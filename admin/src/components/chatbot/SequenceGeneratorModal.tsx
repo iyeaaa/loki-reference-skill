@@ -21,7 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
 
-interface SequenceGeneratorModalProps {
+type SequenceGeneratorModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspaceId: string
@@ -69,7 +69,9 @@ export function SequenceGeneratorModal({
   }, [open])
 
   const handleSubmit = async () => {
-    if (!selectedGroupId || !prompt.trim()) return
+    if (!(selectedGroupId && prompt.trim())) {
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -86,7 +88,7 @@ export function SequenceGeneratorModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -101,12 +103,12 @@ export function SequenceGeneratorModal({
           <div className="space-y-2">
             <Label htmlFor={customerGroupIdHtmlId}>{t("chatbot.modal.customerGroup")}</Label>
             {isLoadingGroups ? (
-              <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-muted-foreground text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {t("chatbot.modal.loadingGroups")}
               </div>
             ) : (
-              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+              <Select onValueChange={setSelectedGroupId} value={selectedGroupId}>
                 <SelectTrigger id={customerGroupIdHtmlId}>
                   <SelectValue placeholder={t("chatbot.modal.selectGroup")} />
                 </SelectTrigger>
@@ -119,7 +121,7 @@ export function SequenceGeneratorModal({
                     </SelectItem>
                   ))}
                   {(!customerGroups || customerGroups.length === 0) && (
-                    <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    <div className="px-2 py-3 text-center text-muted-foreground text-sm">
                       {t("chatbot.modal.noGroups")}
                     </div>
                   )}
@@ -132,23 +134,23 @@ export function SequenceGeneratorModal({
           <div className="space-y-2">
             <Label htmlFor={promptId}>{t("chatbot.modal.requirementsLabel")}</Label>
             <Textarea
+              className="min-h-[120px] resize-none"
               id={promptId}
-              value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={t("chatbot.modal.requirementsPlaceholder")}
-              className="min-h-[120px] resize-none"
+              value={prompt}
             />
-            <p className="text-xs text-muted-foreground">{t("chatbot.modal.requirementsHelp")}</p>
+            <p className="text-muted-foreground text-xs">{t("chatbot.modal.requirementsHelp")}</p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button disabled={isSubmitting} onClick={() => onOpenChange(false)} variant="outline">
             {t("chatbot.button.cancel")}
           </Button>
           <Button
+            disabled={!(selectedGroupId && prompt.trim()) || isSubmitting}
             onClick={handleSubmit}
-            disabled={!selectedGroupId || !prompt.trim() || isSubmitting}
           >
             {isSubmitting ? (
               <>

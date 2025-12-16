@@ -22,7 +22,9 @@ export const customerGroupsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.isDynamic !== undefined && params.isDynamic !== "all") {
       searchParams.append("isDynamic", params.isDynamic.toString())
     }
@@ -48,29 +50,24 @@ export const customerGroupsApi = {
     }))
   },
 
-  get: (groupId: string) => {
-    return apiFetch<CustomerGroup>(`/api/v1/customer-groups/${groupId}`)
-  },
+  get: (groupId: string) => apiFetch<CustomerGroup>(`/api/v1/customer-groups/${groupId}`),
 
-  create: (data: CreateCustomerGroupRequest) => {
-    return apiFetch<CustomerGroup>("/api/v1/customer-groups", {
+  create: (data: CreateCustomerGroupRequest) =>
+    apiFetch<CustomerGroup>("/api/v1/customer-groups", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (groupId: string, data: UpdateCustomerGroupRequest) => {
-    return apiFetch<CustomerGroup>(`/api/v1/customer-groups/${groupId}`, {
+  update: (groupId: string, data: UpdateCustomerGroupRequest) =>
+    apiFetch<CustomerGroup>(`/api/v1/customer-groups/${groupId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (groupId: string) => {
-    return apiFetch(`/api/v1/customer-groups/${groupId}`, {
+  delete: (groupId: string) =>
+    apiFetch(`/api/v1/customer-groups/${groupId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
   // Group members
   getMembers: (groupId: string, page = 1, limit = 10) => {
@@ -96,47 +93,38 @@ export const customerGroupsApi = {
     )
   },
 
-  addMember: (groupId: string, data: AddGroupMemberRequest) => {
-    return apiFetch<CustomerGroupMember>(`/api/v1/customer-groups/${groupId}/members`, {
+  addMember: (groupId: string, data: AddGroupMemberRequest) =>
+    apiFetch<CustomerGroupMember>(`/api/v1/customer-groups/${groupId}/members`, {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  removeMember: (groupId: string, leadId: string) => {
-    return apiFetch(`/api/v1/customer-groups/${groupId}/members/${leadId}`, {
+  removeMember: (groupId: string, leadId: string) =>
+    apiFetch(`/api/v1/customer-groups/${groupId}/members/${leadId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  bulkRemoveMembers: (groupId: string, leadIds: string[]) => {
-    return apiFetch<{ removedCount: number }>(
-      `/api/v1/admin/customer-groups/${groupId}/members/bulk`,
-      {
-        method: "DELETE",
-        body: JSON.stringify({ leadIds }),
-      },
-    )
-  },
+  bulkRemoveMembers: (groupId: string, leadIds: string[]) =>
+    apiFetch<{ removedCount: number }>(`/api/v1/admin/customer-groups/${groupId}/members/bulk`, {
+      method: "DELETE",
+      body: JSON.stringify({ leadIds }),
+    }),
 
-  bulkDelete: (groupIds: string[]) => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/admin/customer-groups/bulk", {
+  bulkDelete: (groupIds: string[]) =>
+    apiFetch<{ deletedCount: number }>("/api/v1/admin/customer-groups/bulk", {
       method: "DELETE",
       body: JSON.stringify({ groupIds }),
-    })
-  },
+    }),
 
-  getByWorkspace: (workspaceId: string) => {
-    return apiFetch<CustomerGroup[]>(`/api/v1/customer-groups/workspace/${workspaceId}`)
-  },
+  getByWorkspace: (workspaceId: string) =>
+    apiFetch<CustomerGroup[]>(`/api/v1/customer-groups/workspace/${workspaceId}`),
 
-  getLeadGroups: (leadId: string) => {
-    return apiFetch<CustomerGroup[]>(`/api/v1/customer-groups/lead/${leadId}/groups`)
-  },
+  getLeadGroups: (leadId: string) =>
+    apiFetch<CustomerGroup[]>(`/api/v1/customer-groups/lead/${leadId}/groups`),
 
   // Get group members with emails and reply status for sequence enrollment
-  getMembersWithEmails: (groupId: string) => {
-    return apiFetch<
+  getMembersWithEmails: (groupId: string) =>
+    apiFetch<
       Array<{
         id: string
         name: string
@@ -150,19 +138,14 @@ export const customerGroupsApi = {
         employeeCount?: string | null
         leadStatus?: string | null
       }>
-    >(`/api/v1/customer-groups/${groupId}/members-with-emails`)
-  },
+    >(`/api/v1/customer-groups/${groupId}/members-with-emails`),
 
   // 그룹에 리드 일괄 추가
-  bulkAddMembers: (groupId: string, leadIds: string[]) => {
-    return apiFetch<{ addedCount: number }>(
-      `/api/v1/admin/customer-groups/${groupId}/members/bulk`,
-      {
-        method: "POST",
-        body: JSON.stringify({ leadIds }),
-      },
-    )
-  },
+  bulkAddMembers: (groupId: string, leadIds: string[]) =>
+    apiFetch<{ addedCount: number }>(`/api/v1/admin/customer-groups/${groupId}/members/bulk`, {
+      method: "POST",
+      body: JSON.stringify({ leadIds }),
+    }),
 
   /**
    * Generates a group name based on lead data analysis.

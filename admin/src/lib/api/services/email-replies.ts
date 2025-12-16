@@ -16,8 +16,12 @@ export const emailRepliesApi = {
   }): Promise<EmailReplyListResponse> => {
     const queryParams = new URLSearchParams()
 
-    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString())
-    if (params.offset !== undefined) queryParams.append("offset", params.offset.toString())
+    if (params.limit !== undefined) {
+      queryParams.append("limit", params.limit.toString())
+    }
+    if (params.offset !== undefined) {
+      queryParams.append("offset", params.offset.toString())
+    }
 
     if (params.filters?.workspaceId) {
       queryParams.append("workspaceId", params.filters.workspaceId)
@@ -41,9 +45,8 @@ export const emailRepliesApi = {
   /**
    * Get single email reply by ID
    */
-  getById: async (id: string): Promise<EmailReplyWithDetails> => {
-    return apiFetch<EmailReplyWithDetails>(`/api/v1/email-replies/${id}`)
-  },
+  getById: async (id: string): Promise<EmailReplyWithDetails> =>
+    apiFetch<EmailReplyWithDetails>(`/api/v1/email-replies/${id}`),
 
   /**
    * Mark reply as read
@@ -62,22 +65,20 @@ export const emailRepliesApi = {
   /**
    * Bulk mark as read
    */
-  bulkMarkAsRead: async (replyIds: string[]): Promise<{ updatedCount: number }> => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/read", {
+  bulkMarkAsRead: async (replyIds: string[]): Promise<{ updatedCount: number }> =>
+    apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/read", {
       method: "PUT",
       body: JSON.stringify({ replyIds }),
-    })
-  },
+    }),
 
   /**
    * Bulk mark as unread
    */
-  bulkMarkAsUnread: async (replyIds: string[]): Promise<{ updatedCount: number }> => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/unread", {
+  bulkMarkAsUnread: async (replyIds: string[]): Promise<{ updatedCount: number }> =>
+    apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/unread", {
       method: "PUT",
       body: JSON.stringify({ replyIds }),
-    })
-  },
+    }),
 
   /**
    * Delete email reply
@@ -89,12 +90,11 @@ export const emailRepliesApi = {
   /**
    * Bulk delete
    */
-  bulkDelete: async (replyIds: string[]): Promise<{ deletedCount: number }> => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/email-replies/bulk", {
+  bulkDelete: async (replyIds: string[]): Promise<{ deletedCount: number }> =>
+    apiFetch<{ deletedCount: number }>("/api/v1/email-replies/bulk", {
       method: "DELETE",
       body: JSON.stringify({ replyIds }),
-    })
-  },
+    }),
 
   /**
    * Update email reply intent and sentiment
@@ -117,12 +117,11 @@ export const emailRepliesApi = {
     id: string
     intent: string | null
     sentiment: string | null
-  }> => {
-    return apiFetch(`/api/v1/email-replies/${id}`, {
+  }> =>
+    apiFetch(`/api/v1/email-replies/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   /**
    * Reclassify email reply using AI
@@ -143,18 +142,16 @@ export const emailRepliesApi = {
       }
     }
     message: string
-  }> => {
-    return apiFetch(`/api/v1/email-replies/${id}/reclassify`, {
+  }> =>
+    apiFetch(`/api/v1/email-replies/${id}/reclassify`, {
       method: "POST",
-    })
-  },
+    }),
 
   /**
    * Get intent counts for a workspace
    */
-  getIntentCounts: async (workspaceId: string): Promise<Record<string, number>> => {
-    return apiFetch(`/api/v1/email-replies/stats/by-intent?workspaceId=${workspaceId}`)
-  },
+  getIntentCounts: async (workspaceId: string): Promise<Record<string, number>> =>
+    apiFetch(`/api/v1/email-replies/stats/by-intent?workspaceId=${workspaceId}`),
 
   /**
    * Toggle important status for a thread

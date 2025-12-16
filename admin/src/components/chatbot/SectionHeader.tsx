@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-interface SectionHeaderProps {
+type SectionHeaderProps = {
   icon?: ReactNode
   title: string
   badge?: string
@@ -8,12 +8,12 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ icon, title, badge }: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-2 mb-3">
+    <div className="mb-3 flex items-center gap-2">
       {icon && <div className="flex-shrink-0">{icon}</div>}
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
         {title}
       </span>
-      {badge && <span className="text-xs text-muted-foreground/60">{badge}</span>}
+      {badge && <span className="text-muted-foreground/60 text-xs">{badge}</span>}
     </div>
   )
 }

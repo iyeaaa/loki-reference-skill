@@ -33,12 +33,12 @@ export default function LeadDiscoveryPage() {
         <ChatRoom />
       ) : (
         // 분할 화면: 좌측 ChatRoom + 우측 CustomerTable
-        <PanelGroup direction="horizontal" className="h-full">
-          <Panel defaultSize={30} minSize={20} maxSize={50}>
+        <PanelGroup className="h-full" direction="horizontal">
+          <Panel defaultSize={30} maxSize={50} minSize={20}>
             <ChatRoom />
           </Panel>
-          <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center group">
-            <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <PanelResizeHandle className="group flex w-2 items-center justify-center bg-border/50 transition-colors hover:bg-border">
+            <GripVertical className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
           </PanelResizeHandle>
           <Panel defaultSize={70} minSize={50}>
             <CustomerTable

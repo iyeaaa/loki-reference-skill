@@ -58,7 +58,7 @@ function StepExecutionDetails({
 
   if (isLoading) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
+      <div className="p-4 text-muted-foreground text-sm">
         {t("sequences.enrollments.stepExecutions.loading")}
       </div>
     )
@@ -66,7 +66,7 @@ function StepExecutionDetails({
 
   if (error) {
     return (
-      <div className="p-4 text-sm text-red-600">
+      <div className="p-4 text-red-600 text-sm">
         {t("sequences.enrollments.stepExecutions.error")}{" "}
         {error instanceof Error
           ? error.message
@@ -77,7 +77,7 @@ function StepExecutionDetails({
 
   if (!executions || executions.length === 0) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
+      <div className="p-4 text-muted-foreground text-sm">
         {t("sequences.enrollments.stepExecutions.noSteps")}
       </div>
     )
@@ -108,8 +108,8 @@ function StepExecutionDetails({
     return <Badge variant="outline">{status}</Badge>
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("ko-KR", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString("ko-KR", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -117,42 +117,41 @@ function StepExecutionDetails({
       minute: "2-digit",
       hour12: false,
     })
-  }
 
   return (
-    <div className="p-4 bg-muted/30">
-      <h4 className="text-sm font-semibold mb-3">
+    <div className="bg-muted/30 p-4">
+      <h4 className="mb-3 font-semibold text-sm">
         {t("sequences.enrollments.stepExecutions.title")}
       </h4>
       <div className="space-y-2">
         {executions.map((execution) => (
           <div
+            className="flex items-center justify-between rounded-lg border bg-background p-3 text-sm"
             key={execution.id}
-            className="flex items-center justify-between p-3 bg-background border rounded-lg text-sm"
           >
             <div className="flex-1">
-              <div className="font-medium mb-1">
+              <div className="mb-1 font-medium">
                 {t("sequences.enrollments.stepExecutions.step", {
                   order: execution.stepOrder,
                 })}
                 : {execution.emailSubject}
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 text-muted-foreground text-xs">
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="h-3 w-3" />
                   {t("sequences.enrollments.stepExecutions.scheduled")}{" "}
                   {formatDate(execution.scheduledAt)}
                 </span>
                 {execution.executedAt && (
                   <span className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="w-3 h-3" />
+                    <CheckCircle className="h-3 w-3" />
                     {t("sequences.enrollments.stepExecutions.executed")}{" "}
                     {formatDate(execution.executedAt)}
                   </span>
                 )}
               </div>
               {execution.errorMessage && (
-                <div className="text-xs text-red-600 mt-1">{execution.errorMessage}</div>
+                <div className="mt-1 text-red-600 text-xs">{execution.errorMessage}</div>
               )}
             </div>
             <div>{getStatusBadge(execution.status)}</div>
@@ -170,32 +169,32 @@ function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+      <span className="text-muted-foreground text-sm">{t("sequences.enrollments.loading")}</span>
     )
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   const { emailsSent, emailsOpened } = metricsData.data
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   if (emailsOpened > 0) {
     return (
-      <div className="flex items-center gap-1 text-sm text-green-600">
-        <Eye className="w-3 h-3" />
+      <div className="flex items-center gap-1 text-green-600 text-sm">
+        <Eye className="h-3 w-3" />
         <span className="font-medium">{t("sequences.enrollments.open.opened")}</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600">
-      <Eye className="w-3 h-3" />
+    <div className="flex items-center gap-1 text-gray-600 text-sm">
+      <Eye className="h-3 w-3" />
       <span className="font-medium">{t("sequences.enrollments.open.notOpened")}</span>
     </div>
   )
@@ -208,19 +207,19 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+      <span className="text-muted-foreground text-sm">{t("sequences.enrollments.loading")}</span>
     )
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   const { emailsSent, emailsDelivered, emailsBounced, emailsFailed, emailHistory } =
     metricsData.data
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   // 발송 실패 (bounced, failed, spam, dropped)
@@ -239,15 +238,15 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-1 text-sm text-red-600 cursor-help hover:underline decoration-dotted">
-            <XCircle className="w-3 h-3" />
+          <div className="flex cursor-help items-center gap-1 text-red-600 text-sm decoration-dotted hover:underline">
+            <XCircle className="h-3 w-3" />
             <span className="font-medium">{t("sequences.enrollments.delivery.failed")}</span>
-            <Info className="w-3 h-3 opacity-70" />
+            <Info className="h-3 w-3 opacity-70" />
           </div>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          <p className="text-sm font-medium">{t("sequences.enrollments.delivery.failureReason")}</p>
-          <p className="text-xs text-muted-foreground">{failureReason}</p>
+          <p className="font-medium text-sm">{t("sequences.enrollments.delivery.failureReason")}</p>
+          <p className="text-muted-foreground text-xs">{failureReason}</p>
         </TooltipContent>
       </Tooltip>
     )
@@ -256,8 +255,8 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
   // 전달 완료
   if (emailsDelivered > 0) {
     return (
-      <div className="flex items-center gap-1 text-sm text-green-600">
-        <CheckCircle className="w-3 h-3" />
+      <div className="flex items-center gap-1 text-green-600 text-sm">
+        <CheckCircle className="h-3 w-3" />
         <span className="font-medium">{t("sequences.enrollments.delivery.completed")}</span>
       </div>
     )
@@ -265,8 +264,8 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
 
   // 발송 중 (전달 대기)
   return (
-    <div className="flex items-center gap-1 text-sm text-blue-600">
-      <Mail className="w-3 h-3" />
+    <div className="flex items-center gap-1 text-blue-600 text-sm">
+      <Mail className="h-3 w-3" />
       <span className="font-medium">{t("sequences.enrollments.delivery.sending")}</span>
     </div>
   )
@@ -279,32 +278,32 @@ function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+      <span className="text-muted-foreground text-sm">{t("sequences.enrollments.loading")}</span>
     )
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   const { emailsSent, emailsClicked } = metricsData.data
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   if (emailsClicked > 0) {
     return (
-      <div className="flex items-center gap-1 text-sm text-green-600">
-        <MousePointer className="w-3 h-3" />
+      <div className="flex items-center gap-1 text-green-600 text-sm">
+        <MousePointer className="h-3 w-3" />
         <span className="font-medium">{t("sequences.enrollments.click.clicked")}</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600">
-      <MousePointer className="w-3 h-3" />
+    <div className="flex items-center gap-1 text-gray-600 text-sm">
+      <MousePointer className="h-3 w-3" />
       <span className="font-medium">{t("sequences.enrollments.click.notClicked")}</span>
     </div>
   )
@@ -317,38 +316,38 @@ function EnrollmentReplyStatus({ enrollmentId }: { enrollmentId: string }) {
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+      <span className="text-muted-foreground text-sm">{t("sequences.enrollments.loading")}</span>
     )
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   const { emailsSent, emailsReplied } = metricsData.data
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-muted-foreground text-sm">-</span>
   }
 
   if (emailsReplied > 0) {
     return (
-      <div className="flex items-center gap-1 text-sm text-green-600">
-        <CheckCircle2 className="w-3 h-3" />
+      <div className="flex items-center gap-1 text-green-600 text-sm">
+        <CheckCircle2 className="h-3 w-3" />
         <span className="font-medium">{t("sequences.enrollments.reply.replied")}</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600">
-      <CheckCircle2 className="w-3 h-3" />
+    <div className="flex items-center gap-1 text-gray-600 text-sm">
+      <CheckCircle2 className="h-3 w-3" />
       <span className="font-medium">{t("sequences.enrollments.reply.notReplied")}</span>
     </div>
   )
 }
 
-interface SequenceEnrollmentsTableProps {
+type SequenceEnrollmentsTableProps = {
   sequenceId: string
 }
 
@@ -399,7 +398,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
           <CardTitle>{t("sequences.enrollments.title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="py-8 text-center text-muted-foreground">
             {t("sequences.enrollments.loading")}
           </div>
         </CardContent>
@@ -457,20 +456,24 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
     const Icon = config.icon
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
-        <Icon className="w-3 h-3" />
+      <Badge className="flex w-fit items-center gap-1" variant={config.variant}>
+        <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
     )
   }
 
   const getProgressPercentage = (currentStep: number, totalSteps: number) => {
-    if (totalSteps === 0) return 0
+    if (totalSteps === 0) {
+      return 0
+    }
     return Math.round((currentStep / totalSteps) * 100)
   }
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "-"
+    if (!dateString) {
+      return "-"
+    }
     return new Date(dateString).toLocaleString("ko-KR", {
       year: "numeric",
       month: "2-digit",
@@ -504,30 +507,28 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         <div className="mb-4 space-y-4">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-muted-foreground" />
               <Input
+                className="pl-9"
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="회사명 검색..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
               />
             </div>
             <Button
-              variant={showFilters ? "default" : "outline"}
-              size="default"
-              onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2"
+              onClick={() => setShowFilters(!showFilters)}
+              size="default"
+              variant={showFilters ? "default" : "outline"}
             >
-              <Filter className="w-4 h-4" />
+              <Filter className="h-4 w-4" />
               필터
             </Button>
           </div>
 
           {showFilters && (
-            <div className="flex flex-wrap gap-2 p-4 bg-muted/50 rounded-md">
+            <div className="flex flex-wrap gap-2 rounded-md bg-muted/50 p-4">
               <Button
-                variant={filters.opened === true ? "default" : "outline"}
-                size="sm"
                 onClick={() => {
                   setFilters({
                     ...filters,
@@ -535,12 +536,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                   })
                   setCurrentPage(1)
                 }}
+                size="sm"
+                variant={filters.opened === true ? "default" : "outline"}
               >
                 오픈함
               </Button>
               <Button
-                variant={filters.clicked === true ? "default" : "outline"}
-                size="sm"
                 onClick={() => {
                   setFilters({
                     ...filters,
@@ -548,12 +549,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                   })
                   setCurrentPage(1)
                 }}
+                size="sm"
+                variant={filters.clicked === true ? "default" : "outline"}
               >
                 클릭함
               </Button>
               <Button
-                variant={filters.replied === true ? "default" : "outline"}
-                size="sm"
                 onClick={() => {
                   setFilters({
                     ...filters,
@@ -561,12 +562,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                   })
                   setCurrentPage(1)
                 }}
+                size="sm"
+                variant={filters.replied === true ? "default" : "outline"}
               >
                 답장함
               </Button>
               <Button
-                variant={filters.delivered === true ? "default" : "outline"}
-                size="sm"
                 onClick={() => {
                   setFilters({
                     ...filters,
@@ -574,21 +575,23 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                   })
                   setCurrentPage(1)
                 }}
+                size="sm"
+                variant={filters.delivered === true ? "default" : "outline"}
               >
                 발송완료
               </Button>
               {hasActiveFilters && (
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  className="flex items-center gap-1"
                   onClick={() => {
                     setSearchQuery("")
                     setFilters({})
                     setCurrentPage(1)
                   }}
-                  className="flex items-center gap-1"
+                  size="sm"
+                  variant="ghost"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="h-3 w-3" />
                   필터 초기화
                 </Button>
               )}
@@ -597,7 +600,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         </div>
 
         {enrollments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="py-8 text-center text-muted-foreground">
             {t("sequences.enrollments.noEnrollments")}
           </div>
         ) : (
@@ -632,7 +635,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
 
                     return (
                       <>
-                        <TableRow key={enrollment.id} className="hover:bg-muted/50">
+                        <TableRow className="hover:bg-muted/50" key={enrollment.id}>
                           <TableCell className="font-medium">
                             <div className="flex flex-col gap-1">
                               <span>
@@ -640,8 +643,8 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                   t("sequences.enrollments.companyNameUnknown")}
                               </span>
                               {enrollment.leadEmail && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Mail className="w-3 h-3" />
+                                <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                                  <Mail className="h-3 w-3" />
                                   {enrollment.leadEmail}
                                 </span>
                               )}
@@ -649,7 +652,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                           </TableCell>
                           <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
                           <TableCell>
-                            <div className="flex flex-col gap-2 min-w-[120px]">
+                            <div className="flex min-w-[120px] flex-col gap-2">
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">
                                   {t("sequences.enrollments.progress.step", {
@@ -659,13 +662,13 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                 </span>
                                 <span className="font-medium">{progress}%</span>
                               </div>
-                              <Progress value={progress} className="h-2" />
+                              <Progress className="h-2" value={progress} />
                             </div>
                           </TableCell>
                           <TableCell>
                             {hasEmailsSent ? (
-                              <div className="flex items-center gap-1 text-sm text-blue-600">
-                                <Mail className="w-3 h-3" />
+                              <div className="flex items-center gap-1 text-blue-600 text-sm">
+                                <Mail className="h-3 w-3" />
                                 <span className="font-medium">
                                   {t("sequences.enrollments.sent.count", {
                                     count: enrollment.currentStepOrder,
@@ -673,7 +676,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-muted-foreground text-sm">
                                 {t("sequences.enrollments.sent.waiting")}
                               </span>
                             )}
@@ -692,21 +695,21 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm">
-                              <Calendar className="w-3 h-3 text-muted-foreground" />
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
                               {formatDate(enrollment.enrolledAt)}
                             </div>
                           </TableCell>
                           <TableCell>
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={toggleExpand}
                               className="flex items-center gap-1"
+                              onClick={toggleExpand}
+                              size="sm"
+                              variant="outline"
                             >
                               {isExpanded ? (
-                                <ChevronUp className="w-3 h-3" />
+                                <ChevronUp className="h-3 w-3" />
                               ) : (
-                                <ChevronDown className="w-3 h-3" />
+                                <ChevronDown className="h-3 w-3" />
                               )}
                               {t("sequences.enrollments.stepSchedule")}
                             </Button>
@@ -714,10 +717,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                         </TableRow>
                         {isExpanded && (
                           <TableRow>
-                            <TableCell colSpan={10} className="p-0">
+                            <TableCell className="p-0" colSpan={10}>
                               <StepExecutionDetails
-                                sequenceId={sequenceId}
                                 enrollmentId={enrollment.id}
+                                sequenceId={sequenceId}
                               />
                             </TableCell>
                           </TableRow>
@@ -731,8 +734,8 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-muted-foreground text-sm">
                   {t("sequences.enrollments.pagination.page", {
                     current: currentPage,
                     total: totalPages,
@@ -740,18 +743,18 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    size="sm"
+                    variant="outline"
                   >
                     {t("sequences.enrollments.pagination.previous")}
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    size="sm"
+                    variant="outline"
                   >
                     {t("sequences.enrollments.pagination.next")}
                   </Button>

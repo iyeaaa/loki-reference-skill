@@ -27,7 +27,7 @@ import { EmailDraftNode } from "./nodes/EmailDraftNode"
 import { StartNode } from "./nodes/StartNode"
 import { TimerNode } from "./nodes/TimerNode"
 
-interface WorkflowData {
+type WorkflowData = {
   nodes: Node[]
   edges: Edge[]
 }
@@ -125,7 +125,9 @@ export default function SequenceDesigner() {
   const addNode = useCallback(
     (parentId: string, nodeType: string) => {
       const parentNode = nodes.find((n) => n.id === parentId)
-      if (!parentNode) return
+      if (!parentNode) {
+        return
+      }
 
       const newNodeId = `${nodeType}-${Date.now()}`
 
@@ -200,7 +202,7 @@ export default function SequenceDesigner() {
               ...(typeof data === "object" && data !== null ? data : {}),
             },
           }
-          console.log(`[Update Node Data] Updated node:`, updatedNode)
+          console.log("[Update Node Data] Updated node:", updatedNode)
           return updatedNode
         }
         return n
@@ -233,7 +235,9 @@ export default function SequenceDesigner() {
   )
 
   const handleSave = async () => {
-    if (!id) return
+    if (!id) {
+      return
+    }
 
     // 디버깅: 현재 nodes state 확인
     console.log("[Workflow Save] Current nodes state:", nodes)
@@ -245,13 +249,24 @@ export default function SequenceDesigner() {
         // 필요한 데이터만 선택적으로 저장
         const cleanData: Record<string, unknown> = {}
 
-        if (node.data.subject !== undefined) cleanData.subject = node.data.subject
-        if (node.data.bodyText !== undefined) cleanData.bodyText = node.data.bodyText
-        if (node.data.generationMode !== undefined)
+        if (node.data.subject !== undefined) {
+          cleanData.subject = node.data.subject
+        }
+        if (node.data.bodyText !== undefined) {
+          cleanData.bodyText = node.data.bodyText
+        }
+        if (node.data.generationMode !== undefined) {
           cleanData.generationMode = node.data.generationMode
-        if (node.data.aiPrompt !== undefined) cleanData.aiPrompt = node.data.aiPrompt
-        if (node.data.useAI !== undefined) cleanData.useAI = node.data.useAI
-        if (node.data.comment !== undefined) cleanData.comment = node.data.comment
+        }
+        if (node.data.aiPrompt !== undefined) {
+          cleanData.aiPrompt = node.data.aiPrompt
+        }
+        if (node.data.useAI !== undefined) {
+          cleanData.useAI = node.data.useAI
+        }
+        if (node.data.comment !== undefined) {
+          cleanData.comment = node.data.comment
+        }
 
         // 타이머 노드: delayDays 기본값 보장
         if (node.type === "timer") {
@@ -298,7 +313,9 @@ export default function SequenceDesigner() {
 
   // 자동저장 (변경 후 3초 후 자동 저장)
   useEffect(() => {
-    if (!hasChanges || !id) return
+    if (!(hasChanges && id)) {
+      return
+    }
 
     const timer = setTimeout(async () => {
       // ref를 사용하여 최신 데이터 참조
@@ -311,13 +328,24 @@ export default function SequenceDesigner() {
         nodes: currentNodes.map((node) => {
           const cleanData: Record<string, unknown> = {}
 
-          if (node.data.subject !== undefined) cleanData.subject = node.data.subject
-          if (node.data.bodyText !== undefined) cleanData.bodyText = node.data.bodyText
-          if (node.data.generationMode !== undefined)
+          if (node.data.subject !== undefined) {
+            cleanData.subject = node.data.subject
+          }
+          if (node.data.bodyText !== undefined) {
+            cleanData.bodyText = node.data.bodyText
+          }
+          if (node.data.generationMode !== undefined) {
             cleanData.generationMode = node.data.generationMode
-          if (node.data.aiPrompt !== undefined) cleanData.aiPrompt = node.data.aiPrompt
-          if (node.data.useAI !== undefined) cleanData.useAI = node.data.useAI
-          if (node.data.comment !== undefined) cleanData.comment = node.data.comment
+          }
+          if (node.data.aiPrompt !== undefined) {
+            cleanData.aiPrompt = node.data.aiPrompt
+          }
+          if (node.data.useAI !== undefined) {
+            cleanData.useAI = node.data.useAI
+          }
+          if (node.data.comment !== undefined) {
+            cleanData.comment = node.data.comment
+          }
 
           if (node.type === "timer") {
             cleanData.delayDays = node.data.delayDays !== undefined ? node.data.delayDays : 1
@@ -360,7 +388,7 @@ export default function SequenceDesigner() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-lg">로딩 중...</div>
       </div>
     )
@@ -368,29 +396,29 @@ export default function SequenceDesigner() {
 
   if (!sequence) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-lg">시퀀스를 찾을 수 없습니다</div>
       </div>
     )
   }
 
   return (
-    <div className="h-[90vh] flex flex-col">
+    <div className="flex h-[90vh] flex-col">
       {/* Header */}
       <Card className="rounded-none border-x-0 border-t-0 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/sequences")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button onClick={() => navigate("/sequences")} size="sm" variant="ghost">
+              <ArrowLeft className="mr-2 h-4 w-4" />
               뒤로
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{sequence.name}</h1>
-              <p className="text-sm text-gray-500">워크플로우 디자이너</p>
+              <h1 className="font-bold text-2xl">{sequence.name}</h1>
+              <p className="text-gray-500 text-sm">워크플로우 디자이너</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={!hasChanges}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button disabled={!hasChanges} onClick={handleSave}>
+            <Save className="mr-2 h-4 w-4" />
             저장
             {hasChanges && <span className="ml-2 text-xs">(변경됨)</span>}
           </Button>
@@ -400,29 +428,29 @@ export default function SequenceDesigner() {
       {/* React Flow Canvas */}
       <div className="flex-1">
         <ReactFlow
-          nodes={nodesWithCallbacks}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
           fitView
-          minZoom={0.2}
           maxZoom={2}
+          minZoom={0.2}
+          nodes={nodesWithCallbacks}
+          nodeTypes={nodeTypes}
+          onConnect={onConnect}
+          onEdgesChange={onEdgesChange}
+          onNodesChange={onNodesChange}
         >
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+          <Background gap={12} size={1} variant={BackgroundVariant.Dots} />
           <Controls />
 
           {/* Figma 스타일 툴바 - 중앙 하단 */}
           <Panel position="bottom-center">
-            <div className="bg-white shadow-lg rounded-lg border border-gray-200 px-4 py-2 mb-4">
+            <div className="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg">
               <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={addCommentNode}
                   className="flex items-center gap-2 hover:bg-yellow-50"
+                  onClick={addCommentNode}
+                  size="sm"
                   title="주석 노드 추가"
+                  variant="ghost"
                 >
                   <MessageSquare className="h-4 w-4 text-yellow-600" />
                   <span className="text-sm">주석</span>
@@ -435,27 +463,27 @@ export default function SequenceDesigner() {
 
       {/* Help Panel */}
       <Card className="rounded-none border-x-0 border-b-0 p-3">
-        <div className="flex items-center gap-6 text-sm text-gray-600">
+        <div className="flex items-center gap-6 text-gray-600 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-600 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-green-600" />
             <span>시작 노드</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
             <span>이메일 초안</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-orange-500 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-orange-500" />
             <span>타이머</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-yellow-400 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-yellow-400" />
             <span>주석</span>
           </div>
           {hasChanges && (
-            <div className="flex items-center gap-2 ml-auto">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-xs text-blue-600">3초 후 자동 저장...</span>
+            <div className="ml-auto flex items-center gap-2">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+              <span className="text-blue-600 text-xs">3초 후 자동 저장...</span>
             </div>
           )}
         </div>
@@ -464,17 +492,17 @@ export default function SequenceDesigner() {
       {/* 이메일 관리 모달 */}
       {selectedNodeForEmail && id && (
         <EmailManagementModal
-          open={emailManagementOpen}
-          onOpenChange={setEmailManagementOpen}
-          sequenceId={id}
-          nodeId={selectedNodeForEmail.id}
+          aiPrompt={selectedNodeForEmail.data?.aiPrompt as string | undefined}
           generationMode={
             (selectedNodeForEmail.data?.generationMode as "ai" | "manual") || "manual"
           }
-          aiPrompt={selectedNodeForEmail.data?.aiPrompt as string | undefined}
-          templateSubject={selectedNodeForEmail.data?.subject as string | undefined}
+          nodeId={selectedNodeForEmail.id}
+          onOpenChange={setEmailManagementOpen}
+          open={emailManagementOpen}
+          sequenceId={id}
           templateBody={selectedNodeForEmail.data?.bodyText as string | undefined}
           templateBodyHtml={selectedNodeForEmail.data?.bodyHtml as string | undefined}
+          templateSubject={selectedNodeForEmail.data?.subject as string | undefined}
         />
       )}
     </div>

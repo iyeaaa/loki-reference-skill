@@ -5,18 +5,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
 import { ACTION_TYPES, ENTITY_TYPES } from "@/lib/api/types/activity-log"
 
-interface Workspace {
+type Workspace = {
   id: string
   name: string
 }
 
-interface User {
+type User = {
   id: string
   username: string
   email: string
 }
 
-interface ActivityLogsFiltersProps {
+type ActivityLogsFiltersProps = {
   selectedEntityTypes: string[]
   selectedActions: string[]
   selectedWorkspaces: string[]
@@ -71,20 +71,20 @@ export function ActivityLogsFilters({
         <div className="space-y-4">
           {/* Entity Type Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">
+            <span className="w-20 font-medium text-gray-700 text-sm dark:text-gray-300">
               엔티티
             </span>
             <div className="flex flex-wrap gap-3">
               {ENTITY_TYPES.map((entityType) => (
-                <div key={entityType.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={entityType.value}>
                   <Checkbox
-                    id={`entity-${entityType.value}`}
                     checked={selectedEntityTypes.includes(entityType.value)}
+                    id={`entity-${entityType.value}`}
                     onCheckedChange={() => toggleEntityType(entityType.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`entity-${entityType.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {entityType.label}
                   </label>
@@ -95,18 +95,18 @@ export function ActivityLogsFilters({
 
           {/* Action Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">액션</span>
+            <span className="w-20 font-medium text-gray-700 text-sm dark:text-gray-300">액션</span>
             <div className="flex flex-wrap gap-3">
               {ACTION_TYPES.map((action) => (
-                <div key={action.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={action.value}>
                   <Checkbox
-                    id={`action-${action.value}`}
                     checked={selectedActions.includes(action.value)}
+                    id={`action-${action.value}`}
                     onCheckedChange={() => toggleAction(action.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`action-${action.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {action.label}
                   </label>
@@ -117,41 +117,41 @@ export function ActivityLogsFilters({
 
           {/* Workspace Filter */}
           <div className="flex items-start gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 pt-2">
+            <span className="w-20 pt-2 font-medium text-gray-700 text-sm dark:text-gray-300">
               워크스페이스
             </span>
-            <div className="flex-1 max-w-md">
+            <div className="max-w-md flex-1">
               <MultiSelectCombobox
+                emptyText="검색 결과가 없습니다."
+                onValueChange={onWorkspaceChange}
                 options={workspaces.map((ws) => ({
                   value: ws.id,
                   label: ws.name,
                 }))}
-                value={selectedWorkspaces}
-                onValueChange={onWorkspaceChange}
                 placeholder="워크스페이스를 선택하세요..."
                 searchPlaceholder="워크스페이스 검색..."
-                emptyText="검색 결과가 없습니다."
+                value={selectedWorkspaces}
               />
             </div>
           </div>
 
           {/* User Filter */}
           <div className="flex items-start gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 pt-2">
+            <span className="w-20 pt-2 font-medium text-gray-700 text-sm dark:text-gray-300">
               사용자
             </span>
-            <div className="flex-1 max-w-md">
+            <div className="max-w-md flex-1">
               <MultiSelectCombobox
+                emptyText="검색 결과가 없습니다."
+                onValueChange={onUserChange}
                 options={users.map((user) => ({
                   value: user.id,
                   label: user.username,
                   sublabel: user.email,
                 }))}
-                value={selectedUsers}
-                onValueChange={onUserChange}
                 placeholder="사용자를 선택하세요..."
                 searchPlaceholder="사용자명 또는 이메일로 검색..."
-                emptyText="검색 결과가 없습니다."
+                value={selectedUsers}
               />
             </div>
           </div>
@@ -159,22 +159,22 @@ export function ActivityLogsFilters({
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedEntityTypes.map((entityType) => {
                 const label = ENTITY_TYPES.find((e) => e.value === entityType)?.label || entityType
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300"
                     key={entityType}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
                     엔티티: {label}
                     <button
-                      type="button"
-                      onClick={() => toggleEntityType(entityType)}
                       className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      onClick={() => toggleEntityType(entityType)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -183,16 +183,16 @@ export function ActivityLogsFilters({
                 const label = ACTION_TYPES.find((a) => a.value === action)?.label || action
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300"
                     key={action}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full"
                   >
                     액션: {label}
                     <button
-                      type="button"
-                      onClick={() => toggleAction(action)}
                       className="ml-1 hover:text-green-600 dark:hover:text-green-200"
+                      onClick={() => toggleAction(action)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -201,18 +201,18 @@ export function ActivityLogsFilters({
                 const ws = workspaces.find((w) => w.id === wsId)
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-purple-800 text-xs dark:bg-purple-900/30 dark:text-purple-300"
                     key={wsId}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full"
                   >
                     워크스페이스: {ws?.name || wsId}
                     <button
-                      type="button"
+                      className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
                       onClick={() =>
                         onWorkspaceChange(selectedWorkspaces.filter((w) => w !== wsId))
                       }
-                      className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -221,16 +221,16 @@ export function ActivityLogsFilters({
                 const user = users.find((u) => u.id === userId)
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-1 text-orange-800 text-xs dark:bg-orange-900/30 dark:text-orange-300"
                     key={userId}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs rounded-full"
                   >
                     사용자: {user?.username || userId}
                     <button
-                      type="button"
-                      onClick={() => onUserChange(selectedUsers.filter((u) => u !== userId))}
                       className="ml-1 hover:text-orange-600 dark:hover:text-orange-200"
+                      onClick={() => onUserChange(selectedUsers.filter((u) => u !== userId))}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -241,9 +241,9 @@ export function ActivityLogsFilters({
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               필터 초기화
             </Button>
           </div>

@@ -13,13 +13,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
-export interface WorkspaceOption {
+export type WorkspaceOption = {
   value: string
   label: string
   sublabel?: string
 }
 
-interface WorkspaceSelectorProps {
+type WorkspaceSelectorProps = {
   options: WorkspaceOption[]
   value?: string
   onValueChange?: (value: string) => void
@@ -50,7 +50,9 @@ export function WorkspaceSelector({
   const selectedOption = options.find((option) => option.value === value)
 
   const filteredOptions = React.useMemo(() => {
-    if (!searchValue) return options
+    if (!searchValue) {
+      return options
+    }
 
     const searchLower = searchValue.toLowerCase()
     return options.filter(
@@ -67,49 +69,49 @@ export function WorkspaceSelector({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
           aria-expanded={open}
           className={cn(
-            "justify-between min-w-[200px] max-w-full overflow-hidden",
+            "min-w-[200px] max-w-full justify-between overflow-hidden",
             compact ? "h-10" : "h-auto py-2",
             className,
           )}
           disabled={disabled}
+          role="combobox"
+          variant="outline"
         >
-          <div className="flex items-center gap-2 flex-1 text-left overflow-hidden min-w-0">
-            <Building2 className="h-4 w-4 text-[#2563EB] shrink-0" />
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left">
+            <Building2 className="h-4 w-4 shrink-0 text-[#2563EB]" />
             {selectedOption ? (
               compact ? (
-                <span className="font-medium truncate text-sm">{selectedOption.label}</span>
+                <span className="truncate font-medium text-sm">{selectedOption.label}</span>
               ) : (
-                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="font-medium truncate text-sm leading-tight">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate font-medium text-sm leading-tight">
                     {selectedOption.label}
                   </span>
                   {selectedOption.sublabel && (
-                    <span className="text-muted-foreground text-xs truncate leading-tight">
+                    <span className="truncate text-muted-foreground text-xs leading-tight">
                       {selectedOption.sublabel}
                     </span>
                   )}
                 </div>
               )
             ) : (
-              <span className="text-muted-foreground truncate">{placeholder}</span>
+              <span className="truncate text-muted-foreground">{placeholder}</span>
             )}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 bg-white dark:bg-gray-950 border" align="start">
-        <Command shouldFilter={false} className="bg-white dark:bg-gray-950">
+      <PopoverContent align="start" className="w-[300px] border bg-white p-0 dark:bg-gray-950">
+        <Command className="bg-white dark:bg-gray-950" shouldFilter={false}>
           <CommandInput
+            onValueChange={setSearchValue}
             placeholder={searchPlaceholder}
             value={searchValue}
-            onValueChange={setSearchValue}
           />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
@@ -117,11 +119,11 @@ export function WorkspaceSelector({
               <CommandGroup>
                 {filteredOptions.map((option) => (
                   <CommandItem
+                    className="cursor-pointer"
                     key={option.value}
-                    value={option.value}
                     keywords={[option.label, option.sublabel || ""]}
                     onSelect={() => handleSelect(option.value)}
-                    className="cursor-pointer"
+                    value={option.value}
                   >
                     <Check
                       className={cn(
@@ -129,10 +131,10 @@ export function WorkspaceSelector({
                         value === option.value ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    <div className="flex-1 overflow-hidden min-w-0">
-                      <span className="font-medium block truncate">{option.label}</span>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <span className="block truncate font-medium">{option.label}</span>
                       {option.sublabel && (
-                        <span className="text-muted-foreground text-xs block truncate">
+                        <span className="block truncate text-muted-foreground text-xs">
                           {option.sublabel}
                         </span>
                       )}

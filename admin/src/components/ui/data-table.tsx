@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 // Types
 // ============================================================================
 
-export interface Column<T> {
+export type Column<T> = {
   key: string
   header: string
   width?: string
@@ -21,14 +21,14 @@ export interface Column<T> {
   sortable?: boolean
 }
 
-export interface PaginationInfo {
+export type PaginationInfo = {
   page: number
   limit: number
   total: number
   totalPages: number
 }
 
-export interface DataTableProps<T> {
+export type DataTableProps<T> = {
   data: T[]
   columns: Column<T>[]
   pagination?: PaginationInfo
@@ -73,7 +73,7 @@ export function DataTable<T>({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && pagination) {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= pagination.totalPages) {
         handlePageChange(page)
       } else {
@@ -84,7 +84,7 @@ export function DataTable<T>({
 
   const handlePageInputBlur = () => {
     if (pagination) {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= pagination.totalPages) {
         handlePageChange(page)
       } else {
@@ -94,7 +94,9 @@ export function DataTable<T>({
   }
 
   const getPageNumbers = () => {
-    if (!pagination) return []
+    if (!pagination) {
+      return []
+    }
     const { page, totalPages } = pagination
     const maxVisiblePages = 5
     let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2))
@@ -128,12 +130,12 @@ export function DataTable<T>({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 {selectable && (
-                  <th className="p-2 w-10">
+                  <th className="w-10 p-2">
                     <Skeleton className="h-4 w-4" />
                   </th>
                 )}
                 {columns.map((col) => (
-                  <th key={col.key} className="p-2 text-left">
+                  <th className="p-2 text-left" key={col.key}>
                     <Skeleton className="h-4 w-20" />
                   </th>
                 ))}
@@ -141,14 +143,14 @@ export function DataTable<T>({
             </thead>
             <tbody>
               {Array.from({ length: loadingRows }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-t">
+                <tr className="border-t" key={rowIndex}>
                   {selectable && (
                     <td className="p-2">
                       <Skeleton className="h-4 w-4" />
                     </td>
                   )}
                   {columns.map((col) => (
-                    <td key={col.key} className="p-2">
+                    <td className="p-2" key={col.key}>
                       <Skeleton className="h-4 w-full" />
                     </td>
                   ))}
@@ -174,7 +176,7 @@ export function DataTable<T>({
               <tr>
                 {selectable && (
                   <th
-                    className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                    className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                     style={{ width: "1%", whiteSpace: "nowrap" }}
                   >
                     <Checkbox checked={allSelected} onCheckedChange={handleToggleAll} />
@@ -182,14 +184,14 @@ export function DataTable<T>({
                 )}
                 {columns.map((col) => (
                   <th
-                    key={col.key}
-                    className={`p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                    className={`p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400 ${
                       col.sticky === "left"
                         ? "sticky left-0 z-10 bg-gray-50 dark:bg-gray-700"
                         : col.sticky === "right"
                           ? "sticky right-0 z-10 bg-gray-50 dark:bg-gray-700"
                           : ""
                     }`}
+                    key={col.key}
                     style={{
                       width: col.width,
                       minWidth: col.minWidth,
@@ -201,12 +203,12 @@ export function DataTable<T>({
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={columns.length + (selectable ? 1 : 0)}
                     className="p-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={columns.length + (selectable ? 1 : 0)}
                   >
                     {emptyMessage}
                   </td>
@@ -218,11 +220,11 @@ export function DataTable<T>({
 
                   return (
                     <tr
+                      className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                       key={itemId}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       {selectable && (
-                        <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                        <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => onToggleSelect?.(itemId)}
@@ -231,7 +233,6 @@ export function DataTable<T>({
                       )}
                       {columns.map((col) => (
                         <td
-                          key={col.key}
                           className={`p-2 text-sm ${
                             col.sticky === "left"
                               ? "sticky left-0 z-10 bg-white dark:bg-gray-800"
@@ -239,6 +240,7 @@ export function DataTable<T>({
                                 ? "sticky right-0 z-10 bg-white dark:bg-gray-800"
                                 : ""
                           }`}
+                          key={col.key}
                           style={{
                             maxWidth: col.minWidth,
                             overflow: "hidden",
@@ -265,7 +267,7 @@ export function DataTable<T>({
         <div className="mt-6 space-y-4">
           {/* Pagination Info */}
           <div className="flex items-center justify-center">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {pagination.total > 0 ? (
                 <>
                   {(pagination.page - 1) * pagination.limit + 1}-
@@ -281,21 +283,21 @@ export function DataTable<T>({
           {/* Pagination Controls */}
           <div className="flex items-center justify-center gap-1">
             <Button
-              onClick={() => handlePageChange(1)}
-              disabled={pagination.page === 1}
-              variant="outline"
-              size="sm"
               className="px-3"
+              disabled={pagination.page === 1}
+              onClick={() => handlePageChange(1)}
+              size="sm"
+              variant="outline"
             >
               처음
             </Button>
 
             <Button
-              onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
-              disabled={pagination.page === 1}
-              variant="outline"
-              size="sm"
               className="px-3"
+              disabled={pagination.page === 1}
+              onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+              size="sm"
+              variant="outline"
             >
               <ChevronLeft className="h-4 w-4" />
               이전
@@ -303,33 +305,33 @@ export function DataTable<T>({
 
             {getPageNumbers().map((page) => (
               <Button
+                className="min-w-[40px] px-3"
                 key={page}
                 onClick={() => handlePageChange(page)}
-                variant={page === pagination.page ? "default" : "outline"}
                 size="sm"
-                className="px-3 min-w-[40px]"
+                variant={page === pagination.page ? "default" : "outline"}
               >
                 {page}
               </Button>
             ))}
 
             <Button
-              onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.page + 1))}
-              disabled={pagination.page >= pagination.totalPages}
-              variant="outline"
-              size="sm"
               className="px-3"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.page + 1))}
+              size="sm"
+              variant="outline"
             >
               다음
               <ChevronRight className="h-4 w-4" />
             </Button>
 
             <Button
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={pagination.page >= pagination.totalPages}
-              variant="outline"
-              size="sm"
               className="px-3"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => handlePageChange(pagination.totalPages)}
+              size="sm"
+              variant="outline"
             >
               마지막
             </Button>
@@ -337,18 +339,18 @@ export function DataTable<T>({
 
           {/* Page Jump */}
           <div className="flex items-center justify-center gap-2">
-            <span className="text-sm text-muted-foreground">페이지:</span>
+            <span className="text-muted-foreground text-sm">페이지:</span>
             <Input
-              type="number"
-              min="1"
+              className="h-8 w-20 text-center text-sm"
               max={pagination.totalPages || 1}
-              value={pageInputValue}
+              min="1"
+              onBlur={handlePageInputBlur}
               onChange={(e) => setPageInputValue(e.target.value)}
               onKeyDown={handlePageInputKeyDown}
-              onBlur={handlePageInputBlur}
-              className="w-20 h-8 text-sm text-center"
+              type="number"
+              value={pageInputValue}
             />
-            <span className="text-sm text-muted-foreground">/ {pagination.totalPages || 1}</span>
+            <span className="text-muted-foreground text-sm">/ {pagination.totalPages || 1}</span>
           </div>
         </div>
       )}
@@ -360,7 +362,7 @@ export function DataTable<T>({
 // Status Badge Component
 // ============================================================================
 
-export interface StatusBadgeProps {
+export type StatusBadgeProps = {
   status: string
   variant?: "default" | "success" | "warning" | "error" | "info"
   label?: string
@@ -378,7 +380,7 @@ export function StatusBadge({ status, variant = "default", label }: StatusBadgeP
   const badgeVariant = statusVariantMap[variant] || "outline"
 
   return (
-    <Badge variant={badgeVariant} className="text-xs">
+    <Badge className="text-xs" variant={badgeVariant}>
       {label || status}
     </Badge>
   )
@@ -388,7 +390,7 @@ export function StatusBadge({ status, variant = "default", label }: StatusBadgeP
 // Bulk Actions Bar Component
 // ============================================================================
 
-export interface BulkAction {
+export type BulkAction = {
   id: string
   label: string
   icon?: ReactNode
@@ -396,27 +398,29 @@ export interface BulkAction {
   onClick: () => void
 }
 
-export interface BulkActionsBarProps {
+export type BulkActionsBarProps = {
   selectedCount: number
   actions: BulkAction[]
 }
 
 export function BulkActionsBar({ selectedCount, actions }: BulkActionsBarProps) {
-  if (selectedCount === 0) return null
+  if (selectedCount === 0) {
+    return null
+  }
 
   return (
-    <div className="flex items-center gap-4 mb-6">
-      <div className="text-sm text-muted-foreground">
+    <div className="mb-6 flex items-center gap-4">
+      <div className="text-muted-foreground text-sm">
         <span className="font-medium">{selectedCount}개 선택됨</span>
       </div>
       <div className="flex gap-2">
         {actions.map((action) => (
           <Button
-            key={action.id}
-            variant={action.variant || "outline"}
-            size="sm"
-            onClick={action.onClick}
             className={action.variant === "destructive" ? "text-red-600 hover:text-red-700" : ""}
+            key={action.id}
+            onClick={action.onClick}
+            size="sm"
+            variant={action.variant || "outline"}
           >
             {action.icon}
             {action.label}

@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/hooks/email-accounts"
 import { AddEmailAccountDialog } from "./AddEmailAccountDialog"
 
-interface WorkspaceEmailAccountsSectionProps {
+type WorkspaceEmailAccountsSectionProps = {
   workspaceId: string
   isEdit: boolean
 }
@@ -44,7 +44,9 @@ export function WorkspaceEmailAccountsSection({
   }
 
   const handleDelete = (accountId: string, emailAddress: string) => {
-    if (!confirm(`${emailAddress} 이메일 계정을 삭제하시겠습니까?`)) return
+    if (!confirm(`${emailAddress} 이메일 계정을 삭제하시겠습니까?`)) {
+      return
+    }
     deleteEmailAccount.mutate(accountId)
   }
 
@@ -84,8 +86,8 @@ export function WorkspaceEmailAccountsSection({
 
   if (!isEdit) {
     return (
-      <Card className="p-4 bg-gray-50">
-        <p className="text-sm text-gray-600">
+      <Card className="bg-gray-50 p-4">
+        <p className="text-gray-600 text-sm">
           워크스페이스 생성 후 이메일 계정을 추가할 수 있습니다.
         </p>
       </Card>
@@ -97,21 +99,21 @@ export function WorkspaceEmailAccountsSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Mail className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">이메일 계정 관리</h3>
+          <h3 className="font-semibold text-lg">이메일 계정 관리</h3>
         </div>
-        <Button type="button" size="sm" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-1" />
+        <Button onClick={() => setShowAddDialog(true)} size="sm" type="button">
+          <Plus className="mr-1 h-4 w-4" />
           이메일 계정 추가
         </Button>
       </div>
 
       {isLoading ? (
         <Card className="p-4">
-          <p className="text-sm text-gray-600">로딩 중...</p>
+          <p className="text-gray-600 text-sm">로딩 중...</p>
         </Card>
       ) : emailAccounts.length === 0 ? (
-        <Card className="p-4 bg-gray-50">
-          <p className="text-sm text-gray-600">
+        <Card className="bg-gray-50 p-4">
+          <p className="text-gray-600 text-sm">
             등록된 이메일 계정이 없습니다. 이메일 발송을 위해 계정을 추가해주세요.
           </p>
         </Card>
@@ -155,11 +157,11 @@ export function WorkspaceEmailAccountsSection({
                       <Badge variant="default">기본</Badge>
                     ) : (
                       <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleSetAsDefault(account.id, account.userId)}
                         className="h-6 px-2 text-xs"
+                        onClick={() => handleSetAsDefault(account.id, account.userId)}
+                        size="sm"
+                        type="button"
+                        variant="ghost"
                       >
                         기본으로 설정
                       </Button>
@@ -175,11 +177,11 @@ export function WorkspaceEmailAccountsSection({
                   </TableCell>
                   <TableCell>
                     <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
                       onClick={() => handleDelete(account.id, account.emailAddress)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      size="sm"
+                      type="button"
+                      variant="ghost"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -192,8 +194,8 @@ export function WorkspaceEmailAccountsSection({
       )}
 
       <AddEmailAccountDialog
-        open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        open={showAddDialog}
         workspaceId={workspaceId}
       />
     </div>

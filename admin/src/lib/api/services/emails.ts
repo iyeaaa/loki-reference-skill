@@ -10,7 +10,7 @@ import type {
   UpdateEmailStatusRequest,
 } from "../types/email"
 
-export interface TodaySentStatsResponse {
+export type TodaySentStatsResponse = {
   success: boolean
   code: string
   message: string
@@ -21,11 +21,11 @@ export interface TodaySentStatsResponse {
   timestamp: string
 }
 
-export interface TodaySentStatsParams {
+export type TodaySentStatsParams = {
   workspaceId?: string
 }
 
-export interface AvgOpenRateStatsResponse {
+export type AvgOpenRateStatsResponse = {
   success: boolean
   code: string
   message: string
@@ -37,11 +37,11 @@ export interface AvgOpenRateStatsResponse {
   timestamp: string
 }
 
-export interface AvgOpenRateStatsParams {
+export type AvgOpenRateStatsParams = {
   workspaceId?: string
 }
 
-export interface RecentSequencesResponse {
+export type RecentSequencesResponse = {
   success: boolean
   code: string
   message: string
@@ -60,12 +60,12 @@ export interface RecentSequencesResponse {
   timestamp: string
 }
 
-export interface RecentSequencesParams {
+export type RecentSequencesParams = {
   workspaceId?: string
   limit?: number
 }
 
-export interface ScheduledFollowupsResponse {
+export type ScheduledFollowupsResponse = {
   success: boolean
   code: string
   message: string
@@ -86,11 +86,11 @@ export interface ScheduledFollowupsResponse {
   timestamp: string
 }
 
-export interface ScheduledFollowupsParams {
+export type ScheduledFollowupsParams = {
   workspaceId?: string
 }
 
-export interface BuyerResponseRateResponse {
+export type BuyerResponseRateResponse = {
   success: boolean
   code: string
   message: string
@@ -102,7 +102,7 @@ export interface BuyerResponseRateResponse {
   timestamp: string
 }
 
-export interface BuyerResponseRateParams {
+export type BuyerResponseRateParams = {
   workspaceId?: string
 }
 
@@ -117,16 +117,24 @@ export const emailsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.status && params.status !== "all") {
       searchParams.append("status", params.status)
     }
     if (params?.direction && params.direction !== "all") {
       searchParams.append("direction", params.direction)
     }
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params?.leadId) searchParams.append("leadId", params.leadId)
-    if (params?.sequenceId) searchParams.append("sequenceId", params.sequenceId)
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.leadId) {
+      searchParams.append("leadId", params.leadId)
+    }
+    if (params?.sequenceId) {
+      searchParams.append("sequenceId", params.sequenceId)
+    }
 
     const query = searchParams.toString()
     return apiFetch<{
@@ -143,9 +151,7 @@ export const emailsApi = {
     }))
   },
 
-  get: (emailId: string) => {
-    return apiFetch<Email>(`/api/v1/emails/${emailId}`)
-  },
+  get: (emailId: string) => apiFetch<Email>(`/api/v1/emails/${emailId}`),
 
   send: (data: SendEmailRequest) => {
     // If files are provided, use FormData, otherwise use JSON
@@ -158,17 +164,36 @@ export const emailsApi = {
       formData.append("workspaceId", data.workspaceId)
       formData.append("userId", data.userId)
 
-      if (data.bodyText) formData.append("bodyText", data.bodyText)
-      if (data.bodyHtml) formData.append("bodyHtml", data.bodyHtml)
-      if (data.fromName) formData.append("fromName", data.fromName)
-      if (data.leadId) formData.append("leadId", data.leadId)
-      if (data.sequenceId) formData.append("sequenceId", data.sequenceId)
-      if (data.stepId) formData.append("stepId", data.stepId)
-      if (data.replyTo) formData.append("replyTo", data.replyTo)
-      if (data.inReplyTo) formData.append("inReplyTo", data.inReplyTo)
-      if (data.scheduledAt) formData.append("scheduledAt", data.scheduledAt)
-      if (data.includeSignature !== undefined)
+      if (data.bodyText) {
+        formData.append("bodyText", data.bodyText)
+      }
+      if (data.bodyHtml) {
+        formData.append("bodyHtml", data.bodyHtml)
+      }
+      if (data.fromName) {
+        formData.append("fromName", data.fromName)
+      }
+      if (data.leadId) {
+        formData.append("leadId", data.leadId)
+      }
+      if (data.sequenceId) {
+        formData.append("sequenceId", data.sequenceId)
+      }
+      if (data.stepId) {
+        formData.append("stepId", data.stepId)
+      }
+      if (data.replyTo) {
+        formData.append("replyTo", data.replyTo)
+      }
+      if (data.inReplyTo) {
+        formData.append("inReplyTo", data.inReplyTo)
+      }
+      if (data.scheduledAt) {
+        formData.append("scheduledAt", data.scheduledAt)
+      }
+      if (data.includeSignature !== undefined) {
         formData.append("includeSignature", String(data.includeSignature))
+      }
 
       // Append arrays
       if (data.ccEmails && data.ccEmails.length > 0) {
@@ -220,8 +245,8 @@ export const emailsApi = {
     subject: string
     content: string
     grantId: string
-  }) => {
-    return apiFetch<{
+  }) =>
+    apiFetch<{
       success: boolean
       message: string
       messageId?: string
@@ -229,22 +254,19 @@ export const emailsApi = {
     }>("/api/v1/emails/send-nylas-test", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  create: (data: CreateEmailRequest) => {
-    return apiFetch<Email>("/api/v1/emails", {
+  create: (data: CreateEmailRequest) =>
+    apiFetch<Email>("/api/v1/emails", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  updateStatus: (emailId: string, data: UpdateEmailStatusRequest) => {
-    return apiFetch<Email>(`/api/v1/emails/${emailId}/status`, {
+  updateStatus: (emailId: string, data: UpdateEmailStatusRequest) =>
+    apiFetch<Email>(`/api/v1/emails/${emailId}/status`, {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   updateIntent: (
     emailId: string,
@@ -260,40 +282,34 @@ export const emailsApi = {
         | null
       sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
     },
-  ) => {
-    return apiFetch<{
+  ) =>
+    apiFetch<{
       id: string
       intent: string | null
       sentiment: string | null
     }>(`/api/v1/emails/${emailId}/intent`, {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (emailId: string) => {
-    return apiFetch(`/api/v1/emails/${emailId}`, {
+  delete: (emailId: string) =>
+    apiFetch(`/api/v1/emails/${emailId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  getEvents: (emailId: string) => {
-    return apiFetch<EmailEvent[]>(`/api/v1/emails/${emailId}/events`)
-  },
+  getEvents: (emailId: string) => apiFetch<EmailEvent[]>(`/api/v1/emails/${emailId}/events`),
 
-  bulkUpdateStatus: (data: BulkUpdateEmailStatusRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/emails/bulk/status", {
+  bulkUpdateStatus: (data: BulkUpdateEmailStatusRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/emails/bulk/status", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkDelete: (emailIds: string[]) => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/admin/emails/bulk", {
+  bulkDelete: (emailIds: string[]) =>
+    apiFetch<{ deletedCount: number }>("/api/v1/admin/emails/bulk", {
       method: "DELETE",
       body: JSON.stringify({ emailIds }),
-    })
-  },
+    }),
 
   // Search replied emails with filters - THREAD-BASED (스레드 기반)
   searchRepliedEmails: (params: {
@@ -323,19 +339,42 @@ export const emailsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params.status && params.status !== "all") searchParams.append("status", params.status)
-    if (params.leadId) searchParams.append("leadId", params.leadId)
-    if (params.sequenceId) searchParams.append("sequenceId", params.sequenceId)
-    if (params.search) searchParams.append("search", params.search)
-    if (params.intent && params.intent !== "all") searchParams.append("intent", params.intent)
-    if (params.isImportant !== undefined)
+    if (params.status && params.status !== "all") {
+      searchParams.append("status", params.status)
+    }
+    if (params.leadId) {
+      searchParams.append("leadId", params.leadId)
+    }
+    if (params.sequenceId) {
+      searchParams.append("sequenceId", params.sequenceId)
+    }
+    if (params.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params.intent && params.intent !== "all") {
+      searchParams.append("intent", params.intent)
+    }
+    if (params.isImportant !== undefined) {
       searchParams.append("isImportant", params.isImportant.toString())
-    if (params.isUnread !== undefined) searchParams.append("isUnread", params.isUnread.toString())
-    if (params.sentiment) searchParams.append("sentiment", params.sentiment)
-    if (params.category) searchParams.append("category", params.category)
-    if (params.priority) searchParams.append("priority", params.priority)
-    if (params.dateFrom) searchParams.append("dateFrom", params.dateFrom)
-    if (params.dateTo) searchParams.append("dateTo", params.dateTo)
+    }
+    if (params.isUnread !== undefined) {
+      searchParams.append("isUnread", params.isUnread.toString())
+    }
+    if (params.sentiment) {
+      searchParams.append("sentiment", params.sentiment)
+    }
+    if (params.category) {
+      searchParams.append("category", params.category)
+    }
+    if (params.priority) {
+      searchParams.append("priority", params.priority)
+    }
+    if (params.dateFrom) {
+      searchParams.append("dateFrom", params.dateFrom)
+    }
+    if (params.dateTo) {
+      searchParams.append("dateTo", params.dateTo)
+    }
 
     const query = searchParams.toString()
     return apiFetch<{

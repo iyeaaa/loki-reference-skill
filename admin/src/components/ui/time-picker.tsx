@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-interface TimePickerProps {
+type TimePickerProps = {
   value: { hour: number; minute: number }
   onChange: (value: { hour: number; minute: number }) => void
   className?: string
@@ -23,20 +23,20 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
   const safeMinute = Number.isInteger(value.minute) ? value.minute : 0
 
   const handleHourChange = (hourStr: string) => {
-    const hour = parseInt(hourStr, 10)
+    const hour = Number.parseInt(hourStr, 10)
     onChange({ hour, minute: safeMinute })
   }
 
   const handleMinuteChange = (minuteStr: string) => {
-    const minute = parseInt(minuteStr, 10)
+    const minute = Number.parseInt(minuteStr, 10)
     onChange({ hour: safeHour, minute })
   }
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Hour selector */}
-      <div className="flex items-center gap-2 flex-1">
-        <Select value={safeHour.toString()} onValueChange={handleHourChange}>
+      <div className="flex flex-1 items-center gap-2">
+        <Select onValueChange={handleHourChange} value={safeHour.toString()}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="시간">
               <span className="flex items-center gap-1">
@@ -53,15 +53,15 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground">시</span>
+        <span className="text-muted-foreground text-sm">시</span>
       </div>
 
       {/* Separator */}
-      <div className="text-lg font-medium text-muted-foreground">:</div>
+      <div className="font-medium text-lg text-muted-foreground">:</div>
 
       {/* Minute selector */}
-      <div className="flex items-center gap-2 flex-1">
-        <Select value={safeMinute.toString()} onValueChange={handleMinuteChange}>
+      <div className="flex flex-1 items-center gap-2">
+        <Select onValueChange={handleMinuteChange} value={safeMinute.toString()}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="분">{safeMinute.toString().padStart(2, "0")}</SelectValue>
           </SelectTrigger>
@@ -73,7 +73,7 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground">분</span>
+        <span className="text-muted-foreground text-sm">분</span>
       </div>
     </div>
   )

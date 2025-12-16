@@ -10,11 +10,11 @@ import { useAuth } from "@/lib/auth-provider"
 import type { IamAction, IamResource } from "@/lib/constants/iam-resources"
 import { useHasPermission, usePermissions } from "@/lib/permission"
 
-interface ProtectedRouteProps {
+type ProtectedRouteProps = {
   children: React.ReactNode
 }
 
-interface PermissionProtectedRouteProps {
+type PermissionProtectedRouteProps = {
   children: React.ReactNode
   resource: IamResource
   action: IamAction
@@ -31,14 +31,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />
+    return <Navigate replace state={{ from: location }} to="/auth" />
   }
 
   return <>{children}</>
@@ -54,14 +54,14 @@ export function UserProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   if (!user?.id) {
-    return <Navigate to="/trial?from=logout" replace />
+    return <Navigate replace to="/trial?from=logout" />
   }
 
   return <>{children}</>
@@ -76,14 +76,14 @@ export function AdminProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   if (!user) {
-    return <Navigate to="/auth?from=logout" replace />
+    return <Navigate replace to="/auth?from=logout" />
   }
 
   // If user is not admin, logout and redirect
@@ -113,15 +113,15 @@ export function PermissionProtectedRoute({
   // Combined loading state
   if (authLoading || permLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   // Not logged in
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />
+    return <Navigate replace state={{ from: location }} to="/auth" />
   }
 
   // Admin always has access
@@ -132,7 +132,7 @@ export function PermissionProtectedRoute({
   // Check specific permission
   if (!hasPermission) {
     console.warn(`Permission denied: ${resource}:${action}`)
-    return <Navigate to={fallbackPath} replace />
+    return <Navigate replace to={fallbackPath} />
   }
 
   return <>{children}</>

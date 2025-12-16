@@ -1,12 +1,12 @@
 import { apiFetch } from "../client"
 
-export interface DateRangeParams {
+export type DateRangeParams = {
   startDate?: string
   endDate?: string
   workspaceId?: string
 }
 
-export interface DashboardStats {
+export type DashboardStats = {
   leads: {
     total: number
     periodCount: number
@@ -23,12 +23,12 @@ export interface DashboardStats {
   }
 }
 
-export interface TrendDataPoint {
+export type TrendDataPoint = {
   date: string
   count: number
 }
 
-export interface LeadDiscoveryNotification {
+export type LeadDiscoveryNotification = {
   id: string
   customerGroupId: string
   customerGroupName: string
@@ -36,7 +36,7 @@ export interface LeadDiscoveryNotification {
   addedAt: string
 }
 
-export interface CampaignNotification {
+export type CampaignNotification = {
   id: string
   name: string
   status: string
@@ -51,7 +51,7 @@ export interface CampaignNotification {
   updatedAt: string
 }
 
-export interface ReplyNotification {
+export type ReplyNotification = {
   id: string
   fromEmail: string
   subject: string | null
@@ -65,9 +65,15 @@ export interface ReplyNotification {
 export const dashboardApi = {
   getStats: async (params?: DateRangeParams): Promise<DashboardStats> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
 
     const query = searchParams.toString()
     return apiFetch<DashboardStats>(`/api/v1/dashboard/stats${query ? `?${query}` : ""}`)
@@ -75,9 +81,15 @@ export const dashboardApi = {
 
   getLeadTrends: async (params?: DateRangeParams): Promise<TrendDataPoint[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
 
     const query = searchParams.toString()
     return apiFetch<TrendDataPoint[]>(`/api/v1/dashboard/trends/leads${query ? `?${query}` : ""}`)
@@ -85,9 +97,15 @@ export const dashboardApi = {
 
   getEmailTrends: async (params?: DateRangeParams): Promise<TrendDataPoint[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
 
     const query = searchParams.toString()
     return apiFetch<TrendDataPoint[]>(`/api/v1/dashboard/trends/emails${query ? `?${query}` : ""}`)
@@ -95,9 +113,15 @@ export const dashboardApi = {
 
   getOpenRateTrends: async (params?: DateRangeParams): Promise<TrendDataPoint[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
 
     const query = searchParams.toString()
     return apiFetch<TrendDataPoint[]>(`/api/v1/dashboard/trends/opens${query ? `?${query}` : ""}`)
@@ -107,10 +131,18 @@ export const dashboardApi = {
     params?: DateRangeParams & { limit?: number },
   ): Promise<LeadDiscoveryNotification[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params?.limit) searchParams.append("limit", params.limit.toString())
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.limit) {
+      searchParams.append("limit", params.limit.toString())
+    }
 
     const query = searchParams.toString()
     return apiFetch<LeadDiscoveryNotification[]>(
@@ -122,10 +154,18 @@ export const dashboardApi = {
     params?: DateRangeParams & { limit?: number },
   ): Promise<CampaignNotification[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params?.limit) searchParams.append("limit", params.limit.toString())
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.limit) {
+      searchParams.append("limit", params.limit.toString())
+    }
 
     const query = searchParams.toString()
     return apiFetch<CampaignNotification[]>(
@@ -137,10 +177,18 @@ export const dashboardApi = {
     params?: DateRangeParams & { limit?: number },
   ): Promise<ReplyNotification[]> => {
     const searchParams = new URLSearchParams()
-    if (params?.startDate) searchParams.append("startDate", params.startDate)
-    if (params?.endDate) searchParams.append("endDate", params.endDate)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params?.limit) searchParams.append("limit", params.limit.toString())
+    if (params?.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params?.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.limit) {
+      searchParams.append("limit", params.limit.toString())
+    }
 
     const query = searchParams.toString()
     return apiFetch<ReplyNotification[]>(

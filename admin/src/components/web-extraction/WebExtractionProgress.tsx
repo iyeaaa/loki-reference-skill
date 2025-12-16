@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
-interface ProgressLog {
+type ProgressLog = {
   timestamp: number
   message: string
   type: "info" | "success" | "warning" | "error"
@@ -25,7 +25,7 @@ interface ProgressLog {
   total?: number
 }
 
-interface WebExtractionProgress {
+type WebExtractionProgress = {
   status: "processing" | "completed" | "error"
   total: number
   processed: number
@@ -48,7 +48,7 @@ interface WebExtractionProgress {
   estimatedCost?: number // 예상 GPT API 비용 (USD)
 }
 
-interface WebExtractionProgressProps {
+type WebExtractionProgressProps = {
   progress: WebExtractionProgress
   apiKeyCount?: number
   concurrency?: number
@@ -59,8 +59,8 @@ function LogEntry({ log }: { log: ProgressLog }) {
   return (
     <div
       className={cn(
-        "flex items-center py-1.5 px-2 rounded text-xs font-mono",
-        "hover:bg-muted/50 transition-colors",
+        "flex items-center rounded px-2 py-1.5 font-mono text-xs",
+        "transition-colors hover:bg-muted/50",
         log.type === "success" && "text-green-700 dark:text-green-300",
         log.type === "error" && "text-red-700 dark:text-red-300",
         log.type === "warning" && "text-amber-700 dark:text-amber-300",
@@ -198,39 +198,39 @@ export function WebExtractionProgress({
   }, [progress.logs])
 
   return (
-    <div className="h-full flex flex-col min-h-0 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Content - Flex layout */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* API Key Speed Boost Banner */}
         {apiKeyCount !== undefined && apiKeyCount > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            className="mb-3 flex-shrink-0 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-3"
+            initial={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="flex-shrink-0 mb-3 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-3"
           >
             <div className="flex items-center gap-2.5">
               <motion.div
                 animate={{
                   scale: [1, 1.05, 1],
                 }}
+                className="flex-shrink-0"
                 transition={{
                   duration: 2,
                   repeat: Number.POSITIVE_INFINITY,
                   ease: "easeInOut",
                 }}
-                className="flex-shrink-0"
               >
-                <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
                   <Zap className="h-4 w-4 text-primary" fill="currentColor" />
                 </div>
               </motion.div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold text-foreground">{apiKeyCount}배 속도</span>
+                  <span className="font-bold text-foreground text-sm">{apiKeyCount}배 속도</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
                   <div className="flex items-center gap-1">
                     <Gauge className="h-3.5 w-3.5" />
                     <span>{concurrency || apiKeyCount * 20}개 동시 처리</span>
@@ -246,7 +246,7 @@ export function WebExtractionProgress({
           {/* Progress Bar */}
           {!isError && progress.total > 0 && (
             <div className="space-y-1.5">
-              <div className="flex justify-between text-sm text-muted-foreground">
+              <div className="flex justify-between text-muted-foreground text-sm">
                 <span>
                   {progress.percentage.toFixed(1)}%
                   {progress.processed !== undefined && progress.total !== undefined && (
@@ -256,13 +256,13 @@ export function WebExtractionProgress({
                   )}
                 </span>
               </div>
-              <Progress value={progress.percentage} className="h-2" />
+              <Progress className="h-2" value={progress.percentage} />
             </div>
           )}
 
           {/* Current Company */}
           {isProcessing && progress.currentCompany && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <StarSpinner size={14} />
               <span className="font-medium">처리 중:</span> {progress.currentCompany}
             </div>
@@ -274,13 +274,13 @@ export function WebExtractionProgress({
               {isComplete && (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-semibold">완료</span>
+                  <span className="font-semibold text-sm">완료</span>
                 </>
               )}
               {isError && (
                 <>
                   <XCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-semibold">실패</span>
+                  <span className="font-semibold text-sm">실패</span>
                 </>
               )}
             </div>
@@ -289,26 +289,26 @@ export function WebExtractionProgress({
           {/* Time Saved Banner */}
           {successCount > 0 && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
               className="rounded-lg border border-border bg-muted/30 p-3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
             >
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="space-y-1.5">
                   <div className="flex items-baseline gap-2">
                     <motion.span
-                      key={currentTimeSaved}
-                      initial={{ scale: 0.8 }}
                       animate={{ scale: 1 }}
+                      className="font-bold text-primary text-xl"
+                      initial={{ scale: 0.8 }}
+                      key={currentTimeSaved}
                       transition={{ type: "spring", stiffness: 200 }}
-                      className="text-xl font-bold text-primary"
                     >
                       {formatLongTime(currentTimeSaved)}
                     </motion.span>
-                    <span className="text-xs text-muted-foreground">절약했어요</span>
+                    <span className="text-muted-foreground text-xs">절약했어요</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
                     수동으로 했다면{" "}
                     <span className="font-semibold text-foreground">
                       {formatLongTime(successCount * MANUAL_TIME_PER_ITEM)}
@@ -320,7 +320,7 @@ export function WebExtractionProgress({
                     만에 끝냈어요
                   </p>
                   {currentCostSaved > 0 && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed">
                       <span className="text-muted-foreground/70">약 </span>
                       <span className="font-semibold text-primary">
                         ₩{currentCostSaved.toLocaleString()}
@@ -371,7 +371,7 @@ export function WebExtractionProgress({
                 </span>
               </div>
             </div>
-            <div className="pt-2 border-t text-sm">
+            <div className="border-t pt-2 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>예상비용</span>
                 <span className="font-semibold">
@@ -382,7 +382,7 @@ export function WebExtractionProgress({
           </div>
 
           {/* Time Stats */}
-          <div className="space-y-1.5 text-sm text-muted-foreground border-t pt-2">
+          <div className="space-y-1.5 border-t pt-2 text-muted-foreground text-sm">
             <div className="flex justify-between">
               <span>경과</span>
               <span className="font-medium">{formatTime(progress.elapsedTime || 0)}</span>
@@ -397,7 +397,7 @@ export function WebExtractionProgress({
 
           {/* API Key & Concurrency Info */}
           {(apiKeyCount !== undefined || concurrency !== undefined) && (
-            <div className="space-y-1.5 text-sm text-muted-foreground border-t pt-2">
+            <div className="space-y-1.5 border-t pt-2 text-muted-foreground text-sm">
               {apiKeyCount !== undefined && (
                 <div className="flex justify-between">
                   <span>API 키</span>
@@ -416,17 +416,17 @@ export function WebExtractionProgress({
 
         {/* Log Entries - Flexible height */}
         {progress.logs && progress.logs.length > 0 && (
-          <Card className="flex-1 flex flex-col min-h-[300px] overflow-hidden border-t-0 rounded-t-none">
-            <CardHeader className="flex-shrink-0 pb-3 pt-4">
+          <Card className="flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-t-none border-t-0">
+            <CardHeader className="flex-shrink-0 pt-4 pb-3">
               <CardTitle className="flex items-center justify-between text-sm">
-                <span className="text-base font-semibold">처리 로그</span>
-                <Badge variant="secondary" className="text-xs">
+                <span className="font-semibold text-base">처리 로그</span>
+                <Badge className="text-xs" variant="secondary">
                   {progress.logs.length}개
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-0 pt-0">
-              <ScrollArea ref={logContainerRef} className="h-full px-3 pb-3">
+            <CardContent className="min-h-0 flex-1 p-0 pt-0">
+              <ScrollArea className="h-full px-3 pb-3" ref={logContainerRef}>
                 <div className="space-y-0.5">
                   {progress.logs.map((log, index) => (
                     <LogEntry key={`${log.timestamp}-${index}`} log={log} />
@@ -439,17 +439,17 @@ export function WebExtractionProgress({
 
         {/* Random Tip Card - Game Style */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="mt-3 flex-shrink-0"
+          initial={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="flex-shrink-0 mt-3"
         >
-          <Card className={`${randomTip.bgColor} border-2 relative overflow-hidden`}>
+          <Card className={`${randomTip.bgColor} relative overflow-hidden border-2`}>
             {/* Shine effect */}
             <motion.div
+              animate={{ x: "200%" }}
               className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
               initial={{ x: "-100%" }}
-              animate={{ x: "200%" }}
               transition={{
                 duration: 3,
                 repeat: Number.POSITIVE_INFINITY,
@@ -457,18 +457,18 @@ export function WebExtractionProgress({
                 ease: "easeInOut",
               }}
             />
-            <CardContent className="p-4 relative z-10">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+            <CardContent className="relative z-10 p-4">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
                   <Badge
+                    className={`font-bold text-xs ${randomTip.color} border-current`}
                     variant="outline"
-                    className={`text-xs font-bold ${randomTip.color} border-current`}
                   >
                     💡 팁
                   </Badge>
-                  <span className={`text-sm font-bold ${randomTip.color}`}>{randomTip.title}</span>
+                  <span className={`font-bold text-sm ${randomTip.color}`}>{randomTip.title}</span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{randomTip.message}</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">{randomTip.message}</p>
               </div>
             </CardContent>
           </Card>

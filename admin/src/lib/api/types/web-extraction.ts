@@ -1,9 +1,9 @@
-export interface SearchCriteriaResult {
+export type SearchCriteriaResult = {
   result: string // "true" or "false"
   reasons: string[] // 3 specific reasons
 }
 
-export interface ExtractionResult {
+export type ExtractionResult = {
   website_url: string
   final_url?: string | null
   http_status?: number | null
@@ -32,7 +32,7 @@ export interface ExtractionResult {
   error_message?: string | null
 }
 
-export interface ExtractionProgress {
+export type ExtractionProgress = {
   status: "processing" | "completed" | "error"
   total: number
   processed: number
@@ -56,26 +56,26 @@ export interface ExtractionProgress {
   estimatedCost?: number // 예상 GPT API 비용 (USD)
 }
 
-export interface WebExtractionUploadRequest {
+export type WebExtractionUploadRequest = {
   file: File
   workspaceId: string
   searchCriteria?: string[]
 }
 
-export interface WebExtractionProgressCallback {
+export type WebExtractionProgressCallback = {
   onProgress: (progress: ExtractionProgress) => void
   onComplete: (jobId: string, progress: ExtractionProgress) => void
   onError: (error: Error) => void
 }
 
 // 단일 URL 분석 관련 타입
-export interface WebsiteAnalysisRequest {
+export type WebsiteAnalysisRequest = {
   websiteUrl: string
   workspaceId: string
   searchCriteria?: string[]
 }
 
-export interface WebsiteAnalysisProgress {
+export type WebsiteAnalysisProgress = {
   type: "init" | "progress" | "complete" | "error"
   status?: "crawling" | "analyzing"
   message?: string
@@ -85,13 +85,13 @@ export interface WebsiteAnalysisProgress {
   error?: string
 }
 
-export interface PageInfo {
+export type PageInfo = {
   url: string
   title?: string
   contentLength: number
 }
 
-export interface WebsiteAnalysisCallbacks {
+export type WebsiteAnalysisCallbacks = {
   onInit?: (message: string) => void
   onProgress?: (status: string, message: string) => void
   onPageFound?: (pageInfo: PageInfo) => void

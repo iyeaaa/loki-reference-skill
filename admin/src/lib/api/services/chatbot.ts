@@ -98,7 +98,7 @@ export const chatbotApi = {
               try {
                 const data: StreamEvent = JSON.parse(line.slice(6))
                 lastEventType = data.type
-                console.log(`[Chatbot] Received event:`, data.type, data.node || "")
+                console.log("[Chatbot] Received event:", data.type, data.node || "")
 
                 // Ignore ping/heartbeat events - they're only for keeping connection alive
                 if (data.type === "ping") {
@@ -561,7 +561,7 @@ export const chatbotApi = {
 }
 
 // Export ChatConversation type
-export interface ChatConversation {
+export type ChatConversation = {
   id: string
   userId: string
   workspaceId: string

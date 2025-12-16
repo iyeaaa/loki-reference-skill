@@ -18,7 +18,7 @@ import { leadsApi } from "@/lib/api/services/leads"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead } from "@/lib/api/types/lead"
 
-interface AddMembersDialogProps {
+type AddMembersDialogProps = {
   isOpen: boolean
   onClose: () => void
   customerGroup: CustomerGroup | null
@@ -51,7 +51,9 @@ export function AddMembersDialog({
   const existingMemberLeadIds = new Set(membersData?.members.map((m) => m.leadId) || [])
 
   const loadLeads = useCallback(async () => {
-    if (!customerGroup?.workspaceId) return
+    if (!customerGroup?.workspaceId) {
+      return
+    }
 
     setLoading(true)
     try {
@@ -98,7 +100,9 @@ export function AddMembersDialog({
   }
 
   const handleAddMembers = async () => {
-    if (!customerGroup || selectedLeads.length === 0) return
+    if (!customerGroup || selectedLeads.length === 0) {
+      return
+    }
 
     try {
       await bulkAddMembers.mutateAsync({
@@ -123,7 +127,9 @@ export function AddMembersDialog({
     }
 
     // 검색 필터
-    if (!searchInput) return true
+    if (!searchInput) {
+      return true
+    }
     const searchLower = searchInput.toLowerCase()
     return (
       lead.companyName?.toLowerCase().includes(searchLower) ||
@@ -138,38 +144,38 @@ export function AddMembersDialog({
     currentPageLeadIds.length > 0 && currentPageLeadIds.every((id) => selectedLeads.includes(id))
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
-        <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="text-xl font-semibold">
+    <Dialog onOpenChange={onClose} open={isOpen}>
+      <DialogContent className="max-h-[90vh] max-w-5xl">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="font-semibold text-xl">
             그룹에 고객 추가 - {customerGroup?.name}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-12rem)]">
+        <div className="max-h-[calc(90vh-12rem)] overflow-y-auto">
           {/* Info & Search */}
           <div className="mb-4 space-y-3">
             {existingMemberLeadIds.size > 0 && (
-              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+              <div className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm">
                 💡 현재 그룹에 {existingMemberLeadIds.size}명의 고객이 이미 있습니다. 이미 추가된
                 고객은 목록에서 제외됩니다.
               </div>
             )}
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
+                className="w-full pr-10 pl-10"
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="고객 검색..."
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10 pr-10 w-full"
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => setSearchInput("")}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -177,15 +183,15 @@ export function AddMembersDialog({
 
           {/* Selection Info */}
           {selectedLeads.length > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
-              <span className="text-sm text-blue-700 font-medium">
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 p-3">
+              <span className="font-medium text-blue-700 text-sm">
                 {selectedLeads.length}명 선택됨
               </span>
               <Button
-                variant="ghost"
-                size="sm"
+                className="text-blue-700 hover:bg-blue-100 hover:text-blue-800"
                 onClick={() => setSelectedLeads([])}
-                className="text-blue-700 hover:text-blue-800 hover:bg-blue-100"
+                size="sm"
+                variant="ghost"
               >
                 선택 해제
               </Button>
@@ -193,15 +199,15 @@ export function AddMembersDialog({
           )}
 
           {/* Table */}
-          <div className="border rounded-lg">
+          <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
+                      aria-label="모두 선택"
                       checked={allCurrentPageSelected}
                       onCheckedChange={handleToggleAll}
-                      aria-label="모두 선택"
                     />
                   </TableHead>
                   <TableHead>회사명</TableHead>
@@ -213,13 +219,13 @@ export function AddMembersDialog({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell className="py-8 text-center text-muted-foreground" colSpan={5}>
                       로딩 중...
                     </TableCell>
                   </TableRow>
                 ) : filteredLeads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell className="py-8 text-center text-muted-foreground" colSpan={5}>
                       {searchInput ? "검색 결과가 없습니다." : "고객이 없습니다."}
                     </TableCell>
                   </TableRow>
@@ -228,21 +234,21 @@ export function AddMembersDialog({
                     <TableRow key={lead.id}>
                       <TableCell>
                         <Checkbox
+                          aria-label={`${lead.companyName} 선택`}
                           checked={selectedLeads.includes(lead.id)}
                           onCheckedChange={() => handleToggleLead(lead.id)}
-                          aria-label={`${lead.companyName} 선택`}
                         />
                       </TableCell>
                       <TableCell className="font-medium">
                         {lead.companyName || lead.foundCompanyName || "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-sm">
                         {lead.websiteUrl || "-"}
                       </TableCell>
                       <TableCell className="text-sm">{lead.businessType || "-"}</TableCell>
                       <TableCell>
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${
                             lead.leadStatus === "new"
                               ? "bg-blue-100 text-blue-800"
                               : lead.leadStatus === "contacted"
@@ -278,16 +284,16 @@ export function AddMembersDialog({
 
           {/* Pagination */}
           {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-muted-foreground text-sm">
                 총 {total}명 중 {(page - 1) * limit + 1}-{Math.min(page * limit, total)}명 표시
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  size="sm"
+                  variant="outline"
                 >
                   이전
                 </Button>
@@ -297,10 +303,10 @@ export function AddMembersDialog({
                   </span>
                 </div>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  size="sm"
+                  variant="outline"
                 >
                   다음
                 </Button>
@@ -310,13 +316,13 @@ export function AddMembersDialog({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={bulkAddMembers.isPending}>
+        <div className="flex justify-end gap-3 border-t pt-4">
+          <Button disabled={bulkAddMembers.isPending} onClick={onClose} variant="outline">
             취소
           </Button>
           <Button
-            onClick={handleAddMembers}
             disabled={selectedLeads.length === 0 || bulkAddMembers.isPending}
+            onClick={handleAddMembers}
           >
             {bulkAddMembers.isPending ? "추가 중..." : `${selectedLeads.length}명 추가`}
           </Button>

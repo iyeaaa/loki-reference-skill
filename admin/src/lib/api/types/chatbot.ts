@@ -5,21 +5,21 @@ import type {
   ProgressLog,
 } from "../services/lead-import"
 
-export interface FileAttachment {
+export type FileAttachment = {
   fileName: string
   fileSize: number
   fileType: string
   content?: string // Parsed content for CSV files
 }
 
-export interface Insight {
+export type Insight = {
   insight: string
   recommendation: string
   impact: "high" | "medium" | "low"
   category?: string
 }
 
-export interface VisualizationSuggestion {
+export type VisualizationSuggestion = {
   type: "bar" | "line" | "pie" | "table" | "metric"
   title: string
   xAxis?: string
@@ -28,7 +28,7 @@ export interface VisualizationSuggestion {
   config?: unknown
 }
 
-export interface ChatbotProgress {
+export type ChatbotProgress = {
   type: "init" | "progress" | "complete"
   node?: string
   message?: string
@@ -46,7 +46,7 @@ export interface ChatbotProgress {
   }
 }
 
-export interface ChatMessage {
+export type ChatMessage = {
   role: "user" | "assistant"
   content: string
   additionalPrompt?: string // AI에게만 전달되는 추가 프롬프트 (사용자에게는 표시되지 않음)
@@ -93,7 +93,7 @@ export interface ChatMessage {
   }
 }
 
-export interface ChatbotAskRequest {
+export type ChatbotAskRequest = {
   question: string
   workspaceId: string
   userId?: string
@@ -102,13 +102,13 @@ export interface ChatbotAskRequest {
   locale?: string // Language code for AI responses (e.g., "ko", "en")
 }
 
-export interface SequenceModalPayload {
+export type SequenceModalPayload = {
   customerGroupId?: string
   customerGroupName?: string
   leadsCount?: number
 }
 
-export interface StreamEvent {
+export type StreamEvent = {
   type:
     | "node"
     | "node-start"
@@ -164,12 +164,12 @@ export interface StreamEvent {
   }
 }
 
-export interface ChatbotHistoryResponse {
+export type ChatbotHistoryResponse = {
   messages: ChatMessage[]
   conversationId: string
 }
 
-export interface NodeProgressUpdate {
+export type NodeProgressUpdate = {
   nodeName: string
   status: "pending" | "in_progress" | "completed" | "error"
   message?: string
@@ -177,7 +177,7 @@ export interface NodeProgressUpdate {
   timestamp: number
 }
 
-export interface StreamCallbacks {
+export type StreamCallbacks = {
   onMessage: (message: ChatMessage) => void
   onMessageUpdate?: (message: ChatMessage) => void
   onThinking: (thinking: string) => void

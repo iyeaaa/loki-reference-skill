@@ -14,7 +14,7 @@ import {
 import type { ColumnFilter, FilterOperator } from "@/lib/api/types/lead-filters"
 import { OPERATOR_LABELS } from "@/lib/api/types/lead-filters"
 
-interface ColumnFilterDateProps {
+type ColumnFilterDateProps = {
   field: string
   onFilterChange: (filter: ColumnFilter | null) => void
   initialFilter?: ColumnFilter
@@ -36,7 +36,9 @@ export function ColumnFilterDate({
 
   // Initialize date range from initial filter
   const getInitialRange = (): DateRange | undefined => {
-    if (!initialFilter?.value) return undefined
+    if (!initialFilter?.value) {
+      return
+    }
 
     if (typeof initialFilter.value === "object" && initialFilter.value !== null) {
       const range = initialFilter.value as { from?: string; to?: string }
@@ -51,7 +53,7 @@ export function ColumnFilterDate({
       return { from: date, to: date }
     }
 
-    return undefined
+    return
   }
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getInitialRange())
@@ -134,7 +136,7 @@ export function ColumnFilterDate({
   }
 
   return (
-    <div className="flex flex-col w-fit">
+    <div className="flex w-fit flex-col">
       <div
         className={
           isBetweenOperator ? "max-w-[min(680px,90vw)] space-y-3 p-4" : "w-auto space-y-3 p-4"
@@ -142,11 +144,11 @@ export function ColumnFilterDate({
       >
         {/* Operator Selection */}
         <div className="space-y-2">
-          <Label htmlFor={operatorId} className="text-xs">
+          <Label className="text-xs" htmlFor={operatorId}>
             Operator
           </Label>
-          <Select value={operator} onValueChange={(val) => setOperator(val as FilterOperator)}>
-            <SelectTrigger id={operatorId} className="w-full max-w-[280px] h-8 text-sm">
+          <Select onValueChange={(val) => setOperator(val as FilterOperator)} value={operator}>
+            <SelectTrigger className="h-8 w-full max-w-[280px] text-sm" id={operatorId}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -165,47 +167,47 @@ export function ColumnFilterDate({
             <Label className="text-xs">Quick Select</Label>
             <div className="flex flex-wrap gap-1.5">
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={setToday}
+                size="sm"
                 type="button"
-                className="h-7 text-xs px-2"
+                variant="outline"
               >
                 Today
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={setLast7Days}
+                size="sm"
                 type="button"
-                className="h-7 text-xs px-2"
+                variant="outline"
               >
                 Last 7d
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={setLast30Days}
+                size="sm"
                 type="button"
-                className="h-7 text-xs px-2"
+                variant="outline"
               >
                 Last 30d
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={setThisMonth}
+                size="sm"
                 type="button"
-                className="h-7 text-xs px-2"
+                variant="outline"
               >
                 This Month
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 px-2 text-xs"
                 onClick={setLastMonth}
+                size="sm"
                 type="button"
-                className="h-7 text-xs px-2"
+                variant="outline"
               >
                 Last Month
               </Button>
@@ -221,20 +223,20 @@ export function ColumnFilterDate({
           {isBetweenOperator ? (
             <div className="overflow-x-auto">
               <Calendar
+                className="origin-top-left scale-90 rounded-md border"
                 mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
                 numberOfMonths={2}
-                className="rounded-md border scale-90 origin-top-left"
+                onSelect={setDateRange}
+                selected={dateRange}
               />
             </div>
           ) : (
             <Calendar
-              mode="single"
-              selected={dateRange?.from}
-              onSelect={(date) => setDateRange(date ? { from: date, to: date } : undefined)}
-              numberOfMonths={1}
               className="rounded-md border"
+              mode="single"
+              numberOfMonths={1}
+              onSelect={(date) => setDateRange(date ? { from: date, to: date } : undefined)}
+              selected={dateRange?.from}
             />
           )}
         </div>
@@ -258,11 +260,11 @@ export function ColumnFilterDate({
       </div>
 
       {/* Action Buttons - Fixed at bottom */}
-      <div className="flex justify-end gap-2 px-4 py-3 border-t bg-background">
-        <Button variant="outline" size="sm" onClick={handleClear}>
+      <div className="flex justify-end gap-2 border-t bg-background px-4 py-3">
+        <Button onClick={handleClear} size="sm" variant="outline">
           Clear
         </Button>
-        <Button size="sm" onClick={handleApply}>
+        <Button onClick={handleApply} size="sm">
           Apply
         </Button>
       </div>

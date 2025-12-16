@@ -4,7 +4,7 @@
  */
 
 // 바이어 추천 타입
-export interface BuyerRecommendation {
+export type BuyerRecommendation = {
   id: string
   country: string
   industry: string
@@ -16,7 +16,7 @@ export interface BuyerRecommendation {
 
 // BigQuery 검색 결과 타입
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
-export interface BigQueryResult {
+export type BigQueryResult = {
   companyName?: string // 회사명
   webAddress?: string // 웹사이트
   website?: string // 웹사이트 (alias)
@@ -35,7 +35,7 @@ export interface BigQueryResult {
 }
 
 // 분석된 페이지 정보
-export interface AnalyzedPage {
+export type AnalyzedPage = {
   url: string
   title?: string
   favicon?: string
@@ -45,7 +45,7 @@ export interface AnalyzedPage {
 }
 
 // 웹사이트 분석 결과
-export interface WebsiteAnalysis {
+export type WebsiteAnalysis = {
   companyName?: string
   description?: string
   industry?: string
@@ -72,7 +72,7 @@ export type SSEEventType =
   | "error"
 
 // SSE 이벤트 데이터
-export interface SSEEventData {
+export type SSEEventData = {
   event: SSEEventType
   sessionId?: string
   node?: string
@@ -89,13 +89,13 @@ export interface SSEEventData {
 }
 
 // API 요청 타입
-export interface LeadDiscoverySearchRequest {
+export type LeadDiscoverySearchRequest = {
   query: string
   workspaceId: string
   locale?: string
 }
 
-export interface LeadDiscoverySelectRequest {
+export type LeadDiscoverySelectRequest = {
   sessionId: string
   selectedRecommendationId: string
   workspaceId: string

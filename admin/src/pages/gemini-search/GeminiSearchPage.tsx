@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { API_BASE_URL } from "@/lib/env"
 
-interface LeadResult {
+type LeadResult = {
   // 기존 필드 (레거시)
   companyName?: string
   website?: string
@@ -48,7 +48,7 @@ interface LeadResult {
   [key: string]: string | number | boolean | undefined
 }
 
-interface UploadedStore {
+type UploadedStore = {
   name: string
   displayName: string
   fileCount: number
@@ -103,7 +103,9 @@ export default function GeminiSearchPage() {
 
   // 고객 그룹 목록 가져오기
   const fetchCustomerGroups = useCallback(async () => {
-    if (!workspaceId || workspaceId === "all") return
+    if (!workspaceId || workspaceId === "all") {
+      return
+    }
 
     try {
       const response = await fetch(
@@ -115,7 +117,9 @@ export default function GeminiSearchPage() {
         },
       )
 
-      if (!response.ok) throw new Error("Failed to fetch customer groups")
+      if (!response.ok) {
+        throw new Error("Failed to fetch customer groups")
+      }
 
       const result = await response.json()
 
@@ -149,7 +153,9 @@ export default function GeminiSearchPage() {
         },
       })
 
-      if (!response.ok) throw new Error("Failed to fetch stores")
+      if (!response.ok) {
+        throw new Error("Failed to fetch stores")
+      }
 
       const result = await response.json()
       if (result.success) {
@@ -291,26 +297,40 @@ export default function GeminiSearchPage() {
 
         // Optional 필드는 값이 있을 때만 추가 (null/undefined 방지)
         const foundCompanyName = result["Company Name"] || result.companyName
-        if (foundCompanyName) lead.foundCompanyName = foundCompanyName
+        if (foundCompanyName) {
+          lead.foundCompanyName = foundCompanyName
+        }
 
         const businessType =
           result["Company Industry"] || result.vertical || result.industry || result.산업
-        if (businessType) lead.businessType = businessType
+        if (businessType) {
+          lead.businessType = businessType
+        }
 
         const websiteUrl =
           result["Company Website"] || result.website || result.웹사이트 || result.url
-        if (websiteUrl && websiteUrl !== "null") lead.websiteUrl = websiteUrl
+        if (websiteUrl && websiteUrl !== "null") {
+          lead.websiteUrl = websiteUrl
+        }
 
         const description = result.description || result.설명
-        if (description && description !== "null") lead.description = description
+        if (description && description !== "null") {
+          lead.description = description
+        }
 
         const country = result.Location || result.country || result.국가
-        if (country) lead.country = country
+        if (country) {
+          lead.country = country
+        }
 
-        if (contactName) lead.contactName = contactName
+        if (contactName) {
+          lead.contactName = contactName
+        }
 
         const primaryEmail = result.Emails || result.email || result.이메일
-        if (primaryEmail) lead.primaryEmail = primaryEmail
+        if (primaryEmail) {
+          lead.primaryEmail = primaryEmail
+        }
 
         return lead
       })
@@ -341,7 +361,7 @@ export default function GeminiSearchPage() {
 
       // HTML 응답인지 먼저 확인
       const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
+      if (!contentType?.includes("application/json")) {
         const text = await response.text()
         console.error("Non-JSON response:", text.substring(0, 500))
         throw new Error(t("gemini-search.error.serverError", { status: response.status }))
@@ -457,14 +477,14 @@ export default function GeminiSearchPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-primary text-primary-foreground rounded-xl shadow-sm">
+    <div className="container mx-auto space-y-6 py-6">
+      <motion.div animate={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 20 }}>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-primary p-3 text-primary-foreground shadow-sm">
             <Sparkles className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{t("gemini-search.header.title")}</h1>
+            <h1 className="font-bold text-3xl">{t("gemini-search.header.title")}</h1>
             <p className="text-muted-foreground">{t("gemini-search.header.description")}</p>
           </div>
         </div>
@@ -475,18 +495,18 @@ export default function GeminiSearchPage() {
           <AlertDescription>{t("gemini-search.alert.adminRequired")}</AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="search" className="space-y-6">
+        <Tabs className="space-y-6" defaultValue="search">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="search">
-              <Search className="h-4 w-4 mr-2" />
+              <Search className="mr-2 h-4 w-4" />
               {t("gemini-search.tabs.search")}
             </TabsTrigger>
             <TabsTrigger value="drive">
-              <Database className="h-4 w-4 mr-2" />
+              <Database className="mr-2 h-4 w-4" />
               {t("gemini-search.tabs.drive")}
             </TabsTrigger>
             <TabsTrigger value="files">
-              <Database className="h-4 w-4 mr-2" />
+              <Database className="mr-2 h-4 w-4" />
               {t("gemini-search.tabs.files")}
             </TabsTrigger>
           </TabsList>
@@ -503,10 +523,10 @@ export default function GeminiSearchPage() {
                   <Label htmlFor={searchQueryId}>{t("gemini-search.search.queryLabel")}</Label>
                   <Textarea
                     id={searchQueryId}
-                    placeholder={t("gemini-search.search.queryPlaceholder")}
-                    value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t("gemini-search.search.queryPlaceholder")}
                     rows={3}
+                    value={searchQuery}
                   />
                 </div>
 
@@ -518,18 +538,18 @@ export default function GeminiSearchPage() {
                     </Label>
                     <Input
                       id={filterCountryId}
+                      onChange={(e) => setFilters({ ...filters, country: e.target.value })}
                       placeholder={t("gemini-search.search.filterCountryPlaceholder")}
                       value={filters.country}
-                      onChange={(e) => setFilters({ ...filters, country: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={filterRegionId}>{t("gemini-search.search.filterRegion")}</Label>
                     <Input
                       id={filterRegionId}
+                      onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                       placeholder={t("gemini-search.search.filterRegionPlaceholder")}
                       value={filters.region}
-                      onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -538,18 +558,18 @@ export default function GeminiSearchPage() {
                     </Label>
                     <Input
                       id={filterVerticalId}
+                      onChange={(e) => setFilters({ ...filters, vertical: e.target.value })}
                       placeholder={t("gemini-search.search.filterVerticalPlaceholder")}
                       value={filters.vertical}
-                      onChange={(e) => setFilters({ ...filters, vertical: e.target.value })}
                     />
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <Button
-                    onClick={handleSearch}
-                    disabled={isSearching || !searchQuery.trim()}
                     className="flex-1"
+                    disabled={isSearching || !searchQuery.trim()}
+                    onClick={handleSearch}
                   >
                     {isSearching ? (
                       <div className="flex items-center gap-2">
@@ -584,15 +604,15 @@ export default function GeminiSearchPage() {
 
                 {/* 리드 선택 및 캠페인 추가 */}
                 {searchResults.length > 0 && (
-                  <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-4 rounded-lg bg-muted p-4">
                     <div className="flex-1">
-                      <p className="text-sm font-medium">
+                      <p className="font-medium text-sm">
                         {selectedLeads.size > 0
                           ? t("gemini-search.search.leadsSelected", { count: selectedLeads.size })
                           : t("gemini-search.search.selectLeadsHint")}
                       </p>
                     </div>
-                    <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                    <Select onValueChange={setSelectedGroupId} value={selectedGroupId}>
                       <SelectTrigger className="w-[250px]">
                         <SelectValue placeholder={t("gemini-search.search.selectGroup")} />
                       </SelectTrigger>
@@ -605,8 +625,8 @@ export default function GeminiSearchPage() {
                       </SelectContent>
                     </Select>
                     <Button
-                      onClick={handleAddToCampaign}
                       disabled={selectedLeads.size === 0 || !selectedGroupId || isAddingToCampaign}
+                      onClick={handleAddToCampaign}
                     >
                       {isAddingToCampaign ? (
                         <div className="flex items-center gap-2">
@@ -643,7 +663,7 @@ export default function GeminiSearchPage() {
 
                 {/* 검색 결과 테이블 - 동적 컬럼 */}
                 {searchResults.length > 0 && (
-                  <div className="border rounded-lg overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-700">
@@ -662,7 +682,7 @@ export default function GeminiSearchPage() {
                             Object.keys(searchResults[0])
                               .filter((key) => key !== "matchReason" && key !== "confidenceScore")
                               .map((key) => (
-                                <TableHead key={key} className="min-w-[120px]">
+                                <TableHead className="min-w-[120px]" key={key}>
                                   {key}
                                 </TableHead>
                               ))}
@@ -677,8 +697,8 @@ export default function GeminiSearchPage() {
                       <TableBody>
                         {searchResults.map((result, idx) => (
                           <TableRow
+                            className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                             key={`result-${idx}-${result.companyName || result["Company Name"] || idx}`}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
                             {/* 선택 체크박스 */}
                             <TableCell>
@@ -697,20 +717,20 @@ export default function GeminiSearchPage() {
                                 const isEmail = typeof value === "string" && value.includes("@")
 
                                 return (
-                                  <TableCell key={key} className="text-sm">
+                                  <TableCell className="text-sm" key={key}>
                                     {isUrl ? (
                                       <a
-                                        href={value}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
                                         className="text-blue-600 hover:underline"
+                                        href={value}
+                                        rel="noopener noreferrer"
+                                        target="_blank"
                                       >
                                         {value}
                                       </a>
                                     ) : isEmail ? (
                                       <a
-                                        href={`mailto:${value}`}
                                         className="text-blue-600 hover:underline"
+                                        href={`mailto:${value}`}
                                       >
                                         {value}
                                       </a>
@@ -739,7 +759,7 @@ export default function GeminiSearchPage() {
                               )}
                             </TableCell>
                             {/* 매칭 이유 */}
-                            <TableCell className="text-sm max-w-xs">
+                            <TableCell className="max-w-xs text-sm">
                               {result.matchReason || "-"}
                             </TableCell>
                           </TableRow>
@@ -751,11 +771,11 @@ export default function GeminiSearchPage() {
 
                 {searchResults.length === 0 && !isSearching && (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <Search className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium text-muted-foreground">
+                    <Search className="mb-4 h-12 w-12 text-muted-foreground" />
+                    <p className="font-medium text-lg text-muted-foreground">
                       {t("gemini-search.search.emptyTitle")}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="mt-1 text-muted-foreground text-sm">
                       {t("gemini-search.search.emptyDescription")}
                     </p>
                   </div>
@@ -777,7 +797,7 @@ export default function GeminiSearchPage() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     <strong>{t("gemini-search.drive.howToUse")}</strong>
-                    <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
+                    <ol className="mt-2 list-inside list-decimal space-y-1 text-sm">
                       <li>{t("gemini-search.drive.step1")}</li>
                       <li>{t("gemini-search.drive.step2")}</li>
                       <li>{t("gemini-search.drive.step3")}</li>
@@ -790,12 +810,12 @@ export default function GeminiSearchPage() {
                   <Label htmlFor={driveUrlId}>{t("gemini-search.drive.urlLabel")}</Label>
                   <Textarea
                     id={driveUrlId}
-                    placeholder={t("gemini-search.drive.urlPlaceholder")}
-                    value={driveUrl}
                     onChange={(e) => setDriveUrl(e.target.value)}
+                    placeholder={t("gemini-search.drive.urlPlaceholder")}
                     rows={3}
+                    value={driveUrl}
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {t("gemini-search.drive.urlHint")}
                   </p>
                 </div>
@@ -805,47 +825,47 @@ export default function GeminiSearchPage() {
                   <Label>{t("gemini-search.drive.metadataLabel")}</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="drive-meta-country" className="text-xs">
+                      <Label className="text-xs" htmlFor="drive-meta-country">
                         {t("gemini-search.drive.metaCountry")}
                       </Label>
                       <Input
                         id={driveMetaCountryId}
+                        onChange={(e) => setMetadata({ ...metadata, country: e.target.value })}
                         placeholder={t("gemini-search.drive.metaCountryPlaceholder")}
                         value={metadata.country}
-                        onChange={(e) => setMetadata({ ...metadata, country: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={driveMetaRegionId} className="text-xs">
+                      <Label className="text-xs" htmlFor={driveMetaRegionId}>
                         {t("gemini-search.drive.metaRegion")}
                       </Label>
                       <Input
                         id={driveMetaRegionId}
+                        onChange={(e) => setMetadata({ ...metadata, region: e.target.value })}
                         placeholder={t("gemini-search.drive.metaRegionPlaceholder")}
                         value={metadata.region}
-                        onChange={(e) => setMetadata({ ...metadata, region: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={driveMetaVerticalId} className="text-xs">
+                      <Label className="text-xs" htmlFor={driveMetaVerticalId}>
                         {t("gemini-search.drive.metaVertical")}
                       </Label>
                       <Input
                         id={driveMetaVerticalId}
+                        onChange={(e) => setMetadata({ ...metadata, vertical: e.target.value })}
                         placeholder={t("gemini-search.drive.metaVerticalPlaceholder")}
                         value={metadata.vertical}
-                        onChange={(e) => setMetadata({ ...metadata, vertical: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={driveMetaSourceId} className="text-xs">
+                      <Label className="text-xs" htmlFor={driveMetaSourceId}>
                         {t("gemini-search.drive.metaSource")}
                       </Label>
                       <Input
                         id={driveMetaSourceId}
+                        onChange={(e) => setMetadata({ ...metadata, source: e.target.value })}
                         placeholder={t("gemini-search.drive.metaSourcePlaceholder")}
                         value={metadata.source}
-                        onChange={(e) => setMetadata({ ...metadata, source: e.target.value })}
                       />
                     </div>
                   </div>
@@ -853,9 +873,9 @@ export default function GeminiSearchPage() {
 
                 {/* 가져오기 버튼 */}
                 <Button
-                  onClick={handleImportFromDrive}
-                  disabled={!driveUrl.trim() || isImportingFromDrive}
                   className="w-full"
+                  disabled={!driveUrl.trim() || isImportingFromDrive}
+                  onClick={handleImportFromDrive}
                 >
                   {isImportingFromDrive ? (
                     <div className="flex items-center gap-2">
@@ -881,11 +901,11 @@ export default function GeminiSearchPage() {
                 </Button>
 
                 {/* 예시 */}
-                <div className="border rounded-lg p-4 bg-muted/50">
-                  <p className="text-sm font-medium mb-2">
+                <div className="rounded-lg border bg-muted/50 p-4">
+                  <p className="mb-2 font-medium text-sm">
                     💡 {t("gemini-search.drive.urlExample")}
                   </p>
-                  <code className="text-xs break-all">
+                  <code className="break-all text-xs">
                     https://drive.google.com/file/d/1a2B3c4D5e6F7g8H9i0J/view
                   </code>
                 </div>
@@ -903,7 +923,7 @@ export default function GeminiSearchPage() {
               <CardContent>
                 {isLoadingStores ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="mb-2 flex items-center gap-2">
                       <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                       <div
                         className="h-2 w-2 animate-pulse rounded-full bg-primary"
@@ -914,12 +934,12 @@ export default function GeminiSearchPage() {
                         style={{ animationDelay: "0.4s" }}
                       />
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {t("gemini-search.files.loading")}
                     </p>
                   </div>
                 ) : uploadedStores.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-hidden rounded-lg border">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-700">
@@ -931,8 +951,8 @@ export default function GeminiSearchPage() {
                       <TableBody>
                         {uploadedStores.map((store) => (
                           <TableRow
+                            className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                             key={store.name}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
                             <TableCell className="font-medium">{store.displayName}</TableCell>
                             <TableCell className="text-sm">
@@ -948,11 +968,11 @@ export default function GeminiSearchPage() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <Database className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium text-muted-foreground">
+                    <Database className="mb-4 h-12 w-12 text-muted-foreground" />
+                    <p className="font-medium text-lg text-muted-foreground">
                       {t("gemini-search.files.emptyTitle")}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="mt-1 text-muted-foreground text-sm">
                       {t("gemini-search.files.emptyDescription")}
                     </p>
                   </div>

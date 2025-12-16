@@ -58,10 +58,13 @@ export default function SequencesPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedSequences.length === 0) return
-
-    if (!confirm(t("sequences.confirm.deleteSequences", { count: selectedSequences.length })))
+    if (selectedSequences.length === 0) {
       return
+    }
+
+    if (!confirm(t("sequences.confirm.deleteSequences", { count: selectedSequences.length }))) {
+      return
+    }
 
     bulkDeleteSequences.mutate(selectedSequences, {
       onSuccess: () => {
@@ -121,17 +124,17 @@ export default function SequencesPage() {
   const selectedStatuses = selectedStatus === "all" ? [] : [selectedStatus]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Dashboard */}
       <SequencesDashboard />
 
       {/* Sequences Table */}
       <Card>
-        <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex flex-col">
             {/* Status Filter Tabs */}
             <div className="mb-4">
-              <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Tabs onValueChange={setSelectedStatus} value={selectedStatus}>
                 <TabsList>
                   <TabsTrigger value="all">{t("sequences.filter.all")}</TabsTrigger>
                   <TabsTrigger value="draft">{t("sequences.table.status.draft")}</TabsTrigger>
@@ -147,21 +150,23 @@ export default function SequencesPage() {
           </div>
           <div className="flex items-center gap-2">
             <ToggleGroup
+              onValueChange={(value) => {
+                if (value) {
+                  setViewMode(value as "list" | "card")
+                }
+              }}
               type="single"
               value={viewMode}
-              onValueChange={(value) => {
-                if (value) setViewMode(value as "list" | "card")
-              }}
             >
-              <ToggleGroupItem value="card" aria-label="카드 뷰">
+              <ToggleGroupItem aria-label="카드 뷰" value="card">
                 <LayoutGrid className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="리스트 뷰">
+              <ToggleGroupItem aria-label="리스트 뷰" value="list">
                 <LayoutList className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
             <Button onClick={handleCreateCampaign} size="sm">
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="mr-1 h-4 w-4" />
               {t("sequences.button.newSequence")}
             </Button>
           </div>
@@ -170,24 +175,24 @@ export default function SequencesPage() {
           {/* Search input */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("sequences.search.placeholder")}
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder={t("sequences.search.placeholder")}
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -195,8 +200,8 @@ export default function SequencesPage() {
 
           {/* Bulk Actions */}
           {selectedSequences.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">
                   {selectedSequences.length}
                   {t("sequences.status.selectedCount")}
@@ -204,28 +209,28 @@ export default function SequencesPage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-green-600 hover:bg-green-50 hover:text-green-700"
                   onClick={handleBulkStart}
-                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                  size="sm"
+                  variant="outline"
                 >
                   {t("sequences.button.bulkStart")}
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                   onClick={handleBulkPause}
-                  className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                  size="sm"
+                  variant="outline"
                 >
                   {t("sequences.button.bulkPause")}
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   {t("sequences.button.deleteSelected")}
                 </Button>
               </div>
@@ -235,20 +240,20 @@ export default function SequencesPage() {
           {/* Sequences View */}
           {viewMode === "list" ? (
             <SequencesTableWithPagination
-              searchQuery={searchQuery}
-              selectedStatuses={selectedStatuses}
-              selectedSequences={selectedSequences}
-              onToggleSequence={toggleSequenceSelection}
-              onToggleAll={toggleAllSequences}
               onEditSequence={handleEditSequence}
+              onToggleAll={toggleAllSequences}
+              onToggleSequence={toggleSequenceSelection}
+              searchQuery={searchQuery}
+              selectedSequences={selectedSequences}
+              selectedStatuses={selectedStatuses}
             />
           ) : (
             <CampaignCardView
-              searchQuery={searchQuery}
-              selectedStatuses={selectedStatuses}
-              selectedSequences={selectedSequences}
-              onToggleSequence={toggleSequenceSelection}
               onEditSequence={handleEditSequence}
+              onToggleSequence={toggleSequenceSelection}
+              searchQuery={searchQuery}
+              selectedSequences={selectedSequences}
+              selectedStatuses={selectedStatuses}
             />
           )}
         </CardContent>

@@ -18,7 +18,7 @@ import { apiFetch } from "@/lib/api/client"
 import { useCompleteStep1, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
-interface SalesStrategyData {
+type SalesStrategyData = {
   industry: string
   target: string
   country: string
@@ -173,10 +173,7 @@ export function StepCompanyInfo() {
 
     // 필수 필드 검증
     if (
-      !editedData.industry ||
-      !editedData.target ||
-      !editedData.country ||
-      !editedData.experience
+      !(editedData.industry && editedData.target && editedData.country && editedData.experience)
     ) {
       console.log("[StepCompanyInfo] ❌ Missing required fields")
       toast.error(isKorean ? "모든 필드를 입력해주세요" : "Please fill in all fields")
@@ -243,18 +240,20 @@ export function StepCompanyInfo() {
     value: string,
   ): string => {
     const option = options.find((opt) => opt.value === value)
-    if (!option) return value
+    if (!option) {
+      return value
+    }
     return isKorean ? option.ko : option.en
   }
 
   // Show loading spinner
   if (isLoadingWorkspaces || isLoading) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2" />
             </div>
           </CardContent>
         </Card>
@@ -265,7 +264,7 @@ export function StepCompanyInfo() {
   // Show message if no workspace is available
   if (!workspace) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">
@@ -273,17 +272,17 @@ export function StepCompanyInfo() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
+            <div className="py-8 text-center">
+              <p className="mb-4 text-gray-600">
                 {isKorean
                   ? "온보딩을 진행하려면 워크스페이스가 필요합니다. 워크스페이스를 먼저 생성해주세요."
                   : "A workspace is required to proceed with onboarding. Please create a workspace first."}
               </p>
               <Button
-                onClick={() => navigate("/settings?tab=workspaces")}
                 className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => navigate("/settings?tab=workspaces")}
               >
-                <Settings className="w-4 h-4 mr-2" />
+                <Settings className="mr-2 h-4 w-4" />
                 {isKorean ? "워크스페이스 생성하러 가기" : "Go to Create Workspace"}
               </Button>
             </div>
@@ -294,22 +293,22 @@ export function StepCompanyInfo() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-2xl">
               {isKorean ? "정보 입력" : "Enter Information"}
             </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="mt-1 text-gray-600 text-sm">
               {isKorean
                 ? "온보딩에서 입력하신 정보를 확인하고 수정할 수 있습니다"
                 : "Review and edit the information you entered during onboarding"}
             </p>
           </div>
           {salesStrategy && !isEditing && (
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit3 className="w-4 h-4 mr-2" />
+            <Button onClick={handleEdit} size="sm" variant="outline">
+              <Edit3 className="mr-2 h-4 w-4" />
               {isKorean ? "수정" : "Edit"}
             </Button>
           )}
@@ -321,23 +320,23 @@ export function StepCompanyInfo() {
               <div className="space-y-4">
                 {/* Website URL */}
                 <div className="space-y-2">
-                  <Label htmlFor={websiteUrlId} className="flex items-center gap-2">
-                    <Globe className="w-4 h-4" />
+                  <Label className="flex items-center gap-2" htmlFor={websiteUrlId}>
+                    <Globe className="h-4 w-4" />
                     {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
-                    <span className="text-gray-400 font-normal text-sm">
+                    <span className="font-normal text-gray-400 text-sm">
                       {isKorean ? "(선택사항)" : "(Optional)"}
                     </span>
                   </Label>
                   <Input
                     id={websiteUrlId}
-                    type="url"
-                    placeholder="https://example.com"
-                    value={editedData.websiteUrl}
                     onChange={(e) =>
                       setEditedData((prev) => ({ ...prev, websiteUrl: e.target.value }))
                     }
+                    placeholder="https://example.com"
+                    type="url"
+                    value={editedData.websiteUrl}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-gray-500 text-xs">
                     {isKorean
                       ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다 (건너뛰기 가능)"
                       : "Enter your website for more accurate lead discovery (can be skipped)"}
@@ -348,10 +347,10 @@ export function StepCompanyInfo() {
                 <div className="space-y-2">
                   <Label>{isKorean ? "산업군" : "Industry"}</Label>
                   <Select
-                    value={editedData.industry}
                     onValueChange={(value) =>
                       setEditedData((prev) => ({ ...prev, industry: value }))
                     }
+                    value={editedData.industry}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isKorean ? "산업군 선택" : "Select industry"} />
@@ -370,8 +369,8 @@ export function StepCompanyInfo() {
                 <div className="space-y-2">
                   <Label>{isKorean ? "타겟 고객" : "Target Customer"}</Label>
                   <Select
-                    value={editedData.target}
                     onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
+                    value={editedData.target}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isKorean ? "타겟 고객 선택" : "Select target"} />
@@ -390,10 +389,10 @@ export function StepCompanyInfo() {
                 <div className="space-y-2">
                   <Label>{isKorean ? "희망 진출 국가" : "Target Country"}</Label>
                   <Select
-                    value={editedData.country}
                     onValueChange={(value) =>
                       setEditedData((prev) => ({ ...prev, country: value }))
                     }
+                    value={editedData.country}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isKorean ? "국가 선택" : "Select country"} />
@@ -412,10 +411,10 @@ export function StepCompanyInfo() {
                 <div className="space-y-2">
                   <Label>{isKorean ? "수출 경험" : "Export Experience"}</Label>
                   <Select
-                    value={editedData.experience}
                     onValueChange={(value) =>
                       setEditedData((prev) => ({ ...prev, experience: value }))
                     }
+                    value={editedData.experience}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isKorean ? "경험 선택" : "Select experience"} />
@@ -433,15 +432,15 @@ export function StepCompanyInfo() {
 
               {/* Edit action buttons */}
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-                  <X className="w-4 h-4 mr-2" />
+                <Button disabled={isSaving} onClick={handleCancel} variant="outline">
+                  <X className="mr-2 h-4 w-4" />
                   {isKorean ? "취소" : "Cancel"}
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
+                <Button disabled={isSaving} onClick={handleSave}>
                   {isSaving ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-white border-b-2" />
                   ) : (
-                    <Save className="w-4 h-4 mr-2" />
+                    <Save className="mr-2 h-4 w-4" />
                   )}
                   {isKorean ? "저장" : "Save"}
                 </Button>
@@ -452,68 +451,68 @@ export function StepCompanyInfo() {
             <>
               <div className="space-y-4">
                 {/* Website URL */}
-                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <Globe className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-600" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 text-sm">
                       {isKorean ? "회사 웹사이트" : "Company Website"}
-                      <span className="text-gray-400 font-normal ml-1">
+                      <span className="ml-1 font-normal text-gray-400">
                         {isKorean ? "(선택사항)" : "(Optional)"}
                       </span>
                     </div>
-                    <div className="text-base font-semibold text-gray-900 mt-1">
+                    <div className="mt-1 font-semibold text-base text-gray-900">
                       {editedData.websiteUrl || (isKorean ? "미입력" : "Not entered")}
                     </div>
                   </div>
                 </div>
 
                 {/* Industry */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 text-sm">
                       {isKorean ? "산업군" : "Industry"}
                     </div>
-                    <div className="text-base font-semibold text-gray-900 mt-1">
+                    <div className="mt-1 font-semibold text-base text-gray-900">
                       {getLabel(INDUSTRY_OPTIONS, salesStrategy.industry)}
                     </div>
                   </div>
                 </div>
 
                 {/* Target Customer */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 text-sm">
                       {isKorean ? "타겟 고객" : "Target Customer"}
                     </div>
-                    <div className="text-base font-semibold text-gray-900 mt-1">
+                    <div className="mt-1 font-semibold text-base text-gray-900">
                       {getLabel(TARGET_OPTIONS, salesStrategy.target)}
                     </div>
                   </div>
                 </div>
 
                 {/* Target Country */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 text-sm">
                       {isKorean ? "희망 진출 국가" : "Target Country"}
                     </div>
-                    <div className="text-base font-semibold text-gray-900 mt-1">
+                    <div className="mt-1 font-semibold text-base text-gray-900">
                       {getLabel(COUNTRY_OPTIONS, salesStrategy.country)}
                     </div>
                   </div>
                 </div>
 
                 {/* Export Experience */}
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 text-sm">
                       {isKorean ? "수출 경험" : "Export Experience"}
                     </div>
-                    <div className="text-base font-semibold text-gray-900 mt-1">
+                    <div className="mt-1 font-semibold text-base text-gray-900">
                       {getLabel(EXPERIENCE_OPTIONS, salesStrategy.experience)}
                     </div>
                   </div>
@@ -522,23 +521,23 @@ export function StepCompanyInfo() {
 
               {/* Next Button */}
               <div className="flex justify-end pt-4">
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
                   {t("app.onboarding.step1.nextButton", "다음 단계")}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </>
           ) : (
             // No data found
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
+            <div className="py-8 text-center">
+              <p className="mb-4 text-gray-600">
                 {isKorean
                   ? "설문 정보를 찾을 수 없습니다. 계속 진행하시겠습니까?"
                   : "Survey information not found. Would you like to continue?"}
               </p>
-              <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
                 {t("app.onboarding.step1.nextButton", "다음 단계")}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           )}

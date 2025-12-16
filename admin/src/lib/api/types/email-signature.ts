@@ -1,5 +1,5 @@
 // Email Signature Types
-export interface EmailSignature {
+export type EmailSignature = {
   id: string
   userId: string | null
   workspaceId: string | null
@@ -15,14 +15,14 @@ export interface EmailSignature {
   userEmail?: string
 }
 
-export interface CreateEmailSignatureRequest {
+export type CreateEmailSignatureRequest = {
   name: string
   signatureHtml: string
   signatureText: string
   isActive?: boolean
 }
 
-export interface UpdateEmailSignatureRequest {
+export type UpdateEmailSignatureRequest = {
   name?: string
   signatureHtml?: string
   signatureText?: string

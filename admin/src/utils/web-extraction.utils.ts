@@ -6,18 +6,22 @@
  * Format file size to human-readable format
  */
 export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return "0 Bytes"
+  if (bytes === 0) {
+    return "0 Bytes"
+  }
   const k = 1024
   const sizes = ["Bytes", "KB", "MB", "GB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 
 /**
  * Format date for API key display
  */
 export const formatDate = (dateString: string | null): string => {
-  if (!dateString) return "사용 안함"
+  if (!dateString) {
+    return "사용 안함"
+  }
   const date = new Date(dateString)
   return date.toLocaleString("ko-KR", {
     month: "short",
@@ -31,10 +35,14 @@ export const formatDate = (dateString: string | null): string => {
  * Format collected_at date for table display
  */
 export const formatCollectedAt = (dateString: string | null | undefined): string => {
-  if (!dateString) return "-"
+  if (!dateString) {
+    return "-"
+  }
   try {
     const date = new Date(dateString)
-    if (Number.isNaN(date.getTime())) return dateString
+    if (Number.isNaN(date.getTime())) {
+      return dateString
+    }
 
     return date.toLocaleString("ko-KR", {
       year: "numeric",
@@ -54,7 +62,9 @@ export const formatCollectedAt = (dateString: string | null | undefined): string
  * Mask API key for secure display
  */
 export const maskApiKey = (key: string): string => {
-  if (key.length <= 8) return "•".repeat(key.length)
+  if (key.length <= 8) {
+    return "•".repeat(key.length)
+  }
   return `${key.slice(0, 7)}${"•".repeat(Math.max(0, key.length - 11))}${key.slice(-4)}`
 }
 
@@ -62,7 +72,9 @@ export const maskApiKey = (key: string): string => {
  * Normalize URL to ensure it has a protocol
  */
 export const normalizeUrl = (url: string | null | undefined): string | null => {
-  if (!url || url.trim() === "") return null
+  if (!url || url.trim() === "") {
+    return null
+  }
 
   const trimmedUrl = url.trim()
 

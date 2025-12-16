@@ -23,15 +23,15 @@ import type { PermissionContextType } from "./types"
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined)
 
-interface PermissionProviderProps {
+type PermissionProviderProps = {
   children: ReactNode
 }
 
 export function PermissionProvider({ children }: PermissionProviderProps) {
   // 로그인 상태 확인 (authToken 존재 여부)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem("authToken")
-  })
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    () => !!localStorage.getItem("authToken"),
+  )
 
   // localStorage에서 선택된 워크스페이스 가져오기
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => {
@@ -90,10 +90,14 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
   const hasPermission = useCallback(
     (resource: IamResource, action: IamAction): boolean => {
       // Admin은 모든 권한 허용
-      if (isAdmin) return true
+      if (isAdmin) {
+        return true
+      }
 
       // 워크스페이스가 없으면 권한 없음
-      if (!workspaceId) return false
+      if (!workspaceId) {
+        return false
+      }
 
       // permissionData에서 권한 확인
       const permissions = permissionData?.permissions ?? []
@@ -111,10 +115,14 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
   const checkPermissionAsync = useCallback(
     async (resource: IamResource, action: IamAction): Promise<boolean> => {
       // Admin은 모든 권한 허용
-      if (isAdmin) return true
+      if (isAdmin) {
+        return true
+      }
 
       // 워크스페이스가 없으면 권한 없음
-      if (!workspaceId) return false
+      if (!workspaceId) {
+        return false
+      }
 
       try {
         // API 호출 (캐시 없이 직접 호출)

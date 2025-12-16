@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead } from "@/lib/api/types/lead"
 
-interface LeadGroupManagementModalProps {
+type LeadGroupManagementModalProps = {
   lead: Lead | null
   isOpen: boolean
   onClose: () => void
@@ -56,7 +56,9 @@ export function LeadGroupManagementModal({
   }
 
   const handleSave = async () => {
-    if (!lead) return
+    if (!lead) {
+      return
+    }
 
     const currentGroupIds = new Set(currentGroups.map((g) => g.id))
     const groupsToAdd = Array.from(selectedGroups).filter((id) => !currentGroupIds.has(id))
@@ -79,58 +81,60 @@ export function LeadGroupManagementModal({
     }
   }
 
-  if (!lead) return null
+  if (!lead) {
+    return null
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>리드 그룹 관리</DialogTitle>
-          <div className="text-sm text-muted-foreground mt-2">
+          <div className="mt-2 text-muted-foreground text-sm">
             {lead.companyName || lead.foundCompanyName}
           </div>
         </DialogHeader>
         <div className="py-4">
           {availableGroups.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <div className="py-8 text-center text-muted-foreground">
+              <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
               <p>사용 가능한 그룹이 없습니다</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="max-h-96 space-y-3 overflow-y-auto">
               {availableGroups.map((group) => {
                 const isSelected = selectedGroups.has(group.id)
                 const wasPreviouslyInGroup = currentGroups.some((g) => g.id === group.id)
 
                 return (
                   <div
+                    className="flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
                     key={group.id}
-                    className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors"
                   >
                     <Checkbox
-                      id={`group-${group.id}`}
                       checked={isSelected}
+                      id={`group-${group.id}`}
                       onCheckedChange={() => handleToggleGroup(group.id)}
                     />
                     <Label
+                      className="flex flex-1 cursor-pointer items-center justify-between"
                       htmlFor={`group-${group.id}`}
-                      className="flex-1 cursor-pointer flex items-center justify-between"
                     >
                       <div>
-                        <div className="font-medium flex items-center gap-2">
+                        <div className="flex items-center gap-2 font-medium">
                           {group.name}
                           {wasPreviouslyInGroup && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge className="text-xs" variant="secondary">
                               현재 속함
                             </Badge>
                           )}
                         </div>
                         {group.description && (
-                          <div className="text-sm text-muted-foreground">{group.description}</div>
+                          <div className="text-muted-foreground text-sm">{group.description}</div>
                         )}
                       </div>
                       {group.leadCount !== undefined && (
-                        <Badge variant="outline" className="ml-2">
+                        <Badge className="ml-2" variant="outline">
                           {group.leadCount}
                         </Badge>
                       )}
@@ -142,10 +146,10 @@ export function LeadGroupManagementModal({
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <Button disabled={isSubmitting} onClick={onClose} variant="outline">
             취소
           </Button>
-          <Button onClick={handleSave} disabled={isSubmitting}>
+          <Button disabled={isSubmitting} onClick={handleSave}>
             {isSubmitting ? "저장 중..." : "저장"}
           </Button>
         </DialogFooter>

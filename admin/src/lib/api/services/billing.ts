@@ -36,9 +36,15 @@ export const billingProductsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
-    if (params?.tier && params.tier !== "all") searchParams.append("tier", params.tier)
-    if (params?.isActive !== undefined) searchParams.append("isActive", String(params.isActive))
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params?.tier && params.tier !== "all") {
+      searchParams.append("tier", params.tier)
+    }
+    if (params?.isActive !== undefined) {
+      searchParams.append("isActive", String(params.isActive))
+    }
 
     const query = searchParams.toString()
     const response = await apiFetch<{
@@ -57,29 +63,24 @@ export const billingProductsApi = {
     }
   },
 
-  get: (productId: string) => {
-    return apiFetch<BillingProduct>(`/api/v1/billing/products/${productId}`)
-  },
+  get: (productId: string) => apiFetch<BillingProduct>(`/api/v1/billing/products/${productId}`),
 
-  create: (data: CreateBillingProductRequest) => {
-    return apiFetch<BillingProduct>("/api/v1/billing/products", {
+  create: (data: CreateBillingProductRequest) =>
+    apiFetch<BillingProduct>("/api/v1/billing/products", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (productId: string, data: UpdateBillingProductRequest) => {
-    return apiFetch<BillingProduct>(`/api/v1/billing/products/${productId}`, {
+  update: (productId: string, data: UpdateBillingProductRequest) =>
+    apiFetch<BillingProduct>(`/api/v1/billing/products/${productId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (productId: string) => {
-    return apiFetch(`/api/v1/billing/products/${productId}`, {
+  delete: (productId: string) =>
+    apiFetch(`/api/v1/billing/products/${productId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 }
 
 // ============================================================================
@@ -97,11 +98,18 @@ export const billingPlansApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
-    if (params?.productId) searchParams.append("productId", params.productId)
-    if (params?.planType && params.planType !== "all")
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params?.productId) {
+      searchParams.append("productId", params.productId)
+    }
+    if (params?.planType && params.planType !== "all") {
       searchParams.append("planType", params.planType)
-    if (params?.isActive !== undefined) searchParams.append("isActive", String(params.isActive))
+    }
+    if (params?.isActive !== undefined) {
+      searchParams.append("isActive", String(params.isActive))
+    }
 
     const query = searchParams.toString()
     const response = await apiFetch<{
@@ -120,29 +128,24 @@ export const billingPlansApi = {
     }
   },
 
-  get: (planId: string) => {
-    return apiFetch<BillingPlan>(`/api/v1/billing/plans/${planId}`)
-  },
+  get: (planId: string) => apiFetch<BillingPlan>(`/api/v1/billing/plans/${planId}`),
 
-  create: (data: CreateBillingPlanRequest) => {
-    return apiFetch<BillingPlan>("/api/v1/billing/plans", {
+  create: (data: CreateBillingPlanRequest) =>
+    apiFetch<BillingPlan>("/api/v1/billing/plans", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (planId: string, data: UpdateBillingPlanRequest) => {
-    return apiFetch<BillingPlan>(`/api/v1/billing/plans/${planId}`, {
+  update: (planId: string, data: UpdateBillingPlanRequest) =>
+    apiFetch<BillingPlan>(`/api/v1/billing/plans/${planId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (planId: string) => {
-    return apiFetch(`/api/v1/billing/plans/${planId}`, {
+  delete: (planId: string) =>
+    apiFetch(`/api/v1/billing/plans/${planId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 }
 
 // ============================================================================
@@ -160,14 +163,24 @@ export const subscriptionsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
-    if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params?.status && params.status !== "all") searchParams.append("status", params.status)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.status && params.status !== "all") {
+      searchParams.append("status", params.status)
+    }
     if (params?.statuses && params.statuses.length > 0) {
       searchParams.append("statuses", params.statuses.join(","))
     }
-    if (params?.tier && params.tier !== "all") searchParams.append("tier", params.tier)
-    if (params?.isPrimary !== undefined) searchParams.append("isPrimary", String(params.isPrimary))
+    if (params?.tier && params.tier !== "all") {
+      searchParams.append("tier", params.tier)
+    }
+    if (params?.isPrimary !== undefined) {
+      searchParams.append("isPrimary", String(params.isPrimary))
+    }
 
     const query = searchParams.toString()
     const response = await apiFetch<{
@@ -186,36 +199,29 @@ export const subscriptionsApi = {
     }
   },
 
-  get: (subscriptionId: string) => {
-    return apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}`)
-  },
+  get: (subscriptionId: string) =>
+    apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}`),
 
-  create: (data: CreateSubscriptionRequest) => {
-    return apiFetch<Subscription>("/api/v1/billing/subscriptions", {
+  create: (data: CreateSubscriptionRequest) =>
+    apiFetch<Subscription>("/api/v1/billing/subscriptions", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (subscriptionId: string, data: UpdateSubscriptionRequest) => {
-    return apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}`, {
+  update: (subscriptionId: string, data: UpdateSubscriptionRequest) =>
+    apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  cancel: (subscriptionId: string, reason?: string) => {
-    return apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}/cancel`, {
+  cancel: (subscriptionId: string, reason?: string) =>
+    apiFetch<Subscription>(`/api/v1/billing/subscriptions/${subscriptionId}/cancel`, {
       method: "POST",
       body: JSON.stringify({ reason }),
-    })
-  },
+    }),
 
-  getHistory: (subscriptionId: string) => {
-    return apiFetch<SubscriptionHistory[]>(
-      `/api/v1/billing/subscriptions/${subscriptionId}/history`,
-    )
-  },
+  getHistory: (subscriptionId: string) =>
+    apiFetch<SubscriptionHistory[]>(`/api/v1/billing/subscriptions/${subscriptionId}/history`),
 }
 
 // ============================================================================
@@ -233,7 +239,9 @@ export const billingCustomersApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
 
     const query = searchParams.toString()
     const response = await apiFetch<{
@@ -252,7 +260,5 @@ export const billingCustomersApi = {
     }
   },
 
-  get: (customerId: string) => {
-    return apiFetch<BillingCustomer>(`/api/v1/billing/customers/${customerId}`)
-  },
+  get: (customerId: string) => apiFetch<BillingCustomer>(`/api/v1/billing/customers/${customerId}`),
 }

@@ -7,43 +7,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 // CSS-based Spinner Components
 function DotSpinner() {
   return (
-    <div className="flex gap-1 items-center">
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+    <div className="flex items-center gap-1">
+      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]" />
+      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]" />
+      <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
     </div>
   )
 }
 
 function RippleSpinner() {
   return (
-    <div className="relative w-8 h-8">
-      <div className="absolute inset-0 border-2 border-blue-500/30 rounded-full animate-ping" />
-      <div className="absolute inset-1 border-2 border-blue-500/50 rounded-full animate-ping [animation-delay:0.3s]" />
-      <div className="absolute inset-2 border-2 border-blue-500 rounded-full animate-ping [animation-delay:0.6s]" />
+    <div className="relative h-8 w-8">
+      <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/30" />
+      <div className="absolute inset-1 animate-ping rounded-full border-2 border-blue-500/50 [animation-delay:0.3s]" />
+      <div className="absolute inset-2 animate-ping rounded-full border-2 border-blue-500 [animation-delay:0.6s]" />
     </div>
   )
 }
 
 function PulseSpinner() {
   return (
-    <div className="w-6 h-6 bg-blue-500 rounded-full animate-pulse shadow-lg shadow-blue-500/50" />
+    <div className="h-6 w-6 animate-pulse rounded-full bg-blue-500 shadow-blue-500/50 shadow-lg" />
   )
 }
 
 function RotatingSpinner() {
   return (
-    <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+    <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-500" />
   )
 }
 
 function BarSpinner() {
   return (
-    <div className="flex gap-1 items-end h-6">
-      {[...Array(5)].map((_, i) => (
+    <div className="flex h-6 items-end gap-1">
+      {[...new Array(5)].map((_, i) => (
         <div
+          className="w-1 animate-pulse rounded-full bg-blue-500"
           key={i}
-          className="w-1 bg-blue-500 rounded-full animate-pulse"
           style={{
             height: `${20 + i * 10}%`,
             animationDelay: `${i * 0.15}s`,
@@ -65,17 +65,17 @@ function MotionDotSpinner() {
     <div className="flex gap-1">
       {[0, 1, 2].map((i) => (
         <motion.div
-          key={i}
-          className="w-2 h-2 bg-blue-500 rounded-full"
-          variants={dotVariants}
-          initial="initial"
           animate="animate"
+          className="h-2 w-2 rounded-full bg-blue-500"
+          initial="initial"
+          key={i}
           transition={{
             duration: 0.5,
             repeat: Number.POSITIVE_INFINITY,
             repeatType: "reverse",
             delay: i * 0.15,
           }}
+          variants={dotVariants}
         />
       ))}
     </div>
@@ -85,8 +85,8 @@ function MotionDotSpinner() {
 function MotionCircleSpinner() {
   return (
     <motion.div
-      className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full"
       animate={{ rotate: 360 }}
+      className="h-6 w-6 rounded-full border-2 border-blue-200 border-t-blue-500"
       transition={{
         duration: 1,
         repeat: Number.POSITIVE_INFINITY,
@@ -102,16 +102,16 @@ function MotionScaleSpinner() {
     "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"
 
   return (
-    <div className="relative w-8 h-8">
+    <div className="relative h-8 w-8">
       {/* Main star */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
-        style={{
-          clipPath: starPath,
-        }}
         animate={{
           scale: [1, 1.3, 1],
           rotate: [0, 180, 360],
+        }}
+        className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
+        style={{
+          clipPath: starPath,
         }}
         transition={{
           duration: 2,
@@ -122,14 +122,14 @@ function MotionScaleSpinner() {
 
       {/* Inner star glow */}
       <motion.div
-        className="absolute inset-2 bg-blue-300"
-        style={{
-          clipPath: starPath,
-        }}
         animate={{
           scale: [1, 1.5, 1],
           rotate: [360, 180, 0],
           opacity: [0.6, 1, 0.6],
+        }}
+        className="absolute inset-2 bg-blue-300"
+        style={{
+          clipPath: starPath,
         }}
         transition={{
           duration: 2,
@@ -140,15 +140,15 @@ function MotionScaleSpinner() {
 
       {/* Outer glow effect */}
       <motion.div
+        animate={{
+          scale: [1.2, 1.5, 1.2],
+          opacity: [0.4, 0.7, 0.4],
+        }}
         className="absolute inset-0"
         style={{
           clipPath: starPath,
           filter: "blur(8px)",
           background: "radial-gradient(circle, rgba(59, 130, 246, 0.6), transparent)",
-        }}
-        animate={{
-          scale: [1.2, 1.5, 1.2],
-          opacity: [0.4, 0.7, 0.4],
         }}
         transition={{
           duration: 2,
@@ -165,13 +165,13 @@ function Cube3DSpinner() {
   return (
     <div className="perspective-1000">
       <motion.div
-        className="relative w-8 h-8"
-        style={{
-          transformStyle: "preserve-3d",
-        }}
         animate={{
           rotateX: 360,
           rotateY: 360,
+        }}
+        className="relative h-8 w-8"
+        style={{
+          transformStyle: "preserve-3d",
         }}
         transition={{
           duration: 3,
@@ -181,32 +181,32 @@ function Cube3DSpinner() {
       >
         {/* Front */}
         <div
-          className="absolute inset-0 bg-blue-500/80 border border-blue-600"
+          className="absolute inset-0 border border-blue-600 bg-blue-500/80"
           style={{ transform: "translateZ(16px)" }}
         />
         {/* Back */}
         <div
-          className="absolute inset-0 bg-purple-500/80 border border-purple-600"
+          className="absolute inset-0 border border-purple-600 bg-purple-500/80"
           style={{ transform: "translateZ(-16px) rotateY(180deg)" }}
         />
         {/* Right */}
         <div
-          className="absolute inset-0 bg-cyan-500/80 border border-cyan-600"
+          className="absolute inset-0 border border-cyan-600 bg-cyan-500/80"
           style={{ transform: "rotateY(90deg) translateZ(16px)" }}
         />
         {/* Left */}
         <div
-          className="absolute inset-0 bg-pink-500/80 border border-pink-600"
+          className="absolute inset-0 border border-pink-600 bg-pink-500/80"
           style={{ transform: "rotateY(-90deg) translateZ(16px)" }}
         />
         {/* Top */}
         <div
-          className="absolute inset-0 bg-green-500/80 border border-green-600"
+          className="absolute inset-0 border border-green-600 bg-green-500/80"
           style={{ transform: "rotateX(90deg) translateZ(16px)" }}
         />
         {/* Bottom */}
         <div
-          className="absolute inset-0 bg-orange-500/80 border border-orange-600"
+          className="absolute inset-0 border border-orange-600 bg-orange-500/80"
           style={{ transform: "rotateX(-90deg) translateZ(16px)" }}
         />
       </motion.div>
@@ -216,21 +216,21 @@ function Cube3DSpinner() {
 
 function Sphere3DSpinner() {
   return (
-    <div className="relative w-8 h-8">
+    <div className="relative h-8 w-8">
       <motion.div
+        animate={{ rotateY: 360 }}
         className="absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateY: 360 }}
         transition={{
           duration: 2,
           repeat: Number.POSITIVE_INFINITY,
           ease: "linear",
         }}
       >
-        {[...Array(8)].map((_, i) => (
+        {[...new Array(8)].map((_, i) => (
           <motion.div
+            className="absolute h-full w-full rounded-full border border-blue-500"
             key={i}
-            className="absolute w-full h-full border border-blue-500 rounded-full"
             style={{
               transform: `rotateY(${i * 22.5}deg)`,
               opacity: 0.6,
@@ -239,10 +239,10 @@ function Sphere3DSpinner() {
         ))}
       </motion.div>
       <motion.div
-        className="absolute inset-2 bg-blue-500 rounded-full"
         animate={{
           scale: [1, 1.2, 1],
         }}
+        className="absolute inset-2 rounded-full bg-blue-500"
         transition={{
           duration: 1.5,
           repeat: Number.POSITIVE_INFINITY,
@@ -255,24 +255,24 @@ function Sphere3DSpinner() {
 
 function Ring3DSpinner() {
   return (
-    <div className="relative w-10 h-10">
+    <div className="relative h-10 w-10">
       <motion.div
-        className="absolute inset-0"
-        style={{ transformStyle: "preserve-3d" }}
         animate={{
           rotateX: [0, 360],
           rotateZ: [0, 180],
         }}
+        className="absolute inset-0"
+        style={{ transformStyle: "preserve-3d" }}
         transition={{
           duration: 3,
           repeat: Number.POSITIVE_INFINITY,
           ease: "linear",
         }}
       >
-        {[...Array(12)].map((_, i) => (
+        {[...new Array(12)].map((_, i) => (
           <div
+            className="absolute h-1.5 w-1.5 rounded-full bg-blue-500"
             key={i}
-            className="absolute w-1.5 h-1.5 bg-blue-500 rounded-full"
             style={{
               transform: `rotateZ(${i * 30}deg) translateY(-16px)`,
               transformStyle: "preserve-3d",
@@ -286,29 +286,29 @@ function Ring3DSpinner() {
 
 function DNA3DSpinner() {
   return (
-    <div className="relative w-10 h-12">
+    <div className="relative h-12 w-10">
       <motion.div
+        animate={{ rotateY: 360 }}
         className="absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateY: 360 }}
         transition={{
           duration: 3,
           repeat: Number.POSITIVE_INFINITY,
           ease: "linear",
         }}
       >
-        {[...Array(8)].map((_, i) => (
+        {[...new Array(8)].map((_, i) => (
           <div key={i}>
             {/* Left strand */}
             <motion.div
-              className="absolute w-1 h-1 bg-blue-500 rounded-full"
+              animate={{
+                scale: [1, 1.3, 1],
+              }}
+              className="absolute h-1 w-1 rounded-full bg-blue-500"
               style={{
                 left: "20%",
                 top: `${i * 12}%`,
                 transform: `rotateY(${i * 45}deg) translateZ(10px)`,
-              }}
-              animate={{
-                scale: [1, 1.3, 1],
               }}
               transition={{
                 duration: 1.5,
@@ -318,14 +318,14 @@ function DNA3DSpinner() {
             />
             {/* Right strand */}
             <motion.div
-              className="absolute w-1 h-1 bg-purple-500 rounded-full"
+              animate={{
+                scale: [1, 1.3, 1],
+              }}
+              className="absolute h-1 w-1 rounded-full bg-purple-500"
               style={{
                 right: "20%",
                 top: `${i * 12}%`,
                 transform: `rotateY(${i * 45 + 180}deg) translateZ(10px)`,
-              }}
-              animate={{
-                scale: [1, 1.3, 1],
               }}
               transition={{
                 duration: 1.5,
@@ -342,14 +342,14 @@ function DNA3DSpinner() {
 
 function Orbit3DSpinner() {
   return (
-    <div className="relative w-10 h-10">
+    <div className="relative h-10 w-10">
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-2 h-2 bg-blue-600 rounded-full z-10" />
+        <div className="z-10 h-2 w-2 rounded-full bg-blue-600" />
       </div>
       <motion.div
+        animate={{ rotateY: 360 }}
         className="absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateY: 360 }}
         transition={{
           duration: 2,
           repeat: Number.POSITIVE_INFINITY,
@@ -357,7 +357,7 @@ function Orbit3DSpinner() {
         }}
       >
         <motion.div
-          className="absolute w-1.5 h-1.5 bg-blue-400 rounded-full"
+          className="absolute h-1.5 w-1.5 rounded-full bg-blue-400"
           style={{
             top: "50%",
             left: "50%",
@@ -368,9 +368,9 @@ function Orbit3DSpinner() {
         />
       </motion.div>
       <motion.div
+        animate={{ rotateX: 360 }}
         className="absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateX: 360 }}
         transition={{
           duration: 1.5,
           repeat: Number.POSITIVE_INFINITY,
@@ -378,7 +378,7 @@ function Orbit3DSpinner() {
         }}
       >
         <motion.div
-          className="absolute w-1 h-1 bg-purple-400 rounded-full"
+          className="absolute h-1 w-1 rounded-full bg-purple-400"
           style={{
             top: "50%",
             left: "50%",
@@ -398,7 +398,7 @@ function Globe3DSpinner() {
   const lonSegments = 24
 
   return (
-    <div className="relative w-24 h-24">
+    <div className="relative h-24 w-24">
       {/* Main sphere with realistic shading - STATIC */}
       <div
         className="absolute inset-0 rounded-full"
@@ -414,7 +414,7 @@ function Globe3DSpinner() {
 
       {/* Atmospheric glow layer - STATIC */}
       <div
-        className="absolute inset-0 rounded-full pointer-events-none"
+        className="pointer-events-none absolute inset-0 rounded-full"
         style={{
           background:
             "radial-gradient(circle at 35% 35%, rgba(147, 197, 253, 0.2) 0%, transparent 70%)",
@@ -424,11 +424,11 @@ function Globe3DSpinner() {
 
       {/* Rotating grid lines and dots */}
       <motion.div
-        className="absolute inset-0"
-        style={{ transformStyle: "preserve-3d" }}
         animate={{
           rotateY: 360,
         }}
+        className="absolute inset-0"
+        style={{ transformStyle: "preserve-3d" }}
         transition={{
           duration: 8,
           repeat: Number.POSITIVE_INFINITY,
@@ -436,22 +436,22 @@ function Globe3DSpinner() {
         }}
       >
         {/* Latitude rings for 3D effect */}
-        {[...Array(latSegments)].map((_, latIndex) => {
+        {[...new Array(latSegments)].map((_, latIndex) => {
           const lat = (latIndex / latSegments) * 180 - 90 // -90 to 90 degrees
           const radius = Math.cos((lat * Math.PI) / 180)
           const yOffset = Math.sin((lat * Math.PI) / 180)
 
           return (
             <div
+              className="absolute top-1/2 left-1/2 border border-white/10"
               key={`lat-${latIndex}`}
-              className="absolute left-1/2 top-1/2 border border-white/10"
               style={{
                 width: `${radius * 100}%`,
                 height: `${radius * 100}%`,
                 marginLeft: `${-(radius * 100) / 2}%`,
                 marginTop: `${yOffset * 50}%`,
                 borderRadius: "50%",
-                transform: `translateY(-50%) rotateX(90deg)`,
+                transform: "translateY(-50%) rotateX(90deg)",
                 transformStyle: "preserve-3d",
               }}
             />
@@ -459,22 +459,24 @@ function Globe3DSpinner() {
         })}
 
         {/* Longitude lines - vertical meridians */}
-        {[...Array(lonSegments)].map((_, i) => {
+        {[...new Array(lonSegments)].map((_, i) => {
           const angle = (i * 360) / lonSegments
           // Skip center lines (0 and 180 degrees)
-          if (angle === 0 || angle === 180) return null
+          if (angle === 0 || angle === 180) {
+            return null
+          }
 
           return (
             <div
+              className="absolute top-1/2 left-1/2 h-full w-full"
               key={`lon-${i}`}
-              className="absolute left-1/2 top-1/2 w-full h-full"
               style={{
                 transform: `translate(-50%, -50%) rotateY(${angle}deg)`,
                 transformStyle: "preserve-3d",
               }}
             >
               <div
-                className="absolute left-1/2 top-0 w-px h-full"
+                className="absolute top-0 left-1/2 h-full w-px"
                 style={{
                   transform: "translateX(-50%)",
                   background:
@@ -486,7 +488,7 @@ function Globe3DSpinner() {
         })}
 
         {/* Sphere surface dots for texture - 20 dots */}
-        {[...Array(20)].map((_, i) => {
+        {[...new Array(20)].map((_, i) => {
           const lat = Math.random() * 160 - 80 // -80 to 80
           const lon = Math.random() * 360
           const phi = (90 - lat) * (Math.PI / 180)
@@ -499,8 +501,8 @@ function Globe3DSpinner() {
 
           return (
             <div
+              className="absolute h-1 w-1 rounded-full bg-cyan-300/40"
               key={`dot-${i}`}
-              className="absolute w-1 h-1 bg-cyan-300/40 rounded-full"
               style={{
                 left: "50%",
                 top: "50%",
@@ -514,9 +516,9 @@ function Globe3DSpinner() {
 
       {/* Orbit ring */}
       <motion.div
+        animate={{ rotateZ: 360 }}
         className="absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateZ: 360 }}
         transition={{
           duration: 4,
           repeat: Number.POSITIVE_INFINITY,
@@ -524,7 +526,7 @@ function Globe3DSpinner() {
         }}
       >
         <div
-          className="absolute left-1/2 top-1/2"
+          className="absolute top-1/2 left-1/2"
           style={{
             width: "140%",
             height: "140%",
@@ -549,8 +551,8 @@ function LLMLoadingSpinner() {
       <div className="relative">
         {/* Outer rotating ring */}
         <motion.div
-          className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full"
           animate={{ rotate: 360 }}
+          className="h-16 w-16 rounded-full border-4 border-blue-200 border-t-blue-500"
           transition={{
             duration: 1.5,
             repeat: Number.POSITIVE_INFINITY,
@@ -560,11 +562,11 @@ function LLMLoadingSpinner() {
 
         {/* Inner pulsing circle */}
         <motion.div
-          className="absolute inset-3 bg-blue-500 rounded-full"
           animate={{
             scale: [0.8, 1, 0.8],
             opacity: [0.5, 1, 0.5],
           }}
+          className="absolute inset-3 rounded-full bg-blue-500"
           transition={{
             duration: 1.5,
             repeat: Number.POSITIVE_INFINITY,
@@ -577,10 +579,10 @@ function LLMLoadingSpinner() {
       <div className="flex gap-1">
         {["A", "I", " ", "is", " ", "thinking"].map((char, i) => (
           <motion.span
-            key={i}
-            className="text-sm text-muted-foreground"
-            initial={{ opacity: 0.3 }}
             animate={{ opacity: [0.3, 1, 0.3] }}
+            className="text-muted-foreground text-sm"
+            initial={{ opacity: 0.3 }}
+            key={i}
             transition={{
               duration: 1.5,
               repeat: Number.POSITIVE_INFINITY,
@@ -598,14 +600,14 @@ function LLMLoadingSpinner() {
 // Typing Indicator for Chat
 function TypingIndicator() {
   return (
-    <div className="flex gap-1.5 p-4 bg-muted/50 rounded-lg w-fit">
+    <div className="flex w-fit gap-1.5 rounded-lg bg-muted/50 p-4">
       {[0, 1, 2].map((i) => (
         <motion.div
-          key={i}
-          className="w-2.5 h-2.5 bg-foreground/40 rounded-full"
           animate={{
             y: [0, -8, 0],
           }}
+          className="h-2.5 w-2.5 rounded-full bg-foreground/40"
+          key={i}
           transition={{
             duration: 0.6,
             repeat: Number.POSITIVE_INFINITY,
@@ -628,9 +630,9 @@ export default function SpinnerTestPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Spinner Animation Test</h1>
+        <h1 className="font-bold text-3xl">Spinner Animation Test</h1>
         <p className="text-muted-foreground">LLM 응답 로딩을 위한 다양한 스피너 애니메이션 모음</p>
       </div>
 
@@ -641,35 +643,35 @@ export default function SpinnerTestPage() {
           <CardDescription>Tailwind CSS 애니메이션을 활용한 스피너</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <DotSpinner />
-              <span className="text-sm text-muted-foreground">Dot Spinner</span>
+              <span className="text-muted-foreground text-sm">Dot Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <RippleSpinner />
-              <span className="text-sm text-muted-foreground">Ripple Spinner</span>
+              <span className="text-muted-foreground text-sm">Ripple Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <PulseSpinner />
-              <span className="text-sm text-muted-foreground">Pulse Spinner</span>
+              <span className="text-muted-foreground text-sm">Pulse Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <RotatingSpinner />
-              <span className="text-sm text-muted-foreground">Rotating Spinner</span>
+              <span className="text-muted-foreground text-sm">Rotating Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <BarSpinner />
-              <span className="text-sm text-muted-foreground">Bar Spinner</span>
+              <span className="text-muted-foreground text-sm">Bar Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
-              <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
-              <span className="text-sm text-muted-foreground">Lucide Icon</span>
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+              <span className="text-muted-foreground text-sm">Lucide Icon</span>
             </div>
           </div>
         </CardContent>
@@ -682,20 +684,20 @@ export default function SpinnerTestPage() {
           <CardDescription>Framer Motion을 활용한 고급 애니메이션</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <MotionDotSpinner />
-              <span className="text-sm text-muted-foreground">Motion Dots</span>
+              <span className="text-muted-foreground text-sm">Motion Dots</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <MotionCircleSpinner />
-              <span className="text-sm text-muted-foreground">Motion Circle</span>
+              <span className="text-muted-foreground text-sm">Motion Circle</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg">
+            <div className="flex flex-col items-center gap-4 rounded-lg border p-6">
               <MotionScaleSpinner />
-              <span className="text-sm text-muted-foreground">Star Spinner</span>
+              <span className="text-muted-foreground text-sm">Star Spinner</span>
             </div>
           </div>
         </CardContent>
@@ -708,49 +710,49 @@ export default function SpinnerTestPage() {
           <CardDescription>3차원 회전 효과를 활용한 고급 스피너</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg"
+              className="flex flex-col items-center gap-4 rounded-lg border p-6"
               style={{ perspective: "1000px" }}
             >
               <Cube3DSpinner />
-              <span className="text-sm text-muted-foreground">3D Cube</span>
+              <span className="text-muted-foreground text-sm">3D Cube</span>
             </div>
 
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg"
+              className="flex flex-col items-center gap-4 rounded-lg border p-6"
               style={{ perspective: "1000px" }}
             >
               <Sphere3DSpinner />
-              <span className="text-sm text-muted-foreground">3D Sphere</span>
+              <span className="text-muted-foreground text-sm">3D Sphere</span>
             </div>
 
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg"
+              className="flex flex-col items-center gap-4 rounded-lg border p-6"
               style={{ perspective: "1000px" }}
             >
               <Ring3DSpinner />
-              <span className="text-sm text-muted-foreground">3D Ring</span>
+              <span className="text-muted-foreground text-sm">3D Ring</span>
             </div>
 
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg"
+              className="flex flex-col items-center gap-4 rounded-lg border p-6"
               style={{ perspective: "1000px" }}
             >
               <DNA3DSpinner />
-              <span className="text-sm text-muted-foreground">DNA Helix</span>
+              <span className="text-muted-foreground text-sm">DNA Helix</span>
             </div>
 
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg"
+              className="flex flex-col items-center gap-4 rounded-lg border p-6"
               style={{ perspective: "1000px" }}
             >
               <Orbit3DSpinner />
-              <span className="text-sm text-muted-foreground">3D Orbit</span>
+              <span className="text-muted-foreground text-sm">3D Orbit</span>
             </div>
 
             <div
-              className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-gradient-to-b from-slate-900 to-slate-800"
+              className="flex flex-col items-center gap-4 rounded-lg border bg-gradient-to-b from-slate-900 to-slate-800 p-6"
               style={{ perspective: "1000px" }}
             >
               <Globe3DSpinner />
@@ -767,15 +769,15 @@ export default function SpinnerTestPage() {
           <CardDescription>LLM 응답 대기 시 최적화된 스피너</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-background">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="flex flex-col items-center gap-4 rounded-lg border bg-background p-6">
               <LLMLoadingSpinner />
-              <span className="text-sm text-muted-foreground">LLM Loading Spinner</span>
+              <span className="text-muted-foreground text-sm">LLM Loading Spinner</span>
             </div>
 
-            <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-background">
+            <div className="flex flex-col items-center gap-4 rounded-lg border bg-background p-6">
               <TypingIndicator />
-              <span className="text-sm text-muted-foreground">Typing Indicator</span>
+              <span className="text-muted-foreground text-sm">Typing Indicator</span>
             </div>
           </div>
         </CardContent>
@@ -789,19 +791,19 @@ export default function SpinnerTestPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button onClick={simulateLLMResponse} disabled={isSimulating}>
+            <Button disabled={isSimulating} onClick={simulateLLMResponse}>
               {isSimulating ? "Waiting for response..." : "Simulate LLM Request"}
             </Button>
 
             {isSimulating && (
-              <div className="p-6 border rounded-lg bg-muted/30">
+              <div className="rounded-lg border bg-muted/30 p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
                     <LLMLoadingSpinner />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <p className="text-sm font-medium">Processing your request...</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-medium text-sm">Processing your request...</p>
+                    <p className="text-muted-foreground text-xs">
                       AI is analyzing your query and generating a response
                     </p>
                   </div>
@@ -810,8 +812,8 @@ export default function SpinnerTestPage() {
             )}
 
             {!isSimulating && (
-              <div className="p-6 border rounded-lg bg-background">
-                <p className="text-sm text-muted-foreground">
+              <div className="rounded-lg border bg-background p-6">
+                <p className="text-muted-foreground text-sm">
                   버튼을 클릭하여 LLM 응답 대기 상태를 시뮬레이션하세요.
                 </p>
               </div>

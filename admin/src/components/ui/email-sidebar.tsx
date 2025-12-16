@@ -2,19 +2,19 @@ import { HelpCircle, Mail, MessageSquare, Minus, Star, ThumbsDown, ThumbsUp } fr
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export interface EmailSidebarItem {
+export type EmailSidebarItem = {
   id: string
   label: string
   icon: React.ReactNode
   count?: number
 }
 
-export interface EmailSidebarSection {
+export type EmailSidebarSection = {
   title: string
   items: EmailSidebarItem[]
 }
 
-export interface EmailSidebarProps {
+export type EmailSidebarProps = {
   sections?: EmailSidebarSection[]
   activeItemId?: string
   onItemClick?: (itemId: string) => void
@@ -94,30 +94,30 @@ export function EmailSidebar({
   return (
     <div
       className={cn(
-        "w-64 bg-background overflow-y-auto border rounded-lg ml-4 my-4 flex-shrink-0",
+        "my-4 ml-4 w-64 flex-shrink-0 overflow-y-auto rounded-lg border bg-background",
         className,
       )}
       style={{ height: "calc(100vh - 152px)" }}
     >
-      <div className="py-4 px-3 space-y-6">
+      <div className="space-y-6 px-3 py-4">
         {sections.map((section, sectionIndex) => (
           <div key={sectionIndex}>
-            <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground tracking-wider">
+            <h3 className="mb-2 px-3 font-semibold text-muted-foreground text-xs tracking-wider">
               {section.title}
             </h3>
             <div className="space-y-1">
               {section.items.map((item) => (
                 <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleItemClick(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     activeId === item.id
-                      ? "bg-accent text-accent-foreground font-medium"
+                      ? "bg-accent font-medium text-accent-foreground"
                       : "text-muted-foreground",
                   )}
+                  key={item.id}
+                  onClick={() => handleItemClick(item.id)}
+                  type="button"
                 >
                   <span
                     className={cn(
@@ -129,7 +129,7 @@ export function EmailSidebar({
                   </span>
                   <span className="flex-1 text-left">{item.label}</span>
                   {item.count !== undefined && (
-                    <span className="text-xs text-muted-foreground">{item.count}</span>
+                    <span className="text-muted-foreground text-xs">{item.count}</span>
                   )}
                 </button>
               ))}

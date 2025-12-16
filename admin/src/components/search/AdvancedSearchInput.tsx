@@ -11,7 +11,7 @@ import { keyOfField, SEARCHABLE_LEAD_FIELDS } from "@/lib/api/types/lead-filters
 import type { SearchToken } from "@/lib/utils/search-tokens"
 import { createToken } from "@/lib/utils/search-tokens"
 
-interface AdvancedSearchInputProps {
+type AdvancedSearchInputProps = {
   tokens: SearchToken[]
   onChange: (tokens: SearchToken[]) => void
   placeholder?: string
@@ -83,20 +83,28 @@ export function AdvancedSearchInput({
 
   // Handle token creation
   const createTokenFromInput = useCallback(() => {
-    if (!inputValue.trim()) return
+    if (!inputValue.trim()) {
+      return
+    }
 
     // Extract field and value from input (no space after colon required)
     const match = inputValue.match(/@([^:]+):(.+)/)
-    if (!match) return
+    if (!match) {
+      return
+    }
 
     const [, fieldLabel, value] = match
-    if (!value.trim()) return
+    if (!value.trim()) {
+      return
+    }
 
     // Find field by label
     const fieldConfig = SEARCHABLE_LEAD_FIELDS.find(
       (f) => t(keyOfField(f.field)) === fieldLabel.trim(),
     )
-    if (!fieldConfig) return
+    if (!fieldConfig) {
+      return
+    }
 
     // Create token
     const newToken = createToken(fieldConfig.field, t(keyOfField(fieldConfig.field)), value.trim())
@@ -116,13 +124,17 @@ export function AdvancedSearchInput({
 
   // Handle date range confirmation
   const handleDateRangeConfirm = useCallback(() => {
-    if (!currentDateField) return
+    if (!currentDateField) {
+      return
+    }
 
     const fieldConfig = SEARCHABLE_LEAD_FIELDS.find((f) => f.field === currentDateField)
-    if (!fieldConfig) return
+    if (!fieldConfig) {
+      return
+    }
 
     // Skip if no dates selected
-    if (!dateRange.from && !dateRange.to) {
+    if (!(dateRange.from || dateRange.to)) {
       // Don't create a filter if no dates selected
       setShowDatePicker(false)
       setCurrentDateField(null)
@@ -282,28 +294,28 @@ export function AdvancedSearchInput({
   }, [])
 
   return (
-    <div ref={containerRef} className="space-y-3">
+    <div className="space-y-3" ref={containerRef}>
       <div className="relative">
         {/* Search input container */}
-        <div className="flex items-center gap-2 min-h-[42px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-          <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <div className="flex min-h-[42px] w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+          <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
 
           {/* Tokens */}
-          <div className="flex items-center gap-1 flex-wrap flex-1">
+          <div className="flex flex-1 flex-wrap items-center gap-1">
             {tokens.map((token) => (
               <Badge
+                className="flex items-center gap-1 bg-blue-100 px-2 py-1 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
                 key={token.id}
                 variant="secondary"
-                className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
               >
                 {/* <span className="text-xs font-medium">{formatTokenDisplay(token)}</span> */}
-                <span className="text-xs font-medium">
+                <span className="font-medium text-xs">
                   @{t(keyOfField(token.field))}: {token.displayValue}
                 </span>
                 <button
-                  type="button"
-                  onClick={() => removeToken(token.id)}
                   className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                  onClick={() => removeToken(token.id)}
+                  type="button"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -312,26 +324,26 @@ export function AdvancedSearchInput({
 
             {/* Input field */}
             <input
+              className="min-w-[200px] flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+              onChange={handleInputChange}
+              onClick={handleClick}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              placeholder={tokens.length === 0 ? placeholder : ""}
               ref={inputRef}
               type="text"
               value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              onFocus={handleFocus}
-              onClick={handleClick}
-              placeholder={tokens.length === 0 ? placeholder : ""}
-              className="flex-1 min-w-[200px] bg-transparent outline-none placeholder:text-muted-foreground"
             />
           </div>
 
           {/* Clear all button */}
           {tokens.length > 0 && (
             <Button
+              className="h-6 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => onChange([])}
+              size="sm"
               type="button"
               variant="ghost"
-              size="sm"
-              onClick={() => onChange([])}
-              className="h-6 px-2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -340,28 +352,28 @@ export function AdvancedSearchInput({
 
         {/* Field selector dropdown */}
         {showFieldSelector && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50">
+          <div className="absolute top-full right-0 left-0 z-50 mt-1">
             <div className="rounded-md border border-input bg-background shadow-lg">
               <div className="p-3">
-                <p className="text-xs text-muted-foreground mb-2 font-medium">
+                <p className="mb-2 font-medium text-muted-foreground text-xs">
                   {t("search.fieldSelector.title")}:
                 </p>
                 <div className="max-h-[300px] overflow-y-auto">
                   <div className="grid grid-cols-2 gap-1">
                     {SEARCHABLE_LEAD_FIELDS.map((field, index) => (
                       <button
-                        key={field.field}
-                        ref={(el) => {
-                          fieldRefs.current[index] = el
-                        }}
-                        type="button"
-                        onClick={() => handleFieldSelect(field.field)}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        className={`px-3 py-2 text-sm text-left rounded-sm transition-colors border border-border ${
+                        className={`rounded-sm border border-border px-3 py-2 text-left text-sm transition-colors ${
                           index === highlightedIndex
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-accent hover:text-accent-foreground"
                         }`}
+                        key={field.field}
+                        onClick={() => handleFieldSelect(field.field)}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        ref={(el) => {
+                          fieldRefs.current[index] = el
+                        }}
+                        type="button"
                       >
                         {/* {field.label} */}
                         {t(keyOfField(field.field))}
@@ -377,7 +389,7 @@ export function AdvancedSearchInput({
 
       {/* Active filters display */}
       {tokens.length > 0 && (
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           <span className="font-medium">
             {t("search.activeFilters.count", { count: tokens.length })}
           </span>
@@ -386,19 +398,19 @@ export function AdvancedSearchInput({
 
       {/* Date Range Picker */}
       {showDatePicker && currentDateField && (
-        <div className="mt-3 p-4 border border-input rounded-md bg-background">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium">
+        <div className="mt-3 rounded-md border border-input bg-background p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-medium text-sm">
               {t(keyOfField(currentDateField))} {t("search.dateRange.selectRange")}
             </h4>
             <Button
-              variant="ghost"
-              size="sm"
               onClick={() => {
                 setShowDatePicker(false)
                 setCurrentDateField(null)
                 setDateRange({})
               }}
+              size="sm"
+              variant="ghost"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -407,10 +419,10 @@ export function AdvancedSearchInput({
           <div className="grid grid-cols-2 gap-4">
             {/* From Date */}
             <div className="space-y-2">
-              <div className="text-sm font-medium">{t("search.dateRange.startDate")}</div>
+              <div className="font-medium text-sm">{t("search.dateRange.startDate")}</div>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button className="w-full justify-start text-left font-normal" variant="outline">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange.from ? (
                       format(dateRange.from, "yyyy년 MM월 dd일", { locale: ko })
@@ -421,21 +433,21 @@ export function AdvancedSearchInput({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent align="start" className="w-auto p-0">
                   <Calendar
-                    mode="single"
-                    selected={dateRange.from}
-                    onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
                     initialFocus
                     locale={ko}
+                    mode="single"
+                    onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
+                    selected={dateRange.from}
                   />
                   {dateRange.from && (
-                    <div className="p-3 border-t">
+                    <div className="border-t p-3">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDateRange((prev) => ({ ...prev, from: undefined }))}
                         className="w-full"
+                        onClick={() => setDateRange((prev) => ({ ...prev, from: undefined }))}
+                        size="sm"
+                        variant="outline"
                       >
                         {t("search.dateRange.reset")}
                       </Button>
@@ -447,10 +459,10 @@ export function AdvancedSearchInput({
 
             {/* To Date */}
             <div className="space-y-2">
-              <div className="text-sm font-medium">{t("search.dateRange.endDate")}</div>
+              <div className="font-medium text-sm">{t("search.dateRange.endDate")}</div>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button className="w-full justify-start text-left font-normal" variant="outline">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange.to ? (
                       format(dateRange.to, "yyyy년 MM월 dd일", { locale: ko })
@@ -461,21 +473,21 @@ export function AdvancedSearchInput({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent align="start" className="w-auto p-0">
                   <Calendar
-                    mode="single"
-                    selected={dateRange.to}
-                    onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
                     initialFocus
                     locale={ko}
+                    mode="single"
+                    onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
+                    selected={dateRange.to}
                   />
                   {dateRange.to && (
-                    <div className="p-3 border-t">
+                    <div className="border-t p-3">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDateRange((prev) => ({ ...prev, to: undefined }))}
                         className="w-full"
+                        onClick={() => setDateRange((prev) => ({ ...prev, to: undefined }))}
+                        size="sm"
+                        variant="outline"
                       >
                         {t("search.dateRange.reset")}
                       </Button>
@@ -488,12 +500,12 @@ export function AdvancedSearchInput({
 
           <div className="mt-4 flex justify-end gap-2">
             <Button
-              variant="outline"
               onClick={() => {
                 setShowDatePicker(false)
                 setCurrentDateField(null)
                 setDateRange({})
               }}
+              variant="outline"
             >
               {t("search.dateRange.cancel")}
             </Button>

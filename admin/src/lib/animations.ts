@@ -266,7 +266,9 @@ export function useCountUpAnimation(end: number, duration = 1000) {
  * 접근성: prefers-reduced-motion 체크
  */
 export function shouldReduceMotion(): boolean {
-  if (typeof window === "undefined") return false
+  if (typeof window === "undefined") {
+    return false
+  }
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 

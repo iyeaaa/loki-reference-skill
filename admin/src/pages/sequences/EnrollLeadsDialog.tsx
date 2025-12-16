@@ -32,13 +32,13 @@ interface CustomerGroupMemberWithLead extends CustomerGroupMember {
   leadBusinessType?: string
 }
 
-interface Lead {
+type Lead = {
   id: string
   companyName?: string
   businessType?: string
 }
 
-interface EnrollLeadsDialogProps {
+type EnrollLeadsDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   sequence: Sequence
@@ -145,7 +145,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -159,8 +159,8 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
 
         <div className="space-y-6 py-4">
           {/* 시퀀스 정보 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">시퀀스 정보</h4>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h4 className="mb-2 font-medium text-blue-900">시퀀스 정보</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-blue-700">시퀀스명:</span>
@@ -175,8 +175,8 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
               <div className="flex justify-between">
                 <span className="text-blue-700">상태:</span>
                 <Badge
-                  variant={sequence.status === "active" ? "default" : "secondary"}
                   className="text-xs"
+                  variant={sequence.status === "active" ? "default" : "secondary"}
                 >
                   {sequence.status === "active"
                     ? t("sequences.table.status.active")
@@ -194,12 +194,12 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
 
           {/* 경고: 고객그룹 미지정 */}
           {!sequence.customerGroupId && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                <AlertCircle className="mt-0.5 h-5 w-5 text-orange-600" />
                 <div>
                   <p className="font-medium text-orange-900">고객그룹이 지정되지 않았습니다</p>
-                  <p className="text-sm text-orange-700 mt-1">
+                  <p className="mt-1 text-orange-700 text-sm">
                     시퀀스를 편집하여 고객그룹을 먼저 지정해주세요.
                   </p>
                 </div>
@@ -209,28 +209,28 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
 
           {/* 대상 리드 정보 */}
           {sequence.customerGroupId && (
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-lg border p-4">
+              <div className="mb-3 flex items-center justify-between">
                 <h4 className="font-medium">등록 대상 리드</h4>
                 <Badge variant="secondary">{leads.length}명</Badge>
               </div>
               {leads.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-muted-foreground text-sm">
                   고객그룹에 리드가 없습니다.
                 </p>
               ) : (
-                <div className="max-h-40 overflow-y-auto space-y-2">
+                <div className="max-h-40 space-y-2 overflow-y-auto">
                   {leads.slice(0, 10).map((lead) => (
                     <div
+                      className="flex items-center justify-between border-b py-1 text-sm last:border-0"
                       key={lead.id}
-                      className="text-sm flex items-center justify-between py-1 border-b last:border-0"
                     >
                       <span className="font-medium">{lead.companyName}</span>
-                      <span className="text-xs text-muted-foreground">{lead.businessType}</span>
+                      <span className="text-muted-foreground text-xs">{lead.businessType}</span>
                     </div>
                   ))}
                   {leads.length > 10 && (
-                    <p className="text-xs text-muted-foreground text-center pt-2">
+                    <p className="pt-2 text-center text-muted-foreground text-xs">
                       외 {leads.length - 10}개 회사
                     </p>
                   )}
@@ -245,19 +245,19 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
               발송 이메일 계정 <span className="text-red-500">*</span>
             </Label>
             {activeEmailAccounts.length === 0 ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <AlertCircle className="mt-0.5 h-5 w-5 text-red-600" />
                   <div>
                     <p className="font-medium text-red-900">활성화된 이메일 계정이 없습니다</p>
-                    <p className="text-sm text-red-700 mt-1">
+                    <p className="mt-1 text-red-700 text-sm">
                       이메일 계정 페이지에서 계정을 추가하고 활성화해주세요.
                     </p>
                   </div>
                 </div>
               </div>
             ) : (
-              <Select value={selectedEmailAccount} onValueChange={setSelectedEmailAccount}>
+              <Select onValueChange={setSelectedEmailAccount} value={selectedEmailAccount}>
                 <SelectTrigger>
                   <SelectValue placeholder="이메일 계정 선택" />
                 </SelectTrigger>
@@ -276,9 +276,9 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
           </div>
 
           {/* 실행 안내 */}
-          <div className="bg-gray-50 border rounded-lg p-4">
-            <h4 className="font-medium text-sm mb-2">실행 시 동작:</h4>
-            <ul className="space-y-1 text-sm text-muted-foreground">
+          <div className="rounded-lg border bg-gray-50 p-4">
+            <h4 className="mb-2 font-medium text-sm">실행 시 동작:</h4>
+            <ul className="space-y-1 text-muted-foreground text-sm">
               <li>✓ 선택된 리드들이 시퀀스에 등록됩니다</li>
               <li>✓ 첫 번째 스텝이 즉시 또는 예약 발송됩니다</li>
               <li>✓ 이후 스텝은 설정된 대기 시간에 따라 자동 발송됩니다</li>
@@ -288,17 +288,17 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button onClick={() => onOpenChange(false)} variant="outline">
             취소
           </Button>
           <Button
-            onClick={handleEnroll}
             disabled={
               !sequence.customerGroupId ||
               leads.length === 0 ||
               !selectedEmailAccount ||
               bulkEnroll.isPending
             }
+            onClick={handleEnroll}
           >
             {bulkEnroll.isPending ? "등록 중..." : `${leads.length}명 등록 및 실행`}
           </Button>

@@ -1,9 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
 import { emailRepliesApi } from "../services/email-replies"
+import type { RepliedEmail } from "../types/email"
 import type { EmailReplyFilters } from "../types/email-reply"
 
 export const EMAIL_REPLIES_QUERY_KEY = "email-replies"
+
+// Type for the replied emails query cache data
+type RepliedEmailsCache = {
+  repliedEmails: RepliedEmail[]
+  total?: number
+}
 
 /**
  * Hook to list email replies with pagination and filters
@@ -240,14 +247,15 @@ export function useToggleImportant() {
       const previousData = queryClient.getQueriesData({ queryKey: ["replied-emails"] })
 
       // Optimistically update ALL cached queries with replied-emails key
-      // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: any) => {
-        if (!old?.repliedEmails) return old
+      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: unknown) => {
+        const cached = old as RepliedEmailsCache | undefined
+        if (!cached?.repliedEmails) {
+          return old
+        }
 
         return {
-          ...old,
-          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-          repliedEmails: old.repliedEmails.map((email: any) =>
+          ...cached,
+          repliedEmails: cached.repliedEmails.map((email) =>
             email.threadId === threadId ? { ...email, isImportant } : email,
           ),
         }

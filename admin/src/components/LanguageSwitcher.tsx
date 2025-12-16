@@ -17,7 +17,7 @@ const languages = [
   { code: "en", name: "English", flag: "🇺🇸" },
 ]
 
-interface LanguageSwitcherProps {
+type LanguageSwitcherProps = {
   className?: string
 }
 
@@ -37,14 +37,14 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
-          size="sm"
           className={cn(
-            "justify-start h-10 px-3 py-2 hover:bg-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
+            "h-10 justify-start px-3 py-2 hover:bg-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
             className,
           )}
+          size="sm"
+          variant="ghost"
         >
-          <Globe className="h-4 w-4 text-muted-foreground group-data-[collapsible=icon]:mr-0 mr-3 shrink-0" />
+          <Globe className="mr-3 h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:mr-0" />
           <span className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
             <span>{currentLanguage.flag}</span>
             <span className="font-normal">{currentLanguage.name}</span>
@@ -54,9 +54,9 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
       <DropdownMenuContent align="start" side="right">
         {languages.map((language) => (
           <DropdownMenuItem
+            className={i18n.language === language.code ? "bg-accent" : ""}
             key={language.code}
             onClick={() => handleLanguageChange(language.code)}
-            className={i18n.language === language.code ? "bg-accent" : ""}
           >
             <span className="mr-2">{language.flag}</span>
             {language.name}
@@ -71,7 +71,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right" align="center">
+        <TooltipContent align="center" side="right">
           {currentLanguage.name}
         </TooltipContent>
       </Tooltip>

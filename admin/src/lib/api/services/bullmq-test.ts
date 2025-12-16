@@ -46,12 +46,24 @@ export const bullmqTestApi = {
   // Get test queue details with pagination and filters
   async getTestQueue(params?: TestQueueParams): Promise<TestQueueResponse> {
     const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set("page", params.page.toString())
-    if (params?.limit) searchParams.set("limit", params.limit.toString())
-    if (params?.status && params.status !== "all") searchParams.set("status", params.status)
-    if (params?.search) searchParams.set("search", params.search)
-    if (params?.sortBy) searchParams.set("sortBy", params.sortBy)
-    if (params?.sortOrder) searchParams.set("sortOrder", params.sortOrder)
+    if (params?.page) {
+      searchParams.set("page", params.page.toString())
+    }
+    if (params?.limit) {
+      searchParams.set("limit", params.limit.toString())
+    }
+    if (params?.status && params.status !== "all") {
+      searchParams.set("status", params.status)
+    }
+    if (params?.search) {
+      searchParams.set("search", params.search)
+    }
+    if (params?.sortBy) {
+      searchParams.set("sortBy", params.sortBy)
+    }
+    if (params?.sortOrder) {
+      searchParams.set("sortOrder", params.sortOrder)
+    }
 
     const queryString = searchParams.toString()
     const url = `${BASE_PATH}/queues/test${queryString ? `?${queryString}` : ""}`

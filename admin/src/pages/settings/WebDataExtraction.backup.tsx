@@ -91,10 +91,10 @@ const TooltipCell = ({
           <div className="w-full">{children}</div>
         </TooltipTrigger>
         <TooltipContent
+          className={`${maxWidth} border-2 border-border bg-background p-3 text-foreground shadow-lg outline outline-1 outline-border`}
           side="top"
-          className={`${maxWidth} border-2 border-border bg-background p-3 shadow-lg outline outline-1 outline-border text-foreground`}
         >
-          <div className="break-all text-sm whitespace-pre-wrap">{displayContent}</div>
+          <div className="whitespace-pre-wrap break-all text-sm">{displayContent}</div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -198,7 +198,7 @@ export function WebDataExtraction() {
 
   // progress가 null로 변경될 때 completedProgress가 없으면 로컬스토리지에서 로드
   React.useEffect(() => {
-    if (!completedProgress && !progress && !isProcessing) {
+    if (!(completedProgress || progress || isProcessing)) {
       try {
         const saved = localStorage.getItem("webExtractionProgress")
         if (saved) {
@@ -466,11 +466,13 @@ export function WebDataExtraction() {
 
   // Format file size to human-readable format
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes"
+    if (bytes === 0) {
+      return "0 Bytes"
+    }
     const k = 1024
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
+    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
   }
 
   // Download template Excel file
@@ -528,7 +530,8 @@ export function WebDataExtraction() {
         }).length
 
         return { count: urlCount, error: null }
-      } else if (fileExtension === "xlsx" || fileExtension === "xls") {
+      }
+      if (fileExtension === "xlsx" || fileExtension === "xls") {
         const arrayBuffer = await file.arrayBuffer()
         const workbook = XLSX.read(arrayBuffer, { type: "array" })
         const firstSheetName = workbook.SheetNames[0]
@@ -588,7 +591,7 @@ export function WebDataExtraction() {
 
       // File type validation
       const fileName = file.name.toLowerCase()
-      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv"))) {
         setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
         setSelectedFile(null)
         return
@@ -640,7 +643,7 @@ export function WebDataExtraction() {
 
       // File type validation
       const fileName = file.name.toLowerCase()
-      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv"))) {
         setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
         setSelectedFile(null)
         return
@@ -664,7 +667,7 @@ export function WebDataExtraction() {
   }
 
   const handleUpload = () => {
-    if (!selectedFile || !workspaceId) {
+    if (!(selectedFile && workspaceId)) {
       setError("파일을 선택하고 워크스페이스를 확인해주세요")
       return
     }
@@ -688,7 +691,7 @@ export function WebDataExtraction() {
     })
   }
 
-  const handleDownload = (splitEmails: boolean = false) => {
+  const handleDownload = (splitEmails = false) => {
     if (!Array.isArray(data) || data.length === 0) {
       setError("다운로드할 데이터가 없습니다")
       return
@@ -698,7 +701,7 @@ export function WebDataExtraction() {
       let excelData: unknown[]
 
       // 테이블 UI 열 순서에 맞춘 데이터 구조
-      const createRowData = (item: ExtractionResult, emailValue: string = "") => ({
+      const createRowData = (item: ExtractionResult, emailValue = "") => ({
         "Website URL": item.website_url || "",
         "Found Company": item.found_company_name || "",
         Email: emailValue,
@@ -802,7 +805,7 @@ export function WebDataExtraction() {
   const handleAddApiKey = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!workspaceId || !apiKeyFormData.name.trim() || !apiKeyFormData.apiKey.trim()) {
+    if (!(workspaceId && apiKeyFormData.name.trim() && apiKeyFormData.apiKey.trim())) {
       return
     }
 
@@ -817,7 +820,9 @@ export function WebDataExtraction() {
   }
 
   const handleDeleteApiKey = async (id: string) => {
-    if (!confirm("이 API 키를 삭제하시겠습니까?")) return
+    if (!confirm("이 API 키를 삭제하시겠습니까?")) {
+      return
+    }
 
     await deleteApiKeyMutation.mutateAsync({ id, workspaceId })
   }
@@ -833,7 +838,9 @@ export function WebDataExtraction() {
   }
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "사용 안함"
+    if (!dateString) {
+      return "사용 안함"
+    }
     const date = new Date(dateString)
     return date.toLocaleString("ko-KR", {
       month: "short",
@@ -844,10 +851,14 @@ export function WebDataExtraction() {
   }
 
   const formatCollectedAt = (dateString: string | null | undefined) => {
-    if (!dateString) return "-"
+    if (!dateString) {
+      return "-"
+    }
     try {
       const date = new Date(dateString)
-      if (Number.isNaN(date.getTime())) return dateString
+      if (Number.isNaN(date.getTime())) {
+        return dateString
+      }
 
       return date.toLocaleString("ko-KR", {
         year: "numeric",
@@ -864,7 +875,9 @@ export function WebDataExtraction() {
   }
 
   const maskApiKey = (key: string) => {
-    if (key.length <= 8) return "•".repeat(key.length)
+    if (key.length <= 8) {
+      return "•".repeat(key.length)
+    }
     return `${key.slice(0, 7)}${"•".repeat(Math.max(0, key.length - 11))}${key.slice(-4)}`
   }
 
@@ -882,7 +895,9 @@ export function WebDataExtraction() {
 
   // Normalize URL to ensure it has a protocol
   const normalizeUrl = (url: string | null | undefined): string | null => {
-    if (!url || url.trim() === "") return null
+    if (!url || url.trim() === "") {
+      return null
+    }
 
     const trimmedUrl = url.trim()
 
@@ -926,7 +941,9 @@ export function WebDataExtraction() {
   // 패널 너비 조절 핸들러
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return
+      if (!isResizing) {
+        return
+      }
 
       const newWidth = window.innerWidth - e.clientX
       const minWidth = 200
@@ -959,13 +976,13 @@ export function WebDataExtraction() {
   const hasData = Array.isArray(data) && data.length > 0
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left: Main Content */}
         {hasData ? (
           // Data exists - Show current UI
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+          <div className="flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
             {/* Error Alert */}
             {error && (
               <Alert variant="destructive">
@@ -979,16 +996,16 @@ export function WebDataExtraction() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <img
-                  src="/images/web-extraction-logo.webp"
                   alt="웹데추"
-                  className="h-10 w-10 object-contain rounded-lg border border-border"
+                  className="h-10 w-10 rounded-lg border border-border object-contain"
+                  src="/images/web-extraction-logo.webp"
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold">웹데추</h2>
-                    <span className="text-xs text-muted-foreground">v1.0.0.20251108</span>
+                    <h2 className="font-semibold text-xl">웹데추</h2>
+                    <span className="text-muted-foreground text-xs">v1.0.0.20251108</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {progress?.status === "processing"
                       ? "지금 추출 중이에요"
                       : "웹사이트에서 추출한 데이터를 확인해보세요"}
@@ -999,14 +1016,14 @@ export function WebDataExtraction() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant="outline"
-                  onClick={() => setIsApiKeyManagementModalOpen(true)}
                   disabled={isProcessing}
+                  onClick={() => setIsApiKeyManagementModalOpen(true)}
+                  variant="outline"
                 >
                   <Key className="mr-2 h-4 w-4" />
                   API 키 관리
                   {apiKeys.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
+                    <Badge className="ml-2" variant="secondary">
                       {apiKeys.length}
                     </Badge>
                   )}
@@ -1025,26 +1042,26 @@ export function WebDataExtraction() {
                   파일 업로드
                 </Button>
                 <Button
+                  disabled={!Array.isArray(data) || data.length === 0}
                   onClick={() => setIsDownloadConfirmDialogOpen(true)}
                   variant="outline"
-                  disabled={!Array.isArray(data) || data.length === 0}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   웹데추 결과 다운로드 ({data.length}개)
                 </Button>
                 {progress?.status === "completed" && jobId && (
                   <Button
+                    disabled={cleanupMutation.isPending}
                     onClick={handleCleanup}
                     variant="outline"
-                    disabled={cleanupMutation.isPending}
                   >
                     초기화
                   </Button>
                 )}
                 <Button
+                  className="text-destructive hover:text-destructive"
                   onClick={() => setIsClearDataDialogOpen(true)}
                   variant="outline"
-                  className="text-destructive hover:text-destructive"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   웹데추 데이터 초기화
@@ -1055,11 +1072,11 @@ export function WebDataExtraction() {
             {/* Results Table */}
             <Card>
               <CardContent className="p-0">
-                <div className="rounded-md border overflow-x-auto">
+                <div className="overflow-x-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[200px] border-r p-1 sticky left-0 bg-background z-10">
+                        <TableHead className="sticky left-0 z-10 min-w-[200px] border-r bg-background p-1">
                           Website URL
                         </TableHead>
                         <TableHead className="min-w-[150px] border-r p-1">Found Company</TableHead>
@@ -1091,15 +1108,15 @@ export function WebDataExtraction() {
                     <TableBody>
                       {data.map((item, index) => (
                         <TableRow key={`${item.website_url}-${index}`}>
-                          <TableCell className="border-r p-1 sticky left-0 bg-background z-10">
+                          <TableCell className="sticky left-0 z-10 border-r bg-background p-1">
                             <TooltipCell content={item.website_url}>
                               {item.website_url ? (
                                 <a
+                                  className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                                   href={normalizeUrl(item.website_url) || "#"}
                                   onClick={(e) => handleWebsiteClick(e, item.website_url)}
-                                  className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
                                 >
-                                  <span className="line-clamp-3 break-all max-w-[180px]">
+                                  <span className="line-clamp-3 max-w-[180px] break-all">
                                     {item.website_url}
                                   </span>
                                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1118,14 +1135,14 @@ export function WebDataExtraction() {
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.email}>
-                              <div className="line-clamp-3 break-all max-w-[200px]">
+                              <div className="line-clamp-3 max-w-[200px] break-all">
                                 {item.email || "-"}
                               </div>
                             </TooltipCell>
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.description}>
-                              <div className="line-clamp-3 break-words max-w-[230px]">
+                              <div className="line-clamp-3 max-w-[230px] break-words">
                                 {item.description || "-"}
                               </div>
                             </TooltipCell>
@@ -1168,11 +1185,11 @@ export function WebDataExtraction() {
                             {item.facebook_url ? (
                               <TooltipCell content={item.facebook_url}>
                                 <a
+                                  className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                                   href={normalizeUrl(item.facebook_url) || "#"}
                                   onClick={(e) => handleWebsiteClick(e, item.facebook_url)}
-                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                                 >
-                                  <span className="line-clamp-3 break-all max-w-[140px]">
+                                  <span className="line-clamp-3 max-w-[140px] break-all">
                                     {item.facebook_url}
                                   </span>
                                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1186,11 +1203,11 @@ export function WebDataExtraction() {
                             {item.instagram_url ? (
                               <TooltipCell content={item.instagram_url}>
                                 <a
+                                  className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                                   href={normalizeUrl(item.instagram_url) || "#"}
                                   onClick={(e) => handleWebsiteClick(e, item.instagram_url)}
-                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                                 >
-                                  <span className="line-clamp-3 break-all max-w-[140px]">
+                                  <span className="line-clamp-3 max-w-[140px] break-all">
                                     {item.instagram_url}
                                   </span>
                                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1204,11 +1221,11 @@ export function WebDataExtraction() {
                             {item.twitter_url ? (
                               <TooltipCell content={item.twitter_url}>
                                 <a
+                                  className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                                   href={normalizeUrl(item.twitter_url) || "#"}
                                   onClick={(e) => handleWebsiteClick(e, item.twitter_url)}
-                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                                 >
-                                  <span className="line-clamp-3 break-all max-w-[140px]">
+                                  <span className="line-clamp-3 max-w-[140px] break-all">
                                     {item.twitter_url}
                                   </span>
                                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1222,11 +1239,11 @@ export function WebDataExtraction() {
                             {item.linkedin_url ? (
                               <TooltipCell content={item.linkedin_url}>
                                 <a
+                                  className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                                   href={normalizeUrl(item.linkedin_url) || "#"}
                                   onClick={(e) => handleWebsiteClick(e, item.linkedin_url)}
-                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                                 >
-                                  <span className="line-clamp-3 break-all max-w-[140px]">
+                                  <span className="line-clamp-3 max-w-[140px] break-all">
                                     {item.linkedin_url}
                                   </span>
                                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -1245,28 +1262,28 @@ export function WebDataExtraction() {
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.products}>
-                              <div className="line-clamp-3 break-words max-w-[180px]">
+                              <div className="line-clamp-3 max-w-[180px] break-words">
                                 {item.products || "-"}
                               </div>
                             </TooltipCell>
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.business_sectors}>
-                              <div className="line-clamp-3 break-words max-w-[160px]">
+                              <div className="line-clamp-3 max-w-[160px] break-words">
                                 {item.business_sectors || "-"}
                               </div>
                             </TooltipCell>
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.product_categories}>
-                              <div className="line-clamp-3 break-words max-w-[160px]">
+                              <div className="line-clamp-3 max-w-[160px] break-words">
                                 {item.product_categories || "-"}
                               </div>
                             </TooltipCell>
                           </TableCell>
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.industry_types}>
-                              <div className="line-clamp-3 break-words max-w-[130px]">
+                              <div className="line-clamp-3 max-w-[130px] break-words">
                                 {item.industry_types || "-"}
                               </div>
                             </TooltipCell>
@@ -1301,7 +1318,7 @@ export function WebDataExtraction() {
                           <TableCell className="border-r p-1">
                             <TooltipCell content={item.error_message}>
                               {item.error_message ? (
-                                <span className="text-red-600 text-xs line-clamp-3 break-words block">
+                                <span className="line-clamp-3 block break-words text-red-600 text-xs">
                                   {item.error_message}
                                 </span>
                               ) : (
@@ -1319,7 +1336,7 @@ export function WebDataExtraction() {
           </div>
         ) : (
           // No data - Empty state similar to chat interface
-          <div className="flex-1 flex flex-col items-center px-4 pt-[20vh] pb-8">
+          <div className="flex flex-1 flex-col items-center px-4 pt-[20vh] pb-8">
             <div className="mx-auto w-full space-y-8" style={{ maxWidth: "670px" }}>
               {/* Error Alert */}
               {error && (
@@ -1331,117 +1348,117 @@ export function WebDataExtraction() {
               )}
 
               {/* Logo - Centered at top */}
-              <div className="flex flex-col justify-center items-center gap-3">
+              <div className="flex flex-col items-center justify-center gap-3">
                 <img
-                  src="/images/web-extraction-logo.webp"
                   alt="웹데추"
-                  className="h-[100px] w-[100px] object-contain rounded-lg"
+                  className="h-[100px] w-[100px] rounded-lg object-contain"
+                  src="/images/web-extraction-logo.webp"
                 />
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-semibold">웹데추</h2>
-                  <span className="text-xs text-muted-foreground">v1.0.0.20251108</span>
+                  <h2 className="font-semibold text-2xl">웹데추</h2>
+                  <span className="text-muted-foreground text-xs">v1.0.0.20251108</span>
                 </div>
               </div>
 
               {/* File Upload Section - Centered */}
               <div className="relative w-full">
                 <motion.div
-                  role="button"
-                  tabIndex={0}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
+                  animate={{
+                    scale: isDragOver ? 1.02 : 1,
+                  }}
+                  className={cn(
+                    "relative rounded-2xl border-2 border-dashed shadow-sm transition-colors duration-200",
+                    isDragOver
+                      ? "border-primary bg-primary/5"
+                      : selectedFile
+                        ? "border-primary/50 bg-primary/3"
+                        : "border-muted-foreground/25 bg-background",
+                    !(isProcessing || selectedFile) && "hover:border-primary/50 hover:bg-accent/50",
+                    isProcessing && "pointer-events-none opacity-50",
+                    !isProcessing && "cursor-pointer",
+                  )}
                   onClick={() => fileInputRef.current?.click()}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault()
                       fileInputRef.current?.click()
                     }
                   }}
-                  animate={{
-                    scale: isDragOver ? 1.02 : 1,
-                  }}
+                  role="button"
+                  tabIndex={0}
                   transition={{
                     duration: 0.2,
                     ease: "easeInOut",
                   }}
-                  whileHover={!isProcessing && !selectedFile ? { scale: 1.01 } : {}}
-                  whileTap={!isProcessing ? { scale: 0.98 } : {}}
-                  className={cn(
-                    "relative border-2 border-dashed rounded-2xl shadow-sm transition-colors duration-200",
-                    isDragOver
-                      ? "border-primary bg-primary/5"
-                      : selectedFile
-                        ? "border-primary/50 bg-primary/3"
-                        : "border-muted-foreground/25 bg-background",
-                    !isProcessing && !selectedFile && "hover:border-primary/50 hover:bg-accent/50",
-                    isProcessing && "opacity-50 pointer-events-none",
-                    !isProcessing && "cursor-pointer",
-                  )}
+                  whileHover={isProcessing || selectedFile ? {} : { scale: 1.01 }}
+                  whileTap={isProcessing ? {} : { scale: 0.98 }}
                 >
                   <input
-                    ref={fileInputRef}
-                    type="file"
                     accept=".xlsx,.xls,.csv"
-                    onChange={handleFileChange}
                     className="hidden"
                     disabled={isProcessing}
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    type="file"
                   />
 
                   <div className="p-8 text-center">
                     <AnimatePresence mode="wait">
                       {selectedFile ? (
                         <motion.div
-                          key="file-selected"
-                          initial={{ opacity: 0, scale: 0.8, y: 20 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.3, ease: "easeOut" }}
                           className="space-y-3"
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                          key="file-selected"
+                          transition={{ duration: 0.3, ease: "easeOut" }}
                         >
                           <motion.div
-                            initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
+                            className="mb-2 flex justify-center"
+                            initial={{ scale: 0 }}
                             transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 15 }}
-                            className="flex justify-center mb-2"
                           >
-                            <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10">
                               <FileUp className="h-8 w-8 text-primary" />
                             </div>
                           </motion.div>
                           <motion.p
-                            initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            className="font-semibold text-lg text-primary"
+                            initial={{ opacity: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="text-lg font-semibold text-primary"
                           >
                             {selectedFile.name}
                           </motion.p>
                           <motion.div
-                            initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3 }}
                             className="space-y-1"
+                            initial={{ opacity: 0 }}
+                            transition={{ delay: 0.3 }}
                           >
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               <span className="font-medium">
                                 {formatFileSize(selectedFile.size)}
                               </span>
                             </p>
                             {isValidatingFile ? (
                               <motion.p
-                                initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="text-sm text-muted-foreground"
+                                className="text-muted-foreground text-sm"
+                                initial={{ opacity: 0 }}
                               >
                                 검증 중...
                               </motion.p>
                             ) : urlCount !== null ? (
                               <motion.p
-                                initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
+                                className="text-muted-foreground text-sm"
+                                initial={{ opacity: 0, scale: 0.9 }}
                                 transition={{ delay: 0.4, type: "spring" }}
-                                className="text-sm text-muted-foreground"
                               >
                                 URL{" "}
                                 <span className="font-medium text-primary">
@@ -1451,32 +1468,25 @@ export function WebDataExtraction() {
                             ) : null}
                           </motion.div>
                           <motion.div
-                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            className="mt-4 flex items-center justify-center gap-2"
+                            initial={{ opacity: 0, y: 10 }}
                             transition={{ delay: 0.5 }}
-                            className="flex items-center justify-center gap-2 mt-4"
                           >
                             <Button
-                              variant="ghost"
-                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setSelectedFile(null)
                                 setUrlCount(null)
                                 setError(null)
                               }}
+                              size="sm"
+                              variant="ghost"
                             >
                               <X className="mr-2 h-4 w-4" />
                               제거
                             </Button>
                             <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (selectedFile && urlCount !== null && urlCount > 0) {
-                                  handleUpload()
-                                }
-                              }}
                               disabled={
                                 !selectedFile ||
                                 isProcessing ||
@@ -1484,6 +1494,13 @@ export function WebDataExtraction() {
                                 urlCount === null ||
                                 urlCount === 0
                               }
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (selectedFile && urlCount !== null && urlCount > 0) {
+                                  handleUpload()
+                                }
+                              }}
+                              size="sm"
                             >
                               <Save className="mr-2 h-4 w-4" />
                               업로드 시작
@@ -1492,12 +1509,12 @@ export function WebDataExtraction() {
                         </motion.div>
                       ) : (
                         <motion.div
-                          key="file-empty"
-                          initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2 }}
                           className="space-y-2"
+                          exit={{ opacity: 0 }}
+                          initial={{ opacity: 0 }}
+                          key="file-empty"
+                          transition={{ duration: 0.2 }}
                         >
                           <motion.div
                             animate={{
@@ -1509,12 +1526,12 @@ export function WebDataExtraction() {
                               ease: "easeInOut",
                             }}
                           >
-                            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                            <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                           </motion.div>
-                          <p className="text-lg font-semibold">
+                          <p className="font-semibold text-lg">
                             website_url이 포함된 엑셀 파일을 올려주세요
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             드래그하거나 클릭하면 돼요
                           </p>
                         </motion.div>
@@ -1523,13 +1540,13 @@ export function WebDataExtraction() {
                   </div>
                 </motion.div>
                 {/* Template Download Button - Outside upload area */}
-                <div className="flex justify-center mt-4">
+                <div className="mt-4 flex justify-center">
                   <Button
+                    className="text-xs"
+                    onClick={handleDownloadTemplate}
+                    size="sm"
                     type="button"
                     variant="outline"
-                    size="sm"
-                    onClick={handleDownloadTemplate}
-                    className="text-xs"
                   >
                     <Download className="mr-1.5 h-3.5 w-3.5" />
                     템플릿 다운로드
@@ -1539,11 +1556,11 @@ export function WebDataExtraction() {
 
               {/* Speed Boost Banner - Simple */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="mx-auto w-full mt-6"
+                className="mx-auto mt-6 w-full"
+                initial={{ opacity: 0, y: 10 }}
                 style={{ maxWidth: "670px" }}
+                transition={{ duration: 0.4 }}
               >
                 <div className="relative overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-4">
                   <div className="flex items-center gap-3">
@@ -1551,47 +1568,47 @@ export function WebDataExtraction() {
                       animate={{
                         scale: [1, 1.1, 1],
                       }}
+                      className="flex-shrink-0"
                       transition={{
                         duration: 2,
                         repeat: Number.POSITIVE_INFINITY,
                         ease: "easeInOut",
                       }}
-                      className="flex-shrink-0"
                     >
-                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
                         <Zap className="h-5 w-5 text-primary" fill="currentColor" />
                       </div>
                     </motion.div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       {activeApiKeysCount > 0 ? (
                         <>
                           <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            <p className="text-sm font-semibold text-foreground">
+                            <p className="font-semibold text-foreground text-sm">
                               API KEY{" "}
                               <motion.span
-                                key={`api-key-count-${activeApiKeysCount}`}
-                                initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
+                                className="inline-block font-bold text-primary"
+                                initial={{ scale: 0 }}
+                                key={`api-key-count-${activeApiKeysCount}`}
                                 transition={{ type: "spring", stiffness: 200 }}
-                                className="inline-block text-primary font-bold"
                               >
                                 {activeApiKeysCount}개
                               </motion.span>
                               로{" "}
                               <motion.span
-                                key={`api-key-speed-${activeApiKeysCount}`}
-                                initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
+                                className="inline-block font-bold text-primary"
+                                initial={{ scale: 0 }}
+                                key={`api-key-speed-${activeApiKeysCount}`}
                                 transition={{ type: "spring", stiffness: 200 }}
-                                className="inline-block text-primary font-bold"
                               >
                                 {activeApiKeysCount}배
                               </motion.span>{" "}
                               빠르게 처리 중
                             </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="mt-0.5 text-muted-foreground text-xs">
                             1개당 20개 동시 처리 · 추가할수록 더 빨라져요 (현재{" "}
                             <span className="font-medium text-primary">
                               {activeApiKeysCount * 20}개
@@ -1603,11 +1620,11 @@ export function WebDataExtraction() {
                         <>
                           <div className="flex items-center gap-2">
                             <Key className="h-4 w-4 text-primary" />
-                            <p className="text-sm font-semibold text-foreground">
+                            <p className="font-semibold text-foreground text-sm">
                               API 키를 먼저 설정해주세요
                             </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="mt-0.5 text-muted-foreground text-xs">
                             API KEY 추가하면 <span className="font-medium text-primary">N배</span>{" "}
                             빨라져요 ·{" "}
                             <span className="font-medium">계정별로 구분된 KEY가 필요해요</span>
@@ -1616,13 +1633,13 @@ export function WebDataExtraction() {
                       )}
                     </div>
                     <Button
-                      variant={activeApiKeysCount === 0 ? "default" : "outline"}
-                      size="sm"
+                      className="flex-shrink-0"
+                      disabled={isProcessing}
                       onClick={() => {
                         setIsApiKeyManagementModalOpen(true)
                       }}
-                      disabled={isProcessing}
-                      className="flex-shrink-0"
+                      size="sm"
+                      variant={activeApiKeysCount === 0 ? "default" : "outline"}
                     >
                       <Plus className="mr-1 h-3 w-3" />
                       API KEY 추가
@@ -1641,41 +1658,41 @@ export function WebDataExtraction() {
               {/* Resizer Handle */}
               {/* biome-ignore lint/a11y/useSemanticElements: resizer handle requires div for proper styling and drag functionality */}
               <div
-                ref={resizeRef}
-                role="separator"
-                tabIndex={0}
+                aria-label="패널 너비 조절"
+                aria-orientation="vertical"
+                aria-valuenow={panelWidth}
+                className={cn(
+                  "w-1 flex-shrink-0 cursor-col-resize bg-border transition-colors hover:bg-primary/50",
+                  isResizing && "bg-primary",
+                )}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   setIsResizing(true)
                 }}
-                className={cn(
-                  "w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors flex-shrink-0",
-                  isResizing && "bg-primary",
-                )}
-                aria-label="패널 너비 조절"
-                aria-orientation="vertical"
-                aria-valuenow={panelWidth}
+                ref={resizeRef}
+                role="separator"
+                tabIndex={0}
               />
               <div
-                className="border-l border-border bg-muted/20 flex flex-col h-full min-h-0 overflow-hidden flex-shrink-0"
+                className="flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-border border-l bg-muted/20"
                 style={{ width: `${panelWidth}px` }}
               >
-                <div className="h-full flex flex-col min-h-0 overflow-hidden">
-                  <div className="flex items-center justify-end p-2 border-b border-border">
+                <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                  <div className="flex items-center justify-end border-border border-b p-2">
                     <button
-                      type="button"
-                      onClick={() => setIsPanelVisible(false)}
-                      className="p-1.5 rounded-md hover:bg-muted transition-colors"
                       aria-label="패널 숨기기"
+                      className="rounded-md p-1.5 transition-colors hover:bg-muted"
+                      onClick={() => setIsPanelVisible(false)}
+                      type="button"
                     >
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
-                  <div className="flex-1 flex flex-col min-h-0 p-4 overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
                     <WebExtractionProgress
-                      progress={displayProgress}
                       apiKeyCount={activeApiKeysCount}
                       concurrency={activeApiKeysCount * 20}
+                      progress={displayProgress}
                       totalTimeSaved={totalTimeSaved}
                     />
                   </div>
@@ -1684,10 +1701,10 @@ export function WebDataExtraction() {
             </>
           ) : (
             <button
-              type="button"
-              onClick={() => setIsPanelVisible(true)}
-              className="w-8 border-l border-border bg-muted/20 hover:bg-muted/40 transition-colors flex items-center justify-center"
               aria-label="패널 보이기"
+              className="flex w-8 items-center justify-center border-border border-l bg-muted/20 transition-colors hover:bg-muted/40"
+              onClick={() => setIsPanelVisible(true)}
+              type="button"
             >
               <ChevronLeft className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -1697,14 +1714,14 @@ export function WebDataExtraction() {
       {/* API Key Management Modal */}
       <TooltipProvider>
         <Dialog
-          open={isApiKeyManagementModalOpen}
           onOpenChange={(open) => {
             if (!isProcessing) {
               setIsApiKeyManagementModalOpen(open)
             }
           }}
+          open={isApiKeyManagementModalOpen}
         >
-          <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
+          <DialogContent className="flex max-h-[85vh] max-w-5xl flex-col">
             <DialogHeader>
               <DialogTitle>API 키 관리</DialogTitle>
               <DialogDescription>
@@ -1712,13 +1729,13 @@ export function WebDataExtraction() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="flex-1 space-y-4 overflow-y-auto pr-2">
               {/* Speed Boost Banner */}
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
                 className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 shadow-lg"
+                initial={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
               >
                 {/* Animated background pattern */}
                 <div className="absolute inset-0 opacity-10">
@@ -1732,15 +1749,15 @@ export function WebDataExtraction() {
                         rotate: [0, 10, -10, 0],
                         scale: [1, 1.1, 1],
                       }}
+                      className="flex-shrink-0"
                       transition={{
                         duration: 2,
                         repeat: Number.POSITIVE_INFINITY,
                         repeatDelay: 3,
                         ease: "easeInOut",
                       }}
-                      className="flex-shrink-0"
                     >
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 shadow-lg">
                         <Zap className="h-8 w-8 text-white" fill="currentColor" />
                       </div>
                     </motion.div>
@@ -1748,18 +1765,18 @@ export function WebDataExtraction() {
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-bold text-foreground">
+                        <h3 className="font-bold text-foreground text-lg">
                           API KEY 추가할수록{" "}
                           <motion.span
-                            key={activeApiKeysCount}
-                            initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
+                            className="inline-block text-primary"
+                            initial={{ scale: 0, rotate: -180 }}
+                            key={activeApiKeysCount}
                             transition={{
                               type: "spring",
                               stiffness: 200,
                               damping: 10,
                             }}
-                            className="inline-block text-primary"
                           >
                             {activeApiKeysCount || 1}배
                           </motion.span>{" "}
@@ -1768,7 +1785,7 @@ export function WebDataExtraction() {
                       </div>
 
                       <div className="space-y-2">
-                        <p className="text-sm text-foreground/90">
+                        <p className="text-foreground/90 text-sm">
                           <span className="font-semibold text-primary">
                             계정별로 구분된 API KEY가 필요해요.
                           </span>{" "}
@@ -1779,13 +1796,13 @@ export function WebDataExtraction() {
 
                         <div className="flex flex-wrap items-center gap-4 pt-2">
                           <motion.div
-                            initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 }}
                             className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2"
+                            initial={{ opacity: 0, x: -20 }}
+                            transition={{ delay: 0.2 }}
                           >
                             <Gauge className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-semibold">
+                            <span className="font-semibold text-sm">
                               현재:{" "}
                               <span className="text-primary">{activeApiKeysCount * 20}개</span> 동시
                               처리
@@ -1794,13 +1811,13 @@ export function WebDataExtraction() {
 
                           {activeApiKeysCount > 0 && (
                             <motion.div
-                              initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.3, type: "spring" }}
                               className="flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              transition={{ delay: 0.3, type: "spring" }}
                             >
                               <Sparkles className="h-4 w-4 text-green-600" />
-                              <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                              <span className="font-semibold text-green-700 text-sm dark:text-green-400">
                                 {activeApiKeysCount}배 속도 향상!
                               </span>
                             </motion.div>
@@ -1808,23 +1825,23 @@ export function WebDataExtraction() {
                         </div>
 
                         <motion.div
-                          initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
+                          className="mt-3 rounded-lg bg-muted/50 p-3"
+                          initial={{ opacity: 0 }}
                           transition={{ delay: 0.4 }}
-                          className="rounded-lg bg-muted/50 p-3 mt-3"
                         >
-                          <p className="text-xs font-medium text-muted-foreground mb-1">💡 예시:</p>
+                          <p className="mb-1 font-medium text-muted-foreground text-xs">💡 예시:</p>
                           <div className="flex flex-wrap gap-2 text-xs">
-                            <span className="px-2 py-1 rounded bg-background">
+                            <span className="rounded bg-background px-2 py-1">
                               1개 = 20개 동시 처리
                             </span>
-                            <span className="px-2 py-1 rounded bg-background">
+                            <span className="rounded bg-background px-2 py-1">
                               2개 = 40개 (2배 빠름)
                             </span>
-                            <span className="px-2 py-1 rounded bg-background">
+                            <span className="rounded bg-background px-2 py-1">
                               5개 = 100개 (5배 빠름)
                             </span>
-                            <span className="px-2 py-1 rounded bg-background">
+                            <span className="rounded bg-background px-2 py-1">
                               10개 = 200개 (10배 빠름)
                             </span>
                           </div>
@@ -1836,9 +1853,9 @@ export function WebDataExtraction() {
 
                 {/* Shine effect */}
                 <motion.div
+                  animate={{ x: "200%" }}
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                   initial={{ x: "-100%" }}
-                  animate={{ x: "200%" }}
                   transition={{
                     duration: 3,
                     repeat: Number.POSITIVE_INFINITY,
@@ -1864,9 +1881,9 @@ export function WebDataExtraction() {
                       </CardDescription>
                     </div>
                     <Button
+                      disabled={isProcessing}
                       onClick={() => setIsApiKeyDialogOpen(true)}
                       size="sm"
-                      disabled={isProcessing}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       추가
@@ -1876,17 +1893,17 @@ export function WebDataExtraction() {
                 <Separator />
                 <CardContent className="pt-4">
                   {apiKeys.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Key className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="font-medium text-base mb-1">등록된 API 키가 없습니다</p>
-                      <p className="text-sm text-muted-foreground mb-4">
+                    <div className="py-12 text-center">
+                      <Key className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+                      <p className="mb-1 font-medium text-base">등록된 API 키가 없습니다</p>
+                      <p className="mb-4 text-muted-foreground text-sm">
                         서버의 환경 변수에 설정된 기본 키가 사용됩니다
                       </p>
                       <Button
-                        onClick={() => setIsApiKeyDialogOpen(true)}
-                        variant="outline"
-                        size="sm"
                         disabled={isProcessing}
+                        onClick={() => setIsApiKeyDialogOpen(true)}
+                        size="sm"
+                        variant="outline"
                       >
                         <Plus className="mr-2 h-4 w-4" />첫 API 키 추가하기
                       </Button>
@@ -1901,30 +1918,30 @@ export function WebDataExtraction() {
                             <TableHead>API 키</TableHead>
                             <TableHead>상태</TableHead>
                             <TableHead>사용 정보</TableHead>
-                            <TableHead className="text-right w-32">작업</TableHead>
+                            <TableHead className="w-32 text-right">작업</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {apiKeys.map((key, index) => {
                             const isRevealed = revealedKeys.has(key.id)
                             return (
-                              <TableRow key={key.id} className={key.isActive ? "" : "opacity-60"}>
+                              <TableRow className={key.isActive ? "" : "opacity-60"} key={key.id}>
                                 <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell>
                                   <div className="font-medium">{key.name}</div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
-                                    <code className="text-xs font-mono text-muted-foreground">
+                                    <code className="font-mono text-muted-foreground text-xs">
                                       {isRevealed ? key.apiKey : maskApiKey(key.apiKey)}
                                     </code>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-6 w-6"
                                           onClick={() => toggleRevealKey(key.id)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           {isRevealed ? (
                                             <EyeOff className="h-3.5 w-3.5" />
@@ -1943,19 +1960,19 @@ export function WebDataExtraction() {
                                   <div className="flex items-center gap-2">
                                     <Switch
                                       checked={key.isActive}
-                                      onCheckedChange={() => handleToggleActive(key)}
                                       disabled={updateApiKeyMutation.isPending}
+                                      onCheckedChange={() => handleToggleActive(key)}
                                     />
                                     <Badge
-                                      variant={key.isActive ? "default" : "secondary"}
                                       className="text-xs"
+                                      variant={key.isActive ? "default" : "secondary"}
                                     >
                                       {key.isActive ? "활성" : "비활성"}
                                     </Badge>
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="space-y-0.5 text-xs text-muted-foreground">
+                                  <div className="space-y-0.5 text-muted-foreground text-xs">
                                     <div>
                                       <span className="font-medium">마지막 사용:</span>{" "}
                                       {formatDate(key.lastUsedAt)}
@@ -1971,11 +1988,11 @@ export function WebDataExtraction() {
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => handleDeleteApiKey(key.id)}
                                           disabled={deleteApiKeyMutation.isPending}
+                                          onClick={() => handleDeleteApiKey(key.id)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           <Trash2 className="h-4 w-4 text-destructive" />
                                         </Button>
@@ -1999,7 +2016,7 @@ export function WebDataExtraction() {
       </TooltipProvider>
 
       {/* File Upload Modal */}
-      <Dialog open={isFileUploadModalOpen} onOpenChange={setIsFileUploadModalOpen}>
+      <Dialog onOpenChange={setIsFileUploadModalOpen} open={isFileUploadModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>파일 업로드</DialogTitle>
@@ -2009,18 +2026,6 @@ export function WebDataExtraction() {
           <div className="space-y-4">
             {/* Drag & Drop Zone */}
             <motion.div
-              role="button"
-              tabIndex={0}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  fileInputRef.current?.click()
-                }
-              }}
               animate={{
                 scale: isDragOver ? 1.02 : 1,
                 borderColor: isDragOver
@@ -2034,84 +2039,94 @@ export function WebDataExtraction() {
                     ? "hsl(var(--primary) / 0.03)"
                     : "hsl(var(--background))",
               }}
+              className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center ${isProcessing ? "pointer-events-none opacity-50" : ""}
+              `}
+              onClick={() => fileInputRef.current?.click()}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
+              role="button"
+              tabIndex={0}
               transition={{
                 duration: 0.2,
                 ease: "easeInOut",
               }}
               whileHover={
-                !isProcessing && !selectedFile
-                  ? {
+                isProcessing || selectedFile
+                  ? {}
+                  : {
                       borderColor: "hsl(var(--primary) / 0.5)",
                       backgroundColor: "hsl(var(--accent) / 0.5)",
                     }
-                  : {}
               }
-              whileTap={!isProcessing ? { scale: 0.98 } : {}}
-              className={`
-                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-                ${isProcessing ? "opacity-50 pointer-events-none" : ""}
-              `}
+              whileTap={isProcessing ? {} : { scale: 0.98 }}
             >
               <input
-                ref={fileInputRef}
-                type="file"
                 accept=".xlsx,.xls,.csv"
-                onChange={handleFileChange}
                 className="hidden"
                 disabled={isProcessing}
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                type="file"
               />
 
               <AnimatePresence mode="wait">
                 {selectedFile ? (
                   <motion.div
-                    key="file-selected-modal"
-                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
                     className="space-y-2"
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    key="file-selected-modal"
+                    transition={{ duration: 0.3, ease: "easeOut" }}
                   >
                     <motion.div
-                      initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
+                      className="mb-2 flex justify-center"
+                      initial={{ scale: 0 }}
                       transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 15 }}
-                      className="flex justify-center mb-2"
                     >
-                      <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10">
                         <FileUp className="h-8 w-8 text-primary" />
                       </div>
                     </motion.div>
                     <motion.p
-                      initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
+                      className="font-semibold text-lg text-primary"
+                      initial={{ opacity: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="text-lg font-semibold text-primary"
                     >
                       {selectedFile.name}
                     </motion.p>
                     <motion.div
-                      initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
                       className="space-y-1"
+                      initial={{ opacity: 0 }}
+                      transition={{ delay: 0.3 }}
                     >
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         <span className="font-medium">{formatFileSize(selectedFile.size)}</span>
                       </p>
                       {isValidatingFile ? (
                         <motion.p
-                          initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-sm text-muted-foreground"
+                          className="text-muted-foreground text-sm"
+                          initial={{ opacity: 0 }}
                         >
                           검증 중...
                         </motion.p>
                       ) : urlCount !== null ? (
                         <motion.p
-                          initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
+                          className="text-muted-foreground text-sm"
+                          initial={{ opacity: 0, scale: 0.9 }}
                           transition={{ delay: 0.4, type: "spring" }}
-                          className="text-sm text-muted-foreground"
                         >
                           URL{" "}
                           <span className="font-medium text-primary">
@@ -2121,20 +2136,20 @@ export function WebDataExtraction() {
                       ) : null}
                     </motion.div>
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
                       transition={{ delay: 0.5 }}
                     >
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        className="mt-2"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedFile(null)
                           setUrlCount(null)
                           setError(null)
                         }}
-                        className="mt-2"
+                        size="sm"
+                        variant="ghost"
                       >
                         <X className="mr-2 h-4 w-4" />
                         제거
@@ -2143,12 +2158,12 @@ export function WebDataExtraction() {
                   </motion.div>
                 ) : (
                   <motion.div
-                    key="file-empty-modal"
-                    initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
                     className="space-y-2"
+                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0 }}
+                    key="file-empty-modal"
+                    transition={{ duration: 0.2 }}
                   >
                     <motion.div
                       animate={{
@@ -2160,25 +2175,25 @@ export function WebDataExtraction() {
                         ease: "easeInOut",
                       }}
                     >
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                     </motion.div>
-                    <p className="text-lg font-semibold">
+                    <p className="font-semibold text-lg">
                       website_url이 포함된 엑셀 파일을 올려주세요
                     </p>
-                    <p className="text-sm text-muted-foreground">드래그하거나 클릭하면 돼요</p>
+                    <p className="text-muted-foreground text-sm">드래그하거나 클릭하면 돼요</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
 
             {/* Template Download Button - Outside upload area */}
-            <div className="flex justify-center mt-4">
+            <div className="mt-4 flex justify-center">
               <Button
+                className="text-xs"
+                onClick={handleDownloadTemplate}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={handleDownloadTemplate}
-                className="text-xs"
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
                 템플릿 다운로드
@@ -2187,19 +2202,13 @@ export function WebDataExtraction() {
 
             <div className="flex justify-end gap-2">
               <Button
-                variant="outline"
-                onClick={() => setIsFileUploadModalOpen(false)}
                 disabled={isProcessing}
+                onClick={() => setIsFileUploadModalOpen(false)}
+                variant="outline"
               >
                 취소
               </Button>
               <Button
-                onClick={() => {
-                  if (selectedFile) {
-                    handleUpload()
-                    setIsFileUploadModalOpen(false)
-                  }
-                }}
                 disabled={
                   !selectedFile ||
                   isProcessing ||
@@ -2207,6 +2216,12 @@ export function WebDataExtraction() {
                   urlCount === null ||
                   urlCount === 0
                 }
+                onClick={() => {
+                  if (selectedFile) {
+                    handleUpload()
+                    setIsFileUploadModalOpen(false)
+                  }
+                }}
               >
                 <Save className="mr-2 h-4 w-4" />
                 업로드 시작
@@ -2218,12 +2233,12 @@ export function WebDataExtraction() {
 
       {/* API Key Add Dialog */}
       <Dialog
-        open={isApiKeyDialogOpen}
         onOpenChange={(open) => {
           if (!isProcessing) {
             setIsApiKeyDialogOpen(open)
           }
         }}
+        open={isApiKeyDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
@@ -2236,15 +2251,15 @@ export function WebDataExtraction() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddApiKey} className="space-y-4">
+          <form className="space-y-4" onSubmit={handleAddApiKey}>
             <div className="space-y-2">
               <Label htmlFor={keyNameId}>키 이름</Label>
               <Input
                 id={keyNameId}
-                value={apiKeyFormData.name}
                 onChange={(e) => setApiKeyFormData({ ...apiKeyFormData, name: e.target.value })}
                 placeholder="예: Main Account, Backup Account 1"
                 required
+                value={apiKeyFormData.name}
               />
             </div>
 
@@ -2252,18 +2267,18 @@ export function WebDataExtraction() {
               <Label htmlFor={apiKeyId}>API 키</Label>
               <Input
                 id={apiKeyId}
-                type="password"
-                value={apiKeyFormData.apiKey}
                 onChange={(e) => setApiKeyFormData({ ...apiKeyFormData, apiKey: e.target.value })}
                 placeholder="sk-..."
                 required
+                type="password"
+                value={apiKeyFormData.apiKey}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="underline"
+                  href="https://platform.openai.com/api-keys"
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   OpenAI 플랫폼
                 </a>
@@ -2272,11 +2287,11 @@ export function WebDataExtraction() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsApiKeyDialogOpen(false)}>
+              <Button onClick={() => setIsApiKeyDialogOpen(false)} type="button" variant="outline">
                 <X className="mr-2 h-4 w-4" />
                 취소
               </Button>
-              <Button type="submit" disabled={createApiKeyMutation.isPending}>
+              <Button disabled={createApiKeyMutation.isPending} type="submit">
                 <Save className="mr-2 h-4 w-4" />
                 추가
               </Button>
@@ -2286,7 +2301,7 @@ export function WebDataExtraction() {
       </Dialog>
 
       {/* Clear Local Storage Confirmation Dialog */}
-      <AlertDialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+      <AlertDialog onOpenChange={setIsClearDataDialogOpen} open={isClearDataDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>웹데추 데이터 초기화 확인</AlertDialogTitle>
@@ -2299,8 +2314,8 @@ export function WebDataExtraction() {
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleClearLocalStorage}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleClearLocalStorage}
             >
               초기화
             </AlertDialogAction>
@@ -2309,13 +2324,13 @@ export function WebDataExtraction() {
       </AlertDialog>
 
       {/* Close Panel Confirmation Dialog */}
-      <AlertDialog open={isClosePanelDialogOpen} onOpenChange={setIsClosePanelDialogOpen}>
+      <AlertDialog onOpenChange={setIsClosePanelDialogOpen} open={isClosePanelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>추출이 끝났어요</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">결과 패널을 닫을까요?</span>
-              <span className="block text-xs text-muted-foreground">
+              <span className="block text-muted-foreground text-xs">
                 닫아도 언제든지 다시 열 수 있어요
               </span>
             </AlertDialogDescription>
@@ -2351,7 +2366,7 @@ export function WebDataExtraction() {
       </AlertDialog>
 
       {/* Download Confirmation Dialog */}
-      <AlertDialog open={isDownloadConfirmDialogOpen} onOpenChange={setIsDownloadConfirmDialogOpen}>
+      <AlertDialog onOpenChange={setIsDownloadConfirmDialogOpen} open={isDownloadConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>다운로드 옵션 선택</AlertDialogTitle>
@@ -2363,37 +2378,37 @@ export function WebDataExtraction() {
           </AlertDialogHeader>
           <div className="space-y-3 py-4">
             <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-3 px-4"
+              className="h-auto w-full justify-start px-4 py-3"
               onClick={() => {
                 handleDownload(false)
                 setIsDownloadConfirmDialogOpen(false)
               }}
+              variant="outline"
             >
               <div className="flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   <span className="font-semibold">기존 형태로 다운로드</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   이메일이 여러 개 있어도 하나의 행으로 유지됩니다
                 </span>
               </div>
             </Button>
             <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-3 px-4"
+              className="h-auto w-full justify-start px-4 py-3"
               onClick={() => {
                 handleDownload(true)
                 setIsDownloadConfirmDialogOpen(false)
               }}
+              variant="outline"
             >
               <div className="flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   <span className="font-semibold">이메일 분리하여 다운로드</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   이메일이 여러 개인 경우 각 이메일마다 별도의 행으로 생성됩니다
                   <br />
                   예: cs@example.com,sales@example.com → 2개 행 생성

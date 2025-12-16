@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface LeadUploadModalProps {
+type LeadUploadModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onFileSelect: (file: File) => void
@@ -60,7 +60,9 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (!file) return
+      if (!file) {
+        return
+      }
 
       const fileName = file.name.toLowerCase()
       if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv")) {
@@ -204,7 +206,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
   }, [])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -220,14 +222,14 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
         <div className="space-y-6 py-4">
           {/* Template Download Section */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Step 1: Get the Template (Optional)</h4>
-            <p className="text-sm text-muted-foreground">
+            <h4 className="font-medium text-sm">Step 1: Get the Template (Optional)</h4>
+            <p className="text-muted-foreground text-sm">
               Use this format so I can work with your data instantly.
             </p>
             <Button
-              variant="outline"
-              onClick={handleDownloadTemplate}
               className="w-full justify-start"
+              onClick={handleDownloadTemplate}
+              variant="outline"
             >
               <Download className="mr-2 h-4 w-4" />
               Download Template
@@ -245,37 +247,35 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
 
           {/* File Upload Section */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Step 2: Upload Your Leads</h4>
+            <h4 className="font-medium text-sm">Step 2: Upload Your Leads</h4>
             <input
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={handleFileChange}
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileChange}
-              className="hidden"
             />
             <button
-              type="button"
+              className={`relative flex min-h-[240px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50"
+              }
+              `}
+              onClick={() => fileInputRef.current?.click()}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`
-                relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 min-h-[240px] text-center cursor-pointer transition-colors w-full
-                ${
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50"
-                }
-              `}
+              type="button"
             >
               <Upload
-                className={`h-10 w-10 mb-3 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+                className={`mb-3 h-10 w-10 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
               />
-              <p className="text-sm font-medium mb-1">
+              <p className="mb-1 font-medium text-sm">
                 {isDragging ? "Drop your file here" : "Drop your file here or click to browse"}
               </p>
-              <p className="text-xs text-muted-foreground">Accepts .xlsx, .xls, or .csv files</p>
+              <p className="text-muted-foreground text-xs">Accepts .xlsx, .xls, or .csv files</p>
             </button>
           </div>
         </div>

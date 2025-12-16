@@ -16,7 +16,7 @@ import type { ExtractionResult } from "@/lib/api/types/web-extraction"
 import { formatCollectedAt, normalizeUrl } from "@/utils/web-extraction.utils"
 import { TooltipCell } from "./TooltipCell"
 
-interface DataTableProps {
+type DataTableProps = {
   data: ExtractionResult[]
 }
 
@@ -62,11 +62,11 @@ export function DataTable({ data }: DataTableProps) {
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="rounded-md border overflow-x-auto">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[160px] max-w-[160px] border-r p-1 sticky left-0 bg-background z-10">
+                <TableHead className="sticky left-0 z-10 w-[160px] max-w-[160px] border-r bg-background p-1">
                   Website URL
                 </TableHead>
                 <TableHead className="w-[120px] max-w-[120px] border-r p-1">
@@ -92,12 +92,12 @@ export function DataTable({ data }: DataTableProps) {
                 {/* Dynamic custom search criteria columns */}
                 {customCriteriaKeys.map((key) => (
                   <>
-                    <TableHead key={`${key}-result`} className="w-[80px] max-w-[80px] border-r p-1">
+                    <TableHead className="w-[80px] max-w-[80px] border-r p-1" key={`${key}-result`}>
                       {key}
                     </TableHead>
                     <TableHead
-                      key={`${key}-reasons`}
                       className="w-[200px] max-w-[200px] border-r p-1"
+                      key={`${key}-reasons`}
                     >
                       {key} (근거)
                     </TableHead>
@@ -112,15 +112,15 @@ export function DataTable({ data }: DataTableProps) {
             <TableBody>
               {data.map((item, index) => (
                 <TableRow key={`${item.website_url}-${index}`}>
-                  <TableCell className="border-r p-1 sticky left-0 bg-background z-10">
+                  <TableCell className="sticky left-0 z-10 border-r bg-background p-1">
                     <TooltipCell content={item.website_url}>
                       {item.website_url ? (
                         <a
+                          className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.website_url) || "#"}
                           onClick={(e) => handleWebsiteClick(e, item.website_url)}
-                          className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
                         >
-                          <span className="line-clamp-3 break-all max-w-[140px]">
+                          <span className="line-clamp-3 max-w-[140px] break-all">
                             {item.website_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -139,14 +139,14 @@ export function DataTable({ data }: DataTableProps) {
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.email}>
-                      <div className="line-clamp-3 break-all max-w-[140px]">
+                      <div className="line-clamp-3 max-w-[140px] break-all">
                         {item.email || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.description}>
-                      <div className="line-clamp-3 break-words max-w-[180px]">
+                      <div className="line-clamp-3 max-w-[180px] break-words">
                         {item.description || "-"}
                       </div>
                     </TooltipCell>
@@ -185,11 +185,11 @@ export function DataTable({ data }: DataTableProps) {
                     {item.facebook_url ? (
                       <TooltipCell content={item.facebook_url}>
                         <a
+                          className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.facebook_url) || "#"}
                           onClick={(e) => handleWebsiteClick(e, item.facebook_url)}
-                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-3 break-all max-w-[100px]">
+                          <span className="line-clamp-3 max-w-[100px] break-all">
                             {item.facebook_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -203,11 +203,11 @@ export function DataTable({ data }: DataTableProps) {
                     {item.instagram_url ? (
                       <TooltipCell content={item.instagram_url}>
                         <a
+                          className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.instagram_url) || "#"}
                           onClick={(e) => handleWebsiteClick(e, item.instagram_url)}
-                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-3 break-all max-w-[100px]">
+                          <span className="line-clamp-3 max-w-[100px] break-all">
                             {item.instagram_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -221,11 +221,11 @@ export function DataTable({ data }: DataTableProps) {
                     {item.twitter_url ? (
                       <TooltipCell content={item.twitter_url}>
                         <a
+                          className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.twitter_url) || "#"}
                           onClick={(e) => handleWebsiteClick(e, item.twitter_url)}
-                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-3 break-all max-w-[100px]">
+                          <span className="line-clamp-3 max-w-[100px] break-all">
                             {item.twitter_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -239,11 +239,11 @@ export function DataTable({ data }: DataTableProps) {
                     {item.linkedin_url ? (
                       <TooltipCell content={item.linkedin_url}>
                         <a
+                          className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.linkedin_url) || "#"}
                           onClick={(e) => handleWebsiteClick(e, item.linkedin_url)}
-                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-3 break-all max-w-[100px]">
+                          <span className="line-clamp-3 max-w-[100px] break-all">
                             {item.linkedin_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -260,28 +260,28 @@ export function DataTable({ data }: DataTableProps) {
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.products}>
-                      <div className="line-clamp-3 break-words max-w-[130px]">
+                      <div className="line-clamp-3 max-w-[130px] break-words">
                         {item.products || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.business_sectors}>
-                      <div className="line-clamp-3 break-words max-w-[110px]">
+                      <div className="line-clamp-3 max-w-[110px] break-words">
                         {item.business_sectors || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.product_categories}>
-                      <div className="line-clamp-3 break-words max-w-[110px]">
+                      <div className="line-clamp-3 max-w-[110px] break-words">
                         {item.product_categories || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.industry_types}>
-                      <div className="line-clamp-3 break-words max-w-[100px]">
+                      <div className="line-clamp-3 max-w-[100px] break-words">
                         {item.industry_types || "-"}
                       </div>
                     </TooltipCell>
@@ -296,10 +296,10 @@ export function DataTable({ data }: DataTableProps) {
 
                     return (
                       <>
-                        <TableCell key={`${key}-result`} className="border-r p-1 text-center">
+                        <TableCell className="border-r p-1 text-center" key={`${key}-result`}>
                           <TooltipCell content={result}>
                             {isTrue ? (
-                              <Badge variant="default" className="bg-green-600">
+                              <Badge className="bg-green-600" variant="default">
                                 true
                               </Badge>
                             ) : isFalse ? (
@@ -309,12 +309,12 @@ export function DataTable({ data }: DataTableProps) {
                             )}
                           </TooltipCell>
                         </TableCell>
-                        <TableCell key={`${key}-reasons`} className="border-r p-1">
+                        <TableCell className="border-r p-1" key={`${key}-reasons`}>
                           <TooltipCell content={reasons.join(" | ")}>
-                            <div className="text-xs space-y-1">
+                            <div className="space-y-1 text-xs">
                               {reasons.length > 0 ? (
                                 reasons.map((reason, idx) => (
-                                  <div key={idx} className="line-clamp-1 break-words">
+                                  <div className="line-clamp-1 break-words" key={idx}>
                                     {idx + 1}. {reason}
                                   </div>
                                 ))
@@ -355,7 +355,7 @@ export function DataTable({ data }: DataTableProps) {
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.error_message}>
                       {item.error_message ? (
-                        <span className="text-red-600 text-xs line-clamp-3 break-words block">
+                        <span className="line-clamp-3 block break-words text-red-600 text-xs">
                           {item.error_message}
                         </span>
                       ) : (

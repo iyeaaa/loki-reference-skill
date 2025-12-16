@@ -14,7 +14,7 @@ import { useLeadDiscoveryMutation } from "@/lib/api/hooks/lead-discovery"
 import { useCompleteStep2, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
-interface Lead {
+type Lead = {
   id: string
   companyName: string
   email?: string
@@ -22,7 +22,7 @@ interface Lead {
   industry?: string
 }
 
-interface BulkCreateLeadsResponse {
+type BulkCreateLeadsResponse = {
   leads: Array<{ id: string; companyName: string }>
   duplicateEmails: string[]
   stats: { created: number; skipped: number }
@@ -130,7 +130,9 @@ export function StepLeadSearch() {
   // Save leads to database with customer group (memoized to avoid useEffect dependency issues)
   const saveLeadsToDatabase = useCallback(
     async (leadsToSave: Lead[]) => {
-      if (!workspace?.id || leadsToSave.length === 0) return []
+      if (!workspace?.id || leadsToSave.length === 0) {
+        return []
+      }
 
       setIsSaving(true)
       try {
@@ -204,7 +206,9 @@ export function StepLeadSearch() {
   )
 
   const startSearch = useCallback(async () => {
-    if (!workspace?.id || hasStartedSearch.current) return
+    if (!workspace?.id || hasStartedSearch.current) {
+      return
+    }
 
     hasStartedSearch.current = true
     setIsSearching(true)
@@ -259,14 +263,14 @@ export function StepLeadSearch() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-3">
-            <Search className="w-6 h-6 text-blue-500" />
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Search className="h-6 w-6 text-blue-500" />
             {t("app.onboarding.step2.searchTitle", "리드 검색 중")}
           </CardTitle>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600 text-sm">
             {t(
               "app.onboarding.step2.searchDescription",
               "설문 정보를 기반으로 잠재 고객을 검색하고 있습니다",
@@ -276,30 +280,30 @@ export function StepLeadSearch() {
         <CardContent className="space-y-6">
           {isSearching || isSaving ? (
             // Searching/Saving state
-            <div className="py-8 space-y-6">
+            <div className="space-y-6 py-8">
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 </div>
-                <p className="text-lg font-medium text-gray-900">
+                <p className="font-medium text-gray-900 text-lg">
                   {isSaving
                     ? isKorean
                       ? "리드 저장 중..."
                       : "Saving leads..."
                     : t("app.onboarding.step2.searching", "검색 중...")}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">{statusMessage}</p>
+                <p className="mt-1 text-gray-500 text-sm">{statusMessage}</p>
               </div>
-              <Progress value={isSaving ? 100 : progress} className="h-2" />
-              <p className="text-center text-sm text-gray-500">
+              <Progress className="h-2" value={isSaving ? 100 : progress} />
+              <p className="text-center text-gray-500 text-sm">
                 {isSaving ? "100%" : `${progress}%`}
               </p>
             </div>
           ) : searchComplete && leads.length > 0 ? (
             // Results found
             <div className="space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-green-600" />
                 <div>
                   <p className="font-medium text-green-800">
                     {leads.length}
@@ -309,18 +313,18 @@ export function StepLeadSearch() {
               </div>
 
               {/* Lead preview list */}
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="max-h-64 space-y-2 overflow-y-auto">
                 {leads.slice(0, 5).map((lead, index) => (
                   <div
+                    className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
                     key={lead.id}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
                   >
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-medium text-blue-600 text-sm">
                       {index + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{lead.companyName}</p>
-                      <p className="text-sm text-gray-500 truncate">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-gray-900">{lead.companyName}</p>
+                      <p className="truncate text-gray-500 text-sm">
                         {lead.country} • {lead.industry}
                       </p>
                     </div>
@@ -328,11 +332,11 @@ export function StepLeadSearch() {
                 ))}
                 {leads.length > 5 && (
                   <Button
-                    variant="ghost"
-                    className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    className="w-full text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                     onClick={() => setShowAllLeads(true)}
+                    variant="ghost"
                   >
-                    <Eye className="w-4 h-4 mr-2" />
+                    <Eye className="mr-2 h-4 w-4" />
                     {isKorean
                       ? `전체 ${leads.length}개 리드 보기`
                       : `View all ${leads.length} leads`}
@@ -343,34 +347,34 @@ export function StepLeadSearch() {
               {/* Next Button */}
               <div className="flex justify-end pt-4">
                 <Button
-                  onClick={handleNext}
                   className="bg-blue-600 hover:bg-blue-700"
                   disabled={!savingComplete || isSaving}
+                  onClick={handleNext}
                 >
                   {t("app.onboarding.step1.nextButton", "다음 단계")}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           ) : searchComplete && leads.length === 0 ? (
             // No results
-            <div className="py-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-gray-400" />
+            <div className="space-y-4 py-8 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                <Users className="h-8 w-8 text-gray-400" />
               </div>
               <p className="text-gray-600">
                 {t("app.onboarding.step2.noLeadsFound", "리드를 찾을 수 없습니다")}
               </p>
-              <Button variant="outline" onClick={handleRetry}>
-                <RefreshCw className="w-4 h-4 mr-2" />
+              <Button onClick={handleRetry} variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
                 {t("app.onboarding.step2.retrySearch", "다시 검색")}
               </Button>
             </div>
           ) : (
             // Initial state (should auto-start)
             <div className="py-8 text-center">
-              <Button onClick={handleRetry} disabled={!workspace?.id}>
-                <Search className="w-4 h-4 mr-2" />
+              <Button disabled={!workspace?.id} onClick={handleRetry}>
+                <Search className="mr-2 h-4 w-4" />
                 {t("app.onboarding.step2.searching", "검색 중...")}
               </Button>
             </div>
@@ -379,35 +383,35 @@ export function StepLeadSearch() {
       </Card>
 
       {/* View All Leads Dialog */}
-      <Dialog open={showAllLeads} onOpenChange={setShowAllLeads}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <Dialog onOpenChange={setShowAllLeads} open={showAllLeads}>
+        <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
+              <Users className="h-5 w-5" />
               {isKorean ? `전체 리드 목록 (${leads.length}개)` : `All Leads (${leads.length})`}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          <div className="flex-1 space-y-2 overflow-y-auto pr-2">
             {leads.map((lead, index) => (
               <div
+                className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
                 key={lead.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
               >
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm flex-shrink-0">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 font-medium text-blue-600 text-sm">
                   {index + 1}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{lead.companyName}</p>
-                  <p className="text-sm text-gray-500 truncate">{lead.email || "-"}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-gray-900">{lead.companyName}</p>
+                  <p className="truncate text-gray-500 text-sm">{lead.email || "-"}</p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex flex-shrink-0 gap-2">
                   {lead.country && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge className="text-xs" variant="outline">
                       {lead.country}
                     </Badge>
                   )}
                   {lead.industry && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge className="text-xs" variant="secondary">
                       {lead.industry}
                     </Badge>
                   )}

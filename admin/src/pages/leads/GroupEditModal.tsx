@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 
-interface GroupEditModalProps {
+type GroupEditModalProps = {
   group: CustomerGroup | null
   isOpen: boolean
   onClose: () => void
@@ -33,7 +33,9 @@ export function GroupEditModal({ group, isOpen, onClose, onSave }: GroupEditModa
   }, [isOpen, group])
 
   const handleSave = () => {
-    if (!group || !name.trim()) return
+    if (!(group && name.trim())) {
+      return
+    }
     onSave(group.id, name, description)
   }
 
@@ -47,7 +49,7 @@ export function GroupEditModal({ group, isOpen, onClose, onSave }: GroupEditModa
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog onOpenChange={handleClose} open={isOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>그룹 정보 수정</DialogTitle>
@@ -57,26 +59,26 @@ export function GroupEditModal({ group, isOpen, onClose, onSave }: GroupEditModa
             <Label htmlFor={nameId}>그룹 이름 *</Label>
             <Input
               id={nameId}
-              value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="그룹 이름을 입력하세요"
+              value={name}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor={descriptionId}>그룹 설명</Label>
             <Input
               id={descriptionId}
-              value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="그룹 설명을 입력하세요"
+              value={description}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button onClick={handleClose} variant="outline">
             취소
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>
+          <Button disabled={!name.trim()} onClick={handleSave}>
             저장
           </Button>
         </DialogFooter>

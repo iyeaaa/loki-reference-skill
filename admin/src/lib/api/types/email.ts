@@ -38,13 +38,13 @@ export type EmailEventType =
   | "spam_report"
   | "unsubscribe"
 
-export interface EmailAttachment {
+export type EmailAttachment = {
   filename: string
   type: string
   size: number
 }
 
-export interface Email {
+export type Email = {
   id: string
   workspaceId: string
   userEmailAccountId: string
@@ -106,7 +106,7 @@ export type EmailIntent =
   | "positive_interest"
   | "neutral"
 
-export interface EmailReply {
+export type EmailReply = {
   id: string
   workspaceId: string
   originalEmailId: string
@@ -119,7 +119,7 @@ export interface EmailReply {
   createdAt: string
 }
 
-export interface EmailEvent {
+export type EmailEvent = {
   id: string
   emailId: string
   eventType: EmailEventType
@@ -136,7 +136,7 @@ export interface EmailEvent {
   createdAt: string
 }
 
-export interface SendEmailRequest {
+export type SendEmailRequest = {
   toEmail: string
   subject: string
   bodyText?: string
@@ -158,7 +158,7 @@ export interface SendEmailRequest {
   userId: string
 }
 
-export interface CreateEmailRequest {
+export type CreateEmailRequest = {
   workspaceId: string
   userEmailAccountId: string
   leadId?: string
@@ -176,18 +176,18 @@ export interface CreateEmailRequest {
   scheduledAt?: string
 }
 
-export interface UpdateEmailStatusRequest {
+export type UpdateEmailStatusRequest = {
   status: EmailStatus
 }
 
-export interface EmailsResponse {
+export type EmailsResponse = {
   data: Email[]
   total: number
   limit: number
   offset: number
 }
 
-export interface EmailsParams {
+export type EmailsParams = {
   page?: number
   limit?: number
   status?: EmailStatus | "all"
@@ -198,12 +198,12 @@ export interface EmailsParams {
   search?: string
 }
 
-export interface BulkUpdateEmailStatusRequest {
+export type BulkUpdateEmailStatusRequest = {
   emailIds: string[]
   status: EmailStatus
 }
 
-export interface RepliedEmail {
+export type RepliedEmail = {
   id: string
   threadId?: string | null
   workspaceId: string
@@ -276,7 +276,7 @@ export interface RepliedEmail {
 }
 
 // Thread email for conversation history (스레드 대화 이력)
-export interface ThreadEmail {
+export type ThreadEmail = {
   id: string
   direction: EmailDirection
   fromEmail: string
@@ -312,7 +312,7 @@ export interface ThreadEmail {
   replySentiment?: EmailReplySentiment | null
 }
 
-export interface ThreadGroupedEmail {
+export type ThreadGroupedEmail = {
   threadId: string
   latestEmailId: string
   emailCount: number

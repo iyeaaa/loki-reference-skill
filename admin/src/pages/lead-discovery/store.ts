@@ -10,7 +10,7 @@ import { atomWithStorage } from "jotai/utils"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
-export interface Customer {
+export type Customer = {
   id: string
   company_name?: string // 회사명
   web_address?: string // 웹사이트
@@ -44,7 +44,7 @@ export interface Customer {
 }
 
 // 채팅 메시지 인터페이스
-export interface ChatMessage {
+export type ChatMessage = {
   id: string
   role: "user" | "assistant"
   content: string
@@ -102,7 +102,7 @@ export const resetCustomersAtom = atom(null, (_get, set) => {
 // ============================================
 
 // 로컬스토리지 저장용 인터페이스 (Date를 string으로 변환)
-interface StoredChatMessage {
+type StoredChatMessage = {
   id: string
   role: "user" | "assistant"
   content: string
@@ -114,7 +114,9 @@ interface StoredChatMessage {
 const chatStorage = {
   getItem: (key: string): ChatMessage[] => {
     const stored = localStorage.getItem(key)
-    if (!stored) return []
+    if (!stored) {
+      return []
+    }
     try {
       const parsed: StoredChatMessage[] = JSON.parse(stored)
       return parsed.map((msg) => ({
@@ -188,7 +190,7 @@ import type { ClarificationData, LeadDiscoveryStatus } from "@/lib/api/hooks/lea
 import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 
 // 스트리밍 상태 인터페이스
-export interface StreamingState {
+export type StreamingState = {
   messageId: string | null
   analysisMessageId: string | null // 분석 결과가 표시될 메시지 ID (선택 후에도 유지)
   status: LeadDiscoveryStatus
@@ -232,7 +234,9 @@ export const initialStreamingState: StreamingState = {
 const loadStreamingState = (): StreamingState => {
   try {
     const stored = localStorage.getItem("lead-discovery-streaming-state")
-    if (!stored) return initialStreamingState
+    if (!stored) {
+      return initialStreamingState
+    }
 
     const parsed = JSON.parse(stored) as StreamingState
 
@@ -294,7 +298,7 @@ export const resetStreamingStateAtom = atom(null, (_get, set) => {
 // Selected Recommendation (적합도 계산용 - 스트리밍 완료 후에도 유지)
 // ============================================
 
-export interface SelectedTarget {
+export type SelectedTarget = {
   country: string
   industry: string
   subIndustry?: string
@@ -306,7 +310,7 @@ export const selectedTargetAtom = atom<SelectedTarget | null>(null)
 // Fit Score State (AI 기반 적합도 점수)
 // ============================================
 
-export interface FitScoreState {
+export type FitScoreState = {
   scores: Record<string, number> // leadId -> score
   isLoading: boolean
   progress: number // 0-100
@@ -364,7 +368,7 @@ export const resetSearchStateAtom = atom(null, (_get, set) => {
 // Enrichment State (회사 description 등)
 // ============================================
 
-export interface EnrichmentState {
+export type EnrichmentState = {
   // customerId -> loading state
   loadingIds: Set<string>
   // customerId -> error message
@@ -413,7 +417,7 @@ export const resetEnrichmentStateAtom = atom(null, (_get, set) => {
 // Bulk Enrichment State (프로필 고도화 퀵액션)
 // ============================================
 
-export interface BulkEnrichmentState {
+export type BulkEnrichmentState = {
   isRunning: boolean
   total: number
   completed: number
@@ -463,7 +467,7 @@ export const finishBulkEnrichmentAtom = atom(null, (_get, set) => {
 // Customer Group Creation State (새 고객그룹으로 추가하기)
 // ============================================
 
-export interface CreateGroupState {
+export type CreateGroupState = {
   isCreating: boolean
   groupName: string
   groupId?: string

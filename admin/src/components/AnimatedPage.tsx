@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import type { ReactNode } from "react"
 import { pageVariants, shouldReduceMotion } from "@/lib/animations"
 
-interface AnimatedPageProps {
+type AnimatedPageProps = {
   children: ReactNode
   className?: string
 }
@@ -21,11 +21,11 @@ export function AnimatedPage({ children, className }: AnimatedPageProps) {
 
   return (
     <motion.div
-      variants={pageVariants}
-      initial="initial"
       animate="enter"
-      exit="exit"
       className={className}
+      exit="exit"
+      initial="initial"
+      variants={pageVariants}
     >
       {children}
     </motion.div>

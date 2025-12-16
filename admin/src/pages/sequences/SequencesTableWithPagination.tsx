@@ -22,7 +22,7 @@ interface CustomerGroupMemberWithLead extends CustomerGroupMember {
   leadStatus?: string
 }
 
-interface SequencesTableWithPaginationProps {
+type SequencesTableWithPaginationProps = {
   searchQuery: string
   selectedStatuses: string[]
   selectedSequences: string[]
@@ -68,7 +68,7 @@ export function SequencesTableWithPagination({
   // Build params for API call
   const params: SequencesParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     status:
       selectedStatuses?.length === 1
         ? (selectedStatuses[0] as SequenceStatus)
@@ -141,7 +141,7 @@ export function SequencesTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -151,7 +151,7 @@ export function SequencesTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -217,7 +217,7 @@ export function SequencesTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
@@ -226,174 +226,175 @@ export function SequencesTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   {t("sequences.table.column.sequenceName")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.status")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "150px" }}
                 >
                   {t("sequences.table.column.workspace")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "120px" }}
                 >
                   {t("sequences.table.column.customerGroup")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.customerCount")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.stepCount")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.sentCount")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.openRate")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.replyRate")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.updatedAt")}
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.actions")}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {sequences.map((sequence) => (
                 <tr
+                  className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                   key={sequence.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   // onClick={(e) => handleRowClick(sequence, e)}
                   onClick={() => onEditSequence(sequence)}
                 >
-                  <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Checkbox
-                      checked={selectedSequences?.includes(sequence.id) || false}
+                      checked={selectedSequences?.includes(sequence.id)}
                       onCheckedChange={() => onToggleSequence(sequence.id)}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </td>
                   <td
-                    className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    title={sequence.name}
+                    className="p-2 font-medium text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "300px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={sequence.name}
                   >
                     {sequence.name}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
-                    <Badge variant={getStatusBadgeVariant(sequence.status)} className="text-xs">
+                  <td className="whitespace-nowrap p-2 text-sm">
+                    <Badge className="text-xs" variant={getStatusBadgeVariant(sequence.status)}>
                       {getStatusText(sequence.status)}
                     </Badge>
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={sequence.workspaceName || sequence.workspaceId}
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "200px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={sequence.workspaceName || sequence.workspaceId}
                   >
                     {sequence.workspaceName || sequence.workspaceId}
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={sequence.customerGroupName || "-"}
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "150px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={sequence.customerGroupName || "-"}
                   >
                     {sequence.customerGroupName || "-"}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                  <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.enrollmentsCount ?? 0}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                  <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.currentMaxStep ?? 0}/{sequence.stepsCount ?? 0}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                  <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.sentCount ?? 0}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                  <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.deliveredCount && sequence.openedCount
                       ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
                       : "-"}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                  <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.deliveredCount && sequence.repliedCount
                       ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
                       : "-"}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(sequence.updatedAt)}
                   </td>
-                  <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleToggleStatus(sequence)
-                        }}
-                        className="text-xs h-8 px-3"
-                        title={
-                          sequence.status === "active"
-                            ? t("sequences.table.button.pause")
-                            : t("sequences.table.button.activate")
-                        }
+                        className="h-8 px-3 text-xs"
                         disabled={
                           sequence.status === "archived" ||
                           sequence.status === "completed" ||
                           (sequence.status === "draft" &&
                             (!sequence.stepsCount || sequence.stepsCount === 0)) ||
-                          (sequence.completedEnrollmentsCount != null &&
+                          (sequence.completedEnrollmentsCount !== null &&
+                            sequence.completedEnrollmentsCount !== undefined &&
                             sequence.completedEnrollmentsCount > 0)
                         }
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleStatus(sequence)
+                        }}
+                        size="sm"
+                        title={
+                          sequence.status === "active"
+                            ? t("sequences.table.button.pause")
+                            : t("sequences.table.button.activate")
+                        }
+                        variant="outline"
                       >
                         {sequence.status === "active" ? (
                           <Pause className="h-3 w-3" />
@@ -414,7 +415,7 @@ export function SequencesTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -430,22 +431,22 @@ export function SequencesTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.first")}
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             {t("sequences.table.pagination.previous")}
@@ -454,12 +455,12 @@ export function SequencesTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -467,11 +468,11 @@ export function SequencesTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.next")}
             <ChevronRight className="h-4 w-4" />
@@ -479,11 +480,11 @@ export function SequencesTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.last")}
           </Button>
@@ -491,30 +492,30 @@ export function SequencesTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {t("sequences.table.pagination.page")}
           </span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
 
       {/* 고객 정보 모달 */}
       <Dialog
-        open={!!selectedSequenceForModal}
         onOpenChange={() => setSelectedSequenceForModal(null)}
+        open={!!selectedSequenceForModal}
       >
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {t("sequences.table.modal.title", { sequenceName: selectedSequenceForModal?.name })}
@@ -523,40 +524,40 @@ export function SequencesTableWithPagination({
           <div className="mt-4">
             {customerGroupData && customerGroupData.members.length > 0 ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-gray-600 text-sm">
                   {t("sequences.table.modal.totalCustomers", { count: customerGroupData.total })}
                 </p>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-hidden rounded-lg border">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 text-xs uppercase">
                           {t("sequences.table.modal.column.companyName")}
                         </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 text-xs uppercase">
                           {t("sequences.table.modal.column.website")}
                         </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 text-xs uppercase">
                           상태
                         </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th className="px-4 py-2 text-left font-medium text-gray-500 text-xs uppercase">
                           {t("sequences.table.modal.column.addedAt")}
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {customerGroupData.members.map((member: CustomerGroupMemberWithLead) => (
-                        <tr key={member.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                        <tr className="hover:bg-gray-50" key={member.id}>
+                          <td className="px-4 py-3 text-gray-900 text-sm">
                             {member.leadCompanyName || "-"}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          <td className="px-4 py-3 text-gray-600 text-sm">
                             {member.leadWebsiteUrl || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <Badge variant="outline">{member.leadStatus || "-"}</Badge>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          <td className="px-4 py-3 text-gray-600 text-sm">
                             {formatRelativeTime(member.addedAt)}
                           </td>
                         </tr>
@@ -566,7 +567,7 @@ export function SequencesTableWithPagination({
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="py-8 text-center text-gray-500">
                 {t("sequences.table.modal.noCustomers")}
               </div>
             )}

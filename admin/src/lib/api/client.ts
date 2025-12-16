@@ -58,7 +58,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
   // Create AbortController for timeout
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes timeout
+  const timeoutId = setTimeout(() => controller.abort(), 300_000) // 5 minutes timeout
 
   try {
     const response = await fetch(url, {
@@ -73,8 +73,8 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       console.error("❌ API Error Response:", {
         status: response.status,
         statusText: response.statusText,
-        url: url,
-        errorText: errorText,
+        url,
+        errorText,
       })
 
       let message: string

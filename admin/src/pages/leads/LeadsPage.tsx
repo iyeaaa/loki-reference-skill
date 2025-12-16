@@ -67,9 +67,9 @@ export default function LeadsPage() {
   const groupId = searchParams.get("groupId")
   const navigate = useNavigate()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
-    return localStorage.getItem("selectedWorkspace") || "all"
-  })
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(
+    () => localStorage.getItem("selectedWorkspace") || "all",
+  )
   const [searchTokens, setSearchTokens] = useState<SearchToken[]>([])
   const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>(groupId || "")
 
@@ -105,7 +105,7 @@ export default function LeadsPage() {
   // 페이지 크기 상태
   const [pageSize, setPageSize] = useState(() => {
     const saved = localStorage.getItem("leadsPageSize")
-    return saved ? parseInt(saved, 10) : 100
+    return saved ? Number.parseInt(saved, 10) : 100
   })
 
   // 확인 다이얼로그 상태
@@ -195,9 +195,7 @@ export default function LeadsPage() {
   }, [selectedWorkspaceId])
 
   // Convert search tokens to column filters
-  const columnFilters = useMemo(() => {
-    return tokensToFilters(searchTokens)
-  }, [searchTokens])
+  const columnFilters = useMemo(() => tokensToFilters(searchTokens), [searchTokens])
 
   const handleCreateLead = async (leadData: unknown) => {
     createLead.mutate(leadData as Lead, {
@@ -209,7 +207,9 @@ export default function LeadsPage() {
   }
 
   const handleUpdateLead = async (leadData: unknown) => {
-    if (!editingLead) return
+    if (!editingLead) {
+      return
+    }
     updateLead.mutate(
       {
         leadId: editingLead.id,
@@ -225,7 +225,9 @@ export default function LeadsPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedLeads.length === 0 && !allLeadsSelected) return
+    if (selectedLeads.length === 0 && !allLeadsSelected) {
+      return
+    }
     setBulkDeleteConfirmOpen(true)
   }
 
@@ -242,7 +244,7 @@ export default function LeadsPage() {
         // 모든 리드를 가져오기 위해 큰 limit 값 사용
         const allLeadsResponse = await leadsApi.list({
           page: 1,
-          limit: 10000, // 충분히 큰 값
+          limit: 10_000, // 충분히 큰 값
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
           filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
@@ -300,7 +302,7 @@ export default function LeadsPage() {
 
         const allLeadsResponse = await leadsApi.list({
           page: 1,
-          limit: 10000,
+          limit: 10_000,
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
           filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
@@ -393,7 +395,7 @@ export default function LeadsPage() {
 
   // 페이지 크기 변경 핸들러
   const handlePageSizeChange = useCallback((newSize: number) => {
-    if (newSize >= 1 && newSize <= 10000) {
+    if (newSize >= 1 && newSize <= 10_000) {
       setPageSize(newSize)
       localStorage.setItem("leadsPageSize", String(newSize))
     }
@@ -431,7 +433,7 @@ export default function LeadsPage() {
         // 모든 리드를 가져오기 위해 큰 limit 값 사용
         const allLeadsResponse = await leadsApi.list({
           page: 1,
-          limit: 10000, // 충분히 큰 값
+          limit: 10_000, // 충분히 큰 값
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
           filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
@@ -473,7 +475,7 @@ export default function LeadsPage() {
         data: {
           name,
           description,
-          isDynamic: editingGroup?.isDynamic || false,
+          isDynamic: editingGroup?.isDynamic ?? false,
         },
       },
       {
@@ -496,7 +498,9 @@ export default function LeadsPage() {
   }
 
   const confirmGroupDelete = () => {
-    if (!groupToDelete) return
+    if (!groupToDelete) {
+      return
+    }
 
     deleteCustomerGroup.mutate(groupToDelete.id, {
       onSuccess: () => {
@@ -617,7 +621,7 @@ export default function LeadsPage() {
         // Get all leads
         const allLeadsResponse = await leadsApi.list({
           page: 1,
-          limit: 10000,
+          limit: 10_000,
           workspaceIds: [workspaceId],
           filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
         })
@@ -736,21 +740,21 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Leads Table */}
       <Card>
         <CardHeader className="pb-4">
           {/* 고객 그룹 선택 - 탭 형태 */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mb-4">
+          <div className="mb-4 flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
             <Tabs
-              value={selectedCustomerGroup || "all"}
+              className="min-w-0 flex-1"
               onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
-              className="flex-1 min-w-0"
+              value={selectedCustomerGroup || "all"}
             >
-              <TabsList className="inline-flex flex-wrap h-auto items-center justify-start gap-2 bg-transparent p-0 w-full lg:w-auto">
+              <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-start gap-2 bg-transparent p-0 lg:w-auto">
                 <TabsTrigger
+                  className="h-9 border border-input bg-background px-4 text-xs hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"
                   value="all"
-                  className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"
                 >
                   {t("leads.group.all")}
                   {!selectedCustomerGroup && totalLeadsCount > 0 && (
@@ -762,14 +766,14 @@ export default function LeadsPage() {
                     <ContextMenu key={group.id}>
                       <ContextMenuTrigger asChild>
                         <TabsTrigger
-                          value={group.id}
-                          className={`text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground ${
+                          className={`h-9 border border-input bg-background px-4 text-xs hover:bg-accent hover:text-accent-foreground ${
                             selectedCustomerGroup === group.id
                               ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
                               : ""
                           }`}
+                          value={group.id}
                         >
-                          <Users className="h-3 w-3 mr-1" />
+                          <Users className="mr-1 h-3 w-3" />
                           {group.name}
                           {group.leadCount !== undefined && (
                             <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
@@ -778,16 +782,16 @@ export default function LeadsPage() {
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-48">
                         <ContextMenuItem
-                          onClick={() => handleEditGroup(group)}
                           className="cursor-pointer"
+                          onClick={() => handleEditGroup(group)}
                         >
                           <Edit2 className="mr-2 h-4 w-4" />
                           {t("leads.button.editGroup")}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
+                          className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950"
                           onClick={() => handleDeleteGroup(group)}
-                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           {t("leads.button.deleteGroup")}
@@ -796,9 +800,6 @@ export default function LeadsPage() {
                     </ContextMenu>
                   ))}
                 <CreateGroupModal
-                  workspaces={workspaces}
-                  selectedWorkspaceId={selectedWorkspaceId}
-                  selectedLeadIds={selectedLeads}
                   currentLeadsData={currentLeadsData.map((lead: Lead) => ({
                     id: lead.id,
                     companyName: lead.companyName || "",
@@ -809,30 +810,33 @@ export default function LeadsPage() {
                     // 선택된 리드들 초기화
                     setSelectedLeads([])
                   }}
+                  selectedLeadIds={selectedLeads}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  workspaces={workspaces}
                 />
               </TabsList>
             </Tabs>
           </div>
           {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length === 0 && (
-            <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md mb-4">
+            <div className="mb-4 rounded-md bg-gray-50 py-4 text-center text-muted-foreground text-sm">
               {t("leads.group.noGroups")}
             </div>
           )}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             {/* 고급 검색 */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <AdvancedSearchInput
-                tokens={searchTokens}
                 onChange={setSearchTokens}
                 placeholder={t("leads.search.placeholder")}
+                tokens={searchTokens}
               />
             </div>
             <div className="flex-shrink-0">
               <Button
+                className="w-full transition-all duration-200 hover:scale-105 active:scale-95 sm:w-auto"
                 onClick={() => setShowAddLeadSheet(true)}
-                className="w-full sm:w-auto transition-all duration-200 hover:scale-105 active:scale-95"
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 h-4 w-4" />
                 {/* 리드 추가 */}
                 {t("leads.button.addLead")}
               </Button>
@@ -841,19 +845,19 @@ export default function LeadsPage() {
         </CardHeader>
         <CardContent>
           {/* 전체 선택 및 Bulk Actions */}
-          <div className="space-y-3 mb-6">
+          <div className="mb-6 space-y-3">
             {/* 한 줄에 모든 컨트롤 표시 */}
             <div className="flex flex-wrap items-center gap-2">
               {/* 페이지 크기 설정 */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <span className="whitespace-nowrap text-muted-foreground text-sm">
                   {t("leads.button.pageSize")}
                 </span>
                 <Select
-                  value={String(pageSize)}
                   onValueChange={(value) => handlePageSizeChange(Number(value))}
+                  value={String(pageSize)}
                 >
-                  <SelectTrigger className="w-[100px] h-9">
+                  <SelectTrigger className="h-9 w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -867,12 +871,12 @@ export default function LeadsPage() {
 
               {/* 전체 선택 버튼 */}
               <Button
-                variant={isSelectAllMode ? "default" : "outline"}
-                size="sm"
-                onClick={toggleSelectAllMode}
                 className={
-                  isSelectAllMode ? "bg-blue-600 hover:bg-blue-700 text-white hover:text-white" : ""
+                  isSelectAllMode ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white" : ""
                 }
+                onClick={toggleSelectAllMode}
+                size="sm"
+                variant={isSelectAllMode ? "default" : "outline"}
               >
                 {isSelectAllMode
                   ? t("leads.button.exitSelectAllMode")
@@ -881,28 +885,28 @@ export default function LeadsPage() {
 
               {/* 캠페인 생성 버튼 - 하이라이트 */}
               <Button
-                variant="default"
-                size="sm"
-                onClick={handleCreateCampaign}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
                 disabled={selectedLeads.length === 0 && !allLeadsSelected}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all"
+                onClick={handleCreateCampaign}
+                size="sm"
+                variant="default"
               >
-                <Send className="h-4 w-4 mr-1" />
+                <Send className="mr-1 h-4 w-4" />
                 <span className="hidden lg:inline">{t("leads.button.createCampaign")}</span>
                 <span className="lg:hidden">Campaign</span>
               </Button>
 
               {/* 액션 버튼들 */}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadSelectedLeadsCSV}
                 disabled={
                   downloadSelectedLeadsCSV.isPending ||
                   (selectedLeads.length === 0 && !allLeadsSelected)
                 }
+                onClick={handleDownloadSelectedLeadsCSV}
+                size="sm"
+                variant="outline"
               >
-                <Download className="h-4 w-4 mr-1" />
+                <Download className="mr-1 h-4 w-4" />
                 <span className="hidden lg:inline">
                   {downloadSelectedLeadsCSV.isPending
                     ? t("leads.button.downloading")
@@ -915,41 +919,41 @@ export default function LeadsPage() {
                 </span>
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openBulkActionModal("status")}
                 disabled={selectedLeads.length === 0 && !allLeadsSelected}
+                onClick={() => openBulkActionModal("status")}
+                size="sm"
+                variant="outline"
               >
                 <span className="hidden lg:inline">{t("leads.button.changeStatus")}</span>
                 <span className="lg:hidden">Status</span>
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openBulkActionModal("businessType")}
                 disabled={selectedLeads.length === 0 && !allLeadsSelected}
+                onClick={() => openBulkActionModal("businessType")}
+                size="sm"
+                variant="outline"
               >
                 <span className="hidden lg:inline">{t("leads.button.changeBusinessType")}</span>
                 <span className="lg:hidden">Type</span>
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openBulkActionModal("copyToGroup")}
                 disabled={selectedLeads.length === 0 && !allLeadsSelected}
+                onClick={() => openBulkActionModal("copyToGroup")}
+                size="sm"
+                variant="outline"
               >
-                <Users className="h-4 w-4 mr-1" />
+                <Users className="mr-1 h-4 w-4" />
                 <span className="hidden lg:inline">{t("leads.button.copyToGroup")}</span>
                 <span className="lg:hidden">Copy</span>
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkDelete}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:hover:bg-transparent"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700 disabled:text-gray-400 disabled:hover:bg-transparent disabled:hover:text-gray-400"
                 disabled={selectedLeads.length === 0 && !allLeadsSelected}
+                onClick={handleBulkDelete}
+                size="sm"
+                variant="outline"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="mr-1 h-4 w-4" />
                 <span className="hidden lg:inline">{t("leads.button.delete")}</span>
                 <span className="lg:hidden">Delete</span>
               </Button>
@@ -957,7 +961,7 @@ export default function LeadsPage() {
 
             {/* 선택 상태 표시 (별도 줄) */}
             {(isSelectAllMode || selectedLeads.length > 0 || allLeadsSelected) && (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-3 text-muted-foreground text-sm">
                 {isSelectAllMode && (
                   <span>
                     {allLeadsSelected
@@ -977,61 +981,61 @@ export default function LeadsPage() {
           </div>
           {/* Leads Table with Pagination */}
           <LeadsTableWithPagination
+            allLeadsSelected={allLeadsSelected}
             columnFilters={columnFilters}
-            selectedCustomerGroup={selectedCustomerGroup}
-            selectedLeads={selectedLeads}
-            onToggleLead={toggleLeadSelection}
-            onToggleAll={toggleAllLeads}
+            isSelectAllMode={isSelectAllMode}
             onEditLead={setEditingLead}
-            onManageGroups={handleManageLeadGroups}
             onLeadsDataChange={setCurrentLeadsData}
+            onManageGroups={handleManageLeadGroups}
+            onToggleAll={toggleAllLeads}
+            onToggleLead={toggleLeadSelection}
+            onToggleSelectAll={handleSelectAllLeads}
             onTotalChange={setTotalLeadsCount}
             pageSize={pageSize}
-            isSelectAllMode={isSelectAllMode}
-            allLeadsSelected={allLeadsSelected}
-            onToggleSelectAll={handleSelectAllLeads}
+            selectedCustomerGroup={selectedCustomerGroup}
             selectedGroupWorkspaceId={selectedGroupWorkspaceId}
+            selectedLeads={selectedLeads}
           />
         </CardContent>
       </Card>
 
       {/* Create Lead Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
+      <Dialog onOpenChange={setShowCreateDialog} open={showCreateDialog}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">
               {t("leads.dialog.createLead")}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <LeadForm
-              isEdit={false}
-              workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id}
               customerGroups={customerGroups || []}
-              selectedGroup={selectedGroupForNewLead}
+              isEdit={false}
+              onCancel={() => setShowCreateDialog(false)}
               onGroupChange={(value) => setSelectedGroupForNewLead(value === "none" ? "" : value)}
               onSave={handleCreateLead}
-              onCancel={() => setShowCreateDialog(false)}
+              selectedGroup={selectedGroupForNewLead}
+              workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Lead Dialog */}
-      <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
+      <Dialog onOpenChange={() => setEditingLead(null)} open={!!editingLead}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">
               {t("leads.dialog.editLead")}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingLead && (
               <LeadForm
-                lead={editingLead}
                 isEdit={true}
-                onSave={handleUpdateLead}
+                lead={editingLead}
                 onCancel={() => setEditingLead(null)}
+                onSave={handleUpdateLead}
               />
             )}
           </div>
@@ -1040,17 +1044,17 @@ export default function LeadsPage() {
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        actionType={bulkActionType}
+        currentWorkspaceId={selectedWorkspaceId}
+        customerGroups={customerGroups}
         isOpen={showBulkActionModal}
+        leadCount={selectedLeads.length}
         onClose={() => {
           setShowBulkActionModal(false)
           setBulkActionType(null)
         }}
         onConfirm={handleBulkAction}
-        leadCount={selectedLeads.length}
-        actionType={bulkActionType}
-        customerGroups={customerGroups}
         workspaces={workspaces}
-        currentWorkspaceId={selectedWorkspaceId}
       />
 
       {/* Group Edit Modal */}
@@ -1066,23 +1070,22 @@ export default function LeadsPage() {
 
       {/* Lead Group Management Modal */}
       <LeadGroupManagementModal
-        lead={managingLeadGroups}
+        availableGroups={customerGroups || []}
+        currentGroups={leadCurrentGroups}
         isOpen={showLeadGroupModal}
+        lead={managingLeadGroups}
         onClose={() => {
           setShowLeadGroupModal(false)
           setManagingLeadGroups(null)
           setLeadCurrentGroups([])
         }}
-        availableGroups={customerGroups || []}
-        currentGroups={leadCurrentGroups}
         onSave={handleSaveLeadGroups}
       />
 
       {/* Bulk Delete Confirmation Dialog */}
       <ConfirmDialog
-        open={bulkDeleteConfirmOpen}
-        onOpenChange={setBulkDeleteConfirmOpen}
-        title={t("leads.dialog.bulkDelete")}
+        cancelText={t("leads.button.cancel")}
+        confirmText={t("leads.button.delete")}
         description={
           allLeadsSelected
             ? t("leads.dialog.bulkDeleteDescription.all")
@@ -1090,44 +1093,45 @@ export default function LeadsPage() {
                 count: selectedLeads.length,
               })
         }
-        confirmText={t("leads.button.delete")}
-        cancelText={t("leads.button.cancel")}
         onConfirm={confirmBulkDelete}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        open={bulkDeleteConfirmOpen}
+        title={t("leads.dialog.bulkDelete")}
         variant="destructive"
       />
 
       {/* Group Delete Confirmation Dialog */}
       <ConfirmDialog
-        open={groupDeleteConfirmOpen}
-        onOpenChange={setGroupDeleteConfirmOpen}
-        title={t("leads.dialog.deleteGroup")}
+        cancelText={t("leads.button.cancel")}
+        confirmText={t("leads.button.delete")}
         description={t("leads.dialog.deleteGroupDescription", {
           groupName: groupToDelete?.name || "",
         })}
-        confirmText={t("leads.button.delete")}
-        cancelText={t("leads.button.cancel")}
         onConfirm={confirmGroupDelete}
+        onOpenChange={setGroupDeleteConfirmOpen}
+        open={groupDeleteConfirmOpen}
+        title={t("leads.dialog.deleteGroup")}
         variant="destructive"
       />
 
       {/* Sequence Launch Modal */}
       <SequenceLaunchModal
+        customerGroup={sequenceLaunchGroup}
         isOpen={showSequenceLaunchModal}
         onClose={() => {
           setShowSequenceLaunchModal(false)
           setSequenceLaunchGroup(null)
         }}
-        customerGroup={sequenceLaunchGroup}
         workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
       />
 
       {/* Add Lead Sheet - 통합 리드 추가 Sheet */}
       <AddLeadSheet
-        open={showAddLeadSheet}
-        onOpenChange={setShowAddLeadSheet}
-        workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
         customerGroups={customerGroups || []}
+        onOpenChange={setShowAddLeadSheet}
+        open={showAddLeadSheet}
         selectedCustomerGroupId={selectedCustomerGroup || undefined}
+        workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
       />
     </div>
   )

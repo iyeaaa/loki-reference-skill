@@ -12,7 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-export interface ComboboxProps {
+export type ComboboxProps = {
   options: { value: string; label: string; sublabel?: string }[]
   value?: string
   onValueChange?: (value: string) => void
@@ -38,17 +38,17 @@ export function Combobox({
   const [open, setOpen] = React.useState(false)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between h-11 border-gray-200 hover:bg-gray-50 focus:border-indigo-500 focus:ring-indigo-500",
+            "h-11 w-full justify-between border-gray-200 hover:bg-gray-50 focus:border-indigo-500 focus:ring-indigo-500",
             className,
           )}
           disabled={disabled}
+          role="combobox"
+          variant="outline"
         >
           {value ? options.find((option) => option.value === value)?.label : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -57,8 +57,8 @@ export function Combobox({
       <PopoverContent className="w-full p-0">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={searchPlaceholder}
             onValueChange={(search) => onSearchChange?.(search)}
+            placeholder={searchPlaceholder}
           />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
@@ -66,12 +66,12 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
                   keywords={[option.label, option.sublabel || ""].filter(Boolean)}
                   onSelect={(currentValue) => {
                     onValueChange?.(currentValue === value ? "" : currentValue)
                     setOpen(false)
                   }}
+                  value={option.value}
                 >
                   <Check
                     className={cn(
@@ -82,7 +82,7 @@ export function Combobox({
                   <div className="flex flex-col">
                     <span>{option.label}</span>
                     {option.sublabel && (
-                      <span className="text-xs text-muted-foreground">{option.sublabel}</span>
+                      <span className="text-muted-foreground text-xs">{option.sublabel}</span>
                     )}
                   </div>
                 </CommandItem>

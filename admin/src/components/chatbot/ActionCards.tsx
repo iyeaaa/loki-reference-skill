@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 
-interface ActionCardsProps {
+type ActionCardsProps = {
   onUploadClick: () => void
   isProcessing?: boolean
   hasAttachedFile?: boolean
@@ -25,28 +25,28 @@ export function ActionCards({
   return (
     <div className="grid grid-cols-1 gap-3">
       <Card
-        hoverable
         animated
+        className={`transition-all ${
+          hasAttachedFile || isProcessing
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer hover:shadow-md"
+        }`}
+        hoverable
         onClick={() => {
-          if (!hasAttachedFile && !isProcessing) {
+          if (!(hasAttachedFile || isProcessing)) {
             onUploadClick()
           }
         }}
-        className={`transition-all ${
-          hasAttachedFile || isProcessing
-            ? "opacity-50 cursor-not-allowed"
-            : "cursor-pointer hover:shadow-md"
-        }`}
       >
         <CardContent className={`${cardPadding} flex items-center gap-3`}>
           <div
-            className={`flex-shrink-0 ${iconSize} rounded-lg bg-primary/10 flex items-center justify-center`}
+            className={`flex-shrink-0 ${iconSize} flex items-center justify-center rounded-lg bg-primary/10`}
           >
-            <img src="/images/excel-icon.png" alt="Excel" className={iconClass} />
+            <img alt="Excel" className={iconClass} src="/images/excel-icon.png" />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm text-foreground">Upload Excel File</div>
-            <div className="text-xs text-muted-foreground mt-0.5">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium text-foreground text-sm">Upload Excel File</div>
+            <div className="mt-0.5 text-muted-foreground text-xs">
               {isCompact
                 ? "Add lead data"
                 : "AI analyzes leads, generates email strategies, and creates automated sequences"}

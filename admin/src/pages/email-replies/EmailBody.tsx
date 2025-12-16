@@ -4,7 +4,7 @@ import quotedPrintable from "quoted-printable"
 import { useEffect, useMemo, useRef, useState } from "react"
 import utf8 from "utf8"
 
-interface EmailBodyProps {
+type EmailBodyProps = {
   bodyText?: string
   bodyHtml?: string
 }
@@ -13,11 +13,17 @@ interface EmailBodyProps {
  * Check if a string is Base64 encoded
  */
 function isBase64(str: string): boolean {
-  if (!str || str.length === 0) return false
+  if (!str || str.length === 0) {
+    return false
+  }
   // Base64 strings should be at least 4 chars and have valid characters
   // Also check that it doesn't look like regular HTML or plain text
-  if (str.startsWith("<") || str.startsWith("<!")) return false
-  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) return false
+  if (str.startsWith("<") || str.startsWith("<!")) {
+    return false
+  }
+  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) {
+    return false
+  }
   // Check for Base64 pattern: alphanumeric, +, /, =, and newlines
   const base64Regex = /^[A-Za-z0-9+/\r\n]+=*$/
   // Remove whitespace and check
@@ -613,7 +619,9 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     }
 
     const iframe = iframeRef.current
-    if (!iframe) return
+    if (!iframe) {
+      return
+    }
 
     const adjustHeight = () => {
       try {
@@ -646,12 +654,12 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     if (sanitizedContent.hasFullHtml) {
       return (
         <iframe
-          ref={iframeRef}
-          srcDoc={sanitizedContent.content}
-          title="Email content"
           className="w-full border-0"
-          style={{ height: `${iframeHeight}px`, minHeight: "200px" }}
+          ref={iframeRef}
           sandbox="allow-same-origin"
+          srcDoc={sanitizedContent.content}
+          style={{ height: `${iframeHeight}px`, minHeight: "200px" }}
+          title="Email content"
         />
       )
     }
@@ -659,7 +667,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     // For simple HTML without <style> tags, use dangerouslySetInnerHTML
     return (
       <div
-        className="prose prose-sm max-w-none break-words [&_img]:max-w-full [&_img]:h-auto [&_a]:text-blue-600 [&_a]:underline"
+        className="prose prose-sm max-w-none break-words [&_a]:text-blue-600 [&_a]:underline [&_img]:h-auto [&_img]:max-w-full"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized with DOMPurify
         dangerouslySetInnerHTML={{ __html: sanitizedContent.content }}
       />

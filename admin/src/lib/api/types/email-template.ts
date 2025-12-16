@@ -1,6 +1,6 @@
 // Email Template Management API Types (aligned with backend database schema)
 
-export interface EmailTemplate {
+export type EmailTemplate = {
   id: string
   workspaceId: string
   name: string
@@ -16,7 +16,7 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
-export interface CreateEmailTemplateRequest {
+export type CreateEmailTemplateRequest = {
   workspaceId: string
   name: string
   description?: string | null
@@ -29,7 +29,7 @@ export interface CreateEmailTemplateRequest {
   createdBy?: string
 }
 
-export interface UpdateEmailTemplateRequest {
+export type UpdateEmailTemplateRequest = {
   name: string
   description?: string | null
   subject: string
@@ -40,14 +40,14 @@ export interface UpdateEmailTemplateRequest {
   isShared: boolean
 }
 
-export interface EmailTemplatesResponse {
+export type EmailTemplatesResponse = {
   data: EmailTemplate[]
   total: number
   limit: number
   offset: number
 }
 
-export interface EmailTemplatesParams {
+export type EmailTemplatesParams = {
   page?: number
   limit?: number
   isShared?: boolean | "all"
@@ -57,12 +57,12 @@ export interface EmailTemplatesParams {
   createdByIds?: string[]
 }
 
-export interface BulkUpdateCategoryRequest {
+export type BulkUpdateCategoryRequest = {
   templateIds: string[]
   category: string
 }
 
-export interface BulkUpdateSharedRequest {
+export type BulkUpdateSharedRequest = {
   templateIds: string[]
   isShared: boolean
 }

@@ -51,7 +51,7 @@ import { analyzeLeadsForGroupName } from "@/lib/utils/lead-analyzer"
 import { getVariables, MAX_STEPS } from "./constants"
 import type { EmailStep } from "./types"
 
-interface ManualModeContentProps {
+type ManualModeContentProps = {
   steps: EmailStep[]
   selectedStepIndex: number
   onSelectedStepChange: (index: number) => void
@@ -162,7 +162,9 @@ export function ManualModeContent({
 
   // currentStep이 변경될 때 서명이 없으면 기본 서명 자동 설정
   useEffect(() => {
-    if (!currentStep) return
+    if (!currentStep) {
+      return
+    }
 
     const defaultSignature = getUserSignature()
     const defaultSigInList = signatures?.find((sig) => sig.isDefault)
@@ -233,7 +235,7 @@ export function ManualModeContent({
   const handleSignatureChange = async (signatureId: string) => {
     console.log("[DEBUG] handleSignatureChange called:", {
       signatureId,
-      currentStep: currentStep,
+      currentStep,
       hasCurrentStep: !!currentStep,
       currentStepEmailSignature: currentStep?.emailSignature,
       currentStepEmailSignatureId: currentStep?.emailSignatureId,
@@ -363,9 +365,7 @@ export function ManualModeContent({
 
     // Validate: at least group info, goal, strategy, or template must be provided
     if (
-      !aiGroupInfo.trim() &&
-      !aiGoal.trim() &&
-      !aiStrategy.trim() &&
+      !(aiGroupInfo.trim() || aiGoal.trim() || aiStrategy.trim()) &&
       (!selectedAITemplateId || selectedAITemplateId === "none")
     ) {
       toast.error("최소한 그룹 정보, 목표, 전략, 또는 템플릿 중 하나를 입력/선택해주세요")
@@ -382,7 +382,7 @@ export function ManualModeContent({
     try {
       // Call actual AI API with selected country
       const result = await sequencesApi.generateTemplate({
-        workspaceId: workspaceId,
+        workspaceId,
         country: aiCountry,
         prompt: finalPrompt,
         temperature: 0.7,
@@ -414,7 +414,7 @@ export function ManualModeContent({
     // Detect country and group info from customer group leads when opening the sheet
     try {
       const leadsResult = await leadsApi.list({
-        customerGroupId: customerGroupId,
+        customerGroupId,
         page: 1,
         limit: 100, // Fetch up to 100 leads for analysis
       })
@@ -471,18 +471,18 @@ export function ManualModeContent({
   }
 
   return (
-    <div className="flex-1 flex gap-6 overflow-hidden">
+    <div className="flex flex-1 gap-6 overflow-hidden">
       {/* Left Panel - Steps List */}
-      <div className="w-[420px] flex-shrink-0 flex flex-col gap-4 border-r pr-6">
+      <div className="flex w-[420px] flex-shrink-0 flex-col gap-4 border-r pr-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">{t("sequences.manualMode.emailSteps")}</h3>
+            <h3 className="font-semibold text-lg">{t("sequences.manualMode.emailSteps")}</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
+                    className="text-muted-foreground transition-colors hover:text-foreground"
                     type="button"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Info className="h-4 w-4" />
                   </button>
@@ -500,12 +500,12 @@ export function ManualModeContent({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  size="sm"
-                  onClick={onAddStep}
-                  disabled={steps.length >= MAX_STEPS}
                   className="h-8"
+                  disabled={steps.length >= MAX_STEPS}
+                  onClick={onAddStep}
+                  size="sm"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="mr-1 h-4 w-4" />
                   {t("sequences.manualMode.add")}
                 </Button>
               </TooltipTrigger>
@@ -517,9 +517,9 @@ export function ManualModeContent({
         </div>
 
         {hasDraftSteps && (
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/20">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <p className="text-amber-900 text-xs dark:text-amber-200">
               {t("sequences.manualMode.draftStepsWarning")}
             </p>
           </div>
@@ -530,15 +530,13 @@ export function ManualModeContent({
             {steps.map((step, index) => (
               // biome-ignore lint/a11y/useSemanticElements: Cannot use button element because it contains nested interactive elements (buttons)
               <div
-                key={`step-${step.stepOrder}-${index}`}
-                role="button"
-                tabIndex={0}
                 className={cn(
-                  "w-full rounded-lg border p-3 cursor-pointer transition-all text-left",
+                  "w-full cursor-pointer rounded-lg border p-3 text-left transition-all",
                   selectedStepIndex === index
                     ? "border-primary bg-primary/5 shadow-sm"
                     : "hover:bg-muted/50",
                 )}
+                key={`step-${step.stepOrder}-${index}`}
                 onClick={() => onSelectedStepChange(index)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -546,14 +544,16 @@ export function ManualModeContent({
                     onSelectedStepChange(index)
                   }
                 }}
+                role="button"
+                tabIndex={0}
               >
                 {/* Schedule info above step - Inline editable */}
-                <div className="mb-2 pb-2 border-b">
+                <div className="mb-2 border-b pb-2">
                   {editingScheduleIndex === index ? (
                     // 인라인 편집 모드
                     // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation is needed to prevent parent click
                     <div
-                      className="space-y-2 p-2 bg-muted/50 rounded"
+                      className="space-y-2 rounded bg-muted/50 p-2"
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -569,11 +569,11 @@ export function ManualModeContent({
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
-                                  variant="outline"
                                   className={cn(
-                                    "w-full justify-start text-left font-normal h-7 text-xs",
+                                    "h-7 w-full justify-start text-left font-normal text-xs",
                                     !step.delayDays && "text-muted-foreground",
                                   )}
+                                  variant="outline"
                                 >
                                   <CalendarIcon className="mr-2 h-3 w-3" />
                                   {step.delayDays === 0
@@ -585,12 +585,13 @@ export function ManualModeContent({
                                       )}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent align="start" className="w-auto p-0">
                                 <Calendar
-                                  mode="single"
-                                  selected={
-                                    new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000)
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0, 0, 0, 0))
                                   }
+                                  initialFocus
+                                  mode="single"
                                   onSelect={(date) => {
                                     if (date) {
                                       const now = new Date()
@@ -601,10 +602,9 @@ export function ManualModeContent({
                                       setSteps(updatedSteps)
                                     }
                                   }}
-                                  disabled={(date) =>
-                                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                                  selected={
+                                    new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000)
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>
@@ -612,15 +612,15 @@ export function ManualModeContent({
                           <div className="space-y-2">
                             <Label className="text-xs">{t("sequences.manualMode.sendTime")}</Label>
                             <TimePicker
-                              value={{
-                                hour: step.scheduledHour ?? 9,
-                                minute: step.scheduledMinute ?? 0,
-                              }}
                               onChange={(time) => {
                                 const updatedSteps = [...steps]
                                 updatedSteps[index].scheduledHour = time.hour
                                 updatedSteps[index].scheduledMinute = time.minute
                                 setSteps(updatedSteps)
+                              }}
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
                               }}
                             />
                           </div>
@@ -629,34 +629,35 @@ export function ManualModeContent({
                         // Remaining steps: Relative date (days later)
                         <>
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs w-16">
+                            <Label className="w-16 text-xs">
                               {t("sequences.manualMode.waitDays")}
                             </Label>
                             <Input
-                              type="number"
+                              className="h-7 w-16 text-xs"
                               min="1"
-                              value={step.delayDays}
                               onChange={(e) => {
                                 const updatedSteps = [...steps]
-                                updatedSteps[index].delayDays = parseInt(e.target.value, 10) || 1
+                                updatedSteps[index].delayDays =
+                                  Number.parseInt(e.target.value, 10) || 1
                                 setSteps(updatedSteps)
                               }}
-                              className="h-7 w-16 text-xs"
+                              type="number"
+                              value={step.delayDays}
                             />
                             <span className="text-xs">{t("sequences.manualMode.daysLater")}</span>
                           </div>
                           <div className="space-y-2">
                             <Label className="text-xs">{t("sequences.manualMode.sendTime")}</Label>
                             <TimePicker
-                              value={{
-                                hour: step.scheduledHour ?? 9,
-                                minute: step.scheduledMinute ?? 0,
-                              }}
                               onChange={(time) => {
                                 const updatedSteps = [...steps]
                                 updatedSteps[index].scheduledHour = time.hour
                                 updatedSteps[index].scheduledMinute = time.minute
                                 setSteps(updatedSteps)
+                              }}
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
                               }}
                             />
                           </div>
@@ -664,26 +665,26 @@ export function ManualModeContent({
                       )}
                       <div className="flex justify-end gap-1">
                         <Button
-                          variant="default"
-                          size="sm"
-                          className="h-6 text-xs px-2"
+                          className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
                             onEditingScheduleIndexChange(null)
                             toast.success(t("sequences.manualMode.scheduleSaved"))
                           }}
+                          size="sm"
+                          variant="default"
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           {t("sequences.manualMode.save")}
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs px-2"
+                          className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
                             onEditingScheduleIndexChange(null)
                           }}
+                          size="sm"
+                          variant="ghost"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -692,12 +693,12 @@ export function ManualModeContent({
                   ) : (
                     // 보기 모드
                     <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-2 h-auto p-1 text-xs text-muted-foreground hover:text-foreground group"
+                      className="group h-auto w-full justify-start gap-2 p-1 text-muted-foreground text-xs hover:text-foreground"
                       onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation()
                         onEditingScheduleIndexChange(index)
                       }}
+                      variant="ghost"
                     >
                       <CalendarIcon className="h-3 w-3" />
                       {index === 0 ? (
@@ -719,12 +720,12 @@ export function ManualModeContent({
                             : t("sequences.step3.daysLater", { days: step.delayDays })}
                         </span>
                       )}
-                      <Clock className="h-3 w-3 ml-1" />
+                      <Clock className="ml-1 h-3 w-3" />
                       <span>
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
                       </span>
-                      <span className="text-xs text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="ml-auto text-muted-foreground text-xs opacity-0 transition-opacity group-hover:opacity-100">
                         {t("sequences.manualMode.edit")}
                       </span>
                     </Button>
@@ -733,34 +734,34 @@ export function ManualModeContent({
 
                 {/* Step content */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="font-semibold text-sm">
                         {t("sequences.manualMode.step", { order: step.stepOrder })}
                       </span>
                       {isStepComplete(step) ? (
                         <Badge
+                          className="bg-green-100 px-2 py-0 text-green-700 text-xs dark:bg-green-900/30 dark:text-green-300"
                           variant="default"
-                          className="text-xs px-2 py-0 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           {t("sequences.manualMode.completed")}
                         </Badge>
                       ) : (
                         <Badge
+                          className="bg-amber-100 px-2 py-0 text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-300"
                           variant="secondary"
-                          className="text-xs px-2 py-0 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                         >
                           {t("sequences.manualMode.drafting")}
                         </Badge>
                       )}
                     </div>
                     {step.emailSubject ? (
-                      <p className="text-sm font-medium line-clamp-2 break-words">
+                      <p className="line-clamp-2 break-words font-medium text-sm">
                         {step.emailSubject}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">
+                      <p className="text-muted-foreground text-sm italic">
                         {t("sequences.manualMode.noSubject")}
                       </p>
                     )}
@@ -771,13 +772,13 @@ export function ManualModeContent({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                            className="h-7 w-7 flex-shrink-0 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={(e) => {
                               e.stopPropagation()
                               onDeleteStep(index)
                             }}
+                            size="sm"
+                            variant="ghost"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -796,19 +797,19 @@ export function ManualModeContent({
       </div>
 
       {/* Right Panel - Email Editor (65%) */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">스텝 {currentStep?.stepOrder} 편집</h3>
-            <p className="text-sm text-muted-foreground">이메일 내용을 작성하세요</p>
+            <h3 className="font-semibold text-lg">스텝 {currentStep?.stepOrder} 편집</h3>
+            <p className="text-muted-foreground text-sm">이메일 내용을 작성하세요</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleOpenAISheet} className="h-9">
-              <Sparkles className="h-4 w-4 mr-2" />
+            <Button className="h-9" onClick={handleOpenAISheet} size="sm" variant="outline">
+              <Sparkles className="mr-2 h-4 w-4" />
               AI 생성
             </Button>
-            <Button onClick={onSaveStep} size="sm" className="h-9">
-              <Check className="h-4 w-4 mr-2" />
+            <Button className="h-9" onClick={onSaveStep} size="sm">
+              <Check className="mr-2 h-4 w-4" />
               저장
             </Button>
           </div>
@@ -819,7 +820,7 @@ export function ManualModeContent({
             {/* Template Selection */}
             <div className="space-y-2">
               <Label>템플릿에서 불러오기</Label>
-              <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+              <Select onValueChange={handleTemplateSelect} value={selectedTemplateId}>
                 <SelectTrigger>
                   <SelectValue placeholder="템플릿 선택 (선택사항)" />
                 </SelectTrigger>
@@ -830,7 +831,7 @@ export function ManualModeContent({
                         <div className="flex flex-col gap-1">
                           <span className="font-medium">{template.name}</span>
                           {template.description && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {template.description}
                             </span>
                           )}
@@ -838,13 +839,13 @@ export function ManualModeContent({
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="no-templates" disabled>
+                    <SelectItem disabled value="no-templates">
                       등록된 템플릿이 없습니다
                     </SelectItem>
                   )}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 💡 기존 템플릿을 선택하면 제목과 본문이 자동으로 입력됩니다
               </p>
             </div>
@@ -855,41 +856,41 @@ export function ManualModeContent({
                 <Label>이메일 제목 *</Label>
                 <div className="flex items-center gap-2">
                   <Checkbox
+                    checked={currentStep?.isAdvertisement}
                     id={`advertisement-${selectedStepIndex}`}
-                    checked={currentStep?.isAdvertisement || false}
                     onCheckedChange={(checked) => handleAdvertisementToggle(checked as boolean)}
                   />
                   <Label
+                    className="cursor-pointer font-normal text-sm"
                     htmlFor={`advertisement-${selectedStepIndex}`}
-                    className="text-sm font-normal cursor-pointer"
                   >
                     (광고) 표시
                   </Label>
                 </div>
               </div>
               <Input
-                value={currentStep?.emailSubject || ""}
                 onChange={(e) => onUpdateStep({ emailSubject: e.target.value })}
                 placeholder="예: 안녕하세요, {{회사명}} 담당자님"
+                value={currentStep?.emailSubject || ""}
               />
             </div>
 
             {/* Variables */}
             <div className="space-y-2">
               <Label>변수 삽입</Label>
-              <div className="flex flex-wrap gap-2 p-3 rounded-lg border bg-muted/30">
+              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
                 {getVariables(t).map((variable) => (
                   <Button
-                    key={variable.value}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => insertVariable(variable.value)}
                     className="h-7 text-xs"
+                    key={variable.value}
+                    onClick={() => insertVariable(variable.value)}
+                    size="sm"
+                    variant="outline"
                   >
                     {variable.label}
                   </Button>
                 ))}
-                <p className="w-full text-xs text-muted-foreground mt-2">
+                <p className="mt-2 w-full text-muted-foreground text-xs">
                   클릭하면 본문에 변수가 추가됩니다
                 </p>
               </div>
@@ -899,11 +900,11 @@ export function ManualModeContent({
             <div className="space-y-2">
               <Label>이메일 본문 *</Label>
               <RichTextEditor
-                ref={editorRef}
-                value={currentStep?.emailBodyText || ""}
+                height="300px"
                 onChange={(value) => onUpdateStep({ emailBodyText: value })}
                 placeholder="이메일 내용을 입력하세요..."
-                height="300px"
+                ref={editorRef}
+                value={currentStep?.emailBodyText || ""}
               />
 
               {/* 서명 선택 및 미리보기 */}
@@ -911,20 +912,20 @@ export function ManualModeContent({
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">서명 선택</Label>
                   <Button
+                    className="h-7 text-xs"
+                    onClick={() => setShowSignaturePreview(!showSignaturePreview)}
+                    size="sm"
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    onClick={() => setShowSignaturePreview(!showSignaturePreview)}
-                    className="h-7 text-xs"
                   >
                     {showSignaturePreview ? (
                       <>
-                        <ChevronUp className="h-3 w-3 mr-1" />
+                        <ChevronUp className="mr-1 h-3 w-3" />
                         미리보기 숨기기
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-3 w-3 mr-1" />
+                        <ChevronDown className="mr-1 h-3 w-3" />
                         미리보기 보기
                       </>
                     )}
@@ -933,20 +934,20 @@ export function ManualModeContent({
                 {/* 서명 포함 여부 체크박스 */}
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id={`include-signature-${currentStep?.stepOrder || 0}`}
-                    checked={currentStep?.includeSignature !== false} // 기본값: true
+                    checked={currentStep?.includeSignature !== false}
+                    id={`include-signature-${currentStep?.stepOrder || 0}`} // 기본값: true
                     onCheckedChange={(checked) =>
                       onUpdateStep({ includeSignature: checked as boolean })
                     }
                   />
                   <Label
+                    className="cursor-pointer font-normal text-sm"
                     htmlFor={`include-signature-${currentStep?.stepOrder || 0}`}
-                    className="text-sm font-normal cursor-pointer"
                   >
                     이메일에 서명 추가
                   </Label>
                 </div>
-                <Select value={getCurrentSignatureValue()} onValueChange={handleSignatureChange}>
+                <Select onValueChange={handleSignatureChange} value={getCurrentSignatureValue()}>
                   <SelectTrigger className="relative h-auto min-h-9 py-1.5">
                     {(() => {
                       const value = getCurrentSignatureValue()
@@ -973,17 +974,17 @@ export function ManualModeContent({
                     {signatures?.map((signature) => {
                       const displayText = `${signature.name}${signature.workspaceName ? ` (${signature.workspaceName}${signature.userName ? ` • ${signature.userName}` : ""})` : ""}`
                       return (
-                        <SelectItem key={signature.id} value={signature.id} textValue={displayText}>
+                        <SelectItem key={signature.id} textValue={displayText} value={signature.id}>
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{signature.name}</span>
                               {signature.isDefault && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge className="text-xs" variant="secondary">
                                   기본
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
                               {signature.workspaceName && (
                                 <span className="flex items-center gap-1">
                                   <span>{signature.workspaceName}</span>
@@ -1011,23 +1012,27 @@ export function ManualModeContent({
                       currentStep?.emailSignature ||
                       (() => {
                         const currentValue = getCurrentSignatureValue()
-                        if (currentValue === "none") return null
-                        if (currentValue === "default") return getUserSignature()
+                        if (currentValue === "none") {
+                          return null
+                        }
+                        if (currentValue === "default") {
+                          return getUserSignature()
+                        }
                         const selectedSig = signatures?.find((sig) => sig.id === currentValue)
                         return selectedSig?.signatureHtml || getUserSignature()
                       })()
 
                     return signatureToShow ? (
-                      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground">
+                      <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                        <Label className="font-medium text-muted-foreground text-xs">
                           서명 미리보기
                         </Label>
                         <div
-                          className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                          className="prose prose-sm dark:prose-invert max-w-none text-xs"
                           // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
                           dangerouslySetInnerHTML={{ __html: signatureToShow }}
                         />
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
                         </p>
                       </div>
@@ -1041,18 +1046,18 @@ export function ManualModeContent({
               <Label>첨부 파일</Label>
               <div className="rounded-lg border-2 border-dashed p-4 text-center">
                 <input
-                  type="file"
-                  multiple
                   className="hidden"
                   id={`file-input-${selectedStepIndex}`}
+                  multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || [])
                     onUpdateStep({ files })
                   }}
+                  type="file"
                 />
                 <label
+                  className="cursor-pointer text-muted-foreground text-sm hover:text-foreground"
                   htmlFor={`file-input-${selectedStepIndex}`}
-                  className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
                 >
                   클릭하여 파일 선택
                 </label>
@@ -1060,18 +1065,18 @@ export function ManualModeContent({
                   <div className="mt-2 space-y-1">
                     {currentStep.files.map((file, idx) => (
                       <div
+                        className="flex items-center justify-between rounded bg-muted p-2 text-xs"
                         key={`file-${file.name}-${idx}`}
-                        className="flex items-center justify-between text-xs bg-muted p-2 rounded"
                       >
                         <span>{file.name}</span>
                         <Button
-                          variant="ghost"
-                          size="sm"
                           className="h-5 w-5 p-0"
                           onClick={() => {
                             const newFiles = currentStep.files?.filter((_, i) => i !== idx)
                             onUpdateStep({ files: newFiles })
                           }}
+                          size="sm"
+                          variant="ghost"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -1086,8 +1091,8 @@ export function ManualModeContent({
       </div>
 
       {/* AI Generation Sheet */}
-      <Sheet open={showAISheet} onOpenChange={onShowAISheetChange}>
-        <SheetContent side="right" className="w-[600px] sm:max-w-[600px] flex flex-col">
+      <Sheet onOpenChange={onShowAISheetChange} open={showAISheet}>
+        <SheetContent className="flex w-[600px] flex-col sm:max-w-[600px]" side="right">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -1098,12 +1103,12 @@ export function ManualModeContent({
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1 mt-6 pr-4">
+          <ScrollArea className="mt-6 flex-1 pr-4">
             <div className="space-y-4">
               {/* Template Selection for AI */}
               <div className="space-y-2">
                 <Label>템플릿 참고 (선택)</Label>
-                <Select value={selectedAITemplateId} onValueChange={setSelectedAITemplateId}>
+                <Select onValueChange={setSelectedAITemplateId} value={selectedAITemplateId}>
                   <SelectTrigger>
                     <SelectValue placeholder="템플릿 선택 (선택사항)" />
                   </SelectTrigger>
@@ -1115,7 +1120,7 @@ export function ManualModeContent({
                           <div className="flex flex-col gap-1">
                             <span className="font-medium">{template.name}</span>
                             {template.description && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground text-xs">
                                 {template.description}
                               </span>
                             )}
@@ -1123,30 +1128,30 @@ export function ManualModeContent({
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="no-templates" disabled>
+                      <SelectItem disabled value="no-templates">
                         등록된 템플릿이 없습니다
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   💡 템플릿을 선택하면 AI가 해당 템플릿의 스타일과 구조를 참고하여 이메일을
                   생성합니다
                 </p>
 
                 {/* Template Preview */}
                 {selectedAITemplateId && selectedAITemplateId !== "none" && (
-                  <div className="rounded-lg border bg-muted/30 p-4 space-y-3 mt-3">
+                  <div className="mt-3 space-y-3 rounded-lg border bg-muted/30 p-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
+                      <h4 className="flex items-center gap-2 font-medium text-sm">
                         <Info className="h-4 w-4 text-primary" />
                         선택한 템플릿 미리보기
                       </h4>
                       <Button
-                        variant="ghost"
-                        size="sm"
                         className="h-6 px-2 text-xs"
                         onClick={() => setSelectedAITemplateId("none")}
+                        size="sm"
+                        variant="ghost"
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -1155,7 +1160,9 @@ export function ManualModeContent({
                       const selectedTemplate = templatesData?.emailTemplates.find(
                         (t) => t.id === selectedAITemplateId,
                       )
-                      if (!selectedTemplate) return null
+                      if (!selectedTemplate) {
+                        return null
+                      }
 
                       return (
                         <div className="space-y-2 text-sm">
@@ -1169,19 +1176,19 @@ export function ManualModeContent({
                               <span>{selectedTemplate.description}</span>
                             </div>
                           )}
-                          <div className="border-t pt-2 space-y-2">
+                          <div className="space-y-2 border-t pt-2">
                             <div>
                               <span className="font-medium text-muted-foreground">제목:</span>
-                              <div className="mt-1 p-2 bg-background rounded border text-xs">
+                              <div className="mt-1 rounded border bg-background p-2 text-xs">
                                 {selectedTemplate.subject}
                               </div>
                             </div>
                             <div>
                               <span className="font-medium text-muted-foreground">본문:</span>
-                              <div className="mt-1 p-2 bg-background rounded border text-xs max-h-[200px] overflow-y-auto">
+                              <div className="mt-1 max-h-[200px] overflow-y-auto rounded border bg-background p-2 text-xs">
                                 {selectedTemplate.bodyHtml ? (
                                   <div
-                                    className="prose prose-sm max-w-none dark:prose-invert"
+                                    className="prose prose-sm dark:prose-invert max-w-none"
                                     // biome-ignore lint/security/noDangerouslySetInnerHtml: Template preview is safe
                                     dangerouslySetInnerHTML={{ __html: selectedTemplate.bodyHtml }}
                                   />
@@ -1193,7 +1200,7 @@ export function ManualModeContent({
                               </div>
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground pt-2 border-t">
+                          <p className="border-t pt-2 text-muted-foreground text-xs">
                             💡 AI가 위 템플릿의 구조, 톤, 스타일을 참고하여 새로운 이메일을
                             생성합니다
                           </p>
@@ -1205,18 +1212,18 @@ export function ManualModeContent({
               </div>
 
               {/* Auto-detected Group Info */}
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
-                <h4 className="font-medium text-sm flex items-center gap-2">
+              <div className="space-y-2 rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
+                <h4 className="flex items-center gap-2 font-medium text-sm">
                   <Info className="h-4 w-4 text-blue-600" />
                   타겟 고객 그룹 정보 (자동 감지)
                 </h4>
                 <Input
-                  value={aiGroupInfo}
+                  className="bg-white dark:bg-background"
                   onChange={(e) => setAiGroupInfo(e.target.value)}
                   placeholder="타겟 고객 정보를 입력하세요"
-                  className="bg-white dark:bg-background"
+                  value={aiGroupInfo}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   고객 리드 데이터를 기반으로 자동 감지됩니다. 필요시 수정 가능합니다.
                 </p>
               </div>
@@ -1225,9 +1232,9 @@ export function ManualModeContent({
               <div className="space-y-2">
                 <Label>타겟 국가</Label>
                 <Input
-                  value={aiCountry}
                   onChange={(e) => setAiCountry(e.target.value)}
                   placeholder="예: Korea, Japan, China"
+                  value={aiCountry}
                 />
               </div>
 
@@ -1235,11 +1242,11 @@ export function ManualModeContent({
               <div className="space-y-2">
                 <Label>팔로업 목표</Label>
                 <Input
-                  value={aiGoal}
                   onChange={(e) => setAiGoal(e.target.value)}
                   placeholder="예: 미팅 성사, 데모 요청, 자료 다운로드 유도"
+                  value={aiGoal}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   이 이메일을 통해 달성하고자 하는 목표를 입력하세요
                 </p>
               </div>
@@ -1248,11 +1255,11 @@ export function ManualModeContent({
               <div className="space-y-2">
                 <Label>템플릿 전략 (톤앤매너)</Label>
                 <Input
-                  value={aiStrategy}
                   onChange={(e) => setAiStrategy(e.target.value)}
                   placeholder="예: 전문적이고 친근한 톤, 간결하고 명확한 메시지"
+                  value={aiStrategy}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   이메일의 톤, 스타일, 길이 등을 지정하세요
                 </p>
               </div>
@@ -1261,19 +1268,19 @@ export function ManualModeContent({
               <div className="space-y-2">
                 <Label>추가 지시사항 (선택)</Label>
                 <Textarea
-                  value={aiPrompt}
                   onChange={(e) => onAIPromptChange(e.target.value)}
                   placeholder="예: 최근 출시한 신제품에 대한 소개를 포함하고, 기존 고객 성공 사례를 언급해주세요..."
                   rows={4}
+                  value={aiPrompt}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   추가로 포함하고 싶은 내용이나 특별한 지시사항을 입력하세요
                 </p>
               </div>
 
-              <div className="rounded-lg bg-muted p-4 space-y-2">
+              <div className="space-y-2 rounded-lg bg-muted p-4">
                 <h4 className="font-medium text-sm">💡 작성 가이드</h4>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <ul className="list-inside list-disc space-y-1 text-muted-foreground text-xs">
                   <li>
                     <strong>템플릿 참고</strong>: 기존 템플릿의 스타일과 구조를 참고하여 생성
                     (선택사항)
@@ -1295,18 +1302,18 @@ export function ManualModeContent({
             </div>
           </ScrollArea>
 
-          <div className="flex gap-2 pt-4 border-t mt-auto">
-            <Button onClick={handleGenerateAI} disabled={isGeneratingAI} className="flex-1">
+          <div className="mt-auto flex gap-2 border-t pt-4">
+            <Button className="flex-1" disabled={isGeneratingAI} onClick={handleGenerateAI}>
               {isGeneratingAI ? (
                 "생성 중..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="mr-2 h-4 w-4" />
                   생성하기
                 </>
               )}
             </Button>
-            <Button variant="outline" onClick={() => onShowAISheetChange(false)}>
+            <Button onClick={() => onShowAISheetChange(false)} variant="outline">
               취소
             </Button>
           </div>

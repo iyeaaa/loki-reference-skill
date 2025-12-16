@@ -69,7 +69,9 @@ export function generateQuotedHtml(email: ThreadEmail): string {
  * HTML 태그 제거
  */
 export function stripHtmlTags(html: string | null | undefined): string {
-  if (!html) return ""
+  if (!html) {
+    return ""
+  }
   return html.replace(/<[^>]*>/g, "").trim()
 }
 

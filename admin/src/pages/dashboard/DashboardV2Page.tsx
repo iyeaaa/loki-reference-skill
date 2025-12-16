@@ -34,14 +34,13 @@ export default function DashboardV2Page() {
         to: new Date(dateRange.to),
         preset: dateRange.preset,
       }
-    } else {
-      const to = new Date()
-      const from = new Date()
-      from.setDate(from.getDate() - 6)
-      from.setHours(0, 0, 0, 0)
-      const dateRange = { from, to, preset: "last7days" }
-      return dateRange
     }
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - 6)
+    from.setHours(0, 0, 0, 0)
+    const dateRange = { from, to, preset: "last7days" }
+    return dateRange
   })
 
   // Save date range to localStorage
@@ -95,47 +94,47 @@ export default function DashboardV2Page() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("dashboard.welcome", { userName })}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="font-bold text-2xl">{t("dashboard.welcome", { userName })}</h1>
+          <p className="mt-1 text-muted-foreground text-sm">
             {t("dashboard.dashboard", {
               workspaceName: selectedWorkspace?.name || t("dashboard.allWorkspace"),
             })}
           </p>
         </div>
-        <DateRangePicker value={dateRange} onChange={setDateRange} />
+        <DateRangePicker onChange={setDateRange} value={dateRange} />
       </div>
 
       {/* Stats and Trend Cards Row */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
         <StatsTrendCard
-          title={t("dashboard.stats.totalCustomers")}
-          icon={Users}
-          totalCount={stats?.leads.total ?? 0}
-          periodCount={stats?.leads.periodCount ?? 0}
-          trendData={filledLeadTrends}
-          isLoading={statsLoading && leadTrendsLoading}
           color="#3b82f6"
+          icon={Users}
+          isLoading={statsLoading && leadTrendsLoading}
+          periodCount={stats?.leads.periodCount ?? 0}
+          title={t("dashboard.stats.totalCustomers")}
+          totalCount={stats?.leads.total ?? 0}
+          trendData={filledLeadTrends}
         />
         <StatsTrendCard
-          title={t("dashboard.stats.totalEmails")}
-          icon={Mail}
-          totalCount={stats?.emails.total ?? 0}
-          periodCount={stats?.emails.periodCount ?? 0}
-          trendData={filledEmailTrends}
-          isLoading={statsLoading && emailTrendsLoading}
           color="#10b981"
+          icon={Mail}
+          isLoading={statsLoading && emailTrendsLoading}
+          periodCount={stats?.emails.periodCount ?? 0}
+          title={t("dashboard.stats.totalEmails")}
+          totalCount={stats?.emails.total ?? 0}
+          trendData={filledEmailTrends}
         />
         <StatsTrendCard
-          title={t("dashboard.stats.openRate")}
+          color="#f59e0b"
           icon={TrendingUp}
-          totalCount={stats?.openRate.rate ?? 0}
+          isLoading={statsLoading && openRateTrendsLoading}
           periodCount={stats?.openRate.periodOpened ?? 0}
           suffix="%"
+          title={t("dashboard.stats.openRate")}
+          totalCount={stats?.openRate.rate ?? 0}
           trendData={filledOpenRateTrends}
-          isLoading={statsLoading && openRateTrendsLoading}
-          color="#f59e0b"
         />
       </div>
 
@@ -195,11 +194,11 @@ export default function DashboardV2Page() {
       {/* Notification Cards Row */}
       <div className="grid gap-4 md:grid-cols-3">
         <LeadDiscoveryNotifications
-          notifications={leadDiscoveryNotifications}
           isLoading={leadDiscoveryLoading}
+          notifications={leadDiscoveryNotifications}
         />
-        <CampaignNotifications notifications={campaignNotifications} isLoading={campaignLoading} />
-        <ReplyNotifications notifications={replyNotifications} isLoading={replyLoading} />
+        <CampaignNotifications isLoading={campaignLoading} notifications={campaignNotifications} />
+        <ReplyNotifications isLoading={replyLoading} notifications={replyNotifications} />
       </div>
     </div>
   )

@@ -110,7 +110,7 @@ export function useCleanupResults() {
 }
 
 // 단일 웹사이트 분석 훅 (스트리밍)
-export interface WebsiteAnalysisState {
+export type WebsiteAnalysisState = {
   status: "idle" | "crawling" | "analyzing" | "streaming" | "complete" | "error"
   message: string
   streamingContent: string
@@ -118,7 +118,7 @@ export interface WebsiteAnalysisState {
   error: string | null
 }
 
-export interface UseWebsiteAnalysisOptions {
+export type UseWebsiteAnalysisOptions = {
   onContentUpdate?: (content: string) => void
 }
 

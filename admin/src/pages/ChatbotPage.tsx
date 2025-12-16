@@ -67,7 +67,9 @@ export default function ChatbotPage() {
   // Called when a new conversation is created from ChatInterface
   const handleConversationCreated = useCallback(
     async (conversationId: string, firstMessage: string): Promise<string | undefined> => {
-      if (!selectedWorkspace?.id || !user?.id) return undefined
+      if (!(selectedWorkspace?.id && user?.id)) {
+        return
+      }
 
       try {
         // Create conversation in database
@@ -99,7 +101,7 @@ export default function ChatbotPage() {
   if (!selectedWorkspace || selectedWorkspace.id === "all" || !selectedWorkspace.id) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
+        <Alert className="max-w-md" variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t("chatbot.workspace.select.title")}</AlertTitle>
           <AlertDescription>{t("chatbot.workspace.select.description")}</AlertDescription>
@@ -112,23 +114,23 @@ export default function ChatbotPage() {
     <div className="flex h-[calc(100vh-80px)]">
       {/* Sidebar */}
       <ChatSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        conversations={conversations}
         activeId={currentConversationId}
-        onSelect={handleSelectConversation}
+        collapsed={sidebarCollapsed}
+        conversations={conversations}
+        isLoading={isLoadingConversations}
+        onDelete={handleDeleteConversation}
         onNew={handleNewChat}
         onRename={handleRenameConversation}
-        onDelete={handleDeleteConversation}
-        isLoading={isLoadingConversations}
+        onSelect={handleSelectConversation}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
       {/* Main chat area */}
       <div className={cn("flex-1 overflow-hidden", sidebarCollapsed && "pl-0")}>
         <ChatInterface
-          workspaceId={selectedWorkspace.id}
           conversationId={currentConversationId || undefined}
           onConversationCreated={handleConversationCreated}
+          workspaceId={selectedWorkspace.id}
         />
       </div>
     </div>

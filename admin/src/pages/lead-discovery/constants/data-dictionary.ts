@@ -3,7 +3,7 @@
  * BigQuery 테이블들의 국가, 산업군 등 필터 옵션을 정의
  */
 
-export interface FilterOption {
+export type FilterOption = {
   value: string
   label: string
   labelKo?: string

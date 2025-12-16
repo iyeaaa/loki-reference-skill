@@ -23,7 +23,7 @@ import { ResizableDivider } from "./ResizableDivider"
 import { SequenceGeneratorModal } from "./SequenceGeneratorModal"
 import { StreamingMessageContainer } from "./StreamingMessageContainer"
 
-interface ChatInterfaceProps {
+type ChatInterfaceProps = {
   workspaceId: string
   conversationId?: string
   onConversationCreated?: (
@@ -232,14 +232,14 @@ export function ChatInterface({
   // Auto-scroll when new user message is added
   useEffect(() => {
     // Only scroll when a new user message is added (not during streaming)
-    if (messages.length > 0 && messages[messages.length - 1].role === "user") {
+    if (messages.length > 0 && messages.at(-1)?.role === "user") {
       // Scroll to the latest user message, positioning it near the top
       lastUserMessageRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       })
     }
-  }, [messages.length, messages[messages.length - 1]?.role])
+  }, [messages.length, messages.at])
 
   const handleRemoveFile = useCallback(() => {
     setAttachedFile(null)
@@ -329,7 +329,9 @@ export function ChatInterface({
   const handleSubmit = useCallback(
     async (customInput?: string) => {
       const questionText = customInput || input
-      if ((!questionText.trim() && !attachedFile) || isProcessing) return
+      if (!(questionText.trim() || attachedFile) || isProcessing) {
+        return
+      }
 
       setIsProcessing(true)
 
@@ -448,7 +450,7 @@ export function ChatInterface({
 
   const handleLeadImportApproval = useCallback(
     async (approved: boolean) => {
-      if (!approved || !leadPreviewData) {
+      if (!(approved && leadPreviewData)) {
         // User rejected
         const rejectionMessage: ChatMessage = {
           role: "assistant",
@@ -784,7 +786,9 @@ export function ChatInterface({
   // Auto-resize textarea based on content
   useEffect(() => {
     const adjustHeight = (textarea: HTMLTextAreaElement | null) => {
-      if (!textarea) return
+      if (!textarea) {
+        return
+      }
 
       // Reset height to auto to get the correct scrollHeight
       textarea.style.height = "auto"
@@ -879,7 +883,9 @@ export function ChatInterface({
 
   // Helper function to check if metadata has any artifact data
   const hasArtifactData = (metadata: ChatMessage["metadata"]) => {
-    if (!metadata) return false
+    if (!metadata) {
+      return false
+    }
     return (
       (metadata.insights && metadata.insights.length > 0) ||
       !!metadata.sql ||
@@ -897,9 +903,7 @@ export function ChatInterface({
   const currentArtifactSource =
     selectedArtifact ||
     streamingMessage ||
-    (!isProcessing && !selectedArtifact && messages.length > 0
-      ? messages[messages.length - 1]
-      : null)
+    (!(isProcessing || selectedArtifact) && messages.length > 0 ? messages.at(-1) : null)
 
   // Check if any message has artifact data (for split view)
   const hasAnyArtifact =
@@ -911,31 +915,31 @@ export function ChatInterface({
     <div className="flex h-full flex-col bg-background">
       {/* Add Lead Sheet - Smart CSV/XLSX parsing with column mapping */}
       <AddLeadSheet
-        open={isUploadModalOpen}
-        onOpenChange={setIsUploadModalOpen}
-        workspaceId={workspaceId}
         customerGroups={customerGroups || []}
-        uploadOnly={true}
         onComplete={handleLeadsAdded}
+        onOpenChange={setIsUploadModalOpen}
+        open={isUploadModalOpen}
+        uploadOnly={true}
+        workspaceId={workspaceId}
       />
 
       {/* Sequence Generator Modal - Triggered by chatbot when user asks to create sequence */}
       <SequenceGeneratorModal
-        open={isSequenceModalOpen}
-        onOpenChange={setIsSequenceModalOpen}
-        workspaceId={workspaceId}
-        onSubmit={handleSequenceModalSubmit}
         defaultCustomerGroupId={defaultCustomerGroupId}
+        onOpenChange={setIsSequenceModalOpen}
+        onSubmit={handleSequenceModalSubmit}
+        open={isSequenceModalOpen}
+        workspaceId={workspaceId}
       />
 
       {messages.length === 0 ? (
         // Empty state - Everything centered vertically and horizontally
-        <div className="flex-1 flex flex-col items-center px-4 pt-[20vh] pb-8">
+        <div className="flex flex-1 flex-col items-center px-4 pt-[20vh] pb-8">
           <div className="mx-auto w-full space-y-8" style={{ maxWidth: "670px" }}>
             {/* Logo */}
-            <div className="flex justify-center items-center gap-2">
-              <img src={TextRinda} alt="RINDA" className="h-10 w-auto" />
-              <img src={TextPlus} alt="Plus" className="h-10 w-auto" />
+            <div className="flex items-center justify-center gap-2">
+              <img alt="RINDA" className="h-10 w-auto" src={TextRinda} />
+              <img alt="Plus" className="h-10 w-auto" src={TextPlus} />
             </div>
 
             {/* File attachment preview */}
@@ -952,10 +956,9 @@ export function ChatInterface({
 
             {/* Input area - Centered */}
             <div className="relative w-full">
-              <div className="relative border rounded-2xl shadow-sm bg-background">
+              <div className="relative rounded-2xl border bg-background shadow-sm">
                 <Textarea
-                  ref={textareaEmptyStateRef}
-                  value={input}
+                  className="min-h-[64px] resize-none overflow-y-auto rounded-2xl border-0 bg-transparent pt-4 pr-12 pb-12 pl-4 text-[15px] leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                   onChange={(e) => {
                     setInput(e.target.value)
                     if (e.target.value.length > 0) {
@@ -974,15 +977,16 @@ export function ChatInterface({
                     }
                   }}
                   placeholder={t("chatbot.input.placeholder")}
-                  className="min-h-[64px] resize-none pl-4 pr-12 pt-4 pb-12 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
+                  ref={textareaEmptyStateRef}
                   style={{ maxHeight: "400px" }}
+                  value={input}
                 />
                 {/* Submit / Stop button */}
                 <Button
+                  className="absolute right-3 bottom-3 h-8 w-8 rounded-full"
+                  disabled={!(isProcessing || input.trim() || attachedFile)}
                   onClick={() => (isProcessing ? handleStop() : handleSubmit())}
-                  disabled={!isProcessing && !input.trim() && !attachedFile}
                   size="icon"
-                  className="absolute bottom-3 right-3 h-8 w-8 rounded-full"
                 >
                   {isProcessing ? (
                     <Square className="h-4 w-4" fill="currentColor" />
@@ -992,10 +996,10 @@ export function ChatInterface({
                 </Button>
                 {/* Drop Your Leads Here button - Bottom left */}
                 <Button
-                  variant="outline"
-                  onClick={() => setIsUploadModalOpen(true)}
+                  className="absolute bottom-3 left-3 h-8 rounded-lg px-3 font-medium text-sm"
                   disabled={!!attachedFile || isProcessing}
-                  className="absolute bottom-3 left-3 h-8 px-3 rounded-lg text-sm font-medium"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  variant="outline"
                 >
                   {t("chatbot.button.dropLeads")}
                 </Button>
@@ -1004,19 +1008,19 @@ export function ChatInterface({
               {/* Suggested questions below input */}
               {showSuggestions && displayQuestions.length > 0 && !isProcessing && (
                 <div
+                  className="absolute top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border bg-background shadow-lg"
                   ref={suggestionsRef}
-                  className="absolute top-full mt-2 w-full bg-background border rounded-2xl shadow-lg overflow-hidden z-50"
                 >
                   <div className="max-h-[300px] overflow-y-auto">
                     {displayQuestions.map((question) => (
                       <button
+                        className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
                         key={question}
-                        type="button"
                         onClick={() => handleSelectQuestion(question)}
-                        className="w-full px-4 py-3 text-left hover:bg-accent transition-colors flex items-start gap-3 group"
+                        type="button"
                       >
-                        <Search className="h-4 w-4 mt-0.5 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
-                        <span className="text-[15px] leading-relaxed text-foreground line-clamp-2">
+                        <Search className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-foreground" />
+                        <span className="line-clamp-2 text-[15px] text-foreground leading-relaxed">
                           {question}
                         </span>
                       </button>
@@ -1029,10 +1033,10 @@ export function ChatInterface({
         </div>
       ) : (
         // Messages view - Claude-style split layout when artifacts exist
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex flex-1 overflow-hidden">
           {/* Left side: Messages + Input (dynamic width when artifact exists, 100% otherwise) */}
           <div
-            className={`flex flex-col ${!isResizing ? "transition-all duration-300" : ""}`}
+            className={`flex flex-col ${isResizing ? "" : "transition-all duration-300"}`}
             style={{
               width: hasAnyArtifact ? `${leftPanelWidth}%` : "100%",
             }}
@@ -1066,26 +1070,26 @@ export function ChatInterface({
 
                     return (
                       <MessageBubble
-                        key={`msg-${index}-${timestampValue}`}
-                        ref={isLastUserMessage ? lastUserMessageRef : null}
-                        message={message}
-                        isStreaming={false}
                         hideArtifact={hasAnyArtifact}
+                        isStreaming={false}
+                        key={`msg-${index}-${timestampValue}`}
+                        message={message}
                         onViewArtifact={() => setSelectedArtifact(message)}
                         questionText={questionText}
+                        ref={isLastUserMessage ? lastUserMessageRef : undefined}
                       />
                     )
                   })}
 
                   {/* Unified streaming container - Claude/ChatGPT style */}
                   <StreamingMessageContainer
-                    message={streamingMessage}
-                    isStreaming={!needsConfirmation}
-                    needsConfirmation={needsConfirmation}
-                    onConfirm={handleConfirmation}
-                    nodeProgress={nodeProgress}
-                    thinkingMessage={currentThinking}
                     hideArtifact={hasAnyArtifact}
+                    isStreaming={!needsConfirmation}
+                    message={streamingMessage}
+                    needsConfirmation={needsConfirmation}
+                    nodeProgress={nodeProgress}
+                    onConfirm={handleConfirmation}
+                    thinkingMessage={currentThinking}
                   />
 
                   <div ref={scrollRef} />
@@ -1094,7 +1098,7 @@ export function ChatInterface({
             </div>
 
             {/* Input area - Fixed at bottom */}
-            <div className="relative border-t border-border">
+            <div className="relative border-border border-t">
               {/* Input container */}
               <div className="bg-background p-4">
                 <div
@@ -1103,7 +1107,7 @@ export function ChatInterface({
                 >
                   {/* File attachment preview */}
                   {attachedFile && (
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="mb-3 flex items-center gap-2">
                       <FileAttachment
                         fileName={attachedFile.fileName}
                         fileSize={attachedFile.fileSize}
@@ -1115,10 +1119,9 @@ export function ChatInterface({
 
                   {/* Input area */}
                   <div className="relative w-full">
-                    <div className="relative border rounded-2xl bg-background">
+                    <div className="relative rounded-2xl border bg-background">
                       <Textarea
-                        ref={textareaRef}
-                        value={input}
+                        className="min-h-[56px] resize-none overflow-y-auto rounded-2xl border-0 bg-transparent pt-3 pr-12 pb-11 pl-4 text-[15px] leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
@@ -1127,15 +1130,16 @@ export function ChatInterface({
                           }
                         }}
                         placeholder={t("chatbot.input.placeholder")}
-                        className="min-h-[56px] resize-none pl-4 pr-12 pt-3 pb-11 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
+                        ref={textareaRef}
                         style={{ maxHeight: "400px" }}
+                        value={input}
                       />
                       {/* Submit / Stop button */}
                       <Button
+                        className="absolute right-2 bottom-2 h-8 w-8 rounded-full"
+                        disabled={!(isProcessing || input.trim() || attachedFile)}
                         onClick={() => (isProcessing ? handleStop() : handleSubmit())}
-                        disabled={!isProcessing && !input.trim() && !attachedFile}
                         size="icon"
-                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
                       >
                         {isProcessing ? (
                           <Square className="h-4 w-4" fill="currentColor" />
@@ -1145,10 +1149,10 @@ export function ChatInterface({
                       </Button>
                       {/* Drop Your Leads Here button - Bottom left */}
                       <Button
-                        variant="outline"
-                        onClick={() => setIsUploadModalOpen(true)}
+                        className="absolute bottom-2 left-2 h-8 rounded-lg px-3 font-medium text-sm"
                         disabled={!!attachedFile || isProcessing}
-                        className="absolute bottom-2 left-2 h-8 px-3 rounded-lg text-sm font-medium"
+                        onClick={() => setIsUploadModalOpen(true)}
+                        variant="outline"
                       >
                         {t("chatbot.button.dropLeads")}
                       </Button>
@@ -1162,25 +1166,30 @@ export function ChatInterface({
           {/* Resizable divider */}
           {hasAnyArtifact && (
             <ResizableDivider
-              onResize={handleResize}
-              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+              onDragStart={handleDragStart}
+              onResize={handleResize}
             />
           )}
 
           {/* Right side: Artifact panel (dynamic width, full height, sticky) */}
           {hasAnyArtifact && (
             <div
-              className={`bg-muted/20 overflow-hidden ${!isResizing ? "transition-all duration-300" : ""}`}
+              className={`overflow-hidden bg-muted/20 ${isResizing ? "" : "transition-all duration-300"}`}
               style={{
                 width: `${100 - leftPanelWidth}%`,
               }}
             >
               <DataArtifact
-                sql={currentArtifactSource?.metadata?.sql}
-                insights={currentArtifactSource?.metadata?.insights}
                 data={currentArtifactSource?.metadata?.result}
+                insights={currentArtifactSource?.metadata?.insights}
                 isStreaming={!selectedArtifact && isProcessing}
+                leadImportProgress={leadImportProgress || undefined}
+                leadImportResult={currentArtifactSource?.metadata?.importResult}
+                leadPreview={leadPreviewData || currentArtifactSource?.metadata?.leadPreview}
+                onGenerateSequence={handleGenerateSequenceFromImport}
+                onLeadImportApproval={handleLeadImportApproval}
+                progressLogs={currentArtifactSource?.metadata?.progressLogs}
                 question={(() => {
                   // Find the corresponding user question for the artifact source
                   if (currentArtifactSource) {
@@ -1196,15 +1205,10 @@ export function ChatInterface({
                   }
                   // Fallback: find the last user message
                   const userMessages = messages.filter((m) => m.role === "user")
-                  return userMessages[userMessages.length - 1]?.content || undefined
+                  return userMessages.at(-1)?.content || undefined
                 })()}
-                leadPreview={leadPreviewData || currentArtifactSource?.metadata?.leadPreview}
-                leadImportProgress={leadImportProgress || undefined}
-                leadImportResult={currentArtifactSource?.metadata?.importResult}
-                progressLogs={currentArtifactSource?.metadata?.progressLogs}
+                sql={currentArtifactSource?.metadata?.sql}
                 startTime={currentArtifactSource?.metadata?.startTime}
-                onLeadImportApproval={handleLeadImportApproval}
-                onGenerateSequence={handleGenerateSequenceFromImport}
               />
             </div>
           )}

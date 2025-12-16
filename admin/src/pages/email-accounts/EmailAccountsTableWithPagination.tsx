@@ -12,7 +12,7 @@ import type {
 } from "@/lib/api/types/email-account"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface EmailAccountsTableWithPaginationProps {
+type EmailAccountsTableWithPaginationProps = {
   searchQuery: string
   selectedStatuses: string[]
   selectedWorkspaces: string[]
@@ -40,7 +40,7 @@ export function EmailAccountsTableWithPagination({
   // Build params for API call
   const params: EmailAccountsParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     status:
       selectedStatuses.length === 1
         ? (selectedStatuses[0] as EmailAccountStatus)
@@ -109,7 +109,7 @@ export function EmailAccountsTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -119,7 +119,7 @@ export function EmailAccountsTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -158,7 +158,7 @@ export function EmailAccountsTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
@@ -167,99 +167,99 @@ export function EmailAccountsTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   이메일
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "150px" }}
                 >
                   표시 이름
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "120px" }}
                 >
                   워크스페이스
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   상태
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   기본
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   일일 발송
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   월별 발송
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   최근동기화
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   편집
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {accounts.map((account) => (
                 <tr
+                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                   key={account.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Checkbox
                       checked={selectedAccounts.includes(account.id)}
                       onCheckedChange={() => onToggleAccount(account.id)}
                     />
                   </td>
                   <td
-                    className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    title={account.emailAddress}
+                    className="p-2 font-medium text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "250px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={account.emailAddress}
                   >
                     {account.emailAddress}
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={account.displayName || "-"}
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "200px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={account.displayName || "-"}
                   >
                     {account.displayName || "-"}
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "150px",
                       overflow: "hidden",
@@ -269,35 +269,35 @@ export function EmailAccountsTableWithPagination({
                   >
                     {account.workspaceId}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
-                    <Badge variant={getStatusBadgeVariant(account.status)} className="text-xs">
+                  <td className="whitespace-nowrap p-2 text-sm">
+                    <Badge className="text-xs" variant={getStatusBadgeVariant(account.status)}>
                       {getStatusText(account.status)}
                     </Badge>
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
+                  <td className="whitespace-nowrap p-2 text-sm">
                     {account.isDefault && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge className="text-xs" variant="outline">
                         기본
                       </Badge>
                     )}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <td className="whitespace-nowrap p-2 text-gray-900 text-sm dark:text-gray-100">
                     {account.dailySentCount}
                     {account.dailyLimit && ` / ${account.dailyLimit}`}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <td className="whitespace-nowrap p-2 text-gray-900 text-sm dark:text-gray-100">
                     {account.monthlySentCount}
                     {account.monthlyLimit && ` / ${account.monthlyLimit}`}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(account.lastSyncAt || null)}
                   </td>
-                  <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Button
-                      variant="outline"
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       onClick={() => onEditAccount(account)}
-                      className="text-xs h-8 px-3"
+                      size="sm"
+                      variant="outline"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -313,7 +313,7 @@ export function EmailAccountsTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -329,22 +329,22 @@ export function EmailAccountsTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             처음
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             이전
@@ -353,12 +353,12 @@ export function EmailAccountsTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -366,11 +366,11 @@ export function EmailAccountsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             다음
             <ChevronRight className="h-4 w-4" />
@@ -378,11 +378,11 @@ export function EmailAccountsTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             마지막
           </Button>
@@ -390,19 +390,19 @@ export function EmailAccountsTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-muted-foreground text-sm">페이지:</span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </>

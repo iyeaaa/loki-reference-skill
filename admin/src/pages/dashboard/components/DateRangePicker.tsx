@@ -11,13 +11,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
-export interface DateRangeValue {
+export type DateRangeValue = {
   from: Date
   to: Date
   preset?: string
 }
 
-interface DateRangePickerProps {
+type DateRangePickerProps = {
   value?: DateRangeValue
   onChange: (value: DateRangeValue) => void
   className?: string
@@ -95,7 +95,9 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
   const canSelectDateRange = (range: DateRange) => {
     const from = range?.from
     const to = range?.to
-    if (!from || !to || to < from) return false
+    if (!(from && to) || to < from) {
+      return false
+    }
     const diffTime = to.getTime() - from.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays <= maxPeriodDay
@@ -126,38 +128,38 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     : t("dashboard.preset.selectPeriod")
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
           className={cn(
             "w-[280px] justify-start text-left font-normal",
             !value && "text-muted-foreground",
             className,
           )}
+          variant="outline"
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {displayText}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
+      <PopoverContent align="end" className="w-auto p-0">
         <div className="flex">
           {/* Presets sidebar */}
-          <div className="border-r p-3 space-y-1 flex flex-col">
-            <div className="text-sm font-medium mb-2">{t("dashboard.preset.title")}</div>
+          <div className="flex flex-col space-y-1 border-r p-3">
+            <div className="mb-2 font-medium text-sm">{t("dashboard.preset.title")}</div>
             <Separator className="border-t" />
             <ScrollArea className="h-[250px]">
               <div className="flex flex-col">
                 {presets.map((preset) => (
                   <Button
-                    key={preset.id}
-                    variant="ghost"
-                    size="sm"
                     className={cn(
                       "w-full justify-start",
                       value?.preset === preset.id && "bg-accent",
                     )}
+                    key={preset.id}
                     onClick={() => handlePresetSelect(preset)}
+                    size="sm"
+                    variant="ghost"
                   >
                     {presetTranslations[preset.id as keyof typeof presetTranslations]}
                   </Button>
@@ -169,13 +171,13 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           {/* Calendar */}
           <div className="p-3">
             <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={handleDateRangeSelect}
-              numberOfMonths={2}
               defaultMonth={dateRange?.from}
-              showOutsideDays={false}
               disabled={(date) => date > new Date(new Date().setHours(0, 0, 0, 0))}
+              mode="range"
+              numberOfMonths={2}
+              onSelect={handleDateRangeSelect}
+              selected={dateRange}
+              showOutsideDays={false}
             />
           </div>
         </div>

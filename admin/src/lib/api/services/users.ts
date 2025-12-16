@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/api/client"
 import type { User, UserStats, UsersParams } from "../types"
 
-interface CreateUserData {
+type CreateUserData = {
   username: string
   email: string
   password?: string
@@ -13,9 +13,7 @@ interface CreateUserData {
 
 export const usersApi = {
   // Get all active users without pagination
-  getAll: () => {
-    return apiFetch<User[]>("/api/v1/users/all")
-  },
+  getAll: () => apiFetch<User[]>("/api/v1/users/all"),
 
   list: (params?: UsersParams) => {
     const searchParams = new URLSearchParams()
@@ -27,7 +25,9 @@ export const usersApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.role && params.role !== "all") {
       searchParams.append("role", params.role)
     }
@@ -53,9 +53,7 @@ export const usersApi = {
     }))
   },
 
-  get: (userId: string) => {
-    return apiFetch<User>(`/api/v1/users/${userId}`)
-  },
+  get: (userId: string) => apiFetch<User>(`/api/v1/users/${userId}`),
 
   stats: async () => {
     const response = await apiFetch<{
@@ -78,8 +76,8 @@ export const usersApi = {
     return stats
   },
 
-  create: (data: CreateUserData) => {
-    return apiFetch<User>("/api/v1/users", {
+  create: (data: CreateUserData) =>
+    apiFetch<User>("/api/v1/users", {
       method: "POST",
       body: JSON.stringify({
         username: data.username,
@@ -90,11 +88,10 @@ export const usersApi = {
         departmentId: data.departmentId,
         employeeId: data.employeeId,
       }),
-    })
-  },
+    }),
 
-  update: (userId: string, data: Partial<User>) => {
-    return apiFetch<User>(`/api/v1/users/${userId}`, {
+  update: (userId: string, data: Partial<User>) =>
+    apiFetch<User>(`/api/v1/users/${userId}`, {
       method: "PUT",
       body: JSON.stringify({
         username: data.username,
@@ -104,105 +101,92 @@ export const usersApi = {
         departmentId: data.departmentId,
         employeeId: data.employeeId,
       }),
-    })
-  },
+    }),
 
-  delete: (userId: string) => {
-    return apiFetch(`/api/v1/users/${userId}`, {
+  delete: (userId: string) =>
+    apiFetch(`/api/v1/users/${userId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  bulkUpdateStatus: (userIds: string[], isActive: boolean) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/status", {
+  bulkUpdateStatus: (userIds: string[], isActive: boolean) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/status", {
       method: "PUT",
       body: JSON.stringify({
         userIds,
         isActive,
       }),
-    })
-  },
+    }),
 
-  bulkUpdateRole: (userIds: string[], role: string) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/role", {
+  bulkUpdateRole: (userIds: string[], role: string) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/role", {
       method: "PUT",
       body: JSON.stringify({
         userIds,
         userRole: role,
       }),
-    })
-  },
+    }),
 
-  bulkUpdateDepartment: (userIds: string[], departmentId: string) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/department", {
+  bulkUpdateDepartment: (userIds: string[], departmentId: string) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/department", {
       method: "PUT",
       body: JSON.stringify({
         userIds,
         departmentId,
       }),
-    })
-  },
+    }),
 
-  changePassword: (userId: string, newPassword: string) => {
-    return apiFetch(`/api/v1/users/${userId}/password`, {
+  changePassword: (userId: string, newPassword: string) =>
+    apiFetch(`/api/v1/users/${userId}/password`, {
       method: "PATCH",
       body: JSON.stringify({ passwordHash: newPassword }),
-    })
-  },
+    }),
 
   // ====================================
   // ONBOARDING API
   // ====================================
 
   /** 온보딩 상태 조회 */
-  getOnboardingStatus: (userId: string) => {
-    return apiFetch<{
+  getOnboardingStatus: (userId: string) =>
+    apiFetch<{
       userId: string
       survey: OnboardingSurvey | null
       currentStep: number
       isCompleted: boolean
       completedAt: string | null
-    }>(`/api/v1/users/${userId}/onboarding`)
-  },
+    }>(`/api/v1/users/${userId}/onboarding`),
 
   /** 온보딩 진행 단계 업데이트 */
-  updateOnboardingStep: (userId: string, step: number) => {
-    return apiFetch<{ success: boolean; currentStep: number }>(
-      `/api/v1/users/${userId}/onboarding/step`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({ step }),
-      },
-    )
-  },
+  updateOnboardingStep: (userId: string, step: number) =>
+    apiFetch<{ success: boolean; currentStep: number }>(`/api/v1/users/${userId}/onboarding/step`, {
+      method: "PATCH",
+      body: JSON.stringify({ step }),
+    }),
 
   /** 온보딩 완료 처리 */
-  completeOnboarding: (userId: string) => {
-    return apiFetch<{ success: boolean; completedAt: string }>(
+  completeOnboarding: (userId: string) =>
+    apiFetch<{ success: boolean; completedAt: string }>(
       `/api/v1/users/${userId}/onboarding/complete`,
       {
         method: "POST",
       },
-    )
-  },
+    ),
 
   /** 온보딩 설문 업데이트 */
-  updateOnboardingSurvey: (userId: string, survey: OnboardingSurvey) => {
-    return apiFetch<{ success: boolean; survey: OnboardingSurvey }>(
+  updateOnboardingSurvey: (userId: string, survey: OnboardingSurvey) =>
+    apiFetch<{ success: boolean; survey: OnboardingSurvey }>(
       `/api/v1/users/${userId}/onboarding/survey`,
       {
         method: "PATCH",
         body: JSON.stringify(survey),
       },
-    )
-  },
+    ),
 }
 
 // ====================================
 // TYPES
 // ====================================
 
-export interface OnboardingSurvey {
+export type OnboardingSurvey = {
   industry?: string
   target?: string
   country?: string

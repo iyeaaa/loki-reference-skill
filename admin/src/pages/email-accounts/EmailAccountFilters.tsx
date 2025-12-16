@@ -4,12 +4,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
 
-interface Workspace {
+type Workspace = {
   id: string
   name: string
 }
 
-interface EmailAccountFiltersProps {
+type EmailAccountFiltersProps = {
   selectedStatuses: string[]
   selectedWorkspaces: string[]
   selectedIsDefault: string[]
@@ -68,18 +68,18 @@ export function EmailAccountFilters({
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">상태</span>
+            <span className="w-24 font-medium text-gray-700 text-sm dark:text-gray-300">상태</span>
             <div className="flex flex-wrap gap-3">
               {statuses.map((status) => (
-                <div key={status.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={status.value}>
                   <Checkbox
-                    id={`status-${status.value}`}
                     checked={selectedStatuses.includes(status.value)}
+                    id={`status-${status.value}`}
                     onCheckedChange={() => toggleStatus(status.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`status-${status.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {status.label}
                   </label>
@@ -90,40 +90,40 @@ export function EmailAccountFilters({
 
           {/* Workspace Filter */}
           <div className="flex items-start gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24 pt-2">
+            <span className="w-24 pt-2 font-medium text-gray-700 text-sm dark:text-gray-300">
               워크스페이스
             </span>
-            <div className="flex-1 max-w-md">
+            <div className="max-w-md flex-1">
               <MultiSelectCombobox
+                emptyText="검색 결과가 없습니다."
+                onValueChange={onWorkspaceChange}
                 options={workspaces.map((workspace) => ({
                   value: workspace.id,
                   label: workspace.name,
                 }))}
-                value={selectedWorkspaces}
-                onValueChange={onWorkspaceChange}
                 placeholder="워크스페이스를 선택하세요..."
                 searchPlaceholder="워크스페이스명으로 검색..."
-                emptyText="검색 결과가 없습니다."
+                value={selectedWorkspaces}
               />
             </div>
           </div>
 
           {/* Is Default Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">
+            <span className="w-24 font-medium text-gray-700 text-sm dark:text-gray-300">
               기본 계정
             </span>
             <div className="flex flex-wrap gap-3">
               {isDefaultOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={option.value}>
                   <Checkbox
-                    id={`isDefault-${option.value}`}
                     checked={selectedIsDefault.includes(option.value)}
+                    id={`isDefault-${option.value}`}
                     onCheckedChange={() => toggleIsDefault(option.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`isDefault-${option.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {option.label}
                   </label>
@@ -135,22 +135,22 @@ export function EmailAccountFilters({
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedStatuses.map((status) => {
                 const statusLabel = statuses.find((s) => s.value === status)?.label || status
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300"
                     key={status}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
                     상태: {statusLabel}
                     <button
-                      type="button"
-                      onClick={() => toggleStatus(status)}
                       className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      onClick={() => toggleStatus(status)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -159,18 +159,18 @@ export function EmailAccountFilters({
                 const workspace = workspaces.find((w) => w.id === workspaceId)
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-purple-800 text-xs dark:bg-purple-900/30 dark:text-purple-300"
                     key={workspaceId}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full"
                   >
                     워크스페이스: {workspace?.name || workspaceId}
                     <button
-                      type="button"
+                      className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
                       onClick={() =>
                         onWorkspaceChange(selectedWorkspaces.filter((w) => w !== workspaceId))
                       }
-                      className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -179,16 +179,16 @@ export function EmailAccountFilters({
                 const optionLabel = isDefaultOptions.find((o) => o.value === value)?.label || value
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300"
                     key={value}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full"
                   >
                     {optionLabel}
                     <button
-                      type="button"
-                      onClick={() => toggleIsDefault(value)}
                       className="ml-1 hover:text-green-600 dark:hover:text-green-200"
+                      onClick={() => toggleIsDefault(value)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -199,9 +199,9 @@ export function EmailAccountFilters({
 
         {/* Clear Filters Button at Bottom */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               필터 초기화
             </Button>
           </div>

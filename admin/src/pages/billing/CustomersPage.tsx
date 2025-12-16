@@ -49,9 +49,8 @@ export default function CustomersPage() {
   }
 
   // Get subscriptions for the selected customer
-  const getCustomerSubscriptions = (customerId: string): Subscription[] => {
-    return allSubscriptions.filter((sub) => sub.customerId === customerId)
-  }
+  const getCustomerSubscriptions = (customerId: string): Subscription[] =>
+    allSubscriptions.filter((sub) => sub.customerId === customerId)
 
   const columns: Column<BillingCustomer>[] = [
     {
@@ -61,7 +60,7 @@ export default function CustomersPage() {
       render: (item) => (
         <div className="max-w-[140px]">
           <div
-            className="font-medium text-gray-900 dark:text-gray-100 truncate"
+            className="truncate font-medium text-gray-900 dark:text-gray-100"
             title={item.user?.username}
           >
             {item.user?.username || "-"}
@@ -75,7 +74,7 @@ export default function CustomersPage() {
       minWidth: "160px",
       render: (item) => (
         <span
-          className="text-sm text-gray-500 truncate block max-w-[160px]"
+          className="block max-w-[160px] truncate text-gray-500 text-sm"
           title={item.user?.email || undefined}
         >
           {item.user?.email || "-"}
@@ -87,7 +86,7 @@ export default function CustomersPage() {
       header: "결제 이메일",
       minWidth: "160px",
       render: (item) => (
-        <span className="text-sm truncate block max-w-[160px]" title={item.email || undefined}>
+        <span className="block max-w-[160px] truncate text-sm" title={item.email || undefined}>
           {item.email || "-"}
         </span>
       ),
@@ -97,7 +96,7 @@ export default function CustomersPage() {
       header: "결제자명",
       minWidth: "100px",
       render: (item) => (
-        <span className="text-sm truncate block max-w-[100px]" title={item.name || undefined}>
+        <span className="block max-w-[100px] truncate text-sm" title={item.name || undefined}>
           {item.name || "-"}
         </span>
       ),
@@ -123,7 +122,7 @@ export default function CustomersPage() {
       header: "외부 ID",
       width: "100px",
       render: (item) => (
-        <span className="text-xs font-mono text-gray-500" title={item.externalCustomerId}>
+        <span className="font-mono text-gray-500 text-xs" title={item.externalCustomerId}>
           {item.externalCustomerId.slice(0, 10)}...
         </span>
       ),
@@ -133,7 +132,7 @@ export default function CustomersPage() {
       header: "등록일",
       width: "80px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {formatRelativeTime(item.createdAt)}
         </span>
       ),
@@ -145,11 +144,11 @@ export default function CustomersPage() {
       sticky: "right",
       render: (item) => (
         <Button
-          variant="outline"
-          size="sm"
+          className="h-7 w-7 p-0 text-xs"
           onClick={() => handleViewDetails(item)}
-          className="text-xs h-7 w-7 p-0"
+          size="sm"
           title="상세 보기"
+          variant="outline"
         >
           <Eye className="h-3 w-3" />
         </Button>
@@ -158,7 +157,7 @@ export default function CustomersPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Customers Table */}
       <Card>
         <CardHeader className="pb-4">
@@ -167,8 +166,8 @@ export default function CustomersPage() {
               <CreditCard className="h-5 w-5 text-gray-500" />
               <CardTitle className="text-lg">고객</CardTitle>
             </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-1" />
+            <Button onClick={() => refetch()} size="sm" variant="outline">
+              <RefreshCw className="mr-1 h-4 w-4" />
               새로고침
             </Button>
           </div>
@@ -177,61 +176,61 @@ export default function CustomersPage() {
           {/* Search */}
           <div className="mb-4">
             <SearchInput
-              value={searchQuery}
               onChange={handleSearch}
               placeholder="이메일, 이름, 외부 ID로 검색..."
+              value={searchQuery}
             />
           </div>
 
           {/* Table */}
           <DataTable
-            data={customers}
             columns={columns}
-            pagination={pagination}
-            isLoading={isFetching}
-            getItemId={(item) => item.id}
-            onPageChange={handlePageChange}
+            data={customers}
             emptyMessage="아직 고객이 없어요"
+            getItemId={(item) => item.id}
+            isLoading={isFetching}
+            onPageChange={handlePageChange}
+            pagination={pagination}
           />
         </CardContent>
       </Card>
 
       {/* Detail Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">고객 상세</DialogTitle>
+      <Dialog onOpenChange={setIsDetailDialogOpen} open={isDetailDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">고객 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {selectedCustomer && (
               <div className="space-y-6">
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">사용자</span>
+                    <span className="font-medium text-gray-500 text-sm">사용자</span>
                     <p className="mt-1 font-medium">{selectedCustomer.user?.username || "-"}</p>
-                    <p className="text-xs text-gray-500">{selectedCustomer.user?.email || "-"}</p>
+                    <p className="text-gray-500 text-xs">{selectedCustomer.user?.email || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">결제 이메일</span>
+                    <span className="font-medium text-gray-500 text-sm">결제 이메일</span>
                     <p className="mt-1">{selectedCustomer.email || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">결제자명</span>
+                    <span className="font-medium text-gray-500 text-sm">결제자명</span>
                     <p className="mt-1">{selectedCustomer.name || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">외부 고객 ID</span>
-                    <p className="mt-1 text-sm font-mono">{selectedCustomer.externalCustomerId}</p>
+                    <span className="font-medium text-gray-500 text-sm">외부 고객 ID</span>
+                    <p className="mt-1 font-mono text-sm">{selectedCustomer.externalCustomerId}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">등록일</span>
+                    <span className="font-medium text-gray-500 text-sm">등록일</span>
                     <p className="mt-1 text-sm">
                       {new Date(selectedCustomer.createdAt).toLocaleString("ko-KR")}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">수정일</span>
+                    <span className="font-medium text-gray-500 text-sm">수정일</span>
                     <p className="mt-1 text-sm">
                       {new Date(selectedCustomer.updatedAt).toLocaleString("ko-KR")}
                     </p>
@@ -240,21 +239,21 @@ export default function CustomersPage() {
 
                 {/* Metadata */}
                 {selectedCustomer.metadata && Object.keys(selectedCustomer.metadata).length > 0 && (
-                  <div className="pt-4 border-t">
-                    <span className="text-sm font-medium text-gray-500">메타데이터</span>
-                    <pre className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs overflow-x-auto">
+                  <div className="border-t pt-4">
+                    <span className="font-medium text-gray-500 text-sm">메타데이터</span>
+                    <pre className="mt-2 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs dark:bg-gray-800">
                       {JSON.stringify(selectedCustomer.metadata, null, 2)}
                     </pre>
                   </div>
                 )}
 
                 {/* Customer's Subscriptions */}
-                <div className="pt-4 border-t">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <div className="border-t pt-4">
+                  <h4 className="mb-3 font-medium text-gray-700 text-sm dark:text-gray-300">
                     구독 목록
                   </h4>
                   {subscriptionsLoading ? (
-                    <div className="text-sm text-gray-500">로딩 중...</div>
+                    <div className="text-gray-500 text-sm">로딩 중...</div>
                   ) : (
                     <CustomerSubscriptionsList
                       subscriptions={getCustomerSubscriptions(selectedCustomer.id)}
@@ -277,8 +276,8 @@ export default function CustomersPage() {
 function CustomerSubscriptionsList({ subscriptions }: { subscriptions: Subscription[] }) {
   if (subscriptions.length === 0) {
     return (
-      <Card className="p-4 bg-gray-50 dark:bg-gray-800">
-        <p className="text-sm text-gray-500">아직 구독이 없어요</p>
+      <Card className="bg-gray-50 p-4 dark:bg-gray-800">
+        <p className="text-gray-500 text-sm">아직 구독이 없어요</p>
       </Card>
     )
   }
@@ -286,24 +285,24 @@ function CustomerSubscriptionsList({ subscriptions }: { subscriptions: Subscript
   return (
     <div className="space-y-3">
       {subscriptions.map((sub) => (
-        <Card key={sub.id} className="p-4">
+        <Card className="p-4" key={sub.id}>
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{sub.workspace?.name || "Unknown"}</span>
                 <Badge
-                  variant={sub.status === "active" ? "default" : "secondary"}
                   className="text-xs"
+                  variant={sub.status === "active" ? "default" : "secondary"}
                 >
                   {SUBSCRIPTION_STATUS_LABELS[sub.status] || sub.status}
                 </Badge>
                 {sub.isPrimary && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge className="text-xs" variant="outline">
                     메인
                   </Badge>
                 )}
               </div>
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="mt-1 text-gray-500 text-sm">
                 {sub.plan?.name} (
                 {SUBSCRIPTION_TIER_LABELS[
                   sub.plan?.product?.tier as keyof typeof SUBSCRIPTION_TIER_LABELS
@@ -311,12 +310,12 @@ function CustomerSubscriptionsList({ subscriptions }: { subscriptions: Subscript
                 )
               </div>
             </div>
-            <div className="text-right text-xs text-gray-500">
+            <div className="text-right text-gray-500 text-xs">
               <div>
                 기간 종료: {sub.currentPeriodEnd ? formatRelativeTime(sub.currentPeriodEnd) : "-"}
               </div>
               {sub.cancelAtPeriodEnd && (
-                <Badge variant="destructive" className="mt-1 text-xs">
+                <Badge className="mt-1 text-xs" variant="destructive">
                   취소 예정
                 </Badge>
               )}

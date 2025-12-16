@@ -22,10 +22,23 @@ import { type FilterConfig, FilterPanel } from "@/components/ui/filter-panel"
 import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { emailRepliesApi } from "@/lib/api/services/email-replies"
+import type { RepliedEmail } from "@/lib/api/types/email"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
 import { RepliedEmailsList } from "./RepliedEmailsList"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
+
+// Type for the replied emails query cache data
+type RepliedEmailsCache = {
+  repliedEmails: RepliedEmail[]
+  total?: number
+}
+
+// Type for intent counts query cache data
+type IntentCountsCache = {
+  unread?: number
+  [key: string]: number | undefined
+}
 
 export default function EmailRepliesPage() {
   const { t } = useTranslation()
@@ -150,20 +163,20 @@ export default function EmailRepliesPage() {
     if (selectedThreadId) {
       // Check if the thread is currently unread
       let wasUnread = false
-      // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: any) => {
-        if (!old?.repliedEmails) return old
+      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: unknown) => {
+        const cached = old as RepliedEmailsCache | undefined
+        if (!cached?.repliedEmails) {
+          return old
+        }
 
-        const targetEmail = old.repliedEmails.find(
-          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-          (email: any) => email.threadId === selectedThreadId,
+        const targetEmail = cached.repliedEmails.find(
+          (email) => email.threadId === selectedThreadId,
         )
-        wasUnread = targetEmail && !targetEmail.isRead
+        wasUnread = !!(targetEmail && !targetEmail.isRead)
 
         return {
-          ...old,
-          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-          repliedEmails: old.repliedEmails.map((email: any) =>
+          ...cached,
+          repliedEmails: cached.repliedEmails.map((email) =>
             email.threadId === selectedThreadId ? { ...email, isRead: true } : email,
           ),
         }
@@ -171,14 +184,19 @@ export default function EmailRepliesPage() {
 
       // Optimistically update unread count
       if (wasUnread) {
-        // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
-        queryClient.setQueryData(["intent-counts", selectedWorkspace?.id || "all"], (old: any) => {
-          if (!old) return old
-          return {
-            ...old,
-            unread: Math.max(0, (old.unread || 0) - 1),
-          }
-        })
+        queryClient.setQueryData(
+          ["intent-counts", selectedWorkspace?.id || "all"],
+          (old: unknown) => {
+            const cached = old as IntentCountsCache | undefined
+            if (!cached) {
+              return old
+            }
+            return {
+              ...cached,
+              unread: Math.max(0, (cached.unread || 0) - 1),
+            }
+          },
+        )
       }
 
       // Make API call in background
@@ -210,7 +228,9 @@ export default function EmailRepliesPage() {
 
   // Bulk action handlers
   const handleBulkDelete = () => {
-    if (selectedThreads.length === 0) return
+    if (selectedThreads.length === 0) {
+      return
+    }
     setShowConfirmDialog(true)
   }
 
@@ -229,10 +249,14 @@ export default function EmailRepliesPage() {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return
+      if (!isResizing) {
+        return
+      }
 
       const container = document.getElementById(containerId)
-      if (!container) return
+      if (!container) {
+        return
+      }
 
       const containerRect = container.getBoundingClientRect()
       const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
@@ -259,17 +283,17 @@ export default function EmailRepliesPage() {
   }, [isResizing, containerId])
 
   return (
-    <div className="flex gap-0 h-full">
+    <div className="flex h-full gap-0">
       {/* Email Sidebar */}
       <EmailSidebar
-        sections={emailSidebarSections}
         activeItemId={sidebarActiveItem}
         onItemClick={handleSidebarItemClick}
+        sections={emailSidebarSections}
       />
 
       {/* Main Content Area */}
       <div
-        className="flex-1 flex flex-col overflow-hidden p-4 pl-2"
+        className="flex flex-1 flex-col overflow-hidden p-4 pl-2"
         style={{ height: "calc(100vh - 120px)" }}
       >
         {/* Workspace 선택 안내 */}
@@ -294,38 +318,38 @@ export default function EmailRepliesPage() {
         )} */}
 
         {/* Gmail-style Split View */}
-        <div id={containerId} className="flex-1 flex relative min-h-0">
+        <div className="relative flex min-h-0 flex-1" id={containerId}>
           {/* Left: Thread List */}
           <div
+            className="flex h-full flex-col"
             style={{ width: selectedThreadId ? `${leftWidth}%` : "100%" }}
-            className="flex flex-col h-full"
           >
-            <Card className="h-full flex flex-col overflow-hidden">
-              <CardContent className="flex-1 flex flex-col overflow-hidden pt-4">
+            <Card className="flex h-full flex-col overflow-hidden">
+              <CardContent className="flex flex-1 flex-col overflow-hidden pt-4">
                 {/* Filter Panel */}
                 <div className="mb-3 flex-shrink-0">
                   <FilterPanel
-                    placeholder={t("email-replies.search.placeholder")}
                     onFilterChange={setFilters}
+                    placeholder={t("email-replies.search.placeholder")}
                   />
                 </div>
 
                 {/* Bulk Actions */}
                 {selectedThreads.length > 0 && (
-                  <div className="flex items-center gap-4 mb-3 flex-shrink-0">
-                    <div className="text-sm text-muted-foreground">
+                  <div className="mb-3 flex flex-shrink-0 items-center gap-4">
+                    <div className="text-muted-foreground text-sm">
                       <span className="font-medium">
                         {t("email-replies.bulk.selected", { count: selectedThreads.length })}
                       </span>
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
                         onClick={handleBulkDelete}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        size="sm"
+                        variant="outline"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
+                        <Trash2 className="mr-1 h-4 w-4" />
                         {t("email-replies.bulk.delete")}
                       </Button>
                     </div>
@@ -336,22 +360,22 @@ export default function EmailRepliesPage() {
                 <div className="flex-1 overflow-auto">
                   {selectedWorkspace ? (
                     <RepliedEmailsList
-                      workspaceId={selectedWorkspace.id}
-                      searchQuery={filters.search}
-                      selectedStatuses={[]}
-                      selectedIntent={selectedIntent}
-                      filterImportant={sidebarActiveItem === "important" ? true : undefined}
-                      filterUnread={sidebarActiveItem === "unread" ? true : undefined}
-                      selectedThreadId={selectedThreadId}
-                      onThreadSelect={setSelectedThreadId}
-                      selectedThreads={selectedThreads}
-                      onToggleThread={toggleThreadSelection}
-                      onToggleAll={toggleAllThreads}
-                      filterSentiment={filters.sentiment}
-                      filterCategory={filters.category}
-                      filterPriority={filters.priority}
                       dateFrom={filters.dateFrom}
                       dateTo={filters.dateTo}
+                      filterCategory={filters.category}
+                      filterImportant={sidebarActiveItem === "important" ? true : undefined}
+                      filterPriority={filters.priority}
+                      filterSentiment={filters.sentiment}
+                      filterUnread={sidebarActiveItem === "unread" ? true : undefined}
+                      onThreadSelect={setSelectedThreadId}
+                      onToggleAll={toggleAllThreads}
+                      onToggleThread={toggleThreadSelection}
+                      searchQuery={filters.search}
+                      selectedIntent={selectedIntent}
+                      selectedStatuses={[]}
+                      selectedThreadId={selectedThreadId}
+                      selectedThreads={selectedThreads}
+                      workspaceId={selectedWorkspace.id}
                     />
                   ) : (
                     <div className="py-12 text-center text-muted-foreground">
@@ -366,22 +390,22 @@ export default function EmailRepliesPage() {
           {/* Resizer - only show when thread is selected */}
           {selectedThreadId && (
             <button
-              type="button"
               aria-label="Resize panels"
-              className={`w-px bg-gray-300 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
+              className={`h-full w-px flex-shrink-0 cursor-col-resize border-0 bg-gray-300 p-0 hover:bg-blue-400 ${
                 isResizing ? "bg-blue-400" : ""
               }`}
               onMouseDown={handleMouseDown}
+              type="button"
             />
           )}
 
           {/* Right: Thread Detail Panel - only show when thread is selected */}
           {selectedThreadId && (
-            <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
+            <div className="flex h-full flex-col" style={{ width: `${100 - leftWidth}%` }}>
               <ThreadDetailPanel
+                onClose={() => setSelectedThreadId(null)}
                 threadId={selectedThreadId}
                 workspaceId={selectedWorkspace?.id}
-                onClose={() => setSelectedThreadId(null)}
               />
             </div>
           )}
@@ -389,15 +413,15 @@ export default function EmailRepliesPage() {
 
         {/* Confirm Delete Dialog */}
         <ConfirmDialog
+          cancelText={t("email-replies.confirm.cancel.button")}
+          confirmText={t("email-replies.confirm.delete.button")}
+          description={t("email-replies.confirm.delete.description", {
+            count: selectedThreads.length,
+          })}
           isOpen={showConfirmDialog}
           onClose={() => setShowConfirmDialog(false)}
           onConfirm={confirmBulkDelete}
           title={t("email-replies.confirm.delete.title")}
-          description={t("email-replies.confirm.delete.description", {
-            count: selectedThreads.length,
-          })}
-          confirmText={t("email-replies.confirm.delete.button")}
-          cancelText={t("email-replies.confirm.cancel.button")}
           variant="destructive"
         />
       </div>

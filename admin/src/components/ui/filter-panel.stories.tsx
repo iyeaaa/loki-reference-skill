@@ -49,16 +49,16 @@ export const Interactive = {
     return (
       <div className="space-y-4">
         <FilterPanel
-          placeholder="Search messages..."
           onFilterChange={(newFilters) => {
             console.log("Filters changed:", newFilters)
             setFilters(newFilters)
           }}
+          placeholder="Search messages..."
         />
 
         {/* Display current filters */}
-        <div className="p-4 bg-muted rounded-lg">
-          <h3 className="font-semibold mb-2">Current Filters:</h3>
+        <div className="rounded-lg bg-muted p-4">
+          <h3 className="mb-2 font-semibold">Current Filters:</h3>
           <pre className="text-sm">{JSON.stringify(filters, null, 2)}</pre>
         </div>
       </div>
@@ -70,7 +70,7 @@ export const Interactive = {
 export const FullWidth = {
   render: () => (
     <div className="w-full">
-      <FilterPanel placeholder="Search..." className="w-full" />
+      <FilterPanel className="w-full" placeholder="Search..." />
     </div>
   ),
 }
@@ -78,22 +78,22 @@ export const FullWidth = {
 // In a card container
 export const InCard = {
   render: () => (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl">
       <div className="rounded-lg border bg-card p-4">
-        <h2 className="text-lg font-semibold mb-4">Email Messages</h2>
+        <h2 className="mb-4 font-semibold text-lg">Email Messages</h2>
         <FilterPanel placeholder="Search messages..." />
         <div className="mt-4 space-y-2">
-          <div className="p-3 border rounded-md hover:bg-accent cursor-pointer">
+          <div className="cursor-pointer rounded-md border p-3 hover:bg-accent">
             <div className="font-medium">Message 1</div>
-            <div className="text-sm text-muted-foreground">Preview text...</div>
+            <div className="text-muted-foreground text-sm">Preview text...</div>
           </div>
-          <div className="p-3 border rounded-md hover:bg-accent cursor-pointer">
+          <div className="cursor-pointer rounded-md border p-3 hover:bg-accent">
             <div className="font-medium">Message 2</div>
-            <div className="text-sm text-muted-foreground">Preview text...</div>
+            <div className="text-muted-foreground text-sm">Preview text...</div>
           </div>
-          <div className="p-3 border rounded-md hover:bg-accent cursor-pointer">
+          <div className="cursor-pointer rounded-md border p-3 hover:bg-accent">
             <div className="font-medium">Message 3</div>
-            <div className="text-sm text-muted-foreground">Preview text...</div>
+            <div className="text-muted-foreground text-sm">Preview text...</div>
           </div>
         </div>
       </div>
@@ -111,7 +111,7 @@ export const MobileView = {
   render: () => (
     <div className="w-full">
       <FilterPanel placeholder="Search..." />
-      <div className="mt-4 text-sm text-muted-foreground">
+      <div className="mt-4 text-muted-foreground text-sm">
         <p>On mobile, filters open in a drawer/sheet instead of dropdown.</p>
         <p className="mt-2">Resize your browser to see the responsive behavior.</p>
       </div>
@@ -133,7 +133,7 @@ export const WithPreselectedFilters = {
     return (
       <BrowserRouter>
         <div className="space-y-4">
-          <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+          <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
             <p className="text-sm">
               <strong>Simulated URL:</strong>
             </p>
@@ -151,23 +151,23 @@ export const KeyboardAccessible = {
   render: () => (
     <div className="space-y-4">
       <FilterPanel placeholder="Search messages..." />
-      <div className="p-4 bg-muted rounded-lg text-sm space-y-2">
+      <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
         <h3 className="font-semibold">Keyboard Shortcuts:</h3>
-        <ul className="list-disc list-inside space-y-1">
+        <ul className="list-inside list-disc space-y-1">
           <li>
-            <kbd className="px-2 py-1 bg-background border rounded">Tab</kbd> - Navigate between
+            <kbd className="rounded border bg-background px-2 py-1">Tab</kbd> - Navigate between
             elements
           </li>
           <li>
-            <kbd className="px-2 py-1 bg-background border rounded">Enter</kbd> - Apply search or
+            <kbd className="rounded border bg-background px-2 py-1">Enter</kbd> - Apply search or
             toggle filter
           </li>
           <li>
-            <kbd className="px-2 py-1 bg-background border rounded">Escape</kbd> - Clear search
+            <kbd className="rounded border bg-background px-2 py-1">Escape</kbd> - Clear search
             input
           </li>
           <li>
-            <kbd className="px-2 py-1 bg-background border rounded">Space</kbd> - Toggle checkboxes
+            <kbd className="rounded border bg-background px-2 py-1">Space</kbd> - Toggle checkboxes
           </li>
         </ul>
       </div>

@@ -65,21 +65,21 @@ function InteractiveWrapper() {
   }
 
   return (
-    <div className="h-screen w-full bg-gray-100 dark:bg-gray-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Gmail-Style Floating Reply Popup</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+    <div className="h-screen w-full bg-gray-100 p-8 dark:bg-gray-900">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-4 font-bold text-2xl">Gmail-Style Floating Reply Popup</h1>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">
           Click the button below to open the floating reply popup in the bottom-right corner.
         </p>
         <Button onClick={() => setIsOpen(true)}>Open Reply Popup</Button>
 
         <FloatingReplyPopup
           isOpen={isOpen}
+          isSending={isSending}
           onClose={() => setIsOpen(false)}
           onSend={handleSend}
-          to="junbo.cho@globallogics.co.kr"
           subject="Re: CES 2026 파트너십 제안 - 미팅 제안"
-          isSending={isSending}
+          to="junbo.cho@globallogics.co.kr"
         />
       </div>
     </div>

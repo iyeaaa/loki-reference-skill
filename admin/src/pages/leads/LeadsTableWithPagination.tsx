@@ -32,7 +32,7 @@ import {
   reorderColumns,
 } from "@/lib/column-visibility"
 
-interface LeadsTableWithPaginationProps {
+type LeadsTableWithPaginationProps = {
   columnFilters: ColumnFilter[]
   selectedCustomerGroup: string
   selectedLeads: string[]
@@ -123,7 +123,9 @@ export function LeadsTableWithPagination({
 
   // Auto-size function for a specific column
   const autoSizeColumn = useCallback((columnId: string) => {
-    if (!tableRef.current) return
+    if (!tableRef.current) {
+      return
+    }
 
     const cells = tableRef.current.querySelectorAll(`[data-column-id="${columnId}"]`)
     let maxWidth = MIN_COLUMN_WIDTH
@@ -154,14 +156,18 @@ export function LeadsTableWithPagination({
 
   // Auto-size all columns
   const autoSizeAllColumns = useCallback(() => {
-    if (!tableRef.current) return
+    if (!tableRef.current) {
+      return
+    }
 
     const newSizing: ColumnSizingState = {}
     const columns = tableRef.current.querySelectorAll("th[data-column-id]")
 
     columns.forEach((header) => {
       const columnId = (header as HTMLElement).getAttribute("data-column-id")
-      if (!columnId || columnId === "select" || columnId === "columnActions") return
+      if (!columnId || columnId === "select" || columnId === "columnActions") {
+        return
+      }
 
       const cells = tableRef.current?.querySelectorAll(`[data-column-id="${columnId}"]`)
       let maxWidth = MIN_COLUMN_WIDTH
@@ -206,9 +212,9 @@ export function LeadsTableWithPagination({
     if (currentWorkspace === "all") {
       // "all" 선택 시 고객 그룹이 선택되어 있고 그룹이 다른 워크스페이스에 있으면 그 워크스페이스 포함
       if (selectedCustomerGroup && selectedGroupWorkspaceId) {
-        return undefined // "all"이면 모든 워크스페이스 포함
+        return
       }
-      return undefined
+      return
     }
 
     // 특정 워크스페이스 선택 시
@@ -236,7 +242,7 @@ export function LeadsTableWithPagination({
   const params: LeadsParams = useMemo(
     () => ({
       page: currentPage,
-      limit: limit,
+      limit,
       // workspaceFilter가 undefined이면 workspaceIds를 전달하지 않음 (모든 워크스페이스 조회)
       workspaceIds: workspaceFilter,
       customerGroupId: selectedCustomerGroup || undefined,
@@ -339,8 +345,12 @@ export function LeadsTableWithPagination({
       const bIndex = columnOrder.indexOf(bId)
 
       // If not in order array, put at the end
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
+      if (aIndex === -1) {
+        return 1
+      }
+      if (bIndex === -1) {
+        return -1
+      }
 
       return aIndex - bIndex
     })
@@ -485,17 +495,17 @@ export function LeadsTableWithPagination({
         <div className="mb-4">
           <FilterSummaryPanel
             filters={activeColumnFilters}
-            onRemoveFilter={handleRemoveFilter}
             onClearAll={handleClearAllFilters}
+            onRemoveFilter={handleRemoveFilter}
           />
         </div>
       )}
 
       {/* Leads Table */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="overflow-x-auto rounded-md border">
         <table
-          ref={tableRef}
           className="border-collapse"
+          ref={tableRef}
           style={{
             width: table.getTotalSize(),
           }}
@@ -510,21 +520,21 @@ export function LeadsTableWithPagination({
 
                   return (
                     <th
-                      key={header.id}
-                      data-column-id={header.id}
-                      draggable={isDraggable}
-                      onDragStart={(e) => isDraggable && handleDragStart(e, header.id)}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => isDraggable && handleDrop(e, header.id)}
-                      onDragEnd={handleDragEnd}
-                      onDoubleClick={() => canResize && autoSizeColumn(header.id)}
                       className={
                         header.id === "select"
-                          ? "sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
-                          : `relative p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                          ? "sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
+                          : `relative p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400 ${
                               isDragging ? "opacity-50" : ""
                             } ${isDraggable ? "cursor-move" : ""}`
                       }
+                      data-column-id={header.id}
+                      draggable={isDraggable}
+                      key={header.id}
+                      onDoubleClick={() => canResize && autoSizeColumn(header.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={handleDragOver}
+                      onDragStart={(e) => isDraggable && handleDragStart(e, header.id)}
+                      onDrop={(e) => isDraggable && handleDrop(e, header.id)}
                       style={{
                         width: header.id === "select" ? 50 : header.getSize(),
                         minWidth: header.id === "select" ? 50 : MIN_COLUMN_WIDTH,
@@ -540,6 +550,9 @@ export function LeadsTableWithPagination({
                         {canResize && (
                           // biome-ignore lint/a11y/noStaticElementInteractions: Column resize handle is a standard table interaction pattern
                           <div
+                            className={`absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none bg-transparent hover:bg-blue-500 ${
+                              header.column.getIsResizing() ? "bg-blue-500" : ""
+                            }`}
                             onMouseDown={(e) => {
                               e.stopPropagation()
                               e.preventDefault()
@@ -550,9 +563,6 @@ export function LeadsTableWithPagination({
                               e.preventDefault()
                               header.getResizeHandler()(e)
                             }}
-                            className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
-                              header.column.getIsResizing() ? "bg-blue-500" : ""
-                            }`}
                             style={{
                               transform: header.column.getIsResizing()
                                 ? `translateX(${table.getState().columnSizingInfo.deltaOffset ?? 0}px)`
@@ -567,13 +577,13 @@ export function LeadsTableWithPagination({
               </tr>
             ))}
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
             {table.getRowModel().rows.map((row) => {
               const lead = row.original
               return (
                 <ContextMenu key={row.id}>
                   <ContextMenuTrigger asChild>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group/row relative">
+                    <tr className="group/row relative transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
                       {row.getVisibleCells().map((cell) => {
                         const canResize =
                           cell.column.id !== "select" && cell.column.id !== "columnActions"
@@ -584,13 +594,13 @@ export function LeadsTableWithPagination({
 
                         return (
                           <td
-                            key={cell.id}
-                            data-column-id={cell.column.id}
                             className={
                               cell.column.id === "select"
-                                ? "sticky left-0 z-10 p-2 text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700"
-                                : "relative p-2 text-sm text-gray-900 dark:text-gray-100"
+                                ? "sticky left-0 z-10 bg-white p-2 text-sm group-hover/row:bg-gray-50 dark:bg-gray-800 dark:group-hover/row:bg-gray-700"
+                                : "relative p-2 text-gray-900 text-sm dark:text-gray-100"
                             }
+                            data-column-id={cell.column.id}
+                            key={cell.id}
                             style={{
                               width: cell.column.id === "select" ? 50 : cell.column.getSize(),
                               maxWidth: cell.column.id === "select" ? 50 : cell.column.getSize(),
@@ -604,6 +614,9 @@ export function LeadsTableWithPagination({
                             {canResize && header && (
                               // biome-ignore lint/a11y/noStaticElementInteractions: Column resize handle is a standard table interaction pattern
                               <div
+                                className={`absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none bg-transparent hover:bg-blue-500 ${
+                                  cell.column.getIsResizing() ? "bg-blue-500" : ""
+                                }`}
                                 onMouseDown={(e) => {
                                   e.stopPropagation()
                                   e.preventDefault()
@@ -614,9 +627,6 @@ export function LeadsTableWithPagination({
                                   e.preventDefault()
                                   header.getResizeHandler()(e)
                                 }}
-                                className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
-                                  cell.column.getIsResizing() ? "bg-blue-500" : ""
-                                }`}
                                 style={{
                                   transform: cell.column.getIsResizing()
                                     ? `translateX(${table.getState().columnSizingInfo.deltaOffset ?? 0}px)`
@@ -630,26 +640,26 @@ export function LeadsTableWithPagination({
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-48">
-                    <ContextMenuItem onClick={() => onEditLead(lead)} className="cursor-pointer">
+                    <ContextMenuItem className="cursor-pointer" onClick={() => onEditLead(lead)}>
                       <Edit className="mr-2 h-4 w-4" />
                       리드 편집
                     </ContextMenuItem>
                     <ContextMenuItem
-                      onClick={() => onManageGroups(lead)}
                       className="cursor-pointer"
+                      onClick={() => onManageGroups(lead)}
                     >
                       <Users className="mr-2 h-4 w-4" />
                       그룹 관리
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
+                      className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950"
                       onClick={() =>
                         handleDeleteLead(
                           lead.id,
                           lead.companyName || lead.foundCompanyName || "이름 없음",
                         )
                       }
-                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       리드 삭제
@@ -668,22 +678,22 @@ export function LeadsTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             {t("leads.button.firstPage")}
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             {t("leads.button.previousPage")}
@@ -692,12 +702,12 @@ export function LeadsTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -705,11 +715,11 @@ export function LeadsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             {t("leads.button.nextPage")}
             <ChevronRight className="h-4 w-4" />
@@ -717,11 +727,11 @@ export function LeadsTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             {t("leads.button.lastPage")}
           </Button>
@@ -730,13 +740,13 @@ export function LeadsTableWithPagination({
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        title={t("leads.button.deleteLead")}
-        description={`"${leadToDelete?.name || ""}" ${t("leads.button.deleteLeadConfirm")}`}
-        confirmText={t("leads.button.delete")}
         cancelText={t("leads.button.cancel")}
+        confirmText={t("leads.button.delete")}
+        description={`"${leadToDelete?.name || ""}" ${t("leads.button.deleteLeadConfirm")}`}
         onConfirm={confirmDelete}
+        onOpenChange={setDeleteConfirmOpen}
+        open={deleteConfirmOpen}
+        title={t("leads.button.deleteLead")}
         variant="destructive"
       />
     </>

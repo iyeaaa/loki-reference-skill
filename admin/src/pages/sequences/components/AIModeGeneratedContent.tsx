@@ -9,7 +9,7 @@ import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email"
 import { EmailPreviewPanel } from "./EmailPreviewPanel"
 import { LeadListSidebar } from "./LeadListSidebar"
 
-interface AIModeGeneratedContentProps {
+type AIModeGeneratedContentProps = {
   sequenceId: string
   onBack?: () => void
 }
@@ -62,9 +62,9 @@ export function AIModeGeneratedContent({ sequenceId, onBack }: AIModeGeneratedCo
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[600px]">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+      <div className="flex h-[600px] items-center justify-center">
+        <div className="space-y-3 text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">{t("sequences.aiMode.loadingGeneratedContent")}</p>
         </div>
       </div>
@@ -73,11 +73,11 @@ export function AIModeGeneratedContent({ sequenceId, onBack }: AIModeGeneratedCo
 
   if (!leads || leads.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[600px]">
-        <div className="text-center space-y-3">
+      <div className="flex h-[600px] items-center justify-center">
+        <div className="space-y-3 text-center">
           <p className="text-muted-foreground">{t("sequences.aiMode.noLeadsFound")}</p>
           {onBack && (
-            <button type="button" onClick={onBack} className="text-primary hover:underline">
+            <button className="text-primary hover:underline" onClick={onBack} type="button">
               {t("sequences.aiMode.backToGeneration")}
             </button>
           )}
@@ -97,44 +97,44 @@ export function AIModeGeneratedContent({ sequenceId, onBack }: AIModeGeneratedCo
     workflowEmails?.filter((e: WorkflowGeneratedEmail) => e.status === "generating").length || 0
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex h-full flex-col gap-4">
       {/* Summary Statistics Header */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Leads</div>
-          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+        <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-blue-900/20">
+          <div className="font-medium text-blue-700 text-sm dark:text-blue-300">Total Leads</div>
+          <div className="mt-1 font-bold text-2xl text-blue-900 dark:text-blue-100">
             {leads.length}
           </div>
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-          <div className="text-sm font-medium text-green-700 dark:text-green-300">Completed</div>
-          <div className="text-2xl font-bold text-green-900 dark:text-green-100 mt-1">
+        <div className="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-4 dark:border-green-800 dark:from-green-950/30 dark:to-green-900/20">
+          <div className="font-medium text-green-700 text-sm dark:text-green-300">Completed</div>
+          <div className="mt-1 font-bold text-2xl text-green-900 dark:text-green-100">
             {completedEmails}
           </div>
         </div>
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-          <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Generating</div>
-          <div className="text-2xl font-bold text-amber-900 dark:text-amber-100 mt-1">
+        <div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 p-4 dark:border-amber-800 dark:from-amber-950/30 dark:to-amber-900/20">
+          <div className="font-medium text-amber-700 text-sm dark:text-amber-300">Generating</div>
+          <div className="mt-1 font-bold text-2xl text-amber-900 dark:text-amber-100">
             {generatingEmails}
           </div>
         </div>
-        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
-          <div className="text-sm font-medium text-red-700 dark:text-red-300">Failed</div>
-          <div className="text-2xl font-bold text-red-900 dark:text-red-100 mt-1">
+        <div className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-4 dark:border-red-800 dark:from-red-950/30 dark:to-red-900/20">
+          <div className="font-medium text-red-700 text-sm dark:text-red-300">Failed</div>
+          <div className="mt-1 font-bold text-2xl text-red-900 dark:text-red-100">
             {failedEmails}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 border rounded-lg overflow-hidden min-h-0">
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border">
         {/* Left Sidebar - Lead List */}
-        <div className="w-80 border-r overflow-y-auto">
+        <div className="w-80 overflow-y-auto border-r">
           <LeadListSidebar
-            sequenceId={sequenceId}
             leads={leads}
-            selectedLeadId={selectedLeadId}
             onSelectLead={setSelectedLeadId}
+            selectedLeadId={selectedLeadId}
+            sequenceId={sequenceId}
             workflowEmails={workflowEmails || []}
           />
         </div>
@@ -146,9 +146,9 @@ export function AIModeGeneratedContent({ sequenceId, onBack }: AIModeGeneratedCo
               const selectedLead = leads.find((l: Lead) => l.id === selectedLeadId)
               return selectedLead ? (
                 <EmailPreviewPanel
+                  emails={selectedLeadEmails}
                   lead={selectedLead}
                   steps={steps || []}
-                  emails={selectedLeadEmails}
                 />
               ) : null
             })()}

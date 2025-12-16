@@ -294,7 +294,7 @@ export function useBullMQTestData(params?: TestQueueParams, autoRefresh = false)
 // SSE Hook for Real-time Updates
 // ================================
 
-export interface BullMQSSEEvent {
+export type BullMQSSEEvent = {
   type: string
   jobId?: string
   name?: string
@@ -307,7 +307,7 @@ export interface BullMQSSEEvent {
   timestamp: string
 }
 
-export interface UseBullMQSSEOptions {
+export type UseBullMQSSEOptions = {
   enabled?: boolean
   onEvent?: (event: BullMQSSEEvent) => void
   onError?: (error: Error) => void
@@ -360,7 +360,9 @@ export function useBullMQSSE(options: UseBullMQSSEOptions = {}) {
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          break
+        }
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split("\n")

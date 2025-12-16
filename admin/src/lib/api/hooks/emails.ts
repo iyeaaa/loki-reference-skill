@@ -268,7 +268,7 @@ export function useBulkDeleteEmails() {
 }
 
 // Replied emails params type (users 패턴과 동일)
-export interface RepliedEmailsParams {
+export type RepliedEmailsParams = {
   workspaceId: string
   page?: number
   limit?: number

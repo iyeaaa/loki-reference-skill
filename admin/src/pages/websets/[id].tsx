@@ -45,12 +45,13 @@ export default function WebsetDetailPage() {
   const isLoading = websetLoading || rowsLoading
 
   // Sort by number of matching criteria, then by created at ascending
-  const initialSorting = useMemo<SortingState>(() => {
-    return [
+  const initialSorting = useMemo<SortingState>(
+    () => [
       { id: "matchingCriteriaCount", desc: true },
       { id: "createdAt", desc: false },
-    ]
-  }, [])
+    ],
+    [],
+  )
 
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -102,7 +103,9 @@ export default function WebsetDetailPage() {
     const matchingCountColumn: ColumnDef<WebsetRow> = {
       id: "matchingCriteriaCount",
       accessorFn: (row) => {
-        if (!row.criteriaAnswers) return 0
+        if (!row.criteriaAnswers) {
+          return 0
+        }
         return row.criteriaAnswers.filter((answer) => answer === true).length
       },
       header: () => null,
@@ -117,12 +120,16 @@ export default function WebsetDetailPage() {
         accessorFn: (row) => {
           const answer = row.criteriaAnswers?.[index]
           // Convert to number for sorting: true=2, false=1, null/undefined=0
-          if (answer === true) return 2
-          if (answer === false) return 1
+          if (answer === true) {
+            return 2
+          }
+          if (answer === false) {
+            return 1
+          }
           return 0
         },
         header: () => (
-          <div className="text-sm font-medium max-w-xs truncate" title={criteria}>
+          <div className="max-w-xs truncate font-medium text-sm" title={criteria}>
             {criteria}
           </div>
         ),
@@ -131,15 +138,15 @@ export default function WebsetDetailPage() {
           return (
             <div className="text-center">
               {answer === true ? (
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 font-semibold text-green-800 text-sm dark:bg-green-900/20 dark:text-green-200">
                   ✓
                 </span>
               ) : answer === false ? (
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-100 font-semibold text-red-800 text-sm dark:bg-red-900/20 dark:text-red-200">
                   ✗
                 </span>
               ) : (
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-500 text-sm dark:bg-gray-700 dark:text-gray-400">
                   ?
                 </span>
               )}
@@ -153,7 +160,7 @@ export default function WebsetDetailPage() {
       accessorKey: "createdAt",
       header: "Created At",
       cell: ({ row }) => (
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <span className="text-gray-600 text-sm dark:text-gray-400">
           {new Date(row.original.createdAt).toLocaleString()}
         </span>
       ),
@@ -229,7 +236,7 @@ export default function WebsetDetailPage() {
 
   if (!id) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
         <div className="text-gray-500 dark:text-gray-400">Invalid webset ID</div>
       </div>
     )
@@ -237,37 +244,37 @@ export default function WebsetDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-blue-500 border-b-2" />
       </div>
     )
   }
 
   if (!webset) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
         <div className="text-gray-500 dark:text-gray-400">Webset not found</div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="font-bold text-3xl text-gray-900 dark:text-gray-100">
             {webset.title || "Untitled Webset"}
           </h1>
           <Button
-            onClick={() => fillWebsetMutation.mutate()}
             disabled={fillWebsetMutation.isPending}
+            onClick={() => fillWebsetMutation.mutate()}
             size="lg"
           >
             {fillWebsetMutation.isPending ? "Filling..." : "Fill Webset"}
           </Button>
         </div>
-        <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex gap-4 text-gray-600 text-sm dark:text-gray-400">
           <div>
             <span className="font-semibold">Query:</span> {webset.query}
           </div>
@@ -284,17 +291,17 @@ export default function WebsetDetailPage() {
 
       {/* Criterias */}
       {webset.criterias && webset.criterias.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">
+        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+          <h3 className="mb-3 font-semibold text-gray-500 text-sm uppercase dark:text-gray-400">
             Validation Criterias
           </h3>
           <ul className="space-y-2">
             {webset.criterias.map((criteria, index) => (
               <li
+                className="flex items-start gap-2 text-gray-700 text-sm dark:text-gray-300"
                 key={index}
-                className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
               >
-                <span className="text-blue-500 font-semibold">{index + 1}.</span>
+                <span className="font-semibold text-blue-500">{index + 1}.</span>
                 <span>{criteria}</span>
               </li>
             ))}
@@ -303,9 +310,9 @@ export default function WebsetDetailPage() {
       )}
 
       {/* Rows Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Webset Rows</h2>
+      <div className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
+        <div className="border-gray-200 border-b p-4 dark:border-gray-700">
+          <h2 className="font-semibold text-gray-900 text-xl dark:text-gray-100">Webset Rows</h2>
         </div>
         <div className="overflow-x-auto">
           {rows.length > 0 ? (
@@ -316,22 +323,22 @@ export default function WebsetDetailPage() {
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
                         <TableHead
-                          key={header.id}
+                          className="select-none transition-opacity"
                           draggable
+                          key={header.id}
+                          onDragOver={handleDragOver}
+                          onDragStart={() => handleDragStart(header.id)}
+                          onDrop={() => handleDrop(header.id)}
                           style={{
                             width: header.getSize(),
                             opacity: draggedColumn === header.id ? 0.5 : 1,
                             cursor: "move",
                           }}
-                          className="select-none transition-opacity"
-                          onDragStart={() => handleDragStart(header.id)}
-                          onDragOver={handleDragOver}
-                          onDrop={() => handleDrop(header.id)}
                         >
                           <button
-                            type="button"
-                            className="flex items-center gap-2 w-full"
+                            className="flex w-full items-center gap-2"
                             onClick={header.column.getToggleSortingHandler()}
+                            type="button"
                           >
                             <span className="text-gray-400">⋮⋮</span>
                             {header.isPlaceholder
@@ -357,45 +364,45 @@ export default function WebsetDetailPage() {
               </Table>
 
               {/* Pagination Controls */}
-              <div className="flex items-center justify-between gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between gap-2 border-gray-200 border-t p-4 dark:border-gray-700">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 text-sm dark:text-gray-400">
                     Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                   </span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 text-sm dark:text-gray-400">
                     ({rows.length} total rows)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.setPageIndex(0)}
+                    size="sm"
+                    variant="outline"
                   >
                     {"<<"}
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.previousPage()}
+                    size="sm"
+                    variant="outline"
                   >
                     Previous
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
+                    onClick={() => table.nextPage()}
+                    size="sm"
+                    variant="outline"
                   >
                     Next
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                     disabled={!table.getCanNextPage()}
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    size="sm"
+                    variant="outline"
                   >
                     {">>"}
                   </Button>

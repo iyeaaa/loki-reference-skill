@@ -15,7 +15,7 @@ import { ColumnFilterNumber } from "./ColumnFilterNumber"
 import { ColumnFilterSelect } from "./ColumnFilterSelect"
 import { ColumnFilterText } from "./ColumnFilterText"
 
-interface ColumnFilterButtonProps {
+type ColumnFilterButtonProps = {
   field: string
   filterConfig: ColumnFilterConfig
   currentFilter?: ColumnFilter
@@ -63,13 +63,13 @@ export function ColumnFilterButton({
       case "enum":
         if (!filterConfig.loadOptions) {
           console.error(`loadOptions is required for select/enum filter on field: ${field}`)
-          return <div className="p-4 text-sm text-destructive">Configuration error</div>
+          return <div className="p-4 text-destructive text-sm">Configuration error</div>
         }
         return (
           <ColumnFilterSelect
             {...commonProps}
-            loadOptions={filterConfig.loadOptions}
             customerGroupId={customerGroupId}
+            loadOptions={filterConfig.loadOptions}
             workspaceId={workspaceId}
           />
         )
@@ -82,7 +82,7 @@ export function ColumnFilterButton({
 
       default:
         return (
-          <div className="p-4 text-sm text-muted-foreground">
+          <div className="p-4 text-muted-foreground text-sm">
             Filter not available for this column type
           </div>
         )
@@ -91,28 +91,28 @@ export function ColumnFilterButton({
 
   // Use Dialog for all filter types to ensure buttons are always visible
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog onOpenChange={setIsOpen} open={isOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 relative"
           aria-label={`Filter ${field}`}
+          className="relative h-8 w-8 p-0"
+          size="sm"
+          variant="ghost"
         >
           <FilterIcon
             className={hasActiveFilter ? "h-4 w-4 text-primary" : "h-4 w-4 text-muted-foreground"}
           />
           {hasActiveFilter && (
             <Badge
+              className="-top-1 -right-1 absolute flex h-4 w-4 items-center justify-center p-0 text-[10px]"
               variant="default"
-              className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
             >
               1
             </Badge>
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-fit p-0 gap-0">
+      <DialogContent className="max-w-fit gap-0 p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>Filter {field}</DialogTitle>
         </DialogHeader>

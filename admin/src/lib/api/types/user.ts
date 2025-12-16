@@ -2,7 +2,7 @@
 
 export type UserRole = "user" | "admin"
 
-export interface Language {
+export type Language = {
   id: string
   code: string
   name: string
@@ -10,7 +10,7 @@ export interface Language {
   isActive: boolean
 }
 
-export interface LanguageInfo {
+export type LanguageInfo = {
   id: string
   code: string
   name: string
@@ -18,7 +18,7 @@ export interface LanguageInfo {
   isActive: boolean
 }
 
-export interface Department {
+export type Department = {
   id: string
   name: string
   code: string
@@ -29,7 +29,7 @@ export interface Department {
 }
 
 // Aligned with database schema and Go handlers
-export interface User {
+export type User = {
   id: string
   username: string
   email: string
@@ -46,7 +46,7 @@ export interface User {
   reviewLanguages?: LanguageInfo[]
 }
 
-export interface UserStats {
+export type UserStats = {
   total: number
   active: number
   inactive: number
@@ -59,7 +59,7 @@ export interface UserStats {
 }
 
 // Aligned with Go handler request structures
-export interface CreateUserRequest {
+export type CreateUserRequest = {
   username: string
   email: string
   password: string
@@ -71,7 +71,7 @@ export interface CreateUserRequest {
   reviewLanguages?: string[]
 }
 
-export interface UpdateUserRequest {
+export type UpdateUserRequest = {
   username: string
   email: string
   userRole: UserRole
@@ -82,28 +82,28 @@ export interface UpdateUserRequest {
   reviewLanguages?: string[]
 }
 
-export interface ChangePasswordRequest {
+export type ChangePasswordRequest = {
   newPassword: string
 }
 
-export interface BulkUpdateStatusRequest {
+export type BulkUpdateStatusRequest = {
   userIds: string[]
   isActive: boolean
 }
 
-export interface BulkUpdateRoleRequest {
+export type BulkUpdateRoleRequest = {
   userIds: string[]
   userRole: UserRole
 }
 
-export interface BulkUpdateLanguagesRequest {
+export type BulkUpdateLanguagesRequest = {
   userIds: string[]
   editLanguages?: string[]
   reviewLanguages?: string[]
 }
 
 // API Response Types (aligned with Go handlers)
-export interface UsersResponse {
+export type UsersResponse = {
   users: User[]
   total: number
   page: number
@@ -111,22 +111,22 @@ export interface UsersResponse {
   totalPages: number
 }
 
-export interface DepartmentsApiResponse {
+export type DepartmentsApiResponse = {
   departments: Department[]
 }
 
-export interface LanguagesApiResponse {
+export type LanguagesApiResponse = {
   languages: Language[]
 }
 
-export interface BulkUpdateResponse {
+export type BulkUpdateResponse = {
   message: string
   updated: number
   total: number
 }
 
 // API Params Types (aligned with Go handlers)
-export interface UsersParams {
+export type UsersParams = {
   page?: number
   limit?: number
   role?: UserRole | "all"

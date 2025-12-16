@@ -10,7 +10,7 @@
 import type { LeadCSVData } from "@/lib/csv-utils"
 
 /** 리드 필드 정의 */
-export interface LeadFieldDefinition {
+export type LeadFieldDefinition = {
   key: keyof LeadCSVData
   label: string
   labelKo: string
@@ -22,7 +22,7 @@ export interface LeadFieldDefinition {
 }
 
 /** 컬럼 분석 결과 */
-export interface ColumnAnalysis {
+export type ColumnAnalysis = {
   originalHeader: string
   suggestedField: keyof LeadCSVData | null
   confidence: "high" | "medium" | "low" | "none"
@@ -32,7 +32,7 @@ export interface ColumnAnalysis {
 }
 
 /** 파싱된 CSV 결과 */
-export interface SmartParseResult {
+export type SmartParseResult = {
   columns: ColumnAnalysis[]
   mappings: Record<string, keyof LeadCSVData | null>
   previewData: Record<string, string>[]
@@ -397,7 +397,9 @@ function parseCSVText(csvText: string): string[][] {
  * - 짧은 텍스트 (보통 헤더는 필드명이므로 짧음)
  */
 function detectIfHeaderRow(firstRow: string[], secondRow?: string[]): boolean {
-  if (firstRow.length === 0) return false
+  if (firstRow.length === 0) {
+    return false
+  }
 
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   const urlPattern = /^(https?:\/\/|www\.)/i
@@ -409,7 +411,9 @@ function detectIfHeaderRow(firstRow: string[], secondRow?: string[]): boolean {
 
   for (const cell of firstRow) {
     const trimmed = cell.trim()
-    if (!trimmed) continue
+    if (!trimmed) {
+      continue
+    }
 
     // 데이터 패턴 감지
     if (emailPattern.test(trimmed)) {
@@ -546,27 +550,37 @@ function analyzeColumnWithoutHeader(
  */
 function inferDataType(values: string[]): "email" | "phone" | "url" | "text" | "number" | "date" {
   const nonEmptyValues = values.filter((v) => v?.trim())
-  if (nonEmptyValues.length === 0) return "text"
+  if (nonEmptyValues.length === 0) {
+    return "text"
+  }
 
   // 이메일 패턴 검사
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   const emailMatches = nonEmptyValues.filter((v) => emailPattern.test(v.trim()))
-  if (emailMatches.length / nonEmptyValues.length > 0.5) return "email"
+  if (emailMatches.length / nonEmptyValues.length > 0.5) {
+    return "email"
+  }
 
   // URL 패턴 검사
   const urlPattern = /^(https?:\/\/|www\.)|(\.(com|co|net|org|io|kr|jp|biz)[/\s]*$)/i
   const urlMatches = nonEmptyValues.filter((v) => urlPattern.test(v.trim()))
-  if (urlMatches.length / nonEmptyValues.length > 0.5) return "url"
+  if (urlMatches.length / nonEmptyValues.length > 0.5) {
+    return "url"
+  }
 
   // 전화번호 패턴 검사
   const phonePattern = /^[\d\s+\-().]{7,20}$/
   const phoneMatches = nonEmptyValues.filter((v) => phonePattern.test(v.trim().replace(/\s/g, "")))
-  if (phoneMatches.length / nonEmptyValues.length > 0.5) return "phone"
+  if (phoneMatches.length / nonEmptyValues.length > 0.5) {
+    return "phone"
+  }
 
   // 숫자 패턴 검사
   const numberPattern = /^[\d,.\s]+$/
   const numberMatches = nonEmptyValues.filter((v) => numberPattern.test(v.trim()))
-  if (numberMatches.length / nonEmptyValues.length > 0.7) return "number"
+  if (numberMatches.length / nonEmptyValues.length > 0.7) {
+    return "number"
+  }
 
   return "text"
 }
@@ -586,7 +600,9 @@ function analyzeColumn(
   let bestMatch: { field: LeadFieldDefinition; confidence: "high" | "medium" | "low" } | null = null
 
   for (const fieldDef of LEAD_FIELD_DEFINITIONS.sort((a, b) => b.priority - a.priority)) {
-    if (usedFields.has(fieldDef.key)) continue
+    if (usedFields.has(fieldDef.key)) {
+      continue
+    }
 
     // 헤더 패턴 매칭
     for (const pattern of fieldDef.patterns) {
@@ -595,7 +611,9 @@ function analyzeColumn(
         break
       }
     }
-    if (bestMatch?.confidence === "high") break
+    if (bestMatch?.confidence === "high") {
+      break
+    }
 
     // 부분 매칭 (헤더에 키워드가 포함된 경우)
     const keywordMatch = fieldDef.patterns.some((p) => {

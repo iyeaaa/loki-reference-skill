@@ -20,7 +20,9 @@ export const emailAccountsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.status && params.status !== "all") {
       searchParams.append("status", params.status)
     }
@@ -52,90 +54,72 @@ export const emailAccountsApi = {
     }))
   },
 
-  get: (accountId: string) => {
-    return apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}`)
-  },
+  get: (accountId: string) => apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}`),
 
-  create: (data: CreateEmailAccountRequest) => {
-    return apiFetch<UserEmailAccount>("/api/v1/email-accounts", {
+  create: (data: CreateEmailAccountRequest) =>
+    apiFetch<UserEmailAccount>("/api/v1/email-accounts", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (accountId: string, data: UpdateEmailAccountRequest) => {
-    return apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}`, {
+  update: (accountId: string, data: UpdateEmailAccountRequest) =>
+    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (accountId: string) => {
-    return apiFetch(`/api/v1/email-accounts/${accountId}`, {
+  delete: (accountId: string) =>
+    apiFetch(`/api/v1/email-accounts/${accountId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  setAsDefault: (accountId: string, data: SetAsDefaultRequest) => {
-    return apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}/set-default`, {
+  setAsDefault: (accountId: string, data: SetAsDefaultRequest) =>
+    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}/set-default`, {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  updateSentCount: (accountId: string) => {
-    return apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}/sent-count`, {
+  updateSentCount: (accountId: string) =>
+    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/${accountId}/sent-count`, {
       method: "PATCH",
-    })
-  },
+    }),
 
-  resetDailySentCount: (accountId: string) => {
-    return apiFetch(`/api/v1/email-accounts/${accountId}/reset-daily`, {
+  resetDailySentCount: (accountId: string) =>
+    apiFetch(`/api/v1/email-accounts/${accountId}/reset-daily`, {
       method: "PATCH",
-    })
-  },
+    }),
 
-  resetMonthlySentCount: (accountId: string) => {
-    return apiFetch(`/api/v1/email-accounts/${accountId}/reset-monthly`, {
+  resetMonthlySentCount: (accountId: string) =>
+    apiFetch(`/api/v1/email-accounts/${accountId}/reset-monthly`, {
       method: "PATCH",
-    })
-  },
+    }),
 
-  updateLastError: (accountId: string, data: UpdateErrorRequest) => {
-    return apiFetch(`/api/v1/email-accounts/${accountId}/error`, {
+  updateLastError: (accountId: string, data: UpdateErrorRequest) =>
+    apiFetch(`/api/v1/email-accounts/${accountId}/error`, {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  updateLastSync: (accountId: string) => {
-    return apiFetch(`/api/v1/email-accounts/${accountId}/sync`, {
+  updateLastSync: (accountId: string) =>
+    apiFetch(`/api/v1/email-accounts/${accountId}/sync`, {
       method: "PATCH",
-    })
-  },
+    }),
 
-  bulkUpdateStatus: (data: BulkUpdateEmailAccountStatusRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/email-accounts/bulk/status", {
+  bulkUpdateStatus: (data: BulkUpdateEmailAccountStatusRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/email-accounts/bulk/status", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  getByUser: (userId: string) => {
-    return apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/user/${userId}`)
-  },
+  getByUser: (userId: string) =>
+    apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/user/${userId}`),
 
-  getByWorkspace: (workspaceId: string) => {
-    return apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}`)
-  },
+  getByWorkspace: (workspaceId: string) =>
+    apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}`),
 
-  getActiveByWorkspace: (workspaceId: string) => {
-    return apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}/active`)
-  },
+  getActiveByWorkspace: (workspaceId: string) =>
+    apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}/active`),
 
-  getByWorkspaceAndUser: (workspaceId: string, userId: string) => {
-    return apiFetch<UserEmailAccount>(
-      `/api/v1/email-accounts/workspace/${workspaceId}/user/${userId}`,
-    )
-  },
+  getByWorkspaceAndUser: (workspaceId: string, userId: string) =>
+    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/workspace/${workspaceId}/user/${userId}`),
 }

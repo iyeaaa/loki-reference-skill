@@ -30,7 +30,7 @@ export type TargetCountry = "jp" | "us" | "sea" | "eu" | "cn" | "ae"
  */
 export type ExportExperience = "none" | "some" | "experienced"
 
-export interface OnboardingData {
+export type OnboardingData = {
   industry: Industry | null
   target: TargetCustomer | null
   country: TargetCountry | null

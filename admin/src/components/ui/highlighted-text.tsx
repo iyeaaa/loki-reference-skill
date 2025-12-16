@@ -1,6 +1,6 @@
 import { Fragment } from "react"
 
-interface HighlightedTextProps {
+type HighlightedTextProps = {
   text: string
   searchTerm?: string
   className?: string
@@ -11,7 +11,7 @@ interface HighlightedTextProps {
  * Supports Korean and English text highlighting
  */
 export function HighlightedText({ text, searchTerm, className }: HighlightedTextProps) {
-  if (!searchTerm || !text) {
+  if (!(searchTerm && text)) {
     return <span className={className}>{text}</span>
   }
 
@@ -32,7 +32,7 @@ export function HighlightedText({ text, searchTerm, className }: HighlightedText
           return (
             <Fragment key={index}>
               {isMatch ? (
-                <mark className="bg-yellow-200 dark:bg-yellow-900 font-medium px-0.5 rounded">
+                <mark className="rounded bg-yellow-200 px-0.5 font-medium dark:bg-yellow-900">
                   {part}
                 </mark>
               ) : (
@@ -62,6 +62,8 @@ export function stripHtml(html: string): string {
  * Utility function to truncate text with ellipsis
  */
 export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
+  if (text.length <= maxLength) {
+    return text
+  }
   return `${text.slice(0, maxLength)}...`
 }

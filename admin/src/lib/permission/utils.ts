@@ -35,7 +35,9 @@ export function getRoutePermission(path: string): RoutePermission {
  * 사용자 역할이 Admin인지 확인
  */
 export function isAdminRole(userRole?: string): boolean {
-  if (!userRole) return false
+  if (!userRole) {
+    return false
+  }
   return ADMIN_ROLES.includes(userRole as (typeof ADMIN_ROLES)[number])
 }
 

@@ -68,7 +68,9 @@ export default function UsersPage() {
   }, [searchInput])
 
   const handleUpdateUser = async (userData: unknown) => {
-    if (!editingUser) return
+    if (!editingUser) {
+      return
+    }
     updateUser.mutate(
       {
         userId: editingUser.id,
@@ -83,14 +85,17 @@ export default function UsersPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedUsers.length === 0) return
+    if (selectedUsers.length === 0) {
+      return
+    }
 
     if (
       !confirm(
         `선택한 ${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
-    )
+    ) {
       return
+    }
 
     for (const userId of selectedUsers) {
       await deleteUser.mutateAsync(userId)
@@ -184,17 +189,17 @@ export default function UsersPage() {
   }, [])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <UserFilters
-        selectedRoles={selectedRoles}
-        selectedStatuses={selectedStatuses}
-        selectedDepartments={selectedDepartments}
         departments={departments}
+        onClearFilters={clearFilters}
+        onDepartmentChange={setSelectedDepartments}
         onRoleChange={setSelectedRoles}
         onStatusChange={setSelectedStatuses}
-        onDepartmentChange={setSelectedDepartments}
-        onClearFilters={clearFilters}
+        selectedDepartments={selectedDepartments}
+        selectedRoles={selectedRoles}
+        selectedStatuses={selectedStatuses}
       />
 
       {/* Users Table */}
@@ -206,24 +211,24 @@ export default function UsersPage() {
           {/* Search input - positioned below title */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="사용자명, 이메일로 검색..."
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder="사용자명, 이메일로 검색..."
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -231,33 +236,33 @@ export default function UsersPage() {
 
           {/* Bulk Actions */}
           {selectedUsers.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">{selectedUsers.length}명 선택됨</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                  <UserCheck className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("status")} size="sm" variant="outline">
+                  <UserCheck className="mr-1 h-4 w-4" />
                   상태 변경
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("role")}>
-                  <Shield className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("role")} size="sm" variant="outline">
+                  <Shield className="mr-1 h-4 w-4" />
                   역할 변경
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => openBulkActionModal("department")}
+                  size="sm"
+                  variant="outline"
                 >
                   부서 변경
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   선택 삭제
                 </Button>
               </div>
@@ -266,31 +271,31 @@ export default function UsersPage() {
 
           {/* Users Table with Pagination */}
           <UsersTableWithPagination
+            onEditUser={setEditingUser}
+            onToggleAll={toggleAllUsers}
+            onToggleUser={toggleUserSelection}
             searchQuery={searchQuery}
+            selectedDepartments={selectedDepartments}
             selectedRoles={selectedRoles}
             selectedStatuses={selectedStatuses}
-            selectedDepartments={selectedDepartments}
             selectedUsers={selectedUsers}
-            onToggleUser={toggleUserSelection}
-            onToggleAll={toggleAllUsers}
-            onEditUser={setEditingUser}
           />
         </CardContent>
       </Card>
 
       {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">사용자 정보 수정</DialogTitle>
+      <Dialog onOpenChange={() => setEditingUser(null)} open={!!editingUser}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">사용자 정보 수정</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingUser && (
               <UserForm
-                user={editingUser}
                 isEdit={true}
-                onSave={handleUpdateUser}
                 onCancel={() => setEditingUser(null)}
+                onSave={handleUpdateUser}
+                user={editingUser}
               />
             )}
           </div>
@@ -298,17 +303,19 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Password Change Dialog */}
-      <Dialog open={!!passwordChangeUser} onOpenChange={() => setPasswordChangeUser(null)}>
+      <Dialog onOpenChange={() => setPasswordChangeUser(null)} open={!!passwordChangeUser}>
         {passwordChangeUser && (
           <PasswordChangeDialog
-            user={passwordChangeUser}
             onClose={() => setPasswordChangeUser(null)}
+            user={passwordChangeUser}
           />
         )}
       </Dialog>
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        actionType={bulkActionType}
+        departments={departments}
         isOpen={showBulkActionModal}
         onClose={() => {
           setShowBulkActionModal(false)
@@ -316,8 +323,6 @@ export default function UsersPage() {
         }}
         onConfirm={handleBulkAction}
         userCount={selectedUsers.length}
-        actionType={bulkActionType}
-        departments={departments}
       />
     </div>
   )

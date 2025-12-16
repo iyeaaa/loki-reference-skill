@@ -19,7 +19,7 @@ import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
-interface DashboardContentProps {
+type DashboardContentProps = {
   children?: React.ReactNode
 }
 
@@ -29,9 +29,9 @@ function DashboardContent({ children }: DashboardContentProps) {
   const pathname = location.pathname
   const pageName = getPageName(pathname, t)
   const [showProfileCard, setShowProfileCard] = useState(false)
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string>(() => {
-    return localStorage.getItem("selectedWorkspace") || "all"
-  })
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>(
+    () => localStorage.getItem("selectedWorkspace") || "all",
+  )
   const { state } = useSidebar()
 
   // Use React Query to get current user (auto-updates when profile changes)
@@ -60,7 +60,7 @@ function DashboardContent({ children }: DashboardContentProps) {
   const userId = currentUser?.id || ""
 
   // 유저의 trial 상태 확인
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
+  const isTrialUser = currentUser?.trialStatus?.isTrialActive
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
   const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
@@ -133,23 +133,23 @@ function DashboardContent({ children }: DashboardContentProps) {
   return (
     <>
       <AppSidebar
-        workspaces={workspaces}
-        selectedWorkspace={selectedWorkspace}
-        onWorkspaceChange={setSelectedWorkspace}
         hideWorkspaceSelector={hideWorkspaceSelector}
+        onWorkspaceChange={setSelectedWorkspace}
+        selectedWorkspace={selectedWorkspace}
+        workspaces={workspaces}
       />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 z-50">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Separator className="mr-2 h-4" orientation="vertical" />
             {isSidebarCollapsed && !hideWorkspaceSelector && (
               <WorkspaceSelector
-                options={workspaceOptions}
-                value={selectedWorkspace}
-                onValueChange={setSelectedWorkspace}
                 className="mr-2"
                 compact
+                onValueChange={setSelectedWorkspace}
+                options={workspaceOptions}
+                value={selectedWorkspace}
               />
             )}
             <Breadcrumb>
@@ -162,13 +162,13 @@ function DashboardContent({ children }: DashboardContentProps) {
           </div>
           <div className="ml-auto flex items-center gap-7 px-4">
             <button
-              type="button"
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
               onClick={() => setShowProfileCard(!showProfileCard)}
-              className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors overflow-hidden"
+              type="button"
             >
               {currentUser?.profilePicture ? (
                 <Avatar className="h-full w-full">
-                  <AvatarImage src={currentUser.profilePicture} alt="Profile" />
+                  <AvatarImage alt="Profile" src={currentUser.profilePicture} />
                   <AvatarFallback className="bg-gray-200 text-gray-600 text-sm">
                     {currentUser?.username?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
@@ -180,7 +180,7 @@ function DashboardContent({ children }: DashboardContentProps) {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 h-full">
+          <div className="h-full p-4">
             <Suspense fallback={getSkeletonForRoute(pathname)}>{children || <Outlet />}</Suspense>
           </div>
         </main>
@@ -188,19 +188,13 @@ function DashboardContent({ children }: DashboardContentProps) {
 
       {/* Profile Card - positioned at the top level for global access */}
       <ProfileCard
-        isOpen={showProfileCard}
-        onClose={() => setShowProfileCard(false)}
-        user={{
-          username: currentUser?.username || "Admin",
-          email: currentUser?.email || "",
-          image: currentUser?.profilePicture || null,
-          userRole: currentUser?.userRole || "user",
-        }}
         isAdmin={currentUser?.userRole === "admin"}
+        isOpen={showProfileCard}
         onAdminClick={() => {
           setShowProfileCard(false)
           // Already in admin panel
         }}
+        onClose={() => setShowProfileCard(false)}
         onLogout={() => {
           setShowProfileCard(false)
 
@@ -211,6 +205,12 @@ function DashboardContent({ children }: DashboardContentProps) {
 
           // Redirect all users to login page
           window.location.href = "/auth"
+        }}
+        user={{
+          username: currentUser?.username || "Admin",
+          email: currentUser?.email || "",
+          image: currentUser?.profilePicture || null,
+          userRole: currentUser?.userRole || "user",
         }}
       />
     </>
@@ -268,13 +268,13 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
   }
 }
 
-interface DashboardLayoutProps {
+type DashboardLayoutProps = {
   children?: React.ReactNode
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <SidebarProvider defaultOpen={false}>
         <DashboardContent>{children}</DashboardContent>
       </SidebarProvider>

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { EmailIntent } from "@/lib/api/types/email"
 
-interface CategoryFilterProps {
+type CategoryFilterProps = {
   categories: {
     id: string
     label: string
@@ -56,21 +56,21 @@ export function CategoryFilter({
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex flex-wrap items-center gap-2">
       {categories.map((category) => {
         const isSelected = selectedCategory === category.id
         return (
           <Button
+            className={`${getCategoryColor(category.id, isSelected)} h-auto rounded-full px-4 py-2 font-medium transition-colors`}
             key={category.id}
-            variant="ghost"
-            size="sm"
-            className={`${getCategoryColor(category.id, isSelected)} rounded-full px-4 py-2 h-auto font-medium transition-colors`}
             onClick={() => onSelectCategory(category.id)}
+            size="sm"
+            variant="ghost"
           >
             {category.label}
             <Badge
-              variant="secondary"
               className={`ml-2 ${isSelected ? "bg-white/20 text-white" : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}
+              variant="secondary"
             >
               {category.count}
             </Badge>

@@ -18,7 +18,7 @@ export type LeadStatus =
   | "lost"
   | "unsubscribed"
 
-export interface Lead {
+export type Lead = {
   id: string
   workspaceId: string
   workspaceName?: string | null
@@ -67,7 +67,7 @@ export interface Lead {
   industryTypes?: LeadIndustryType[]
 }
 
-export interface CreateLeadRequest {
+export type CreateLeadRequest = {
   workspaceId: string
   companyName?: string | null
   foundCompanyName?: string | null
@@ -99,7 +99,7 @@ export interface CreateLeadRequest {
   socialMedia?: Partial<LeadSocialMedia>[]
 }
 
-export interface UpdateLeadRequest {
+export type UpdateLeadRequest = {
   companyName?: string | null
   foundCompanyName?: string | null
   contactName?: string | null
@@ -124,14 +124,14 @@ export interface UpdateLeadRequest {
   socialMedia?: Partial<LeadSocialMedia>[]
 }
 
-export interface LeadsResponse {
+export type LeadsResponse = {
   data: Lead[]
   total: number
   limit: number
   offset: number
 }
 
-export interface LeadsParams {
+export type LeadsParams = {
   page?: number
   limit?: number // Support custom page sizes (default: 100)
   leadStatus?: LeadStatus | "all"
@@ -148,12 +148,12 @@ export interface LeadsParams {
   filters?: string // JSON stringified ColumnFilter[]
 }
 
-export interface BulkUpdateLeadStatusRequest {
+export type BulkUpdateLeadStatusRequest = {
   leadIds: string[]
   leadStatus: LeadStatus
 }
 
-export interface BulkUpdateBusinessTypeRequest {
+export type BulkUpdateBusinessTypeRequest = {
   leadIds: string[]
   businessType: string
 }

@@ -11,7 +11,7 @@ export type SubscriptionTier = "trial" | "basic" | "pro" | "enterprise"
 // Entities
 // ============================================================================
 
-export interface IamPolicy {
+export type IamPolicy = {
   id: string
   workspaceId: string | null
   name: string
@@ -35,7 +35,7 @@ export interface IamPolicy {
   statementsCount?: number
 }
 
-export interface IamPolicyStatement {
+export type IamPolicyStatement = {
   id: string
   policyId: string
   sid: string | null
@@ -47,7 +47,7 @@ export interface IamPolicyStatement {
   createdAt: string
 }
 
-export interface IamWorkspaceRole {
+export type IamWorkspaceRole = {
   id: string
   workspaceId: string
   name: string
@@ -71,7 +71,7 @@ export interface IamWorkspaceRole {
   membersCount?: number
 }
 
-export interface IamRolePolicy {
+export type IamRolePolicy = {
   id: string
   roleId: string
   policyId: string
@@ -82,7 +82,7 @@ export interface IamRolePolicy {
   policy?: IamPolicy
 }
 
-export interface IamMemberRole {
+export type IamMemberRole = {
   id: string
   memberId: string
   roleId: string
@@ -100,7 +100,7 @@ export interface IamMemberRole {
   }
 }
 
-export interface IamMemberPolicy {
+export type IamMemberPolicy = {
   id: string
   memberId: string
   policyId: string
@@ -110,7 +110,7 @@ export interface IamMemberPolicy {
   policy?: IamPolicy
 }
 
-export interface IamTierBoundary {
+export type IamTierBoundary = {
   id: string
   tier: SubscriptionTier
   policyId: string
@@ -121,7 +121,7 @@ export interface IamTierBoundary {
   policy?: IamPolicy
 }
 
-export interface IamAuditLog {
+export type IamAuditLog = {
   id: string
   workspaceId: string | null
   userId: string | null
@@ -149,7 +149,7 @@ export interface IamAuditLog {
 // API Params
 // ============================================================================
 
-export interface IamPoliciesParams {
+export type IamPoliciesParams = {
   page?: number
   limit?: number
   workspaceId?: string
@@ -159,7 +159,7 @@ export interface IamPoliciesParams {
   filterForWorkspace?: boolean // true이면 워크스페이스에서 사용 가능한 정책만 반환
 }
 
-export interface IamRolesParams {
+export type IamRolesParams = {
   page?: number
   limit?: number
   workspaceId?: string
@@ -168,7 +168,7 @@ export interface IamRolesParams {
   search?: string
 }
 
-export interface IamAuditLogsParams {
+export type IamAuditLogsParams = {
   page?: number
   limit?: number
   workspaceId?: string
@@ -179,7 +179,7 @@ export interface IamAuditLogsParams {
   endDate?: string
 }
 
-export interface IamTierBoundariesParams {
+export type IamTierBoundariesParams = {
   tier?: SubscriptionTier
 }
 
@@ -187,7 +187,7 @@ export interface IamTierBoundariesParams {
 // API Requests
 // ============================================================================
 
-export interface CreateIamPolicyRequest {
+export type CreateIamPolicyRequest = {
   workspaceId?: string
   name: string
   description?: string
@@ -195,13 +195,13 @@ export interface CreateIamPolicyRequest {
   statements?: CreatePolicyStatementRequest[]
 }
 
-export interface UpdateIamPolicyRequest {
+export type UpdateIamPolicyRequest = {
   name?: string
   description?: string
   isActive?: boolean
 }
 
-export interface CreatePolicyStatementRequest {
+export type CreatePolicyStatementRequest = {
   sid?: string
   effect: PolicyEffect
   resources: string[]
@@ -210,7 +210,7 @@ export interface CreatePolicyStatementRequest {
   priority?: number
 }
 
-export interface UpdatePolicyStatementRequest {
+export type UpdatePolicyStatementRequest = {
   sid?: string
   effect?: PolicyEffect
   resources?: string[]
@@ -219,7 +219,7 @@ export interface UpdatePolicyStatementRequest {
   priority?: number
 }
 
-export interface CreateIamRoleRequest {
+export type CreateIamRoleRequest = {
   workspaceId: string
   name: string
   description?: string
@@ -227,24 +227,24 @@ export interface CreateIamRoleRequest {
   priority?: number
 }
 
-export interface UpdateIamRoleRequest {
+export type UpdateIamRoleRequest = {
   name?: string
   description?: string
   isDefault?: boolean
   priority?: number
 }
 
-export interface AttachPolicyToRoleRequest {
+export type AttachPolicyToRoleRequest = {
   roleId: string
   policyId: string
 }
 
-export interface GrantRoleToMemberRequest {
+export type GrantRoleToMemberRequest = {
   memberId: string
   roleId: string
 }
 
-export interface AttachPolicyToMemberRequest {
+export type AttachPolicyToMemberRequest = {
   memberId: string
   policyId: string
 }
@@ -253,7 +253,7 @@ export interface AttachPolicyToMemberRequest {
 // API Responses
 // ============================================================================
 
-export interface PaginatedResponse<T> {
+export type PaginatedResponse<T> = {
   data: T[]
   total: number
   page: number

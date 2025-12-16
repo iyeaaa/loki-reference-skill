@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 
-interface SequenceFiltersProps {
+type SequenceFiltersProps = {
   selectedStatuses: string[]
   onStatusChange: (statuses: string[]) => void
   onClearFilters: () => void
@@ -41,20 +41,20 @@ export function SequenceFilters({
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">
+            <span className="w-24 font-medium text-gray-700 text-sm dark:text-gray-300">
               {t("sequences.filter.status")}
             </span>
             <div className="flex flex-wrap gap-3">
               {statuses.map((status) => (
-                <div key={status.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={status.value}>
                   <Checkbox
-                    id={`status-${status.value}`}
                     checked={selectedStatuses.includes(status.value)}
+                    id={`status-${status.value}`}
                     onCheckedChange={() => toggleStatus(status.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`status-${status.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {status.label}
                   </label>
@@ -66,22 +66,22 @@ export function SequenceFilters({
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedStatuses.map((status) => {
                 const statusLabel = statuses.find((s) => s.value === status)?.label || status
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300"
                     key={status}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
                     {t("sequences.filter.statusLabel")}: {statusLabel}
                     <button
-                      type="button"
-                      onClick={() => toggleStatus(status)}
                       className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      onClick={() => toggleStatus(status)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -92,9 +92,9 @@ export function SequenceFilters({
 
         {/* Clear Filters Button at Bottom */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               {t("sequences.filter.clearFilters")}
             </Button>
           </div>

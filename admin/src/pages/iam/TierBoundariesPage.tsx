@@ -77,7 +77,9 @@ export default function TierBoundariesPage() {
   }
 
   const handleSave = async () => {
-    if (!editingTier || !selectedPolicyId) return
+    if (!(editingTier && selectedPolicyId)) {
+      return
+    }
     await updateTierBoundary.mutateAsync({
       tier: editingTier.tier,
       policyId: selectedPolicyId,
@@ -97,7 +99,7 @@ export default function TierBoundariesPage() {
         return (
           <div className="flex items-center gap-2">
             <Shield className={`h-4 w-4 ${tierInfo.color}`} />
-            <Badge variant={tierInfo.badgeVariant} className="text-xs">
+            <Badge className="text-xs" variant={tierInfo.badgeVariant}>
               {tierInfo.label}
             </Badge>
           </div>
@@ -112,7 +114,7 @@ export default function TierBoundariesPage() {
         const tierInfo = TIER_INFO[item.tier]
         return (
           <span
-            className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2"
+            className="line-clamp-2 text-gray-600 text-sm dark:text-gray-400"
             title={tierInfo.description}
           >
             {tierInfo.description}
@@ -127,7 +129,7 @@ export default function TierBoundariesPage() {
       render: (item) => (
         <div className="max-w-[140px]">
           <div
-            className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate"
+            className="truncate font-medium text-gray-900 text-sm dark:text-gray-100"
             title={item.policy?.name}
           >
             {item.policy?.name || "정책 없음"}
@@ -142,7 +144,7 @@ export default function TierBoundariesPage() {
       render: (item) => (
         <div>
           {item.policy?.description ? (
-            <span className="text-xs text-gray-500 line-clamp-3" title={item.policy.description}>
+            <span className="line-clamp-3 text-gray-500 text-xs" title={item.policy.description}>
               {item.policy.description}
             </span>
           ) : (
@@ -157,11 +159,11 @@ export default function TierBoundariesPage() {
       width: "70px",
       render: (item) =>
         item.policy?.isManaged ? (
-          <Badge variant="secondary" className="text-xs">
+          <Badge className="text-xs" variant="secondary">
             시스템
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-xs">
+          <Badge className="text-xs" variant="outline">
             사용자
           </Badge>
         ),
@@ -171,7 +173,7 @@ export default function TierBoundariesPage() {
       header: "수정일",
       width: "80px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {formatRelativeTime(item.updatedAt)}
         </span>
       ),
@@ -183,12 +185,12 @@ export default function TierBoundariesPage() {
       sticky: "right",
       render: (item) => (
         <Button
-          variant="outline"
-          size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => handleEdit(item)}
-          className="text-xs h-7 px-2"
+          size="sm"
+          variant="outline"
         >
-          <Edit className="h-3 w-3 mr-1" />
+          <Edit className="mr-1 h-3 w-3" />
           수정
         </Button>
       ),
@@ -196,17 +198,17 @@ export default function TierBoundariesPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Header Info */}
-      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+            <Info className="mt-0.5 h-5 w-5 text-blue-600" />
             <div>
               <CardTitle className="text-base text-blue-900 dark:text-blue-100">
                 Tier Boundary란?
               </CardTitle>
-              <CardDescription className="text-blue-700 dark:text-blue-300 mt-1">
+              <CardDescription className="mt-1 text-blue-700 dark:text-blue-300">
                 구독 등급별 최대 권한 경계입니다. 사용자가 어떤 역할을 가지더라도 해당 등급의
                 Boundary를 초과하는 권한은 부여되지 않습니다. AWS IAM의 Permission Boundary와 동일한
                 개념입니다.
@@ -221,27 +223,27 @@ export default function TierBoundariesPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">등급 권한 경계 관리</CardTitle>
-            <Badge variant="outline" className="text-xs">
+            <Badge className="text-xs" variant="outline">
               {sortedBoundaries.length}개 등급
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <DataTable
-            data={sortedBoundaries}
             columns={columns}
-            isLoading={isLoading}
-            getItemId={(item) => item.id}
+            data={sortedBoundaries}
             emptyMessage="아직 등급 경계가 없어요. 시드 데이터를 실행해 주세요."
+            getItemId={(item) => item.id}
+            isLoading={isLoading}
           />
         </CardContent>
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingTier} onOpenChange={() => setEditingTier(null)}>
+      <Dialog onOpenChange={() => setEditingTier(null)} open={!!editingTier}>
         <DialogContent className="max-w-md">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2 font-semibold text-lg">
               <Shield
                 className={`h-5 w-5 ${editingTier ? TIER_INFO[editingTier.tier].color : ""}`}
               />
@@ -253,16 +255,16 @@ export default function TierBoundariesPage() {
               )}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             {editingTier && (
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-400">
+              <div className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm dark:bg-gray-800 dark:text-gray-400">
                 {TIER_INFO[editingTier.tier].description}
               </div>
             )}
 
             <div className="space-y-2">
               <Label htmlFor={`${formId}-policy`}>권한 경계 정책</Label>
-              <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
+              <Select onValueChange={setSelectedPolicyId} value={selectedPolicyId}>
                 <SelectTrigger>
                   <SelectValue placeholder="정책 선택" />
                 </SelectTrigger>
@@ -272,7 +274,7 @@ export default function TierBoundariesPage() {
                       <div className="flex items-center gap-2">
                         <span>{policy.name}</span>
                         {policy.isManaged && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge className="text-xs" variant="secondary">
                             시스템
                           </Badge>
                         )}
@@ -281,7 +283,7 @@ export default function TierBoundariesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-gray-500 text-xs">
                 이 등급의 사용자가 가질 수 있는 최대 권한을 정의하는 정책을 선택하세요.
               </p>
             </div>
@@ -291,38 +293,38 @@ export default function TierBoundariesPage() {
               <div className="space-y-2">
                 <Label>선택된 정책 설명</Label>
                 <Textarea
-                  value={
-                    policies.find((p) => p.id === selectedPolicyId)?.description || "설명 없음"
-                  }
-                  readOnly
-                  className="text-xs text-gray-500 resize-none min-h-[72px] bg-gray-50 dark:bg-gray-800"
-                  rows={3}
-                  style={{
-                    height: "auto",
-                    overflow: "hidden",
-                  }}
+                  className="min-h-[72px] resize-none bg-gray-50 text-gray-500 text-xs dark:bg-gray-800"
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement
                     target.style.height = "auto"
                     target.style.height = `${Math.max(72, target.scrollHeight)}px`
                   }}
+                  readOnly
+                  rows={3}
+                  style={{
+                    height: "auto",
+                    overflow: "hidden",
+                  }}
+                  value={
+                    policies.find((p) => p.id === selectedPolicyId)?.description || "설명 없음"
+                  }
                 />
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 border-t pt-4">
               <Button
-                variant="outline"
                 onClick={() => {
                   setEditingTier(null)
                   setSelectedPolicyId("")
                 }}
+                variant="outline"
               >
                 취소
               </Button>
               <Button
-                onClick={handleSave}
                 disabled={!selectedPolicyId || updateTierBoundary.isPending}
+                onClick={handleSave}
               >
                 {updateTierBoundary.isPending ? "저장 중..." : "저장"}
               </Button>

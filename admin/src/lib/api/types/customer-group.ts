@@ -1,6 +1,6 @@
 // Customer Group Management API Types (aligned with backend database schema)
 
-export interface CustomerGroup {
+export type CustomerGroup = {
   id: string
   workspaceId: string
   name: string
@@ -17,7 +17,7 @@ export interface CustomerGroup {
   leadCount?: number
 }
 
-export interface CustomerGroupMember {
+export type CustomerGroupMember = {
   id: string
   groupId: string
   leadId: string
@@ -25,7 +25,7 @@ export interface CustomerGroupMember {
   addedAt: string
 }
 
-export interface CreateCustomerGroupRequest {
+export type CreateCustomerGroupRequest = {
   workspaceId: string
   name: string
   description?: string
@@ -55,33 +55,33 @@ export interface CreateCustomerGroupRequest {
   }>
 }
 
-export interface UpdateCustomerGroupRequest {
+export type UpdateCustomerGroupRequest = {
   name: string
   description?: string | null
   criteria?: Record<string, unknown> | null
   isDynamic: boolean
 }
 
-export interface AddGroupMemberRequest {
+export type AddGroupMemberRequest = {
   leadId: string
   addedBy?: string
 }
 
-export interface CustomerGroupsResponse {
+export type CustomerGroupsResponse = {
   data: CustomerGroup[]
   total: number
   limit: number
   offset: number
 }
 
-export interface CustomerGroupMembersResponse {
+export type CustomerGroupMembersResponse = {
   data: CustomerGroupMember[]
   total: number
   limit: number
   offset: number
 }
 
-export interface CustomerGroupsParams {
+export type CustomerGroupsParams = {
   page?: number
   limit?: number
   isDynamic?: boolean | "all"
@@ -90,20 +90,20 @@ export interface CustomerGroupsParams {
   createdByIds?: string[]
 }
 
-export interface BulkAddMembersRequest {
+export type BulkAddMembersRequest = {
   groupId: string
   leadIds: string[]
   addedBy?: string
 }
 
-export interface BulkRemoveMembersRequest {
+export type BulkRemoveMembersRequest = {
   leadIds: string[]
 }
 
 // Auto-generated group name types
 export type CompanyScale = "Small" | "Medium" | "Large" | "Unknown"
 
-export interface GroupNameTemplate {
+export type GroupNameTemplate = {
   country: string
   scale: CompanyScale
   businessType: string

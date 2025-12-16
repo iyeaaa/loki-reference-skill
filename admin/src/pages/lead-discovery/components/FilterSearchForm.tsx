@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { COUNTRIES, REGIONS } from "../constants/data-dictionary"
 
-interface FilterSearchFormProps {
+type FilterSearchFormProps = {
   onSubmit: (query: string) => void
   isLoading?: boolean
   disabled?: boolean
@@ -59,9 +59,10 @@ export function FilterSearchForm({
   }, [country, region, freeText])
 
   // 유효성 검사: 자연어 또는 국가/지역 선택 필요
-  const isValid = useMemo(() => {
-    return !!(freeText.trim() || country || region)
-  }, [freeText, country, region])
+  const isValid = useMemo(
+    () => !!(freeText.trim() || country || region),
+    [freeText, country, region],
+  )
 
   // 폼 초기화
   const handleReset = useCallback(() => {
@@ -74,7 +75,9 @@ export function FilterSearchForm({
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
-      if (!isValid || isLoading) return
+      if (!isValid || isLoading) {
+        return
+      }
       onSubmit(generatedQuery)
     },
     [isValid, isLoading, generatedQuery, onSubmit],
@@ -93,19 +96,19 @@ export function FilterSearchForm({
   }, [])
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form className="space-y-5" onSubmit={handleSubmit}>
       {/* 자연어 입력 */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">자연어로 검색</Label>
+        <Label className="font-medium text-foreground text-sm">자연어로 검색</Label>
         <textarea
-          value={freeText}
+          className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled}
           onChange={(e) => setFreeText(e.target.value)}
           placeholder="예: 화장품 유통업체"
-          disabled={disabled}
           rows={2}
-          className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          value={freeText}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           직접 입력하거나, 아래 드롭다운으로 조건을 선택하세요
         </p>
       </div>
@@ -113,7 +116,7 @@ export function FilterSearchForm({
       {/* 구분선 */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
+          <span className="w-full border-border border-t" />
         </div>
         <div className="relative flex justify-center text-xs">
           <span className="bg-background px-2 text-muted-foreground">또는 조건 선택</span>
@@ -122,10 +125,10 @@ export function FilterSearchForm({
 
       {/* 국가/지역 선택 */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">국가 또는 지역</Label>
+        <Label className="font-medium text-foreground text-sm">국가 또는 지역</Label>
         <div className="grid grid-cols-2 gap-2">
           {/* 국가 */}
-          <Select value={country} onValueChange={handleCountryChange} disabled={disabled}>
+          <Select disabled={disabled} onValueChange={handleCountryChange} value={country}>
             <SelectTrigger className="h-10">
               <SelectValue placeholder="국가 선택" />
             </SelectTrigger>
@@ -182,7 +185,7 @@ export function FilterSearchForm({
           </Select>
 
           {/* 지역 */}
-          <Select value={region} onValueChange={handleRegionChange} disabled={disabled}>
+          <Select disabled={disabled} onValueChange={handleRegionChange} value={region}>
             <SelectTrigger className="h-10">
               <SelectValue placeholder="지역 선택" />
             </SelectTrigger>
@@ -200,17 +203,17 @@ export function FilterSearchForm({
       {/* 버튼 */}
       <div className="flex items-center gap-2 pt-2">
         <Button
+          className="gap-1.5"
+          disabled={disabled || isLoading}
+          onClick={handleReset}
+          size="sm"
           type="button"
           variant="outline"
-          size="sm"
-          onClick={handleReset}
-          disabled={disabled || isLoading}
-          className="gap-1.5"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           초기화
         </Button>
-        <Button type="submit" disabled={!isValid || disabled || isLoading} className="flex-1 gap-2">
+        <Button className="flex-1 gap-2" disabled={!isValid || disabled || isLoading} type="submit">
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />

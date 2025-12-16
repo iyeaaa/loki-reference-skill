@@ -1,6 +1,6 @@
 // 이메일 서명 생성 유틸리티 함수
 
-export interface SignatureOptions {
+export type SignatureOptions = {
   name?: string
   title?: string
 }
@@ -81,7 +81,9 @@ This email contains confidential information that is protected by law or under t
 
 // HTML을 텍스트로 변환하는 함수 (줄바꿈 유지)
 export function htmlToMarkdown(html: string): string {
-  if (!html) return ""
+  if (!html) {
+    return ""
+  }
 
   return (
     html

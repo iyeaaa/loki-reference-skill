@@ -35,7 +35,7 @@ export type StepConditionType =
   | "positive_response"
   | "custom"
 
-export interface Sequence {
+export type Sequence = {
   id: string
   workspaceId: string
   customerGroupId?: string | null
@@ -70,14 +70,14 @@ export interface Sequence {
   replyRate?: number
 }
 
-export interface SequenceStepAttachment {
+export type SequenceStepAttachment = {
   filename: string
   type: string
   size?: number
   content?: string
 }
 
-export interface SequenceStep {
+export type SequenceStep = {
   id: string
   sequenceId: string
   stepOrder: number
@@ -102,7 +102,7 @@ export interface SequenceStep {
   executionCount?: number
 }
 
-export interface SequenceEnrollment {
+export type SequenceEnrollment = {
   id: string
   sequenceId: string
   leadId: string
@@ -122,7 +122,7 @@ export interface SequenceEnrollment {
   emailAccountAddress?: string | null
 }
 
-export interface SequenceStepExecution {
+export type SequenceStepExecution = {
   id: string
   enrollmentId: string
   stepId: string
@@ -136,7 +136,7 @@ export interface SequenceStepExecution {
   createdAt: string
 }
 
-export interface CreateSequenceRequest {
+export type CreateSequenceRequest = {
   workspaceId: string
   name: string
   description?: string
@@ -146,7 +146,7 @@ export interface CreateSequenceRequest {
   createdBy?: string
 }
 
-export interface UpdateSequenceRequest {
+export type UpdateSequenceRequest = {
   name?: string
   description?: string
   memo?: string
@@ -156,7 +156,7 @@ export interface UpdateSequenceRequest {
   selectedLeadIds?: string[]
 }
 
-export interface CreateSequenceStepRequest {
+export type CreateSequenceStepRequest = {
   stepOrder: number
   delayDays: number
   scheduledHour?: number
@@ -172,28 +172,28 @@ export interface CreateSequenceStepRequest {
   previousStepId?: string
 }
 
-export interface CreateEnrollmentRequest {
+export type CreateEnrollmentRequest = {
   leadId: string
   userEmailAccountId: string
   enrolledBy?: string
   status?: EnrollmentStatus
 }
 
-export interface SequencesResponse {
+export type SequencesResponse = {
   data: Sequence[]
   total: number
   limit: number
   offset: number
 }
 
-export interface SequenceEnrollmentsResponse {
+export type SequenceEnrollmentsResponse = {
   data: SequenceEnrollment[]
   total: number
   limit: number
   offset: number
 }
 
-export interface SequencesParams {
+export type SequencesParams = {
   page?: number
   limit?: number
   status?: SequenceStatus | "all"
@@ -202,29 +202,29 @@ export interface SequencesParams {
   createdByIds?: string[]
 }
 
-export interface BulkUpdateSequenceStatusRequest {
+export type BulkUpdateSequenceStatusRequest = {
   sequenceIds: string[]
   status: SequenceStatus
 }
 
-export interface BulkEnrollRequest {
+export type BulkEnrollRequest = {
   sequenceId: string
   leadIds: string[]
   userEmailAccountId: string
   enrolledBy?: string
 }
 
-export interface BulkUnenrollRequest {
+export type BulkUnenrollRequest = {
   enrollmentIds: string[]
 }
 
-export interface BulkEnrollWithSchedulingRequest {
+export type BulkEnrollWithSchedulingRequest = {
   leadIds: string[]
   userEmailAccountId: string
   enrolledBy?: string
 }
 
-export interface BulkEnrollWithSchedulingResponse {
+export type BulkEnrollWithSchedulingResponse = {
   enrolledCount: number
   totalSteps: number
   scheduledExecutions: number
@@ -242,7 +242,7 @@ export type SequenceStepCreateInput = CreateSequenceStepRequest
 export type SequenceStepUpdateInput = CreateSequenceStepRequest
 
 // Workflow Node Statistics
-export interface NodeStatistics {
+export type NodeStatistics = {
   nodeId: string
   sentCount: number
   repliedCount: number

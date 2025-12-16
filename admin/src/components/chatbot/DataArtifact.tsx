@@ -96,7 +96,7 @@ const claudeTheme = {
   },
 }
 
-interface DataArtifactProps {
+type DataArtifactProps = {
   sql?: string
   insights?: Insight[]
   data?: unknown[]
@@ -193,8 +193,8 @@ export function DataArtifact({
   // Show empty state if no content
   if (!hasAnyContent) {
     return (
-      <div className="h-full flex items-center justify-center p-8">
-        <p className="text-sm text-muted-foreground text-center">
+      <div className="flex h-full items-center justify-center p-8">
+        <p className="text-center text-muted-foreground text-sm">
           {t("chatbot.artifact.analysisResults")}
         </p>
       </div>
@@ -203,22 +203,28 @@ export function DataArtifact({
 
   // Determine the main title based on what content is available
   const getTitle = () => {
-    if (leadImportProgress) return t("chatbot.artifact.leadImportProgress")
-    if (leadImportResult) return t("chatbot.artifact.leadImportComplete")
-    if (leadPreview) return t("chatbot.artifact.leadPreview")
+    if (leadImportProgress) {
+      return t("chatbot.artifact.leadImportProgress")
+    }
+    if (leadImportResult) {
+      return t("chatbot.artifact.leadImportComplete")
+    }
+    if (leadPreview) {
+      return t("chatbot.artifact.leadPreview")
+    }
     return question || t("chatbot.artifact.analysisResults")
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* Header with streaming indicator */}
-      <div className="border-b border-border px-6 py-4 bg-muted/30 flex-shrink-0">
+      <div className="flex-shrink-0 border-border border-b bg-muted/30 px-6 py-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">{getTitle()}</h3>
+          <h3 className="font-semibold text-foreground text-sm">{getTitle()}</h3>
           {isStreaming && (
             <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+              <span className="text-muted-foreground text-xs">
                 {t("chatbot.artifact.streaming")}
               </span>
             </div>
@@ -227,14 +233,14 @@ export function DataArtifact({
       </div>
 
       {/* Content area with full-height scroll */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto p-6">
         {/* Lead Preview Section */}
         {leadPreview && onLeadImportApproval && (
           <LeadPreviewArtifact
             data={leadPreview}
+            isProcessing={isProcessingLead}
             onApprove={handleApprove}
             onReject={handleReject}
-            isProcessing={isProcessingLead}
           />
         )}
 
@@ -244,25 +250,21 @@ export function DataArtifact({
         {/* Lead Import Result Section */}
         {leadImportResult && (
           <LeadResultSection
-            result={leadImportResult}
-            progressLogs={progressLogs}
-            startTime={startTime}
             onGenerateSequence={onGenerateSequence}
+            progressLogs={progressLogs}
+            result={leadImportResult}
+            startTime={startTime}
           />
         )}
         {/* SQL Query Section - Only show in development mode */}
         {sql && isDevelopment && (
           <div
-            className={`
-              space-y-3 transition-all duration-500 ease-out
-              ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+            className={`space-y-3 transition-all duration-500 ease-out ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
             `}
           >
             <SectionHeader title={t("chatbot.artifact.executedQuery")} />
             <div className="rounded-lg border border-border bg-muted/50">
               <SyntaxHighlighter
-                language="sql"
-                style={claudeTheme}
                 customStyle={{
                   margin: 0,
                   padding: "1rem",
@@ -271,8 +273,10 @@ export function DataArtifact({
                   background: "transparent",
                   overflow: "visible",
                 }}
-                wrapLongLines={true}
+                language="sql"
                 showLineNumbers={false}
+                style={claudeTheme}
+                wrapLongLines={true}
               >
                 {sql}
               </SyntaxHighlighter>
@@ -283,24 +287,22 @@ export function DataArtifact({
         {/* Query Result Table Section */}
         {data && data.length > 0 && (
           <div
-            className={`
-              space-y-3 transition-all duration-500 ease-out
-              ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+            className={`space-y-3 transition-all duration-500 ease-out ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
             `}
             style={{
               transitionDelay: sql && isDevelopment ? "50ms" : "0ms",
             }}
           >
             <SectionHeader title={t("chatbot.artifact.queryResults", { count: data.length })} />
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="max-h-[400px] overflow-x-auto overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-background sticky top-0 shadow-sm z-10">
+                  <thead className="sticky top-0 z-10 bg-background shadow-sm">
                     <tr>
                       {Object.keys(data[0] as Record<string, unknown>).map((key) => (
                         <th
+                          className="whitespace-nowrap border-border border-b bg-background px-3 py-2 text-left font-medium text-foreground"
                           key={key}
-                          className="px-3 py-2 text-left font-medium text-foreground whitespace-nowrap border-b border-border bg-background"
                         >
                           {key}
                         </th>
@@ -309,11 +311,11 @@ export function DataArtifact({
                   </thead>
                   <tbody>
                     {data.slice(0, 100).map((row, i) => (
-                      <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                      <tr className="border-b last:border-0 hover:bg-muted/30" key={i}>
                         {Object.values(row as Record<string, unknown>).map((value, j) => (
                           <td
+                            className="max-w-[200px] truncate whitespace-nowrap px-3 py-2 text-foreground"
                             key={j}
-                            className="px-3 py-2 text-foreground whitespace-nowrap max-w-[200px] truncate"
                           >
                             {value === null ? (
                               <span className="text-muted-foreground italic">null</span>
@@ -334,9 +336,7 @@ export function DataArtifact({
         {/* Insights Section */}
         {insights.length > 0 && (
           <div
-            className={`
-              space-y-3 transition-all duration-500 ease-out
-              ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+            className={`space-y-3 transition-all duration-500 ease-out ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
             `}
             style={{
               transitionDelay: sql && isDevelopment ? "100ms" : "0ms",
@@ -346,18 +346,16 @@ export function DataArtifact({
             <div className="space-y-3">
               {insights.map((insight, i) => (
                 <div
-                  key={i}
-                  className={`
-                    w-full rounded-lg border border-border bg-background/80 p-4 text-sm
-                    transition-all duration-500 ease-out
-                    ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+                  className={`w-full rounded-lg border border-border bg-background/80 p-4 text-sm transition-all duration-500 ease-out ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
                   `}
+                  key={i}
                   style={{
                     transitionDelay: `${(sql && isDevelopment ? 100 : 0) + i * 100}ms`,
                   }}
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <Badge
+                      className="text-xs"
                       variant={
                         insight.impact === "high"
                           ? "default"
@@ -365,15 +363,14 @@ export function DataArtifact({
                             ? "secondary"
                             : "outline"
                       }
-                      className="text-xs"
                     >
                       {insight.impact.toUpperCase()}
                     </Badge>
                   </div>
-                  <p className="font-medium text-foreground mb-2 leading-relaxed">
+                  <p className="mb-2 font-medium text-foreground leading-relaxed">
                     {insight.insight}
                   </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
                     {insight.recommendation}
                   </p>
                 </div>

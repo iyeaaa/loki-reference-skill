@@ -8,7 +8,7 @@ import { EnhancedProgressBar } from "./EnhancedProgressBar"
 import { type ProgressLog, ProgressLogger } from "./ProgressLogger"
 import { StarSpinner } from "./StarSpinner"
 
-interface LeadImportProgressProps {
+type LeadImportProgressProps = {
   progress: ImportProgress
 }
 
@@ -96,7 +96,7 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
                 ) : (
                   <StarSpinner size={20} />
                 )}
-                <h3 className="text-base font-semibold">
+                <h3 className="font-semibold text-base">
                   {isComplete
                     ? t("chatbot.leadProgress.complete")
                     : isError
@@ -107,7 +107,7 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
                 </h3>
               </div>
               {!isInit && progress.processed !== undefined && progress.total !== undefined && (
-                <Badge variant={isComplete ? "default" : "secondary"} className="text-sm font-mono">
+                <Badge className="font-mono text-sm" variant={isComplete ? "default" : "secondary"}>
                   {progress.processed} / {progress.total}
                 </Badge>
               )}
@@ -115,7 +115,7 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
 
             {/* Customer Group Info */}
             {progress.customerGroupName && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-3">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:bg-blue-950/20">
                 <div className="flex items-center gap-2 text-sm">
                   <FileSpreadsheet className="h-4 w-4 text-blue-600" />
                   <span className="text-muted-foreground">
@@ -130,22 +130,22 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
           </div>
 
           {/* Enhanced Progress Bar */}
-          {!isInit && !isError && progress.total !== undefined && progress.total > 0 && (
+          {!(isInit || isError) && progress.total !== undefined && progress.total > 0 && (
             <EnhancedProgressBar
-              value={progress.processed || 0}
-              max={progress.total}
               animated={isInProgress}
+              max={progress.total}
+              value={progress.processed || 0}
             />
           )}
 
           {/* Progress Logger with Stats */}
-          {!isInit && !isError && logs.length > 0 && (
+          {!(isInit || isError) && logs.length > 0 && (
             <ProgressLogger
+              currentProgress={progress.processed || 0}
+              isComplete={isComplete}
               logs={logs}
               startTime={startTime}
-              currentProgress={progress.processed || 0}
               totalItems={progress.total || 0}
-              isComplete={isComplete}
             />
           )}
 
@@ -155,41 +155,41 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
               progress.skipped !== undefined ||
               progress.failed !== undefined) && (
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg border border-border bg-green-50 dark:bg-green-950/20 p-3">
-                  <div className="text-xs text-muted-foreground mb-1">
+                <div className="rounded-lg border border-border bg-green-50 p-3 dark:bg-green-950/20">
+                  <div className="mb-1 text-muted-foreground text-xs">
                     {t("chatbot.leadResult.success")}
                   </div>
-                  <div className="text-2xl font-bold text-green-600">{progress.success || 0}</div>
+                  <div className="font-bold text-2xl text-green-600">{progress.success || 0}</div>
                 </div>
-                <div className="rounded-lg border border-border bg-amber-50 dark:bg-amber-950/20 p-3">
-                  <div className="text-xs text-muted-foreground mb-1">
+                <div className="rounded-lg border border-border bg-amber-50 p-3 dark:bg-amber-950/20">
+                  <div className="mb-1 text-muted-foreground text-xs">
                     {t("chatbot.leadResult.skipped")}
                   </div>
-                  <div className="text-2xl font-bold text-amber-600">{progress.skipped || 0}</div>
+                  <div className="font-bold text-2xl text-amber-600">{progress.skipped || 0}</div>
                 </div>
-                <div className="rounded-lg border border-border bg-red-50 dark:bg-red-950/20 p-3">
-                  <div className="text-xs text-muted-foreground mb-1">
+                <div className="rounded-lg border border-border bg-red-50 p-3 dark:bg-red-950/20">
+                  <div className="mb-1 text-muted-foreground text-xs">
                     {t("chatbot.leadResult.failed")}
                   </div>
-                  <div className="text-2xl font-bold text-red-600">{progress.failed || 0}</div>
+                  <div className="font-bold text-2xl text-red-600">{progress.failed || 0}</div>
                 </div>
               </div>
             )}
 
           {/* Message */}
-          {progress.message && <p className="text-sm text-muted-foreground">{progress.message}</p>}
+          {progress.message && <p className="text-muted-foreground text-sm">{progress.message}</p>}
 
           {/* Error Message */}
           {isError && progress.error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-3">
-              <p className="text-sm text-red-600">{progress.error}</p>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:bg-red-950/20">
+              <p className="text-red-600 text-sm">{progress.error}</p>
             </div>
           )}
 
           {/* Complete Result Details */}
           {isComplete && progress.result && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-              <div className="text-sm font-medium">{t("chatbot.leadResult.detailedResults")}</div>
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="font-medium text-sm">{t("chatbot.leadResult.detailedResults")}</div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
@@ -225,7 +225,7 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
                 </div>
               </div>
               {progress.result.duration && (
-                <div className="pt-2 border-t text-xs text-muted-foreground">
+                <div className="border-t pt-2 text-muted-foreground text-xs">
                   {t("chatbot.leadResult.duration")} {(progress.result.duration / 1000).toFixed(2)}s
                 </div>
               )}
@@ -236,34 +236,34 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
           {isComplete &&
             progress.result?.duplicateEmails &&
             progress.result.duplicateEmails.length > 0 && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4">
-                <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:bg-blue-950/20">
+                <div className="mb-2 font-medium text-blue-900 text-sm dark:text-blue-100">
                   {t("chatbot.leadResult.duplicateEmails")} (
                   {progress.result.emailsSkipped || progress.result.duplicateEmails.length})
                 </div>
-                <div className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                <div className="mb-2 text-blue-700 text-xs dark:text-blue-300">
                   ℹ️ {t("chatbot.leadResult.duplicateNote")}
                 </div>
-                <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
+                <div className="max-h-32 space-y-1 overflow-y-auto text-xs">
                   {progress.result.duplicateEmails.slice(0, 5).map((item, idx) => (
-                    <div key={idx} className="text-blue-800 dark:text-blue-200">
+                    <div className="text-blue-800 dark:text-blue-200" key={idx}>
                       #{item.rowNumber}: {item.email} (
                       {item.companyName || t("chatbot.leadResult.noName")})
                       {item.existingLeadId !== "CSV_DUPLICATE" && (
-                        <span className="text-blue-600 dark:text-blue-400 ml-1">
+                        <span className="ml-1 text-blue-600 dark:text-blue-400">
                           - {t("chatbot.leadResult.existingLeadId")}{" "}
                           {item.existingLeadId.substring(0, 8)}...
                         </span>
                       )}
                       {item.existingLeadId === "CSV_DUPLICATE" && (
-                        <span className="text-blue-600 dark:text-blue-400 ml-1">
+                        <span className="ml-1 text-blue-600 dark:text-blue-400">
                           - {t("chatbot.leadResult.duplicateInFile")}
                         </span>
                       )}
                     </div>
                   ))}
                   {progress.result.duplicateEmails.length > 5 && (
-                    <div className="text-blue-700 dark:text-blue-300 italic">
+                    <div className="text-blue-700 italic dark:text-blue-300">
                       {t("chatbot.leadResult.andMore", {
                         count: progress.result.duplicateEmails.length - 5,
                       })}
@@ -277,23 +277,23 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
           {isComplete &&
             progress.result?.skippedLeads &&
             progress.result.skippedLeads.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
-                <div className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:bg-amber-950/20">
+                <div className="mb-2 font-medium text-amber-900 text-sm dark:text-amber-100">
                   {t("chatbot.leadProgress.duplicates")} ({progress.result.skippedLeads.length})
                 </div>
-                <div className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                <div className="mb-2 text-amber-700 text-xs dark:text-amber-300">
                   ℹ️ {t("chatbot.leadProgress.duplicateNote")}
                 </div>
-                <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
+                <div className="max-h-32 space-y-1 overflow-y-auto text-xs">
                   {progress.result.skippedLeads.slice(0, 5).map((lead, idx) => (
-                    <div key={idx} className="text-amber-800 dark:text-amber-200">
+                    <div className="text-amber-800 dark:text-amber-200" key={idx}>
                       #{lead.rowNumber}:{" "}
                       {lead.companyName || lead.websiteUrl || t("chatbot.leadResult.noName")} -{" "}
                       {lead.reason}
                     </div>
                   ))}
                   {progress.result.skippedLeads.length > 5 && (
-                    <div className="text-amber-700 dark:text-amber-300 italic">
+                    <div className="text-amber-700 italic dark:text-amber-300">
                       {t("chatbot.leadResult.andMore", {
                         count: progress.result.skippedLeads.length - 5,
                       })}

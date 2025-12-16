@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface BulkActionModalProps {
+type BulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string, value: string | string[]) => void
@@ -86,24 +86,24 @@ export function BulkActionModal({
   ]
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="space-y-4 py-4">
           {actionType === "category" && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>미리 정의된 카테고리</Label>
                 <Select
-                  value={selectedValue}
                   onValueChange={(value) => {
                     setSelectedValue(value)
                     setCustomCategory("")
                   }}
+                  value={selectedValue}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="카테고리 선택" />
@@ -130,12 +130,12 @@ export function BulkActionModal({
               <div className="space-y-2">
                 <Label>커스텀 카테고리</Label>
                 <Input
-                  placeholder="새 카테고리 입력..."
-                  value={customCategory}
                   onChange={(e) => {
                     setCustomCategory(e.target.value)
                     setSelectedValue("")
                   }}
+                  placeholder="새 카테고리 입력..."
+                  value={customCategory}
                 />
               </div>
             </div>
@@ -144,7 +144,7 @@ export function BulkActionModal({
           {actionType === "shared" && (
             <div className="space-y-2">
               <Label>변경할 공유 상태</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger>
                   <SelectValue placeholder="공유 상태 선택" />
                 </SelectTrigger>
@@ -158,14 +158,14 @@ export function BulkActionModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             취소
           </Button>
           <Button
-            onClick={handleConfirm}
             disabled={
-              actionType === "category" ? !selectedValue && !customCategory : !selectedValue
+              actionType === "category" ? !(selectedValue || customCategory) : !selectedValue
             }
+            onClick={handleConfirm}
           >
             변경
           </Button>

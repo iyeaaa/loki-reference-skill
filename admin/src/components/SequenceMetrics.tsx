@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
-interface SequenceMetricsProps {
+type SequenceMetricsProps = {
   sequenceId: string
   sequenceName: string
   metrics?: {
@@ -70,29 +70,29 @@ export function SequenceMetrics({
 
   if (isLoading) {
     return (
-      <div className="space-y-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="mb-6 space-y-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card className="animate-pulse" key={i}>
               <CardHeader className="pb-2">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 w-3/4 rounded bg-gray-200" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                <div className="mb-2 h-8 w-1/2 rounded bg-gray-200" />
+                <div className="h-3 w-full rounded bg-gray-200" />
               </CardContent>
             </Card>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card className="animate-pulse" key={i}>
               <CardHeader className="pb-2">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 w-3/4 rounded bg-gray-200" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                <div className="mb-2 h-8 w-1/2 rounded bg-gray-200" />
+                <div className="h-3 w-full rounded bg-gray-200" />
               </CardContent>
             </Card>
           ))}
@@ -106,7 +106,7 @@ export function SequenceMetrics({
       <Card className="mb-6">
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center text-muted-foreground">
-            <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <Mail className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>{t("sequences.metrics.loading")}</p>
           </div>
         </CardContent>
@@ -134,42 +134,52 @@ export function SequenceMetrics({
     }
 
     if (type === "negative") {
-      if (rate > 5) return "text-red-600"
-      if (rate > 2) return "text-orange-600"
+      if (rate > 5) {
+        return "text-red-600"
+      }
+      if (rate > 2) {
+        return "text-orange-600"
+      }
       return "text-green-600"
     }
 
-    if (rate > 20) return "text-green-600"
-    if (rate > 10) return "text-blue-600"
-    if (rate > 5) return "text-orange-600"
+    if (rate > 20) {
+      return "text-green-600"
+    }
+    if (rate > 10) {
+      return "text-blue-600"
+    }
+    if (rate > 5) {
+      return "text-orange-600"
+    }
     return "text-red-600"
   }
 
   return (
-    <div className="space-y-6 mb-6">
+    <div className="mb-6 space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{sequenceName}</h2>
+          <h2 className="font-bold text-2xl">{sequenceName}</h2>
           <p className="text-muted-foreground">{t("sequences.metrics.title")}</p>
         </div>
-        <Badge variant="outline" className="text-sm">
+        <Badge className="text-sm" variant="outline">
           ID: {sequenceId.slice(0, 8)}...
         </Badge>
       </div>
 
       {/* 발송 통계 - 핵심 지표만 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="font-medium text-sm">
               {t("sequences.metrics.totalSent")}
             </CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(metrics.totalSent)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="font-bold text-2xl">{formatNumber(metrics.totalSent)}</div>
+            <p className="text-muted-foreground text-xs">
               {metrics.delivered} {t("sequences.metrics.delivered")}
             </p>
           </CardContent>
@@ -177,16 +187,16 @@ export function SequenceMetrics({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="font-medium text-sm">
               {t("sequences.metrics.deliveryRate")}
             </CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="font-bold text-2xl text-green-600">
               {formatPercentage((metrics.delivered / metrics.totalSent) * 100)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {metrics.delivered} / {metrics.totalSent}
             </p>
           </CardContent>
@@ -194,56 +204,56 @@ export function SequenceMetrics({
       </div>
 
       {/* 참여 통계 - 핵심 지표만 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("sequences.metrics.openRate")}</CardTitle>
+            <CardTitle className="font-medium text-sm">{t("sequences.metrics.openRate")}</CardTitle>
             <MailOpen className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getRateColor(metrics.openRate)}`}>
+            <div className={`font-bold text-2xl ${getRateColor(metrics.openRate)}`}>
               {formatPercentage(metrics.openRate)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {metrics.opened} / {metrics.delivered} {t("sequences.metrics.opened")}
             </p>
-            <Progress value={metrics.openRate} className="mt-2 h-2" />
+            <Progress className="mt-2 h-2" value={metrics.openRate} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="font-medium text-sm">
               {t("sequences.metrics.clickRate")}
             </CardTitle>
             <MousePointer className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getRateColor(metrics.clickRate)}`}>
+            <div className={`font-bold text-2xl ${getRateColor(metrics.clickRate)}`}>
               {formatPercentage(metrics.clickRate)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {metrics.clicked} / {metrics.delivered} {t("sequences.metrics.clicked")}
             </p>
-            <Progress value={metrics.clickRate} className="mt-2 h-2" />
+            <Progress className="mt-2 h-2" value={metrics.clickRate} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="font-medium text-sm">
               {t("sequences.metrics.replyRate")}
             </CardTitle>
             <Reply className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${getRateColor(metrics.replyRate)}`}>
+            <div className={`font-bold text-2xl ${getRateColor(metrics.replyRate)}`}>
               {formatPercentage(metrics.replyRate)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {metrics.replied} / {metrics.delivered} {t("sequences.metrics.replied")}
             </p>
-            <Progress value={metrics.replyRate} className="mt-2 h-2" />
+            <Progress className="mt-2 h-2" value={metrics.replyRate} />
           </CardContent>
         </Card>
       </div>
@@ -252,7 +262,7 @@ export function SequenceMetrics({
       {metrics.replied > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-medium text-sm">
               <Clock className="h-4 w-4 text-blue-600" />
               회신 시간 통계
             </CardTitle>
@@ -261,36 +271,36 @@ export function SequenceMetrics({
             {metrics.avgTimeToReply !== undefined ||
             metrics.minTimeToReply !== undefined ||
             metrics.maxTimeToReply !== undefined ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {metrics.avgTimeToReply !== undefined && (
                   <div className="text-center">
-                    <div className="text-lg font-semibold text-blue-600">
+                    <div className="font-semibold text-blue-600 text-lg">
                       {formatReplyTime(metrics.avgTimeToReply)}
                     </div>
-                    <p className="text-xs text-muted-foreground">평균 회신 시간</p>
+                    <p className="text-muted-foreground text-xs">평균 회신 시간</p>
                   </div>
                 )}
                 {metrics.minTimeToReply !== undefined && (
                   <div className="text-center">
-                    <div className="text-lg font-semibold text-green-600 flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1 font-semibold text-green-600 text-lg">
                       <TrendingDown className="h-4 w-4" />
                       {formatReplyTime(metrics.minTimeToReply)}
                     </div>
-                    <p className="text-xs text-muted-foreground">최단 회신 시간</p>
+                    <p className="text-muted-foreground text-xs">최단 회신 시간</p>
                   </div>
                 )}
                 {metrics.maxTimeToReply !== undefined && (
                   <div className="text-center">
-                    <div className="text-lg font-semibold text-orange-600 flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1 font-semibold text-lg text-orange-600">
                       <TrendingUp className="h-4 w-4" />
                       {formatReplyTime(metrics.maxTimeToReply)}
                     </div>
-                    <p className="text-xs text-muted-foreground">최장 회신 시간</p>
+                    <p className="text-muted-foreground text-xs">최장 회신 시간</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-center py-4 text-sm text-muted-foreground">
+              <div className="py-4 text-center text-muted-foreground text-sm">
                 회신 시간 데이터를 계산 중입니다...
               </div>
             )}
@@ -302,25 +312,26 @@ export function SequenceMetrics({
       {metrics.replied > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">회신 내용 요약</CardTitle>
+            <CardTitle className="font-medium text-sm">회신 내용 요약</CardTitle>
             <Badge variant="outline">{metrics.replySummaries?.length || 0}개</Badge>
           </CardHeader>
           <CardContent>
             {metrics.replySummaries && metrics.replySummaries.length > 0 ? (
               <div className="space-y-3">
                 {metrics.replySummaries.map((summary, index) => (
-                  <div key={summary.originalEmailId} className="border rounded-lg p-3 space-y-2">
+                  <div className="space-y-2 rounded-lg border p-3" key={summary.originalEmailId}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge className="text-xs" variant="outline">
                           #{index + 1}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           회신 시간: {formatReplyTime(summary.replyTime)}
                         </span>
                       </div>
                       {summary.sentiment && (
                         <Badge
+                          className="text-xs"
                           variant={
                             summary.sentiment === "positive"
                               ? "default"
@@ -328,7 +339,6 @@ export function SequenceMetrics({
                                 ? "destructive"
                                 : "secondary"
                           }
-                          className="text-xs"
                         >
                           {summary.sentiment === "positive"
                             ? "긍정"
@@ -340,13 +350,13 @@ export function SequenceMetrics({
                     </div>
                     {summary.intent && (
                       <div>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge className="text-xs" variant="outline">
                           의도: {summary.intent}
                         </Badge>
                       </div>
                     )}
                     {summary.aiSummary && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="line-clamp-2 text-muted-foreground text-sm">
                         {summary.aiSummary}
                       </p>
                     )}
@@ -354,7 +364,7 @@ export function SequenceMetrics({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-sm text-muted-foreground">
+              <div className="py-4 text-center text-muted-foreground text-sm">
                 회신 내용 요약 데이터가 없습니다.
               </div>
             )}
@@ -368,13 +378,13 @@ export function SequenceMetrics({
 function formatReplyTime(minutes: number): string {
   if (minutes < 60) {
     return `${Math.round(minutes)}분`
-  } else if (minutes < 1440) {
+  }
+  if (minutes < 1440) {
     const hours = Math.floor(minutes / 60)
     const mins = Math.round(minutes % 60)
     return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`
-  } else {
-    const days = Math.floor(minutes / 1440)
-    const hours = Math.floor((minutes % 1440) / 60)
-    return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
   }
+  const days = Math.floor(minutes / 1440)
+  const hours = Math.floor((minutes % 1440) / 60)
+  return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
 }

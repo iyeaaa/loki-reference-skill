@@ -32,7 +32,7 @@ interface CustomerGroupMemberWithLead extends CustomerGroupMember {
   leadBusinessType?: string
 }
 
-interface SequenceFormProps {
+type SequenceFormProps = {
   sequence?: Sequence
   isEdit?: boolean
   onSave: (sequenceData: unknown) => Promise<void> | void
@@ -62,7 +62,9 @@ export function SequenceForm({
 
   // Parse selectedLeadIds from JSON string with error handling
   const initialSelectedLeadIds = (() => {
-    if (!sequence?.selectedLeadIds) return []
+    if (!sequence?.selectedLeadIds) {
+      return []
+    }
     try {
       const parsed = JSON.parse(sequence.selectedLeadIds)
       return Array.isArray(parsed) ? parsed : []
@@ -156,15 +158,15 @@ export function SequenceForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor={nameId}>{t("sequences.form.sequenceName")}</Label>
         <Input
           id={nameId}
-          value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
           placeholder={t("sequences.form.sequenceNamePlaceholder")}
+          required
+          value={formData.name}
         />
       </div>
 
@@ -172,39 +174,39 @@ export function SequenceForm({
         <Label htmlFor={descriptionId}>{t("sequences.form.description")}</Label>
         <Textarea
           id={descriptionId}
-          value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder={t("sequences.form.descriptionPlaceholder")}
           rows={4}
+          value={formData.description}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="customerGroup">{t("sequences.form.workspace")}</Label>
         <Combobox
+          emptyText={t("sequences.form.workspaceEmptyText")}
+          onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
           options={workspaces.map((workspace) => ({
             value: workspace.id,
             label: workspace.name,
             sublabel: workspace.description || undefined,
           }))}
-          value={formData.workspaceId}
-          onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
           placeholder={t("sequences.form.workspacePlaceholder")}
           searchPlaceholder={t("sequences.form.workspaceSearchPlaceholder")}
-          emptyText={t("sequences.form.workspaceEmptyText")}
+          value={formData.workspaceId}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="customerGroup" className="flex items-center gap-2">
+        <Label className="flex items-center gap-2" htmlFor="customerGroup">
           {t("sequences.form.customerGroup")}
           <span className="text-red-500">*</span>
         </Label>
         <Select
-          value={formData.customerGroupId}
-          onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
           disabled={!formData.workspaceId || hasEnrollments}
+          onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
           required
+          value={formData.customerGroupId}
         >
           <SelectTrigger>
             <SelectValue
@@ -233,31 +235,31 @@ export function SequenceForm({
           )}
         </Select>
         {customerGroups && customerGroups.length === 0 && formData.workspaceId && (
-          <div className="rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-3 mt-2">
-            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-2">
+          <div className="mt-2 rounded-lg border-2 border-amber-500 bg-amber-50 p-3 dark:bg-amber-950/20">
+            <p className="mb-2 font-semibold text-amber-900 text-xs dark:text-amber-200">
               {t("sequences.form.warning.noCustomerGroupsInWorkspace")}
             </p>
-            <p className="text-xs text-amber-800 dark:text-amber-300 mb-2">
+            <p className="mb-2 text-amber-800 text-xs dark:text-amber-300">
               {t("sequences.form.warning.createCustomerGroupFirst")}
             </p>
             <Button
+              className="h-8 text-xs"
+              onClick={() => window.open("/customer-groups", "_blank")}
+              size="sm"
               type="button"
               variant="outline"
-              size="sm"
-              className="text-xs h-8"
-              onClick={() => window.open("/customer-groups", "_blank")}
             >
-              <ExternalLink className="h-3 w-3 mr-1" />
+              <ExternalLink className="mr-1 h-3 w-3" />
               {t("sequences.form.button.goToCreateCustomerGroup")}
             </Button>
           </div>
         )}
         {hasEnrollments ? (
-          <p className="text-xs text-amber-600">
+          <p className="text-amber-600 text-xs">
             {t("sequences.form.warning.cannotChangeCustomerGroup")}
           </p>
         ) : customerGroups && customerGroups.length > 0 ? (
-          <p className="text-xs text-gray-500">{t("sequences.form.info.customerGroupRequired")}</p>
+          <p className="text-gray-500 text-xs">{t("sequences.form.info.customerGroupRequired")}</p>
         ) : null}
       </div>
 
@@ -265,12 +267,12 @@ export function SequenceForm({
       {formData.customerGroupId && (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">{t("sequences.form.leadSelection.title")}</Label>
+            <Label className="font-medium text-sm">{t("sequences.form.leadSelection.title")}</Label>
             <Button
+              onClick={() => setShowLeadSelection(!showLeadSelection)}
+              size="sm"
               type="button"
               variant="ghost"
-              size="sm"
-              onClick={() => setShowLeadSelection(!showLeadSelection)}
             >
               {showLeadSelection
                 ? t("sequences.form.leadSelection.collapse")
@@ -279,7 +281,7 @@ export function SequenceForm({
           </div>
 
           {!showLeadSelection && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {t("sequences.form.leadSelection.defaultNote")}
               {selectedLeadIds.length > 0 &&
                 ` ${t("sequences.form.leadSelection.currentlySelected", { count: selectedLeadIds.length })}`}
@@ -291,11 +293,11 @@ export function SequenceForm({
               <div className="flex items-center justify-between rounded-md bg-background p-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    id={selectAllId}
                     checked={members.length > 0 && selectedLeadIds.length === members.length}
+                    id={selectAllId}
                     onCheckedChange={handleToggleAllLeads}
                   />
-                  <Label htmlFor={selectAllId} className="text-sm font-medium cursor-pointer">
+                  <Label className="cursor-pointer font-medium text-sm" htmlFor={selectAllId}>
                     {t("sequences.form.leadSelection.selectAll", {
                       selected: selectedLeadIds.length,
                       total: members.length,
@@ -304,10 +306,10 @@ export function SequenceForm({
                 </div>
                 {selectedLeadIds.length > 0 && (
                   <Button
+                    onClick={() => setSelectedLeadIds([])}
+                    size="sm"
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedLeadIds([])}
                   >
                     {t("sequences.form.leadSelection.deselectAll")}
                   </Button>
@@ -316,24 +318,24 @@ export function SequenceForm({
 
               <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border bg-background p-3">
                 {members.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground">
+                  <p className="text-center text-muted-foreground text-sm">
                     {t("sequences.form.leadSelection.noLeads")}
                   </p>
                 ) : (
                   members.map((member) => (
                     <div
+                      className="flex items-center gap-2 rounded-sm p-2 transition-colors hover:bg-muted/50"
                       key={member.leadId}
-                      className="flex items-center gap-2 rounded-sm p-2 hover:bg-muted/50 transition-colors"
                     >
                       <Checkbox
-                        id={member.leadId}
                         checked={selectedLeadIds.includes(member.leadId)}
+                        id={member.leadId}
                         onCheckedChange={() => handleToggleLead(member.leadId)}
                       />
-                      <Label htmlFor={member.leadId} className="flex-1 text-sm cursor-pointer">
+                      <Label className="flex-1 cursor-pointer text-sm" htmlFor={member.leadId}>
                         <span className="font-medium">{member.leadCompanyName}</span>
                         {member.leadBusinessType && (
-                          <span className="ml-2 text-xs text-muted-foreground">
+                          <span className="ml-2 text-muted-foreground text-xs">
                             ({member.leadBusinessType})
                           </span>
                         )}
@@ -343,7 +345,7 @@ export function SequenceForm({
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {selectedLeadIds.length > 0
                   ? t("sequences.form.leadSelection.selectedNote", {
                       count: selectedLeadIds.length,
@@ -359,20 +361,20 @@ export function SequenceForm({
         <div className="space-y-2">
           <Label htmlFor="status">{t("sequences.form.status.label")}</Label>
           <Select
-            value={formData.status}
             onValueChange={(value) =>
               setFormData({
                 ...formData,
                 status: value as SequenceStatus,
               })
             }
+            value={formData.status}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">{t("sequences.form.status.draft")}</SelectItem>
-              <SelectItem value="active" disabled={stepsCount > 0}>
+              <SelectItem disabled={stepsCount > 0} value="active">
                 {t("sequences.form.status.active")}{" "}
                 {stepsCount > 0 && t("sequences.form.status.stepBasedNote")}
               </SelectItem>
@@ -383,16 +385,16 @@ export function SequenceForm({
             </SelectContent>
           </Select>
           {stepsCount > 0 && formData.status !== "active" && (
-            <p className="text-xs text-amber-600">{t("sequences.form.info.useToggleButton")}</p>
+            <p className="text-amber-600 text-xs">{t("sequences.form.info.useToggleButton")}</p>
           )}
         </div>
       )}
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button onClick={onCancel} type="button" variant="outline">
           {t("sequences.form.button.cancel")}
         </Button>
-        <Button type="submit" className="min-w-[100px]">
+        <Button className="min-w-[100px]" type="submit">
           {isEdit ? t("sequences.form.button.editComplete") : t("sequences.form.button.create")}
         </Button>
       </div>

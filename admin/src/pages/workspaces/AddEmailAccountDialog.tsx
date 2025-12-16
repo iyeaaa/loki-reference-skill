@@ -30,7 +30,7 @@ import {
 import { useCreateEmailAccount } from "@/lib/api/hooks/email-accounts"
 import { useWorkspaceMembers } from "@/lib/api/hooks/workspaces"
 
-interface AddEmailAccountDialogProps {
+type AddEmailAccountDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspaceId: string
@@ -119,8 +119,8 @@ export function AddEmailAccountDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>이메일 계정 추가</DialogTitle>
           <DialogDescription>
@@ -129,20 +129,20 @@ export function AddEmailAccountDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           {/* 사용자 선택 */}
           <div className="space-y-2">
             <Label htmlFor="user">
               사용자 <span className="text-red-500">*</span>
             </Label>
-            <Popover open={userOpen} onOpenChange={setUserOpen}>
+            <Popover onOpenChange={setUserOpen} open={userOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
-                  role="combobox"
                   aria-expanded={userOpen}
                   className="w-full justify-between font-normal"
+                  role="combobox"
                   type="button"
+                  variant="outline"
                 >
                   {formData.userId
                     ? members.find((member) => member.userId === formData.userId)?.username ||
@@ -154,9 +154,9 @@ export function AddEmailAccountDialog({
               <PopoverContent className="w-full p-0">
                 <Command className="max-h-[300px]">
                   <CommandInput
+                    onValueChange={setUserSearch}
                     placeholder="사용자 검색..."
                     value={userSearch}
-                    onValueChange={setUserSearch}
                   />
                   <CommandList>
                     <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
@@ -164,7 +164,6 @@ export function AddEmailAccountDialog({
                       {filteredMembers.map((member) => (
                         <CommandItem
                           key={member.userId}
-                          value={`${member.username} ${member.email}`}
                           onSelect={() => {
                             setFormData({
                               ...formData,
@@ -173,6 +172,7 @@ export function AddEmailAccountDialog({
                             setUserOpen(false)
                             setUserSearch("")
                           }}
+                          value={`${member.username} ${member.email}`}
                         >
                           <Check
                             className={`mr-2 h-4 w-4 ${
@@ -181,7 +181,7 @@ export function AddEmailAccountDialog({
                           />
                           <div className="flex flex-col">
                             <span>{member.username}</span>
-                            <span className="text-xs text-gray-500">{member.email}</span>
+                            <span className="text-gray-500 text-xs">{member.email}</span>
                           </div>
                         </CommandItem>
                       ))}
@@ -190,7 +190,7 @@ export function AddEmailAccountDialog({
                 </Command>
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               이 사용자가 이메일 발송 시 사용할 계정입니다
             </p>
           </div>
@@ -202,11 +202,11 @@ export function AddEmailAccountDialog({
             </Label>
             <Input
               id={emailAddressId}
+              onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
+              placeholder="sender@example.com"
+              required
               type="email"
               value={formData.emailAddress}
-              onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
-              required
-              placeholder="sender@example.com"
             />
           </div>
 
@@ -215,11 +215,11 @@ export function AddEmailAccountDialog({
             <Label htmlFor={displayNameId}>표시 이름</Label>
             <Input
               id={displayNameId}
-              value={formData.displayName}
               onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
               placeholder="발신자 이름"
+              value={formData.displayName}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               수신자에게 표시될 발신자 이름 (선택사항)
             </p>
           </div>
@@ -231,11 +231,11 @@ export function AddEmailAccountDialog({
             </Label>
             <Input
               id={apiKeyId}
+              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+              placeholder="SG.xxxxxxxxxxxxxxxxxx"
+              required
               type="password"
               value={formData.apiKey}
-              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              required
-              placeholder="SG.xxxxxxxxxxxxxxxxxx"
             />
           </div>
 
@@ -244,11 +244,11 @@ export function AddEmailAccountDialog({
             <Label htmlFor={sendgridVerifiedSenderIdId}>SendGrid Verified Sender ID</Label>
             <Input
               id={sendgridVerifiedSenderIdId}
-              value={formData.sendgridVerifiedSenderId}
               onChange={(e) =>
                 setFormData({ ...formData, sendgridVerifiedSenderId: e.target.value })
               }
               placeholder="Verified Sender ID (선택사항)"
+              value={formData.sendgridVerifiedSenderId}
             />
           </div>
 
@@ -258,11 +258,11 @@ export function AddEmailAccountDialog({
               <Label htmlFor={dailyLimitId}>일일 발송 제한</Label>
               <Input
                 id={dailyLimitId}
-                type="number"
                 min="0"
-                value={formData.dailyLimit}
                 onChange={(e) => setFormData({ ...formData, dailyLimit: e.target.value })}
                 placeholder="예: 500"
+                type="number"
+                value={formData.dailyLimit}
               />
             </div>
 
@@ -270,11 +270,11 @@ export function AddEmailAccountDialog({
               <Label htmlFor={monthlyLimitId}>월간 발송 제한</Label>
               <Input
                 id={monthlyLimitId}
-                type="number"
                 min="0"
-                value={formData.monthlyLimit}
                 onChange={(e) => setFormData({ ...formData, monthlyLimit: e.target.value })}
                 placeholder="예: 10000"
+                type="number"
+                value={formData.monthlyLimit}
               />
             </div>
           </div>
@@ -285,13 +285,13 @@ export function AddEmailAccountDialog({
               상태 <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={formData.status}
               onValueChange={(value) =>
                 setFormData({
                   ...formData,
                   status: value as typeof formData.status,
                 })
               }
+              value={formData.status}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -310,40 +310,38 @@ export function AddEmailAccountDialog({
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Checkbox
-                id={isVerifiedId}
                 checked={formData.isVerified}
+                id={isVerifiedId}
                 onCheckedChange={(checked) => setFormData({ ...formData, isVerified: !!checked })}
               />
-              <Label htmlFor={isVerifiedId} className="font-normal">
+              <Label className="font-normal" htmlFor={isVerifiedId}>
                 이메일 주소 인증됨
               </Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id={isDefaultId}
                 checked={formData.isDefault}
+                id={isDefaultId}
                 onCheckedChange={(checked) => setFormData({ ...formData, isDefault: !!checked })}
               />
-              <Label htmlFor={isDefaultId} className="font-normal">
+              <Label className="font-normal" htmlFor={isDefaultId}>
                 이 사용자의 기본 계정으로 설정
               </Label>
             </div>
           </div>
 
           {/* 버튼들 */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-3 border-t pt-4">
+            <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
               취소
             </Button>
             <Button
-              type="submit"
               disabled={
-                !formData.userId ||
-                !formData.emailAddress ||
-                !formData.apiKey ||
+                !(formData.userId && formData.emailAddress && formData.apiKey) ||
                 createEmailAccount.isPending
               }
+              type="submit"
             >
               {createEmailAccount.isPending ? "추가 중..." : "추가"}
             </Button>

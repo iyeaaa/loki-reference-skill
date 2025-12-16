@@ -95,7 +95,7 @@ export default function AuditLogsPage() {
       header: "액션",
       width: "120px",
       render: (item) => (
-        <Badge variant={ACTION_VARIANTS[item.action] || "secondary"} className="text-xs">
+        <Badge className="text-xs" variant={ACTION_VARIANTS[item.action] || "secondary"}>
           {IAM_AUDIT_ACTION_LABELS[item.action] || item.action}
         </Badge>
       ),
@@ -105,7 +105,7 @@ export default function AuditLogsPage() {
       header: "대상 유형",
       width: "80px",
       render: (item) => (
-        <span className="text-sm text-gray-600 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-600 text-sm">
           {IAM_TARGET_TYPE_LABELS[item.targetType] || item.targetType}
         </span>
       ),
@@ -116,7 +116,7 @@ export default function AuditLogsPage() {
       minWidth: "140px",
       render: (item) => (
         <div className="max-w-[140px]">
-          <div className="font-medium text-sm truncate" title={item.targetName || undefined}>
+          <div className="truncate font-medium text-sm" title={item.targetName || undefined}>
             {item.targetName || "-"}
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function AuditLogsPage() {
       header: "대상 ID",
       width: "90px",
       render: (item) => (
-        <span className="text-xs text-gray-400 font-mono" title={item.targetId}>
+        <span className="font-mono text-gray-400 text-xs" title={item.targetId}>
           {item.targetId.slice(0, 8)}
         </span>
       ),
@@ -138,7 +138,7 @@ export default function AuditLogsPage() {
       minWidth: "100px",
       render: (item) => (
         <div className="max-w-[100px]">
-          <div className="text-sm truncate" title={item.user?.username}>
+          <div className="truncate text-sm" title={item.user?.username}>
             {item.user?.username || "시스템"}
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function AuditLogsPage() {
       width: "100px",
       render: (item) => (
         <span
-          className="text-xs text-gray-500 truncate block max-w-[100px]"
+          className="block max-w-[100px] truncate text-gray-500 text-xs"
           title={item.workspace?.name}
         >
           {item.workspace?.name || "-"}
@@ -162,7 +162,7 @@ export default function AuditLogsPage() {
       header: "IP",
       width: "110px",
       render: (item) => (
-        <span className="text-xs text-gray-500 font-mono">{item.ipAddress || "-"}</span>
+        <span className="font-mono text-gray-500 text-xs">{item.ipAddress || "-"}</span>
       ),
     },
     {
@@ -170,7 +170,7 @@ export default function AuditLogsPage() {
       header: "시간",
       width: "80px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {formatRelativeTime(item.createdAt)}
         </span>
       ),
@@ -181,11 +181,11 @@ export default function AuditLogsPage() {
       width: "50px",
       render: (item) => (
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setViewingLog(item)}
           className="h-7 w-7 p-0"
+          onClick={() => setViewingLog(item)}
+          size="sm"
           title="상세 보기"
+          variant="ghost"
         >
           <Eye className="h-4 w-4" />
         </Button>
@@ -194,13 +194,13 @@ export default function AuditLogsPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <DataFilters
         filters={filterConfigs}
-        values={filterValues}
         onChange={updateFilter}
         onClear={clearFilters}
+        values={filterValues}
       />
 
       {/* Audit Logs Table */}
@@ -211,8 +211,8 @@ export default function AuditLogsPage() {
               <FileText className="h-5 w-5 text-gray-500" />
               <CardTitle className="text-lg">감사 로그</CardTitle>
             </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-1" />
+            <Button onClick={() => refetch()} size="sm" variant="outline">
+              <RefreshCw className="mr-1 h-4 w-4" />
               새로고침
             </Button>
           </div>
@@ -220,29 +220,29 @@ export default function AuditLogsPage() {
         <CardContent>
           {/* Table */}
           <DataTable
-            data={logs}
             columns={columns}
-            pagination={pagination}
+            data={logs}
+            emptyMessage="아직 기록된 로그가 없어요"
             isLoading={isFetching}
             onPageChange={handlePageChange}
-            emptyMessage="아직 기록된 로그가 없어요"
+            pagination={pagination}
           />
         </CardContent>
       </Card>
 
       {/* Detail Dialog */}
-      <Dialog open={!!viewingLog} onOpenChange={() => setViewingLog(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">감사 로그 상세</DialogTitle>
+      <Dialog onOpenChange={() => setViewingLog(null)} open={!!viewingLog}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">감사 로그 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {viewingLog && (
               <div className="space-y-6">
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">액션</span>
+                    <span className="font-medium text-gray-500 text-sm">액션</span>
                     <p className="mt-1">
                       <Badge variant={ACTION_VARIANTS[viewingLog.action] || "secondary"}>
                         {IAM_AUDIT_ACTION_LABELS[viewingLog.action] || viewingLog.action}
@@ -250,33 +250,33 @@ export default function AuditLogsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">대상 유형</span>
+                    <span className="font-medium text-gray-500 text-sm">대상 유형</span>
                     <p className="mt-1 text-sm">
                       {IAM_TARGET_TYPE_LABELS[viewingLog.targetType] || viewingLog.targetType}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">대상명</span>
+                    <span className="font-medium text-gray-500 text-sm">대상명</span>
                     <p className="mt-1 font-medium">{viewingLog.targetName || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">대상 ID</span>
-                    <p className="mt-1 text-sm font-mono text-gray-600">{viewingLog.targetId}</p>
+                    <span className="font-medium text-gray-500 text-sm">대상 ID</span>
+                    <p className="mt-1 font-mono text-gray-600 text-sm">{viewingLog.targetId}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">실행자</span>
+                    <span className="font-medium text-gray-500 text-sm">실행자</span>
                     <p className="mt-1 text-sm">{viewingLog.user?.username || "시스템"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">워크스페이스</span>
+                    <span className="font-medium text-gray-500 text-sm">워크스페이스</span>
                     <p className="mt-1 text-sm">{viewingLog.workspace?.name || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">IP 주소</span>
-                    <p className="mt-1 text-sm font-mono">{viewingLog.ipAddress || "-"}</p>
+                    <span className="font-medium text-gray-500 text-sm">IP 주소</span>
+                    <p className="mt-1 font-mono text-sm">{viewingLog.ipAddress || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">시간</span>
+                    <span className="font-medium text-gray-500 text-sm">시간</span>
                     <p className="mt-1 text-sm">
                       {new Date(viewingLog.createdAt).toLocaleString("ko-KR")}
                     </p>
@@ -286,8 +286,8 @@ export default function AuditLogsPage() {
                 {/* User Agent */}
                 {viewingLog.userAgent && (
                   <div>
-                    <span className="text-sm font-medium text-gray-500">User Agent</span>
-                    <p className="mt-1 text-xs text-gray-600 bg-gray-50 p-2 rounded break-all">
+                    <span className="font-medium text-gray-500 text-sm">User Agent</span>
+                    <p className="mt-1 break-all rounded bg-gray-50 p-2 text-gray-600 text-xs">
                       {viewingLog.userAgent}
                     </p>
                   </div>
@@ -295,9 +295,9 @@ export default function AuditLogsPage() {
 
                 {/* Old Value */}
                 {viewingLog.oldValue && Object.keys(viewingLog.oldValue).length > 0 && (
-                  <div className="pt-4 border-t">
-                    <span className="text-sm font-medium text-gray-500">변경 전</span>
-                    <pre className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs overflow-x-auto">
+                  <div className="border-t pt-4">
+                    <span className="font-medium text-gray-500 text-sm">변경 전</span>
+                    <pre className="mt-2 overflow-x-auto rounded-lg bg-red-50 p-3 text-xs dark:bg-red-900/20">
                       {JSON.stringify(viewingLog.oldValue, null, 2)}
                     </pre>
                   </div>
@@ -306,8 +306,8 @@ export default function AuditLogsPage() {
                 {/* New Value */}
                 {viewingLog.newValue && Object.keys(viewingLog.newValue).length > 0 && (
                   <div>
-                    <span className="text-sm font-medium text-gray-500">변경 후</span>
-                    <pre className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-xs overflow-x-auto">
+                    <span className="font-medium text-gray-500 text-sm">변경 후</span>
+                    <pre className="mt-2 overflow-x-auto rounded-lg bg-green-50 p-3 text-xs dark:bg-green-900/20">
                       {JSON.stringify(viewingLog.newValue, null, 2)}
                     </pre>
                   </div>

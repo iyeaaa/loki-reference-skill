@@ -74,11 +74,11 @@ export function SentEmailsTab() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">
+          <Mail className="mb-4 h-12 w-12 text-muted-foreground" />
+          <h3 className="mb-2 font-medium text-lg">
             {t("app.dashboard.selectWorkspace", "워크스페이스를 선택해주세요")}
           </h3>
-          <p className="text-sm text-muted-foreground max-w-md">
+          <p className="max-w-md text-muted-foreground text-sm">
             {t(
               "app.dashboard.selectWorkspaceDesc",
               "이메일 연동을 위해 사이드바에서 특정 워크스페이스를 선택해주세요.",
@@ -90,7 +90,7 @@ export function SentEmailsTab() {
   }
 
   // Show connect card for trial preview accounts (regardless of email count)
-  if (isTrialPreviewAccount || (!emailAccount && !emailAccountLoading)) {
+  if (isTrialPreviewAccount || !(emailAccount || emailAccountLoading)) {
     return <ConnectEmailCard userEmail={userEmail} />
   }
 
@@ -98,11 +98,11 @@ export function SentEmailsTab() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">
+          <Mail className="mb-4 h-12 w-12 text-muted-foreground" />
+          <h3 className="font-medium text-lg">
             {t("app.dashboard.noSentEmails", "No sent emails yet")}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground text-sm">
             {t("app.dashboard.noSentEmailsDesc", "Emails that have been sent will appear here")}
           </p>
         </CardContent>
@@ -122,28 +122,28 @@ export function SentEmailsTab() {
           <div className="space-y-2">
             {emails.map((email) => (
               <button
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
                 key={email.id}
-                type="button"
-                className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer w-full text-left"
                 onClick={() => handleEmailClick(email)}
+                type="button"
               >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10">
                     <User className="h-4 w-4 text-blue-500" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{email.toEmail}</span>
-                      <Badge variant="secondary" className="text-xs">
+                      <span className="truncate font-medium">{email.toEmail}</span>
+                      <Badge className="text-xs" variant="secondary">
                         {t("app.dashboard.sent", "Sent")}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className="truncate text-muted-foreground text-sm">
                       {email.subject || t("app.dashboard.noSubject", "(No subject)")}
                     </p>
                   </div>
                 </div>
-                <div className="flex-shrink-0 text-xs text-muted-foreground ml-4">
+                <div className="ml-4 flex-shrink-0 text-muted-foreground text-xs">
                   {email.sentAt ? format(new Date(email.sentAt), "MMM d, HH:mm") : ""}
                 </div>
               </button>
@@ -152,7 +152,7 @@ export function SentEmailsTab() {
         </CardContent>
       </Card>
 
-      <EmailDetailDialog email={selectedEmail} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EmailDetailDialog email={selectedEmail} onOpenChange={setDialogOpen} open={dialogOpen} />
     </>
   )
 }

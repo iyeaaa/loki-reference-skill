@@ -23,7 +23,7 @@ import {
 import type { EmailAccountStatus, UserEmailAccount } from "@/lib/api/types/email-account"
 import type { Workspace } from "@/lib/api/types/workspace"
 
-interface EmailAccountFormProps {
+type EmailAccountFormProps = {
   account?: UserEmailAccount
   isEdit?: boolean
   workspaces: Workspace[]
@@ -77,23 +77,23 @@ export function EmailAccountForm({
       sendgridVerifiedSenderId: formData.sendgridVerifiedSenderId || undefined,
       status: formData.status,
       isDefault: formData.isDefault,
-      dailyLimit: formData.dailyLimit ? parseInt(formData.dailyLimit, 10) : undefined,
-      monthlyLimit: formData.monthlyLimit ? parseInt(formData.monthlyLimit, 10) : undefined,
+      dailyLimit: formData.dailyLimit ? Number.parseInt(formData.dailyLimit, 10) : undefined,
+      monthlyLimit: formData.monthlyLimit ? Number.parseInt(formData.monthlyLimit, 10) : undefined,
     }
 
     onSave(dataToSend)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor={emailId}>이메일 주소 *</Label>
         <Input
           id={emailId}
-          type="email"
-          value={formData.emailAddress}
           onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
           required
+          type="email"
+          value={formData.emailAddress}
         />
       </div>
 
@@ -101,20 +101,20 @@ export function EmailAccountForm({
         <Label htmlFor={displayNameId}>표시 이름</Label>
         <Input
           id={displayNameId}
-          value={formData.displayName}
           onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+          value={formData.displayName}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="workspace">워크스페이스 *</Label>
-        <Popover open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
+        <Popover onOpenChange={setWorkspaceOpen} open={workspaceOpen}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
-              role="combobox"
               aria-expanded={workspaceOpen}
               className="w-full justify-between font-normal"
+              role="combobox"
+              variant="outline"
             >
               {formData.workspaceId
                 ? workspaces.find((ws) => ws.id === formData.workspaceId)?.name ||
@@ -126,9 +126,9 @@ export function EmailAccountForm({
           <PopoverContent className="w-full p-0">
             <Command>
               <CommandInput
+                onValueChange={setWorkspaceSearch}
                 placeholder="워크스페이스 검색..."
                 value={workspaceSearch}
-                onValueChange={setWorkspaceSearch}
               />
               <CommandList>
                 <CommandEmpty>워크스페이스를 찾을 수 없습니다.</CommandEmpty>
@@ -136,7 +136,6 @@ export function EmailAccountForm({
                   {filteredWorkspaces.map((workspace) => (
                     <CommandItem
                       key={workspace.id}
-                      value={workspace.id}
                       onSelect={(currentValue) => {
                         setFormData({
                           ...formData,
@@ -145,6 +144,7 @@ export function EmailAccountForm({
                         setWorkspaceOpen(false)
                         setWorkspaceSearch("")
                       }}
+                      value={workspace.id}
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
@@ -165,11 +165,11 @@ export function EmailAccountForm({
         <Label htmlFor={apiKeyId}>SendGrid API Key *</Label>
         <Input
           id={apiKeyId}
+          onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+          placeholder="SG.****"
+          required
           type="password"
           value={formData.apiKey}
-          onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-          required
-          placeholder="SG.****"
         />
       </div>
 
@@ -177,21 +177,21 @@ export function EmailAccountForm({
         <Label htmlFor={sendgridVerifiedSenderIdId}>SendGrid Verified Sender ID</Label>
         <Input
           id={sendgridVerifiedSenderIdId}
-          value={formData.sendgridVerifiedSenderId}
           onChange={(e) => setFormData({ ...formData, sendgridVerifiedSenderId: e.target.value })}
+          value={formData.sendgridVerifiedSenderId}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="status">상태</Label>
         <Select
-          value={formData.status}
           onValueChange={(value) =>
             setFormData({
               ...formData,
               status: value as EmailAccountStatus,
             })
           }
+          value={formData.status}
         >
           <SelectTrigger>
             <SelectValue />
@@ -211,11 +211,11 @@ export function EmailAccountForm({
           <Label htmlFor={dailyLimitId}>일일 발송 제한</Label>
           <Input
             id={dailyLimitId}
-            type="number"
             min="0"
-            value={formData.dailyLimit}
             onChange={(e) => setFormData({ ...formData, dailyLimit: e.target.value })}
             placeholder="무제한"
+            type="number"
+            value={formData.dailyLimit}
           />
         </div>
 
@@ -223,29 +223,29 @@ export function EmailAccountForm({
           <Label htmlFor={monthlyLimitId}>월별 발송 제한</Label>
           <Input
             id={monthlyLimitId}
-            type="number"
             min="0"
-            value={formData.monthlyLimit}
             onChange={(e) => setFormData({ ...formData, monthlyLimit: e.target.value })}
             placeholder="무제한"
+            type="number"
+            value={formData.monthlyLimit}
           />
         </div>
       </div>
 
       <div className="flex items-center space-x-2">
         <Checkbox
-          id={isDefaultId}
           checked={formData.isDefault}
+          id={isDefaultId}
           onCheckedChange={(checked) => setFormData({ ...formData, isDefault: !!checked })}
         />
         <Label htmlFor={isDefaultId}>기본 계정으로 설정</Label>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" className="min-w-[100px]">
+        <Button className="min-w-[100px]" type="submit">
           {isEdit ? "수정 완료" : "생성"}
         </Button>
       </div>

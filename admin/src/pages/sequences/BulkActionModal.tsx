@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface BulkActionModalProps {
+type BulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string, value: string | string[]) => void
@@ -67,18 +67,18 @@ export function BulkActionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="space-y-4 py-4">
           {actionType === "status" && (
             <div className="space-y-2">
               <Label>{t("sequences.bulkAction.statusToChange")}</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("sequences.bulkAction.selectStatus")} />
                 </SelectTrigger>
@@ -99,12 +99,12 @@ export function BulkActionModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             {t("sequences.bulkAction.cancel")}
           </Button>
           <Button
-            onClick={handleConfirm}
             disabled={actionType === "status" && !selectedValue}
+            onClick={handleConfirm}
             variant={actionType === "delete" ? "destructive" : "default"}
           >
             {actionType === "delete"

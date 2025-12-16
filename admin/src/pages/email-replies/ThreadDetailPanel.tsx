@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth-provider"
 import { generateQuotedText, getReplyRecipient, parseEmailList } from "@/lib/email-utils"
 import { EmailItem } from "./EmailItem"
 
-interface ThreadDetailPanelProps {
+type ThreadDetailPanelProps = {
   threadId: string
   workspaceId?: string
   onClose: () => void
@@ -60,7 +60,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       return expandedEmails[emailId]
     }
     // 기본값: 마지막 이메일만 펼침
-    return emails[emails.length - 1]?.id === emailId
+    return emails.at(-1)?.id === emailId
   }
 
   // 이메일 토글 (현재 isExpanded 상태를 기반으로 토글)
@@ -163,8 +163,10 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       return
     }
 
-    const lastEmail = emails[emails.length - 1]
-    if (!lastEmail) return
+    const lastEmail = emails.at(-1)
+    if (!lastEmail) {
+      return
+    }
 
     const effectiveWorkspaceId = lastEmail.workspaceId || workspaceId
 
@@ -210,10 +212,10 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
   if (isLoading) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <Card className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <div className="text-sm text-muted-foreground">{t("email-replies.thread.loading")}</div>
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-primary border-b-2" />
+          <div className="text-muted-foreground text-sm">{t("email-replies.thread.loading")}</div>
         </div>
       </Card>
     )
@@ -221,7 +223,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
   if (error) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <Card className="flex h-full items-center justify-center">
         <div className="text-center text-red-600">
           <div className="text-sm">{t("email-replies.thread.loadError")}</div>
         </div>
@@ -231,7 +233,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
   if (emails.length === 0) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <Card className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <div className="text-sm">{t("email-replies.thread.noMessages")}</div>
         </div>
@@ -240,14 +242,14 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="flex h-full flex-col">
       {/* Header */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-base truncate flex-1">
+          <h3 className="flex-1 truncate font-medium text-base">
             {emails[0]?.subject || t("email-replies.thread.noSubject")}
           </h3>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0 ml-2">
+          <Button className="ml-2 h-8 w-8 p-0" onClick={onClose} size="sm" variant="ghost">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -255,16 +257,16 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
       {/* AI Summary Section - Gmail Style */}
       {emails.length > 0 && (
-        <div className="px-4 pb-3 border-b bg-gray-50/50 dark:bg-gray-900/50">
-          {!summary && !summaryLoading && (
+        <div className="border-b bg-gray-50/50 px-4 pb-3 dark:bg-gray-900/50">
+          {!(summary || summaryLoading) && (
             <div className="flex justify-start">
               <Button
-                onClick={handleGenerateAISummary}
+                className="rounded-full bg-blue-600 px-4 py-2 font-medium text-sm text-white shadow-sm hover:bg-blue-700"
                 disabled={summaryLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm font-medium shadow-sm"
+                onClick={handleGenerateAISummary}
                 size="sm"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="mr-2 h-4 w-4" />
                 {t("email-replies.aiSummary.button.generate")}
               </Button>
             </div>
@@ -272,8 +274,8 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
           {summaryLoading && (
             <div className="flex items-center gap-3 py-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <span className="text-gray-600 text-sm dark:text-gray-400">
                 {t("email-replies.aiSummary.loading")}
               </span>
             </div>
@@ -283,25 +285,25 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="bg-blue-600 rounded-full p-1">
+                  <div className="rounded-full bg-blue-600 p-1">
                     <Sparkles className="h-3 w-3 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <span className="font-medium text-gray-900 text-sm dark:text-gray-100">
                     {t("email-replies.aiSummary.title")}
                   </span>
                 </div>
                 <Button
-                  onClick={handleGenerateAISummary}
+                  className="h-7 px-2 text-gray-500 text-xs hover:text-gray-700"
                   disabled={summaryLoading}
-                  variant="ghost"
+                  onClick={handleGenerateAISummary}
                   size="sm"
-                  className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                  variant="ghost"
                 >
                   {t("email-replies.aiSummary.button.regenerate")}
                 </Button>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
+              <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="whitespace-pre-line text-gray-800 text-sm leading-relaxed dark:text-gray-200">
                   {summary}
                 </div>
               </div>
@@ -309,20 +311,20 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
           )}
 
           {summaryError && (
-            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="bg-red-600 rounded-full p-1">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/20">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="rounded-full bg-red-600 p-1">
                   <Sparkles className="h-3 w-3 text-white" />
                 </div>
-                <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                <span className="font-medium text-red-800 text-sm dark:text-red-200">
                   {t("email-replies.aiSummary.error.title")}
                 </span>
               </div>
-              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{summaryError}</p>
+              <p className="mb-3 text-red-600 text-sm dark:text-red-400">{summaryError}</p>
               <Button
-                onClick={handleGenerateAISummary}
+                className="rounded-full bg-blue-600 px-3 py-1 text-white text-xs hover:bg-blue-700"
                 disabled={summaryLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs"
+                onClick={handleGenerateAISummary}
                 size="sm"
               >
                 {t("email-replies.aiSummary.button.tryAgain")}
@@ -338,9 +340,9 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
           <div className="pb-4">
             {emails.map((email) => (
               <EmailItem
-                key={email.id}
                 email={email}
                 isExpanded={isExpanded(email.id)}
+                key={email.id}
                 onToggle={() => toggleEmail(email.id)}
               />
             ))}
@@ -350,45 +352,45 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
       {/* AI Follow-up Suggestion & Reply Button */}
       {emails.length > 0 && (
-        <div className="px-4 py-3 border-t space-y-2">
+        <div className="space-y-2 border-t px-4 py-3">
           <div className="flex items-center gap-2">
             <Button
-              onClick={handleGenerateAISuggestion}
-              disabled={aiLoading}
-              variant="outline"
-              size="sm"
               className="flex-1"
+              disabled={aiLoading}
+              onClick={handleGenerateAISuggestion}
+              size="sm"
+              variant="outline"
             >
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Sparkles className="mr-2 h-4 w-4" />
               {aiLoading ? t("email-replies.ai.generating") : t("email-replies.ai.suggestion")}
             </Button>
             <Button
+              className="flex-1"
               onClick={() => setShowReply(true)}
               size="sm"
               variant="default"
-              className="flex-1"
             >
-              <Reply className="h-4 w-4 mr-2" />
+              <Reply className="mr-2 h-4 w-4" />
               {t("email-replies.thread.replyButton")}
             </Button>
           </div>
-          {aiError && <p className="text-sm text-red-600 dark:text-red-400">{aiError}</p>}
+          {aiError && <p className="text-red-600 text-sm dark:text-red-400">{aiError}</p>}
         </div>
       )}
 
       {/* Floating Reply Popup */}
       {emails.length > 0 && (
         <FloatingReplyPopup
+          initialText={initialReplyText}
           isOpen={showReply}
+          isSending={isSending}
           onClose={() => {
             setShowReply(false)
             setInitialReplyText("") // Reset initial text when closing
           }}
           onSend={handleSendReply}
-          to={emails[emails.length - 1]?.fromEmail || ""}
           subject={`Re: ${emails[0]?.subject || ""}`}
-          isSending={isSending}
-          initialText={initialReplyText}
+          to={emails.at(-1)?.fromEmail || ""}
         />
       )}
     </Card>

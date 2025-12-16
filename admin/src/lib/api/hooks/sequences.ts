@@ -189,7 +189,9 @@ export function useCreateSequenceStep(sequenceId?: string) {
       console.log("📎 Hook - Files count:", files?.length || 0)
 
       const id = data.sequenceId || sequenceId
-      if (!id) throw new Error("sequenceId is required")
+      if (!id) {
+        throw new Error("sequenceId is required")
+      }
 
       console.log("📎 Hook - About to call sequencesApi.createStep with:", {
         id,
@@ -241,7 +243,9 @@ export function useUpdateSequenceStep(sequenceId?: string) {
       })
 
       const id = variables.sequenceId || sequenceId
-      if (!id) throw new Error("sequenceId is required")
+      if (!id) {
+        throw new Error("sequenceId is required")
+      }
 
       console.log("📎 Hook - About to call sequencesApi.updateStep with:", {
         id,
@@ -292,7 +296,9 @@ export function useDeleteSequenceStep(sequenceId?: string) {
   return useMutation({
     mutationFn: ({ sequenceId: seqId, stepId }: { sequenceId?: string; stepId: string }) => {
       const id = seqId || sequenceId
-      if (!id) throw new Error("sequenceId is required")
+      if (!id) {
+        throw new Error("sequenceId is required")
+      }
       return sequencesApi.deleteStep(id, stepId)
     },
     onSuccess: (_, variables) => {

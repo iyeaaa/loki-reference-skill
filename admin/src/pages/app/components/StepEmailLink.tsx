@@ -70,9 +70,9 @@ export function StepEmailLink() {
   // Loading state
   if (isLoadingWorkspaces || isLoadingEmailAccounts) {
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="pt-12 pb-10 px-8 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <Card className="mx-auto max-w-2xl">
+        <CardContent className="flex items-center justify-center px-8 pt-12 pb-10">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         </CardContent>
       </Card>
     )
@@ -86,32 +86,32 @@ export function StepEmailLink() {
     return (
       <LinkedEmailAccountsView
         emailAccount={emailAccount}
-        workspaceId={workspace.id}
-        userId={userId}
+        isAddingMore={isLoading}
         onAddMore={handleConnect}
         onNext={handleNextStep}
-        isAddingMore={isLoading}
+        userId={userId}
+        workspaceId={workspace.id}
       />
     )
   }
 
   // No email accounts - show confirmation dialog
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardContent className="pt-12 pb-10 px-8">
+    <Card className="mx-auto max-w-2xl">
+      <CardContent className="px-8 pt-12 pb-10">
         <div className="flex flex-col items-center text-center">
           {/* Email Icon */}
-          <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
-            <Mail className="w-10 h-10 text-blue-500" />
+          <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50">
+            <Mail className="h-10 w-10 text-blue-500" />
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          <h2 className="mb-3 font-bold text-2xl text-gray-900">
             {t("app.onboarding.step4.connectTitle", "이메일 연동")}
           </h2>
 
           {/* Description */}
-          <p className="text-gray-500 mb-4 max-w-sm">
+          <p className="mb-4 max-w-sm text-gray-500">
             {t(
               "app.onboarding.step4.connectDescription",
               "이메일을 발송하기 위해 계정을 연동해주세요",
@@ -119,14 +119,14 @@ export function StepEmailLink() {
           </p>
 
           {/* Current user email info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 w-full max-w-sm">
+          <div className="mb-6 w-full max-w-sm rounded-lg bg-gray-50 p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Mail className="w-5 h-5 text-blue-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                <Mail className="h-5 w-5 text-blue-600" />
               </div>
               <div className="flex-1 text-left">
                 <p className="font-medium text-gray-900">{userEmail}</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-500 text-sm">
                   {isKorean ? "현재 로그인된 계정" : "Currently logged in account"}
                 </p>
               </div>
@@ -134,25 +134,25 @@ export function StepEmailLink() {
           </div>
 
           {/* Confirmation message */}
-          <p className="text-lg font-medium text-gray-900 mb-6">
+          <p className="mb-6 font-medium text-gray-900 text-lg">
             {t("app.onboarding.step4.confirmConnect", "연동하시겠습니까?")}
           </p>
 
           {/* Error Message */}
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          {error && <p className="mb-4 text-red-500 text-sm">{error}</p>}
 
           {/* Action Button */}
           <div className="w-full max-w-sm">
             <Button
-              size="lg"
-              onClick={handleConnect}
+              className="h-12 w-full bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+              onClick={handleConnect}
+              size="lg"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
-                <CheckCircle2 className="w-5 h-5 mr-2" />
+                <CheckCircle2 className="mr-2 h-5 w-5" />
               )}
               {isLoading
                 ? t("app.onboarding.step1.loading", "연동 중...")
@@ -166,7 +166,7 @@ export function StepEmailLink() {
 }
 
 // Linked email accounts view component
-interface LinkedEmailAccountsViewProps {
+type LinkedEmailAccountsViewProps = {
   emailAccount: UserEmailAccount
   workspaceId: string
   userId: string
@@ -194,7 +194,9 @@ function LinkedEmailAccountsView({
     const confirmed = window.confirm(
       t("app.onboarding.step1.deleteConfirm", "이 이메일 계정을 삭제하시겠습니까?"),
     )
-    if (!confirmed) return
+    if (!confirmed) {
+      return
+    }
 
     setIsDeleting(true)
     try {
@@ -216,15 +218,15 @@ function LinkedEmailAccountsView({
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardContent className="pt-8 pb-8 px-8">
+    <Card className="mx-auto max-w-2xl">
+      <CardContent className="px-8 pt-8 pb-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6 text-green-500" />
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
+            <CheckCircle2 className="h-6 w-6 text-green-500" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="font-bold text-gray-900 text-xl">
               {t("app.onboarding.step1.linkedTitle", "이메일 계정이 연동되었습니다")}
             </h2>
             <p className="text-gray-500 text-sm">
@@ -234,27 +236,27 @@ function LinkedEmailAccountsView({
         </div>
 
         {/* Email Account Card */}
-        <div className="border rounded-lg p-4 mb-6">
+        <div className="mb-6 rounded-lg border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Mail className="w-5 h-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+              <Mail className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{emailAccount.emailAddress}</span>
                 {emailAccount.isDefault && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge className="text-xs" variant="secondary">
                     {t("app.onboarding.step1.default", "기본")}
                   </Badge>
                 )}
               </div>
               {emailAccount.displayName && (
-                <span className="text-sm text-gray-500">{emailAccount.displayName}</span>
+                <span className="text-gray-500 text-sm">{emailAccount.displayName}</span>
               )}
             </div>
             <Badge
-              variant={emailAccount.status === "active" ? "default" : "secondary"}
               className={emailAccount.status === "active" ? "bg-green-100 text-green-700" : ""}
+              variant={emailAccount.status === "active" ? "default" : "secondary"}
             >
               {emailAccount.status === "active"
                 ? t("app.onboarding.step1.statusActive", "활성")
@@ -262,16 +264,16 @@ function LinkedEmailAccountsView({
             </Badge>
             {/* Delete Button */}
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
+              className="text-gray-400 hover:bg-red-50 hover:text-red-500"
               disabled={isDeleting}
-              className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+              onClick={handleDelete}
+              size="icon"
+              variant="ghost"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               )}
             </Button>
           </div>
@@ -279,23 +281,23 @@ function LinkedEmailAccountsView({
 
         {/* Add More Button */}
         <Button
-          variant="outline"
-          onClick={onAddMore}
+          className="mb-4 h-11 w-full border-dashed"
           disabled={isAddingMore}
-          className="w-full mb-4 h-11 border-dashed"
+          onClick={onAddMore}
+          variant="outline"
         >
           {isAddingMore ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
           )}
           {t("app.onboarding.step1.addMore", "다른 이메일 계정 추가")}
         </Button>
 
         {/* Next Step Button */}
-        <Button onClick={onNext} className="w-full bg-blue-500 hover:bg-blue-600 text-white h-11">
+        <Button className="h-11 w-full bg-blue-500 text-white hover:bg-blue-600" onClick={onNext}>
           {t("app.onboarding.step1.nextButton", "다음 단계로")}
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardContent>
     </Card>

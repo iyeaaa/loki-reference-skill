@@ -18,7 +18,7 @@ import { EmailBody } from "./EmailBody"
 import { IntentSelector } from "./IntentSelector"
 import { getDomain, getInitials, getName } from "./utils"
 
-interface EmailItemProps {
+type EmailItemProps = {
   email: ThreadEmail
   isExpanded: boolean
   onToggle: () => void
@@ -39,7 +39,9 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
   // 미리보기 content는 접힌 상태일 때만 계산 (최적화)
   const getPreviewContent = () => {
-    if (isExpanded) return ""
+    if (isExpanded) {
+      return ""
+    }
     const content =
       email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
     // 최대 150자까지만 표시 (너무 길면 잘라냄)
@@ -49,7 +51,9 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
   // 첨부파일 다운로드 핸들러
   const handleDownloadAttachment = async (attachmentIndex: number) => {
     const attachment = email.attachments?.[attachmentIndex]
-    if (!attachment) return
+    if (!attachment) {
+      return
+    }
 
     try {
       const response = await fetch(`/api/v1/emails/${email.id}/attachments/${attachmentIndex}`)
@@ -73,8 +77,12 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
   // 파일 크기 포맷팅
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    if (bytes < 1024) {
+      return `${bytes} B`
+    }
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`
+    }
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
@@ -93,7 +101,9 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
   // Engagement status indicators (for outbound emails)
   const renderEngagementIndicators = () => {
-    if (email.direction === "inbound") return null
+    if (email.direction === "inbound") {
+      return null
+    }
 
     const indicators = []
 
@@ -133,7 +143,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
             <div className="flex items-center gap-0.5">
               <Eye className="h-3 w-3 text-blue-600" />
               {email.openCount > 1 && (
-                <span className="text-xs text-blue-600">{email.openCount}</span>
+                <span className="text-blue-600 text-xs">{email.openCount}</span>
               )}
             </div>
           </TooltipTrigger>
@@ -154,7 +164,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
             <div className="flex items-center gap-0.5">
               <MousePointerClick className="h-3 w-3 text-purple-600" />
               {email.clickCount > 1 && (
-                <span className="text-xs text-purple-600">{email.clickCount}</span>
+                <span className="text-purple-600 text-xs">{email.clickCount}</span>
               )}
             </div>
           </TooltipTrigger>
@@ -174,44 +184,44 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
   return (
     <div
-      className={`w-full rounded-lg border-t pt-4 pb-2 px-2 ${
+      className={`w-full rounded-lg border-t px-2 pt-4 pb-2 ${
         email.direction === "inbound" ? "bg-blue-50/30 dark:bg-blue-950/10" : ""
       }`}
     >
       <div>
         {/* Sender header - 클릭 가능 */}
         <button
-          type="button"
-          className="w-full flex items-start gap-3 mb-2 cursor-pointer text-left bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 transition-colors"
+          className="-m-2 mb-2 flex w-full cursor-pointer items-start gap-3 rounded bg-transparent p-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
           onClick={onToggle}
+          type="button"
         >
           {/* Profile Circle */}
-          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+            <span className="font-medium text-gray-600 text-xs dark:text-gray-300">
               {getInitials(senderEmail)}
             </span>
           </div>
 
           {/* Sender info */}
-          <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <div className="flex items-center gap-2 mb-0.5">
-                <div className="font-medium text-sm truncate">
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="mb-0.5 flex items-center gap-2">
+                <div className="truncate font-medium text-sm">
                   {senderName}{" "}
-                  <span className="text-gray-500 font-normal">&lt;{senderEmail}&gt;</span>
+                  <span className="font-normal text-gray-500">&lt;{senderEmail}&gt;</span>
                 </div>
                 {/* Sequence step badge for outbound emails */}
                 {email.direction === "outbound" &&
                   email.sequenceName &&
                   email.stepOrder !== null &&
                   email.stepOrder !== undefined && (
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">
+                    <Badge className="flex-shrink-0 text-xs" variant="secondary">
                       Step {email.stepOrder}
                     </Badge>
                   )}
               </div>
               {isExpanded ? (
-                <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <div className="mt-0.5 flex items-center gap-1 text-muted-foreground text-xs">
                   <span>{recipientName}에게</span>
                   <Popover>
                     <Tooltip>
@@ -219,7 +229,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                         <PopoverTrigger asChild>
                           {/* biome-ignore lint/a11y/useSemanticElements: Cannot use button due to nesting in parent button */}
                           <span
-                            className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors inline-flex cursor-pointer"
+                            className="ml-1 inline-flex cursor-pointer rounded p-0.5 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
@@ -237,10 +247,10 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                         <p>상세 정보 보기</p>
                       </TooltipContent>
                     </Tooltip>
-                    <PopoverContent className="w-80" align="start">
+                    <PopoverContent align="start" className="w-80">
                       <div className="space-y-2 text-xs">
                         <div className="flex">
-                          <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
+                          <span className="w-24 font-medium text-gray-700 dark:text-gray-300">
                             보낸사람:
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
@@ -248,13 +258,13 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                           </span>
                         </div>
                         <div className="flex">
-                          <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
+                          <span className="w-24 font-medium text-gray-700 dark:text-gray-300">
                             받는사람:
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">{recipientEmail}</span>
                         </div>
                         <div className="flex">
-                          <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
+                          <span className="w-24 font-medium text-gray-700 dark:text-gray-300">
                             날짜:
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
@@ -262,7 +272,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                           </span>
                         </div>
                         <div className="flex">
-                          <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
+                          <span className="w-24 font-medium text-gray-700 dark:text-gray-300">
                             제목:
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
@@ -270,7 +280,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                           </span>
                         </div>
                         <div className="flex">
-                          <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
+                          <span className="w-24 font-medium text-gray-700 dark:text-gray-300">
                             발송 도메인:
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">{senderDomain}</span>
@@ -280,15 +290,15 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                   </Popover>
                 </div>
               ) : (
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 whitespace-pre-wrap line-clamp-2">
+                <div className="mt-0.5 line-clamp-2 whitespace-pre-wrap text-gray-400 text-xs dark:text-gray-500">
                   {getPreviewContent() || "(내용 없음)"}
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center gap-2">
               {/* Engagement indicators */}
               {renderEngagementIndicators()}
-              <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              <div className="whitespace-nowrap text-gray-600 text-xs dark:text-gray-400">
                 {formatKoreanDateTime(email.createdAt)}
               </div>
             </div>
@@ -297,11 +307,11 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
         {/* Intent Badge for inbound emails only */}
         {email.direction === "inbound" && (
-          <div className="ml-13 mt-2 flex items-center gap-2">
+          <div className="mt-2 ml-13 flex items-center gap-2">
             <IntentSelector
+              currentIntent={email.replyIntent}
               emailId={email.id}
               emailReplyId={email.emailReplyId || undefined}
-              currentIntent={email.replyIntent}
               size="sm"
             />
           </div>
@@ -310,40 +320,40 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
         {/* Email body - only show when expanded, 선택 가능 */}
         {isExpanded && (
           <>
-            <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3 select-text cursor-text">
+            <div className="mt-3 ml-13 cursor-text select-text text-gray-700 text-sm dark:text-gray-300">
               <EmailBody
-                bodyText={email.bodyText ?? undefined}
                 bodyHtml={email.bodyHtml ?? undefined}
+                bodyText={email.bodyText ?? undefined}
               />
             </div>
 
             {/* 첨부파일 섹션 */}
             {email.attachments && email.attachments.length > 0 && (
-              <div className="ml-13 mt-4 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground mb-2">첨부파일</div>
+              <div className="mt-4 ml-13 space-y-2">
+                <div className="mb-2 font-medium text-muted-foreground text-xs">첨부파일</div>
                 <div className="flex flex-wrap gap-2">
                   {email.attachments.map((attachment, index) => (
                     <div
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm transition-colors hover:bg-muted/80"
                       key={index}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm hover:bg-muted/80 transition-colors"
                     >
                       {getFileIcon(attachment.filename)}
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium text-foreground truncate max-w-[200px]">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="max-w-[200px] truncate font-medium text-foreground">
                           {attachment.filename}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {formatFileSize(attachment.size)}
                         </span>
                       </div>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 ml-1"
+                        className="ml-1 h-6 w-6"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDownloadAttachment(index)
                         }}
+                        size="icon"
+                        variant="ghost"
                       >
                         <Download className="h-3 w-3" />
                       </Button>

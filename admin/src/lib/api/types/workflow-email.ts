@@ -3,7 +3,7 @@
 export type WorkflowEmailStatus = "pending" | "generating" | "generated" | "edited" | "failed"
 export type GenerationMode = "ai" | "manual" | "template"
 
-export interface WorkflowGeneratedEmail {
+export type WorkflowGeneratedEmail = {
   id: string
   sequenceId: string
   nodeId: string
@@ -28,7 +28,7 @@ export interface WorkflowGeneratedEmail {
   industry?: string
 }
 
-export interface GenerateAllEmailsRequest {
+export type GenerateAllEmailsRequest = {
   mode: "ai" | "manual" | "template"
   aiPrompt?: string
   aiModel?: string
@@ -38,7 +38,7 @@ export interface GenerateAllEmailsRequest {
   incremental?: boolean // true면 이미 생성된 이메일은 스킵
 }
 
-export interface GenerateAllEmailsResponse {
+export type GenerateAllEmailsResponse = {
   message: string
   generated: number
   total: number
@@ -50,7 +50,7 @@ export interface GenerateAllEmailsResponse {
   }>
 }
 
-export interface UpdateGeneratedEmailRequest {
+export type UpdateGeneratedEmailRequest = {
   subject?: string
   bodyText?: string
   bodyHtml?: string

@@ -11,7 +11,7 @@ import type {
   StreamEvent,
 } from "../types/chatbot"
 
-export interface EventHandlerContext {
+export type EventHandlerContext = {
   accumulatedData: {
     analysis: string
     insights: unknown[]
@@ -33,7 +33,7 @@ export type EventHandler = (data: StreamEvent, context: EventHandlerContext) => 
  * - Does NOT add to NodeProgressTracker (progress events handle that)
  */
 export const handleNodeStart: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Node starting:`, data.node, "-", data.message)
+  console.log("[Chatbot] Node starting:", data.node, "-", data.message)
 
   // Show in thinking indicator only
   if (data.message && context.callbacks.onThinking) {
@@ -48,7 +48,7 @@ export const handleNodeStart: EventHandler = (data, context) => {
  * Handle node-complete event - node execution completed
  */
 export const handleNodeComplete: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Node completed:`, data.node, "-", data.message)
+  console.log("[Chatbot] Node completed:", data.node, "-", data.message)
   console.log("[Chatbot] Full node-complete data:", data)
 
   // Track node progress
@@ -134,7 +134,7 @@ export const handleNodeComplete: EventHandler = (data, context) => {
  * Handle thinking event - legacy support
  */
 export const handleThinking: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Thinking:`, data.message)
+  console.log("[Chatbot] Thinking:", data.message)
 
   if (data.message && context.callbacks.onThinking) {
     context.callbacks.onThinking(data.message)
@@ -145,7 +145,7 @@ export const handleThinking: EventHandler = (data, context) => {
  * Handle progress event - node execution progress
  */
 export const handleProgress: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Progress:`, data)
+  console.log("[Chatbot] Progress:", data)
 
   // Convert StreamEvent to ChatbotProgress
   const progress: ChatbotProgress = {
@@ -200,7 +200,7 @@ export const handleProgress: EventHandler = (data, context) => {
  * Handle text_chunk event - LLM streaming chunks
  */
 export const handleTextChunk: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Text chunk:`, data.chunk?.substring(0, 50))
+  console.log("[Chatbot] Text chunk:", data.chunk?.substring(0, 50))
 
   const { accumulatedData, callbacks } = context
 
@@ -263,16 +263,24 @@ export const handleInterrupt: EventHandler = (data, context) => {
  * Handle node event - legacy node completion
  */
 export const handleNode: EventHandler = (data, context) => {
-  console.log(`[Chatbot] Node event:`, data.node)
+  console.log("[Chatbot] Node event:", data.node)
 
   const { accumulatedData, callbacks } = context
   const state = data.state || {}
 
   // Update accumulated data
-  if (state.analysis) accumulatedData.analysis = state.analysis as string
-  if (state.insights) accumulatedData.insights = state.insights as unknown[]
-  if (state.generatedSQL) accumulatedData.sql = state.generatedSQL as string
-  if (state.queryResult) accumulatedData.result = state.queryResult as unknown[]
+  if (state.analysis) {
+    accumulatedData.analysis = state.analysis as string
+  }
+  if (state.insights) {
+    accumulatedData.insights = state.insights as unknown[]
+  }
+  if (state.generatedSQL) {
+    accumulatedData.sql = state.generatedSQL as string
+  }
+  if (state.queryResult) {
+    accumulatedData.result = state.queryResult as unknown[]
+  }
   if (state.followUpQuestions) {
     accumulatedData.followUpQuestions = state.followUpQuestions as string[]
   }

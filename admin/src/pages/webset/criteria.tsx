@@ -119,38 +119,40 @@ export default function WebsetCriteriaPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Half - Search Configuration */}
-      <div className="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+      <div className="w-1/2 border-gray-200 border-r p-6 dark:border-gray-700">
+        <h2 className="mb-4 font-bold text-2xl text-gray-900 dark:text-gray-100">
           Search Configuration
         </h2>
 
         <div className="space-y-6">
           {/* Target Count Picker */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+          <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
             <label
+              className="mb-2 block font-semibold text-gray-700 text-sm dark:text-gray-300"
               htmlFor={targetCountId}
-              className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
             >
               Target Webset Count
             </label>
             <Input
-              id={targetCountId}
-              type="number"
-              min="1"
-              max="1000"
-              value={targetCount}
-              onChange={(e) => setTargetCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
               className="w-full"
+              id={targetCountId}
+              max="1000"
+              min="1"
+              onChange={(e) =>
+                setTargetCount(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+              }
               placeholder="Enter target count"
+              type="number"
+              value={targetCount}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="mt-2 text-gray-500 text-xs dark:text-gray-400">
               Number of validated companies to find (default: 10)
             </p>
           </div>
 
           {/* Info Box */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+            <p className="text-blue-800 text-sm dark:text-blue-200">
               The system will search and validate companies until it reaches your target count.
             </p>
           </div>
@@ -158,39 +160,39 @@ export default function WebsetCriteriaPage() {
       </div>
 
       {/* Right Half - Criteria Result */}
-      <div className="w-1/2 p-6 bg-gray-50 dark:bg-gray-900">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Query Analysis</h2>
+      <div className="w-1/2 bg-gray-50 p-6 dark:bg-gray-900">
+        <h2 className="mb-6 font-bold text-2xl text-gray-900 dark:text-gray-100">Query Analysis</h2>
 
         {isPending ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="flex h-40 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-blue-500 border-b-2" />
           </div>
         ) : isError ? (
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-800 dark:text-red-200">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-red-800 text-sm dark:text-red-200">
               Error: {error?.message || "Failed to generate criteria"}
             </p>
           </div>
         ) : criteriaResult ? (
           <div className="space-y-6">
             {/* Original Query */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+              <h3 className="mb-2 font-semibold text-gray-500 text-sm uppercase dark:text-gray-400">
                 Original Query
               </h3>
-              <p className="text-lg text-gray-900 dark:text-gray-100">{query}</p>
+              <p className="text-gray-900 text-lg dark:text-gray-100">{query}</p>
             </div>
 
             {/* Rewritten Query */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border-2 border-blue-500">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-blue-500 uppercase">Rewritten Query</h3>
+            <div className="rounded-lg border-2 border-blue-500 bg-white p-4 shadow-sm dark:bg-gray-800">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold text-blue-500 text-sm uppercase">Rewritten Query</h3>
                 {!isEditingQuery && (
                   <Button
+                    className="h-7 w-7 p-0"
                     onClick={handleEditQuery}
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0"
                   >
                     <Pencil className="h-3 w-3 text-blue-600" />
                   </Button>
@@ -199,109 +201,117 @@ export default function WebsetCriteriaPage() {
               {isEditingQuery ? (
                 <div className="flex gap-2">
                   <Input
-                    value={rewrittenQuery}
-                    onChange={(e) => setRewrittenQuery(e.target.value)}
-                    className="flex-1"
-                    placeholder="Enter rewritten query"
                     autoFocus
+                    className="flex-1"
+                    onChange={(e) => setRewrittenQuery(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveQuery()
-                      if (e.key === "Escape") handleCancelQueryEdit()
+                      if (e.key === "Enter") {
+                        handleSaveQuery()
+                      }
+                      if (e.key === "Escape") {
+                        handleCancelQueryEdit()
+                      }
                     }}
+                    placeholder="Enter rewritten query"
+                    value={rewrittenQuery}
                   />
                   <Button
+                    className="h-9 w-9 p-0"
                     onClick={handleSaveQuery}
                     size="sm"
                     variant="ghost"
-                    className="h-9 w-9 p-0"
                   >
                     <Check className="h-4 w-4 text-green-600" />
                   </Button>
                   <Button
+                    className="h-9 w-9 p-0"
                     onClick={handleCancelQueryEdit}
                     size="sm"
                     variant="ghost"
-                    className="h-9 w-9 p-0"
                   >
                     <X className="h-4 w-4 text-red-600" />
                   </Button>
                 </div>
               ) : (
-                <p className="text-lg text-gray-900 dark:text-gray-100">{rewrittenQuery}</p>
+                <p className="text-gray-900 text-lg dark:text-gray-100">{rewrittenQuery}</p>
               )}
             </div>
 
             {/* Criterias List */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase">
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-500 text-sm uppercase dark:text-gray-400">
                   Criterias ({editableCriterias.length}/{MAX_CRITERIAS})
                 </h3>
                 <Button
-                  onClick={handleAddNew}
+                  className="h-7 text-xs"
                   disabled={editableCriterias.length >= MAX_CRITERIAS}
+                  onClick={handleAddNew}
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
+                  <Plus className="mr-1 h-3 w-3" />
                   Add
                 </Button>
               </div>
               {editableCriterias.length > 0 ? (
                 <ul className="space-y-2">
                   {editableCriterias.map((criteria, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-blue-500 font-semibold text-sm mt-2">{index + 1}.</span>
+                    <li className="flex items-start gap-2" key={index}>
+                      <span className="mt-2 font-semibold text-blue-500 text-sm">{index + 1}.</span>
                       {editingIndex === index ? (
-                        <div className="flex-1 flex gap-2">
+                        <div className="flex flex-1 gap-2">
                           <Input
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="flex-1 h-8 text-sm"
-                            placeholder="Enter criteria"
                             autoFocus
+                            className="h-8 flex-1 text-sm"
+                            onChange={(e) => setEditValue(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSaveEdit()
-                              if (e.key === "Escape") handleCancelEdit()
+                              if (e.key === "Enter") {
+                                handleSaveEdit()
+                              }
+                              if (e.key === "Escape") {
+                                handleCancelEdit()
+                              }
                             }}
+                            placeholder="Enter criteria"
+                            value={editValue}
                           />
                           <Button
+                            className="h-8 w-8 p-0"
                             onClick={handleSaveEdit}
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0"
                           >
                             <Check className="h-4 w-4 text-green-600" />
                           </Button>
                           <Button
+                            className="h-8 w-8 p-0"
                             onClick={handleCancelEdit}
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0"
                           >
                             <X className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex-1 flex items-center justify-between gap-2 group">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                        <div className="group flex flex-1 items-center justify-between gap-2">
+                          <span className="flex-1 text-gray-700 text-sm dark:text-gray-300">
                             {criteria}
                           </span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                             <Button
+                              className="h-7 w-7 p-0"
                               onClick={() => handleEdit(index)}
                               size="sm"
                               variant="ghost"
-                              className="h-7 w-7 p-0"
                             >
                               <Pencil className="h-3 w-3 text-blue-600" />
                             </Button>
                             <Button
+                              className="h-7 w-7 p-0"
                               onClick={() => handleDelete(index)}
                               size="sm"
                               variant="ghost"
-                              className="h-7 w-7 p-0"
                             >
                               <Trash2 className="h-3 w-3 text-red-600" />
                             </Button>
@@ -312,15 +322,15 @@ export default function WebsetCriteriaPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-gray-500 text-sm dark:text-gray-400">
                   No criterias yet. Click Add to create one.
                 </p>
               )}
             </div>
 
             {/* Info Box */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+              <p className="text-blue-800 text-sm dark:text-blue-200">
                 The query has been analyzed and rewritten for better search results.
               </p>
             </div>
@@ -328,7 +338,7 @@ export default function WebsetCriteriaPage() {
             {/* Create Webset Button */}
             <div className="flex justify-end">
               <Button
-                onClick={handleCreateWebset}
+                className="w-full"
                 disabled={
                   !selectedWorkspace?.id ||
                   editableCriterias.length === 0 ||
@@ -336,8 +346,8 @@ export default function WebsetCriteriaPage() {
                   !rewrittenQuery.trim() ||
                   createWebsetMutation.isPending
                 }
+                onClick={handleCreateWebset}
                 size="lg"
-                className="w-full"
               >
                 {createWebsetMutation.isPending ? "Creating..." : "Create Webset"}
               </Button>

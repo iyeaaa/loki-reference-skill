@@ -67,7 +67,7 @@ import WorkspacesPage from "./workspaces/WorkspacesPage"
  * - permission: "admin-only" - 시스템 Admin만 표시
  * - permission: undefined - 모든 로그인 사용자에게 표시 (기본값)
  */
-interface SettingsMenuItem {
+type SettingsMenuItem = {
   id: string
   label: string
   icon: React.ReactNode
@@ -110,7 +110,9 @@ export default function SettingsPage() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
@@ -354,7 +356,9 @@ export default function SettingsPage() {
    */
   const sidebarItems = useMemo(() => {
     // 권한 로딩 중이면 빈 배열 (깜박임 방지)
-    if (permissionLoading) return []
+    if (permissionLoading) {
+      return []
+    }
 
     // 권한 체크 함수
     const canAccess = (item: SettingsMenuItem): boolean => {
@@ -364,13 +368,19 @@ export default function SettingsPage() {
       }
 
       // Admin은 모든 메뉴 접근 가능
-      if (isSystemAdmin) return true
+      if (isSystemAdmin) {
+        return true
+      }
 
       // "admin-only" 권한인 경우
-      if (item.permission === "admin-only") return false
+      if (item.permission === "admin-only") {
+        return false
+      }
 
       // "public" 또는 undefined는 모든 사용자 접근 가능
-      if (!item.permission || item.permission === "public") return true
+      if (!item.permission || item.permission === "public") {
+        return true
+      }
 
       // IAM 권한 체크
       return hasPermission(item.permission.resource, item.permission.action)
@@ -417,7 +427,7 @@ export default function SettingsPage() {
   if (isLoading || permissionLoading) {
     return (
       <div className="flex h-screen">
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-1 items-center justify-center">
           <div className="text-center">{t("common.loading")}</div>
         </div>
       </div>
@@ -439,56 +449,56 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+              <form className="max-w-2xl space-y-6" onSubmit={handleSubmit}>
                 {/* Profile Picture Upload */}
                 <div className="space-y-3">
                   <Label>{t("settings.profile.profilePicture")}</Label>
                   <div className="flex items-center gap-6">
-                    <div className="relative group">
+                    <div className="group relative">
                       <Avatar className="h-24 w-24 border-2 border-muted">
-                        <AvatarImage src={previewImage || undefined} alt="Profile" />
-                        <AvatarFallback className="text-2xl bg-muted">
+                        <AvatarImage alt="Profile" src={previewImage || undefined} />
+                        <AvatarFallback className="bg-muted text-2xl">
                           {formData.username?.charAt(0)?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <button
-                        type="button"
+                        className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        type="button"
                       >
                         <Camera className="h-6 w-6 text-white" />
                       </button>
                     </div>
                     <div className="flex flex-col gap-2">
                       <input
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
                       />
                       <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        size="sm"
                         type="button"
                         variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
+                        <Upload className="mr-2 h-4 w-4" />
                         {t("settings.profile.uploadPhoto")}
                       </Button>
                       {previewImage && (
                         <Button
+                          className="text-destructive hover:text-destructive"
+                          onClick={handleRemoveImage}
+                          size="sm"
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveImage}
-                          className="text-destructive hover:text-destructive"
                         >
-                          <X className="h-4 w-4 mr-2" />
+                          <X className="mr-2 h-4 w-4" />
                           {t("settings.profile.removePhoto")}
                         </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {t("settings.profile.photoHint")}
                       </p>
                     </div>
@@ -500,10 +510,10 @@ export default function SettingsPage() {
                   <Input
                     id={nameId}
                     name="username"
-                    value={formData.username}
                     onChange={handleChange}
                     placeholder="홍길동"
                     required
+                    value={formData.username}
                   />
                 </div>
                 <div className="space-y-2">
@@ -511,14 +521,14 @@ export default function SettingsPage() {
                   <Input
                     id={emailId}
                     name="email"
-                    type="email"
-                    value={formData.email}
                     onChange={handleChange}
                     placeholder="email@example.com"
                     required
+                    type="email"
+                    value={formData.email}
                   />
                 </div>
-                <Button type="submit" disabled={updateProfileMutation.isPending}>
+                <Button disabled={updateProfileMutation.isPending} type="submit">
                   {updateProfileMutation.isPending
                     ? t("settings.profile.saving")
                     : t("settings.profile.saveChanges")}
@@ -527,10 +537,10 @@ export default function SettingsPage() {
 
               <DangerZone
                 canDelete={deletionCheck?.canDelete ?? false}
+                isDeleting={deleteAccountMutation.isPending}
+                onDeleteAccount={() => deleteAccountMutation.mutate()}
                 workspacesRequiringTransfer={deletionCheck?.workspacesRequiringTransfer ?? []}
                 workspacesToBeDeleted={deletionCheck?.workspacesToBeDeleted ?? []}
-                onDeleteAccount={() => deleteAccountMutation.mutate()}
-                isDeleting={deleteAccountMutation.isPending}
               />
             </CardContent>
           </Card>
@@ -586,55 +596,51 @@ export default function SettingsPage() {
     sidebarItems.find((item) => item.id === activeTab)?.label || t("settings.title")
 
   return (
-    <div className="flex h-full overflow-hidden gap-4">
+    <div className="flex h-full gap-4 overflow-hidden">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <button
-          type="button"
           aria-label="Close sidebar"
-          className="fixed inset-0 bg-black/50 z-40 sm:hidden cursor-default"
+          className="fixed inset-0 z-40 cursor-default bg-black/50 sm:hidden"
           onClick={() => setIsSidebarOpen(false)}
+          type="button"
         />
       )}
 
       {/* Sidebar - Hidden on mobile, visible on sm+ */}
       <div
-        className={`
-          fixed sm:relative inset-y-0 left-0 z-50 h-full
-          transform transition-transform duration-300 ease-in-out
-          sm:transform-none sm:translate-x-0 shrink-0
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        className={`fixed inset-y-0 left-0 z-50 h-full shrink-0 transform transition-transform duration-300 ease-in-out sm:relative sm:translate-x-0 sm:transform-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         <SettingsSidebar
-          items={sidebarItems}
           activeItemId={activeTab}
+          collapsed={isSettingsSidebarCollapsed}
+          items={sidebarItems}
+          onCollapsedChange={setIsSettingsSidebarCollapsed}
           onItemClick={(id) => {
             setActiveTab(id)
             // Close sidebar on mobile after selection
             setIsSidebarOpen(false)
           }}
-          collapsed={isSettingsSidebarCollapsed}
-          onCollapsedChange={setIsSettingsSidebarCollapsed}
         />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto min-w-0">
-        <div className="h-full flex flex-col">
+      <div className="min-w-0 flex-1 overflow-auto">
+        <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* Mobile Menu Button */}
               <Button
-                variant="ghost"
-                size="icon"
                 className="sm:hidden"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                size="icon"
+                variant="ghost"
               >
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
-              <h1 className="text-lg font-semibold">{activeItemLabel}</h1>
+              <h1 className="font-semibold text-lg">{activeItemLabel}</h1>
             </div>
           </div>
 

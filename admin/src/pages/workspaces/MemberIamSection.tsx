@@ -24,7 +24,7 @@ import {
   useRevokeRoleFromMember,
 } from "@/lib/api/hooks/iam"
 
-interface MemberIamSectionProps {
+type MemberIamSectionProps = {
   memberId: string
   memberName: string
   memberEmail?: string
@@ -35,13 +35,17 @@ interface MemberIamSectionProps {
 function RolePoliciesBadges({ roleId }: { roleId: string }) {
   const { data: rolePolicies = [], isLoading } = useIamRolePolicies(roleId)
 
-  if (isLoading) return <span className="text-[10px] text-gray-400">...</span>
-  if (rolePolicies.length === 0) return null
+  if (isLoading) {
+    return <span className="text-[10px] text-gray-400">...</span>
+  }
+  if (rolePolicies.length === 0) {
+    return null
+  }
 
   return (
     <div className="flex flex-wrap gap-1">
       {rolePolicies.map((rp) => (
-        <Badge key={rp.policyId} variant="outline" className="text-[10px] h-4 px-1 bg-white">
+        <Badge className="h-4 bg-white px-1 text-[10px]" key={rp.policyId} variant="outline">
           {rp.policy?.name || "Unknown"}
         </Badge>
       ))}
@@ -82,14 +86,18 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
   // const detachPolicy = useDetachPolicyFromMember()
 
   const handleGrantRole = async () => {
-    if (!selectedRoleId) return
+    if (!selectedRoleId) {
+      return
+    }
     await grantRole.mutateAsync({ memberId, roleId: selectedRoleId })
     setSelectedRoleId("")
     setIsRoleDialogOpen(false)
   }
 
   const handleRevokeRole = async (roleId: string, roleName: string) => {
-    if (!confirm(`"${roleName}" 역할을 해제하시겠습니까?`)) return
+    if (!confirm(`"${roleName}" 역할을 해제하시겠습니까?`)) {
+      return
+    }
     await revokeRole.mutateAsync({ memberId, roleId })
   }
 
@@ -108,12 +116,12 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
   const showNoRoleWarning = !rolesLoading && memberRoles.length === 0
 
   return (
-    <div className="p-3 space-y-3 border-t bg-gray-50/50">
+    <div className="space-y-3 border-t bg-gray-50/50 p-3">
       {/* No Role Warning */}
       {showNoRoleWarning && (
-        <Alert variant="destructive" className="py-1.5 px-3">
+        <Alert className="px-3 py-1.5" variant="destructive">
           <AlertCircle className="h-3.5 w-3.5" />
-          <AlertDescription className="text-xs ml-2">
+          <AlertDescription className="ml-2 text-xs">
             할당된 역할이 없습니다. 기본 권한만 적용됩니다.
           </AlertDescription>
         </Alert>
@@ -124,25 +132,25 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
         {/* Roles */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600 flex items-center gap-1">
+            <span className="flex items-center gap-1 font-medium text-gray-600 text-xs">
               <Shield className="h-3 w-3" /> 역할
             </span>
             <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsRoleDialogOpen(true)}
+              className="h-6 px-2 text-gray-500 text-xs"
               disabled={unassignedRoles.length === 0}
-              className="h-6 text-xs px-2 text-gray-500"
+              onClick={() => setIsRoleDialogOpen(true)}
+              size="sm"
+              type="button"
+              variant="ghost"
             >
               <Plus className="h-3 w-3" />
             </Button>
           </div>
 
           {rolesLoading ? (
-            <div className="text-xs text-gray-400">로딩...</div>
+            <div className="text-gray-400 text-xs">로딩...</div>
           ) : memberRoles.length === 0 ? (
-            <div className="text-xs text-gray-400 py-2 text-center border border-dashed rounded bg-white">
+            <div className="rounded border border-dashed bg-white py-2 text-center text-gray-400 text-xs">
               없음
             </div>
           ) : (
@@ -151,14 +159,14 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
                 const roleName = mr.role?.name || "Unknown"
                 return (
                   <div
+                    className="flex items-center justify-between rounded border bg-white p-2 text-xs"
                     key={mr.roleId}
-                    className="flex items-center justify-between p-2 bg-white border rounded text-xs"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium truncate">{roleName}</span>
+                        <span className="truncate font-medium">{roleName}</span>
                         {mr.role?.isSystem && (
-                          <Badge variant="secondary" className="text-[9px] h-3.5 px-1">
+                          <Badge className="h-3.5 px-1 text-[9px]" variant="secondary">
                             시스템
                           </Badge>
                         )}
@@ -168,9 +176,9 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
                       </div>
                     </div>
                     <button
-                      type="button"
+                      className="flex-shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                       onClick={() => handleRevokeRole(mr.roleId, roleName)}
-                      className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                      type="button"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -238,13 +246,13 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
       </div>
 
       {/* Add Role Dialog */}
-      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+      <Dialog onOpenChange={setIsRoleDialogOpen} open={isRoleDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-base">역할 추가</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-2">
-            <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+            <Select onValueChange={setSelectedRoleId} value={selectedRoleId}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="역할 선택" />
               </SelectTrigger>
@@ -254,7 +262,7 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
                     <div className="flex items-center gap-2">
                       <span>{role.name}</span>
                       {role.isSystem && (
-                        <Badge variant="secondary" className="text-[9px] h-4">
+                        <Badge className="h-4 text-[9px]" variant="secondary">
                           시스템
                         </Badge>
                       )}
@@ -265,28 +273,28 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
             </Select>
             {selectedRoleId && (
               <Textarea
+                className="h-16 resize-none text-gray-500 text-xs"
+                readOnly
+                rows={2}
                 value={
                   unassignedRoles.find((r) => r.id === selectedRoleId)?.description || "설명 없음"
                 }
-                readOnly
-                className="text-xs text-gray-500 resize-none h-16"
-                rows={2}
               />
             )}
             <div className="flex justify-end gap-2">
               <Button
+                onClick={() => setIsRoleDialogOpen(false)}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => setIsRoleDialogOpen(false)}
               >
                 취소
               </Button>
               <Button
-                type="button"
-                size="sm"
-                onClick={handleGrantRole}
                 disabled={!selectedRoleId || grantRole.isPending}
+                onClick={handleGrantRole}
+                size="sm"
+                type="button"
               >
                 {grantRole.isPending ? "추가 중..." : "추가"}
               </Button>

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface EmailRepliesBulkActionModalProps {
+type EmailRepliesBulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string, value: string) => void
@@ -63,18 +63,18 @@ export function EmailRepliesBulkActionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="space-y-4 py-4">
           {actionType === "read_status" && (
             <div className="space-y-2">
               <Label>{t("email-replies.bulkModal.label.status")}</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger>
                   <SelectValue
                     placeholder={t("email-replies.bulkModal.placeholder.selectStatus")}
@@ -92,10 +92,10 @@ export function EmailRepliesBulkActionModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             {t("email-replies.bulkModal.button.cancel")}
           </Button>
-          <Button onClick={handleConfirm} disabled={!selectedValue}>
+          <Button disabled={!selectedValue} onClick={handleConfirm}>
             {t("email-replies.bulkModal.button.change")}
           </Button>
         </DialogFooter>

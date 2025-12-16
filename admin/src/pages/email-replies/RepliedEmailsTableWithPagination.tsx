@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { type RepliedEmailsParams, useRepliedEmails } from "@/lib/api/hooks/emails"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface RepliedEmailsTableWithPaginationProps {
+type RepliedEmailsTableWithPaginationProps = {
   workspaceId: string
   searchQuery: string
   selectedStatuses: string[]
@@ -39,7 +39,7 @@ export function RepliedEmailsTableWithPagination({
   const params: RepliedEmailsParams = {
     workspaceId,
     page: currentPage,
-    limit: limit,
+    limit,
     status:
       selectedStatuses.length === 1
         ? selectedStatuses[0]
@@ -77,7 +77,9 @@ export function RepliedEmailsTableWithPagination({
   const getEnrollmentStatusText = (
     status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed" | null,
   ) => {
-    if (!status) return "-"
+    if (!status) {
+      return "-"
+    }
     switch (status) {
       case "active":
         return t("email-replies.enrollment.status.active")
@@ -108,7 +110,7 @@ export function RepliedEmailsTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -118,7 +120,7 @@ export function RepliedEmailsTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -175,33 +177,33 @@ export function RepliedEmailsTableWithPagination({
                     }
                   />
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.company")}
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.subject")}
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-center font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.messages")}
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.lead")}
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.sequence")}
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.status")}
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   {t("email-replies.table.header.date")}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {repliedEmails.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-2 py-4 text-center text-sm text-gray-500">
+                  <td className="px-2 py-4 text-center text-gray-500 text-sm" colSpan={8}>
                     {isFetching
                       ? t("email-replies.table.empty.loading")
                       : t("email-replies.table.empty.noReplies")}
@@ -211,12 +213,12 @@ export function RepliedEmailsTableWithPagination({
                 repliedEmails.map((email) => {
                   return (
                     <tr
-                      key={email.id}
                       className={`transition-colors ${
                         selectedThreadId === email.threadId
                           ? "bg-gray-100 dark:bg-gray-700"
                           : "hover:bg-gray-50 dark:hover:bg-gray-750"
                       }`}
+                      key={email.id}
                     >
                       <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -227,12 +229,12 @@ export function RepliedEmailsTableWithPagination({
                         />
                       </td>
                       <td
-                        className="px-3 py-2 text-sm cursor-pointer"
+                        className="cursor-pointer px-3 py-2 text-sm"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         <div className="min-w-0">
                           {email.companyName || email.contactName ? (
-                            <div className="font-medium break-words">
+                            <div className="break-words font-medium">
                               {email.companyName || email.contactName}
                             </div>
                           ) : (
@@ -241,24 +243,24 @@ export function RepliedEmailsTableWithPagination({
                         </div>
                       </td>
                       <td
-                        className="px-3 py-2 text-sm cursor-pointer"
+                        className="cursor-pointer px-3 py-2 text-sm"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         <div
-                          className="font-medium line-clamp-3 break-words"
+                          className="line-clamp-3 break-words font-medium"
                           title={email.subject || ""}
                         >
                           {email.subject || t("email-replies.thread.noSubject")}
                         </div>
                       </td>
                       <td
-                        className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer"
+                        className="cursor-pointer px-3 py-2 text-center text-gray-600 text-xs dark:text-gray-400"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         {email.messageCount && email.messageCount > 1 ? email.messageCount : "-"}
                       </td>
                       <td
-                        className="px-3 py-2 text-xs cursor-pointer"
+                        className="cursor-pointer px-3 py-2 text-xs"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         {email.companyName || email.leadName ? (
@@ -267,12 +269,12 @@ export function RepliedEmailsTableWithPagination({
                               <TooltipTrigger asChild>
                                 <PopoverTrigger asChild>
                                   <button
-                                    type="button"
-                                    className="flex items-start gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    className="-mx-1.5 flex w-full min-w-0 items-start gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                                     onClick={(e) => e.stopPropagation()}
+                                    type="button"
                                   >
-                                    <User className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
-                                    <span className="text-gray-600 dark:text-gray-300 line-clamp-3 break-words">
+                                    <User className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400" />
+                                    <span className="line-clamp-3 break-words text-gray-600 dark:text-gray-300">
                                       {email.companyName || email.leadName}
                                     </span>
                                   </button>
@@ -283,11 +285,11 @@ export function RepliedEmailsTableWithPagination({
                               </TooltipContent>
                             </Tooltip>
                             <PopoverContent
-                              className="w-96 max-h-[600px] overflow-y-auto"
                               align="start"
+                              className="max-h-[600px] w-96 overflow-y-auto"
                             >
                               <div className="space-y-3">
-                                <div className="flex items-center gap-2 pb-2 border-b">
+                                <div className="flex items-center gap-2 border-b pb-2">
                                   <User className="h-4 w-4 text-gray-500" />
                                   <h4 className="font-semibold text-sm">
                                     {t("email-replies.leadInfo.title")}
@@ -298,50 +300,50 @@ export function RepliedEmailsTableWithPagination({
                                   <div className="space-y-1.5">
                                     {email.companyName && (
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           회사명:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        <span className="break-words text-gray-600 dark:text-gray-400">
                                           {email.companyName}
                                         </span>
                                       </div>
                                     )}
                                     {email.foundCompanyName && (
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           발견된 회사명:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        <span className="break-words text-gray-600 dark:text-gray-400">
                                           {email.foundCompanyName}
                                         </span>
                                       </div>
                                     )}
                                     {email.contactName && (
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           담당자명:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        <span className="break-words text-gray-600 dark:text-gray-400">
                                           {email.contactName}
                                         </span>
                                       </div>
                                     )}
                                     {email.leadName && (
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           리드명:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        <span className="break-words text-gray-600 dark:text-gray-400">
                                           {email.leadName}
                                         </span>
                                       </div>
                                     )}
                                     {email.leadEmail && (
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           이메일:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        <span className="break-words text-gray-600 dark:text-gray-400">
                                           {email.leadEmail}
                                         </span>
                                       </div>
@@ -359,30 +361,30 @@ export function RepliedEmailsTableWithPagination({
                                       <div className="space-y-1.5">
                                         {email.businessType && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               업종:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.businessType}
                                             </span>
                                           </div>
                                         )}
                                         {email.employeeCount && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               직원 수:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.employeeCount}
                                             </span>
                                           </div>
                                         )}
                                         {email.leadStatus && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               리드 상태:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.leadStatus}
                                             </span>
                                           </div>
@@ -390,20 +392,20 @@ export function RepliedEmailsTableWithPagination({
                                         {email.leadScore !== null &&
                                           email.leadScore !== undefined && (
                                             <div className="flex">
-                                              <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                                 리드 점수:
                                               </span>
-                                              <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              <span className="break-words text-gray-600 dark:text-gray-400">
                                                 {email.leadScore}
                                               </span>
                                             </div>
                                           )}
                                         {email.leadSource && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               출처:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.leadSource}
                                             </span>
                                           </div>
@@ -422,40 +424,40 @@ export function RepliedEmailsTableWithPagination({
                                       <div className="space-y-1.5">
                                         {email.country && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               국가:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.country}
                                             </span>
                                           </div>
                                         )}
                                         {email.state && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               주/도:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.state}
                                             </span>
                                           </div>
                                         )}
                                         {email.city && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               도시:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.city}
                                             </span>
                                           </div>
                                         )}
                                         {email.address && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               주소:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {email.address}
                                             </span>
                                           </div>
@@ -471,15 +473,15 @@ export function RepliedEmailsTableWithPagination({
                                       <div className="space-y-1.5">
                                         {email.websiteUrl && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               웹사이트:
                                             </span>
                                             <a
+                                              className="break-all text-blue-600 hover:underline dark:text-blue-400"
                                               href={email.websiteUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
                                               onClick={(e) => e.stopPropagation()}
+                                              rel="noopener noreferrer"
+                                              target="_blank"
                                             >
                                               {email.websiteUrl}
                                             </a>
@@ -487,15 +489,15 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.finalUrl && email.finalUrl !== email.websiteUrl && (
                                           <div className="flex">
-                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               최종 URL:
                                             </span>
                                             <a
+                                              className="break-all text-blue-600 hover:underline dark:text-blue-400"
                                               href={email.finalUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
                                               onClick={(e) => e.stopPropagation()}
+                                              rel="noopener noreferrer"
+                                              target="_blank"
                                             >
                                               {email.finalUrl}
                                             </a>
@@ -510,10 +512,10 @@ export function RepliedEmailsTableWithPagination({
                                     <>
                                       <div className="border-t pt-2" />
                                       <div className="flex">
-                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-24 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           ID:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all">
+                                        <span className="break-all font-mono text-gray-600 dark:text-gray-400">
                                           {email.leadId}
                                         </span>
                                       </div>
@@ -534,12 +536,12 @@ export function RepliedEmailsTableWithPagination({
                               <TooltipTrigger asChild>
                                 <PopoverTrigger asChild>
                                   <button
-                                    type="button"
-                                    className="flex items-start gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    className="-mx-1.5 flex w-full min-w-0 items-start gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                                     onClick={(e) => e.stopPropagation()}
+                                    type="button"
                                   >
-                                    <Layers className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
-                                    <span className="text-gray-600 dark:text-gray-300 line-clamp-3 break-words">
+                                    <Layers className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400" />
+                                    <span className="line-clamp-3 break-words text-gray-600 dark:text-gray-300">
                                       {email.sequenceName}
                                     </span>
                                   </button>
@@ -550,11 +552,11 @@ export function RepliedEmailsTableWithPagination({
                               </TooltipContent>
                             </Tooltip>
                             <PopoverContent
-                              className="w-96 max-h-[600px] overflow-y-auto"
                               align="start"
+                              className="max-h-[600px] w-96 overflow-y-auto"
                             >
                               <div className="space-y-3">
-                                <div className="flex items-center gap-2 pb-2 border-b">
+                                <div className="flex items-center gap-2 border-b pb-2">
                                   <Layers className="h-4 w-4 text-gray-500" />
                                   <h4 className="font-semibold text-sm">
                                     {t("email-replies.sequenceInfo.title")}
@@ -564,19 +566,19 @@ export function RepliedEmailsTableWithPagination({
                                   {/* 기본 정보 */}
                                   <div className="space-y-1.5">
                                     <div className="flex">
-                                      <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                      <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                         시퀀스명:
                                       </span>
-                                      <span className="text-gray-600 dark:text-gray-400 break-words">
+                                      <span className="break-words text-gray-600 dark:text-gray-400">
                                         {email.sequenceName}
                                       </span>
                                     </div>
                                     {email.sequenceId && (
                                       <div className="flex">
-                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           시퀀스 ID:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                        <span className="break-all font-mono text-[10px] text-gray-600 dark:text-gray-400">
                                           {email.sequenceId}
                                         </span>
                                       </div>
@@ -589,10 +591,10 @@ export function RepliedEmailsTableWithPagination({
                                       <div className="border-t pt-2" />
                                       <div className="space-y-1.5">
                                         <div className="flex">
-                                          <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                             등록 상태:
                                           </span>
-                                          <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          <span className="break-words text-gray-600 dark:text-gray-400">
                                             {getEnrollmentStatusText(
                                               email.enrollmentStatus || null,
                                             )}
@@ -601,10 +603,10 @@ export function RepliedEmailsTableWithPagination({
                                         {email.enrollmentCurrentStepOrder !== null &&
                                           email.enrollmentCurrentStepOrder !== undefined && (
                                             <div className="flex">
-                                              <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                                 {t("email-replies.sequenceInfo.currentStep")}:
                                               </span>
-                                              <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              <span className="break-words text-gray-600 dark:text-gray-400">
                                                 {t("email-replies.sequenceInfo.currentStepValue", {
                                                   step: email.enrollmentCurrentStepOrder + 1,
                                                 })}
@@ -613,10 +615,10 @@ export function RepliedEmailsTableWithPagination({
                                           )}
                                         {email.enrollmentEnrolledAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               등록일:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(email.enrollmentEnrolledAt).toLocaleString(
                                                 "ko-KR",
                                               )}
@@ -625,10 +627,10 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.enrollmentFirstEmailSentAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               첫 이메일 전송:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(
                                                 email.enrollmentFirstEmailSentAt,
                                               ).toLocaleString("ko-KR")}
@@ -637,10 +639,10 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.enrollmentLastEmailSentAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               마지막 이메일 전송:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(
                                                 email.enrollmentLastEmailSentAt,
                                               ).toLocaleString("ko-KR")}
@@ -649,10 +651,10 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.enrollmentNextStepScheduledAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               다음 스텝 예정:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(
                                                 email.enrollmentNextStepScheduledAt,
                                               ).toLocaleString("ko-KR")}
@@ -661,10 +663,10 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.enrollmentCompletedAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               완료일:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(email.enrollmentCompletedAt).toLocaleString(
                                                 "ko-KR",
                                               )}
@@ -673,10 +675,10 @@ export function RepliedEmailsTableWithPagination({
                                         )}
                                         {email.enrollmentStoppedAt && (
                                           <div className="flex">
-                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                               중단일:
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            <span className="break-words text-gray-600 dark:text-gray-400">
                                               {new Date(email.enrollmentStoppedAt).toLocaleString(
                                                 "ko-KR",
                                               )}
@@ -692,10 +694,10 @@ export function RepliedEmailsTableWithPagination({
                                     <>
                                       <div className="border-t pt-2" />
                                       <div className="flex">
-                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        <span className="w-32 flex-shrink-0 font-medium text-gray-700 dark:text-gray-300">
                                           Enrollment ID:
                                         </span>
-                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                        <span className="break-all font-mono text-[10px] text-gray-600 dark:text-gray-400">
                                           {email.enrollmentId}
                                         </span>
                                       </div>
@@ -710,13 +712,13 @@ export function RepliedEmailsTableWithPagination({
                         )}
                       </td>
                       <td
-                        className="px-3 py-2 text-xs whitespace-nowrap cursor-pointer"
+                        className="cursor-pointer whitespace-nowrap px-3 py-2 text-xs"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         <span className="text-gray-600">{getStatusText(email.status)}</span>
                       </td>
                       <td
-                        className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap cursor-pointer"
+                        className="cursor-pointer whitespace-nowrap px-3 py-2 text-gray-500 text-xs"
                         onClick={() => email.threadId && onThreadSelect(email.threadId)}
                       >
                         {formatRelativeTime(email.createdAt)}
@@ -732,7 +734,7 @@ export function RepliedEmailsTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0
               ? t("email-replies.pagination.showing", {
                   start: (currentPage - 1) * limit + 1,
@@ -746,21 +748,21 @@ export function RepliedEmailsTableWithPagination({
         {/* Pagination Controls */}
         <div className="flex items-center justify-center gap-1">
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             {t("email-replies.pagination.first")}
           </Button>
 
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             {t("email-replies.pagination.previous")}
@@ -768,34 +770,34 @@ export function RepliedEmailsTableWithPagination({
 
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
           ))}
 
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             {t("email-replies.pagination.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             {t("email-replies.pagination.last")}
           </Button>
@@ -803,21 +805,21 @@ export function RepliedEmailsTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {t("email-replies.pagination.page")}:
           </span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </TooltipProvider>

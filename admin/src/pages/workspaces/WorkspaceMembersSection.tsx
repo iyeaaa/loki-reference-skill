@@ -26,7 +26,7 @@ import {
 } from "@/lib/api/hooks/workspaces"
 import { MemberIamSection } from "./MemberIamSection"
 
-interface WorkspaceMembersSectionProps {
+type WorkspaceMembersSectionProps = {
   workspaceId: string
   isEdit: boolean
   onAddMemberClick: () => void
@@ -60,7 +60,9 @@ export function WorkspaceMembersSection({
   }
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
-    if (!confirm(`${memberName} 멤버를 제거하시겠습니까?`)) return
+    if (!confirm(`${memberName} 멤버를 제거하시겠습니까?`)) {
+      return
+    }
 
     removeMember.mutate({
       workspaceId,
@@ -115,8 +117,8 @@ export function WorkspaceMembersSection({
 
   if (!isEdit) {
     return (
-      <Card className="p-4 bg-gray-50">
-        <p className="text-sm text-gray-600">워크스페이스 생성 후 멤버를 추가할 수 있습니다.</p>
+      <Card className="bg-gray-50 p-4">
+        <p className="text-gray-600 text-sm">워크스페이스 생성 후 멤버를 추가할 수 있습니다.</p>
       </Card>
     )
   }
@@ -124,30 +126,30 @@ export function WorkspaceMembersSection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700">멤버 ({members.length})</h3>
-        <Button type="button" size="sm" variant="outline" onClick={onAddMemberClick}>
-          <UserPlus className="h-3.5 w-3.5 mr-1" />
+        <h3 className="font-medium text-gray-700 text-sm">멤버 ({members.length})</h3>
+        <Button onClick={onAddMemberClick} size="sm" type="button" variant="outline">
+          <UserPlus className="mr-1 h-3.5 w-3.5" />
           추가
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-gray-500 py-4 text-center">로딩 중...</div>
+        <div className="py-4 text-center text-gray-500 text-sm">로딩 중...</div>
       ) : members.length === 0 ? (
-        <Card className="p-4 bg-gray-50 border-dashed">
-          <p className="text-sm text-gray-500 text-center">등록된 멤버가 없습니다.</p>
+        <Card className="border-dashed bg-gray-50 p-4">
+          <p className="text-center text-gray-500 text-sm">등록된 멤버가 없습니다.</p>
         </Card>
       ) : (
         <Card className="overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="w-8 py-2 px-2"></TableHead>
-                <TableHead className="py-2 px-2 text-xs font-medium">사용자</TableHead>
-                <TableHead className="py-2 px-2 text-xs font-medium w-[100px]">역할</TableHead>
-                <TableHead className="py-2 px-2 text-xs font-medium w-[80px]">상태</TableHead>
-                <TableHead className="py-2 px-2 text-xs font-medium w-[80px]">초대일</TableHead>
-                <TableHead className="py-2 px-2 text-xs font-medium w-[40px]"></TableHead>
+                <TableHead className="w-8 px-2 py-2" />
+                <TableHead className="px-2 py-2 font-medium text-xs">사용자</TableHead>
+                <TableHead className="w-[100px] px-2 py-2 font-medium text-xs">역할</TableHead>
+                <TableHead className="w-[80px] px-2 py-2 font-medium text-xs">상태</TableHead>
+                <TableHead className="w-[80px] px-2 py-2 font-medium text-xs">초대일</TableHead>
+                <TableHead className="w-[40px] px-2 py-2 font-medium text-xs" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -157,25 +159,25 @@ export function WorkspaceMembersSection({
                     className={`cursor-pointer hover:bg-gray-50 ${expandedMemberId === member.id ? "bg-gray-50" : ""}`}
                     onClick={() => toggleExpand(member.id)}
                   >
-                    <TableCell className="py-2 px-2">
+                    <TableCell className="px-2 py-2">
                       {expandedMemberId === member.id ? (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronRight className="h-4 w-4 text-gray-400" />
                       )}
                     </TableCell>
-                    <TableCell className="py-2 px-2">
+                    <TableCell className="px-2 py-2">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">{member.username}</span>
-                        <span className="text-xs text-gray-500">{member.email}</span>
+                        <span className="font-medium text-sm">{member.username}</span>
+                        <span className="text-gray-500 text-xs">{member.email}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <Select
-                        value={member.role}
                         onValueChange={(value) => handleRoleChange(member.id, value)}
+                        value={member.role}
                       >
-                        <SelectTrigger className="h-7 text-xs w-[90px]">
+                        <SelectTrigger className="h-7 w-[90px] text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -186,15 +188,15 @@ export function WorkspaceMembersSection({
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <Select
-                        value={member.status}
                         onValueChange={(value) => handleStatusChange(member.id, value)}
+                        value={member.status}
                       >
-                        <SelectTrigger className="h-7 text-xs w-[70px] p-1">
+                        <SelectTrigger className="h-7 w-[70px] p-1 text-xs">
                           <Badge
+                            className="px-1.5 py-0 text-[10px]"
                             variant={getStatusBadgeVariant(member.status)}
-                            className="text-[10px] px-1.5 py-0"
                           >
                             {getStatusLabel(member.status)}
                           </Badge>
@@ -206,19 +208,19 @@ export function WorkspaceMembersSection({
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="py-2 px-2 text-xs text-gray-500">
+                    <TableCell className="px-2 py-2 text-gray-500 text-xs">
                       {new Date(member.invitedAt).toLocaleDateString("ko-KR", {
                         month: "short",
                         day: "numeric",
                       })}
                     </TableCell>
-                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                       <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
+                        className="h-7 w-7 p-0 text-gray-400 hover:bg-red-50 hover:text-red-600"
                         onClick={() => handleRemoveMember(member.id, member.username || "")}
-                        className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        size="sm"
+                        type="button"
+                        variant="ghost"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -226,13 +228,13 @@ export function WorkspaceMembersSection({
                   </TableRow>
                   {expandedMemberId === member.id && (
                     <TableRow>
-                      <TableCell colSpan={6} className="p-0 bg-gray-50/50">
+                      <TableCell className="bg-gray-50/50 p-0" colSpan={6}>
                         <MemberIamSection
+                          memberEmail={member.email}
                           memberId={member.id}
                           memberName={member.username || "Unknown"}
-                          memberEmail={member.email}
-                          workspaceId={workspaceId}
                           memberRole={member.role}
+                          workspaceId={workspaceId}
                         />
                       </TableCell>
                     </TableRow>

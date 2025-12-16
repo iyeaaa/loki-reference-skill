@@ -1,4 +1,4 @@
-export interface BulkEmailData {
+export type BulkEmailData = {
   fromEmail: string
   toEmail: string
   subject: string
@@ -7,13 +7,13 @@ export interface BulkEmailData {
   fromName?: string
 }
 
-export interface BulkEmailSendRequest {
+export type BulkEmailSendRequest = {
   workspaceId: string
   userId: string
   emails: BulkEmailData[]
 }
 
-export interface BulkEmailResult {
+export type BulkEmailResult = {
   toEmail: string
   subject: string
   success: boolean
@@ -21,7 +21,7 @@ export interface BulkEmailResult {
   emailId?: string
 }
 
-export interface BulkEmailSendResponse {
+export type BulkEmailSendResponse = {
   total: number
   successCount: number
   failCount: number

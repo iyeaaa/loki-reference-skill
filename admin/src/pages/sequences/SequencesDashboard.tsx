@@ -22,7 +22,7 @@ export function SequencesDashboard() {
               <Skeleton className="h-4 w-4 rounded-full" />
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-8 w-20 mb-2" />
+              <Skeleton className="mb-2 h-8 w-20" />
               <Skeleton className="h-3 w-32" />
             </CardContent>
           </Card>
@@ -50,12 +50,12 @@ export function SequencesDashboard() {
         {/* 실행된 캠페인 개수 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">실행된 캠페인</CardTitle>
+            <CardTitle className="font-medium text-sm">실행된 캠페인</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeCampaignCount}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="font-bold text-2xl">{activeCampaignCount}</div>
+            <p className="text-muted-foreground text-xs">
               활성 {stats.activeSequences} · 일시정지 {stats.pausedSequences}
             </p>
           </CardContent>
@@ -64,12 +64,12 @@ export function SequencesDashboard() {
         {/* 총 발송 수 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 발송</CardTitle>
+            <CardTitle className="font-medium text-sm">총 발송</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDelivered.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="font-bold text-2xl">{stats.totalDelivered.toLocaleString()}</div>
+            <p className="text-muted-foreground text-xs">
               {stats.totalSent.toLocaleString()}건 발송 시도
             </p>
           </CardContent>
@@ -78,12 +78,12 @@ export function SequencesDashboard() {
         {/* 총 오픈률 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 오픈률</CardTitle>
+            <CardTitle className="font-medium text-sm">총 오픈률</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.openRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="font-bold text-2xl">{stats.openRate.toFixed(1)}%</div>
+            <p className="text-muted-foreground text-xs">
               {stats.totalOpened.toLocaleString()}명이 오픈
             </p>
           </CardContent>
@@ -92,12 +92,12 @@ export function SequencesDashboard() {
         {/* 총 회신률 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 회신률</CardTitle>
+            <CardTitle className="font-medium text-sm">총 회신률</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.replyRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="font-bold text-2xl">{stats.replyRate.toFixed(1)}%</div>
+            <p className="text-muted-foreground text-xs">
               {stats.totalReplied.toLocaleString()}건 회신
             </p>
           </CardContent>

@@ -77,38 +77,32 @@ const alignClasses = {
  * </TagList>
  * ```
  */
-export const TagList = React.forwardRef<HTMLUListElement, TagListProps>(
-  (
-    {
+export const TagList = ({
+  className,
+  children,
+  direction = "horizontal",
+  wrap = true,
+  gap = "sm",
+  align = "start",
+  ref,
+  ...props
+}: TagListProps & { ref?: React.RefObject<HTMLUListElement | null> }) => (
+  <ul
+    className={cn(
+      "flex list-none",
+      direction === "horizontal" ? "flex-row" : "flex-col",
+      wrap ? "flex-wrap" : "flex-nowrap overflow-x-auto",
+      gapClasses[gap],
+      alignClasses[align],
       className,
-      children,
-      direction = "horizontal",
-      wrap = true,
-      gap = "sm",
-      align = "start",
-      ...props
-    },
-    ref,
-  ) => {
-    return (
-      <ul
-        ref={ref}
-        className={cn(
-          "flex list-none",
-          direction === "horizontal" ? "flex-row" : "flex-col",
-          wrap ? "flex-wrap" : "flex-nowrap overflow-x-auto",
-          gapClasses[gap],
-          alignClasses[align],
-          className,
-        )}
-        {...props}
-      >
-        {React.Children.map(children, (child, index) => (
-          <li key={index}>{child}</li>
-        ))}
-      </ul>
-    )
-  },
+    )}
+    ref={ref}
+    {...props}
+  >
+    {React.Children.map(children, (child, index) => (
+      <li key={index}>{child}</li>
+    ))}
+  </ul>
 )
 
 TagList.displayName = "TagList"

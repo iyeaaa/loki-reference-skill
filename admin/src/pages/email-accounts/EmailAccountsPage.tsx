@@ -61,7 +61,9 @@ export default function EmailAccountsPage() {
   }, [searchInput])
 
   const handleUpdateAccount = async (accountData: unknown) => {
-    if (!editingAccount) return
+    if (!editingAccount) {
+      return
+    }
     const data = accountData as Partial<UserEmailAccount>
     updateAccount.mutate(
       {
@@ -87,14 +89,17 @@ export default function EmailAccountsPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedAccounts.length === 0) return
+    if (selectedAccounts.length === 0) {
+      return
+    }
 
     if (
       !confirm(
         `선택한 ${selectedAccounts.length}개의 이메일 계정을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
-    )
+    ) {
       return
+    }
 
     for (const accountId of selectedAccounts) {
       await deleteAccount.mutateAsync(accountId)
@@ -154,17 +159,17 @@ export default function EmailAccountsPage() {
   }, [])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <EmailAccountFilters
-        selectedStatuses={selectedStatuses}
-        selectedWorkspaces={selectedWorkspaces}
-        selectedIsDefault={selectedIsDefault}
-        workspaces={workspaces}
+        onClearFilters={clearFilters}
+        onIsDefaultChange={setSelectedIsDefault}
         onStatusChange={setSelectedStatuses}
         onWorkspaceChange={setSelectedWorkspaces}
-        onIsDefaultChange={setSelectedIsDefault}
-        onClearFilters={clearFilters}
+        selectedIsDefault={selectedIsDefault}
+        selectedStatuses={selectedStatuses}
+        selectedWorkspaces={selectedWorkspaces}
+        workspaces={workspaces}
       />
 
       {/* Email Accounts Table */}
@@ -176,24 +181,24 @@ export default function EmailAccountsPage() {
           {/* Search input - positioned below title */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="이메일 주소로 검색..."
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder="이메일 주소로 검색..."
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -201,22 +206,22 @@ export default function EmailAccountsPage() {
 
           {/* Bulk Actions */}
           {selectedAccounts.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">{selectedAccounts.length}개 선택됨</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                  <Mail className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("status")} size="sm" variant="outline">
+                  <Mail className="mr-1 h-4 w-4" />
                   상태 변경
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   선택 삭제
                 </Button>
               </div>
@@ -225,32 +230,32 @@ export default function EmailAccountsPage() {
 
           {/* Email Accounts Table with Pagination */}
           <EmailAccountsTableWithPagination
-            searchQuery={searchQuery}
-            selectedStatuses={selectedStatuses}
-            selectedWorkspaces={selectedWorkspaces}
-            selectedIsDefault={selectedIsDefault}
-            selectedAccounts={selectedAccounts}
+            onEditAccount={setEditingAccount}
             onToggleAccount={toggleAccountSelection}
             onToggleAll={toggleAllAccounts}
-            onEditAccount={setEditingAccount}
+            searchQuery={searchQuery}
+            selectedAccounts={selectedAccounts}
+            selectedIsDefault={selectedIsDefault}
+            selectedStatuses={selectedStatuses}
+            selectedWorkspaces={selectedWorkspaces}
           />
         </CardContent>
       </Card>
 
       {/* Edit Account Dialog */}
-      <Dialog open={!!editingAccount} onOpenChange={() => setEditingAccount(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">이메일 계정 정보 수정</DialogTitle>
+      <Dialog onOpenChange={() => setEditingAccount(null)} open={!!editingAccount}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">이메일 계정 정보 수정</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingAccount && (
               <EmailAccountForm
                 account={editingAccount}
                 isEdit={true}
-                workspaces={workspaces}
-                onSave={handleUpdateAccount}
                 onCancel={() => setEditingAccount(null)}
+                onSave={handleUpdateAccount}
+                workspaces={workspaces}
               />
             )}
           </div>
@@ -259,14 +264,14 @@ export default function EmailAccountsPage() {
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        accountCount={selectedAccounts.length}
+        actionType={bulkActionType}
         isOpen={showBulkActionModal}
         onClose={() => {
           setShowBulkActionModal(false)
           setBulkActionType(null)
         }}
         onConfirm={handleBulkAction}
-        accountCount={selectedAccounts.length}
-        actionType={bulkActionType}
       />
     </div>
   )

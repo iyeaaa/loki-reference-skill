@@ -20,7 +20,7 @@ import type {
 } from "@/lib/api/types/billing"
 import { PLAN_INTERVAL_LABELS, PLAN_TYPE_LABELS } from "@/lib/api/types/billing"
 
-interface PlanFormProps {
+type PlanFormProps = {
   plan?: BillingPlan
   products: BillingProduct[]
   defaultProductId?: string
@@ -75,16 +75,14 @@ export function PlanForm({
     })
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("ko-KR").format(value)
-  }
+  const formatCurrency = (value: number) => new Intl.NumberFormat("ko-KR").format(value)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+    <form className="space-y-6 py-4" onSubmit={handleSubmit}>
       {/* Product Selection */}
       <div className="space-y-2">
         <Label htmlFor={`${formId}-product`}>상품 *</Label>
-        <Select value={productId} onValueChange={setProductId} disabled={!!plan}>
+        <Select disabled={!!plan} onValueChange={setProductId} value={productId}>
           <SelectTrigger>
             <SelectValue placeholder="상품 선택" />
           </SelectTrigger>
@@ -96,7 +94,7 @@ export function PlanForm({
             ))}
           </SelectContent>
         </Select>
-        {plan && <p className="text-xs text-gray-500">요금제 수정 시 상품은 변경할 수 없습니다.</p>}
+        {plan && <p className="text-gray-500 text-xs">요금제 수정 시 상품은 변경할 수 없습니다.</p>}
       </div>
 
       {/* Name */}
@@ -104,10 +102,10 @@ export function PlanForm({
         <Label htmlFor={`${formId}-name`}>요금제명 *</Label>
         <Input
           id={`${formId}-name`}
-          value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="예: Monthly Pro, Annual Basic"
           required
+          value={name}
         />
       </div>
 
@@ -116,17 +114,17 @@ export function PlanForm({
         <Label htmlFor={`${formId}-description`}>설명</Label>
         <Textarea
           id={`${formId}-description`}
-          value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="요금제에 대한 설명을 입력하세요..."
           rows={2}
+          value={description}
         />
       </div>
 
       {/* Plan Type */}
       <div className="space-y-2">
         <Label htmlFor={`${formId}-planType`}>결제 유형 *</Label>
-        <Select value={planType} onValueChange={(v) => setPlanType(v as PlanType)}>
+        <Select onValueChange={(v) => setPlanType(v as PlanType)} value={planType}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -146,8 +144,8 @@ export function PlanForm({
           <div className="space-y-2">
             <Label htmlFor={`${formId}-interval`}>결제 주기</Label>
             <Select
-              value={billingInterval}
               onValueChange={(v) => setBillingInterval(v as PlanInterval)}
+              value={billingInterval}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -165,13 +163,13 @@ export function PlanForm({
             <Label htmlFor={`${formId}-intervalCount`}>주기 횟수</Label>
             <Input
               id={`${formId}-intervalCount`}
+              max={12}
+              min={1}
+              onChange={(e) => setIntervalCount(Number.parseInt(e.target.value, 10) || 1)}
               type="number"
               value={intervalCount}
-              onChange={(e) => setIntervalCount(Number.parseInt(e.target.value, 10) || 1)}
-              min={1}
-              max={12}
             />
-            <p className="text-xs text-gray-500">예: 3개월마다 = 주기(월) + 횟수(3)</p>
+            <p className="text-gray-500 text-xs">예: 3개월마다 = 주기(월) + 횟수(3)</p>
           </div>
         </div>
       )}
@@ -182,18 +180,18 @@ export function PlanForm({
           <Label htmlFor={`${formId}-amount`}>금액 *</Label>
           <Input
             id={`${formId}-amount`}
+            min={0}
+            onChange={(e) => setAmount(Number.parseInt(e.target.value, 10) || 0)}
             type="number"
             value={amount}
-            onChange={(e) => setAmount(Number.parseInt(e.target.value, 10) || 0)}
-            min={0}
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-gray-500 text-xs">
             {formatCurrency(amount)} {currency}
           </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${formId}-currency`}>통화</Label>
-          <Select value={currency} onValueChange={setCurrency}>
+          <Select onValueChange={setCurrency} value={currency}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -211,47 +209,47 @@ export function PlanForm({
       <div className="space-y-2">
         <Label htmlFor={`${formId}-trialDays`}>체험 기간 (일)</Label>
         <Input
+          className="w-32"
           id={`${formId}-trialDays`}
+          max={90}
+          min={0}
+          onChange={(e) => setTrialDays(Number.parseInt(e.target.value, 10) || 0)}
           type="number"
           value={trialDays}
-          onChange={(e) => setTrialDays(Number.parseInt(e.target.value, 10) || 0)}
-          min={0}
-          max={90}
-          className="w-32"
         />
-        <p className="text-xs text-gray-500">0이면 체험 기간 없음</p>
+        <p className="text-gray-500 text-xs">0이면 체험 기간 없음</p>
       </div>
 
       {/* Checkboxes */}
       <div className="space-y-3">
         <div className="flex items-center space-x-2">
           <Checkbox
-            id={`${formId}-isActive`}
             checked={isActive}
+            id={`${formId}-isActive`}
             onCheckedChange={(checked) => setIsActive(checked as boolean)}
           />
-          <Label htmlFor={`${formId}-isActive`} className="cursor-pointer">
+          <Label className="cursor-pointer" htmlFor={`${formId}-isActive`}>
             활성 상태 (비활성 시 신규 구독 불가)
           </Label>
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox
-            id={`${formId}-isDefault`}
             checked={isDefault}
+            id={`${formId}-isDefault`}
             onCheckedChange={(checked) => setIsDefault(checked as boolean)}
           />
-          <Label htmlFor={`${formId}-isDefault`} className="cursor-pointer">
+          <Label className="cursor-pointer" htmlFor={`${formId}-isDefault`}>
             기본 요금제 (신규 가입 시 기본 선택)
           </Label>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button disabled={isLoading} onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" disabled={isLoading || !name.trim() || !productId}>
+        <Button disabled={isLoading || !name.trim() || !productId} type="submit">
           {isLoading ? "저장 중..." : plan ? "수정" : "생성"}
         </Button>
       </div>

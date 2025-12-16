@@ -7,7 +7,7 @@ import type { Lead } from "@/lib/api/types/lead"
 import type { SequenceStep } from "@/lib/api/types/sequence"
 import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email"
 
-interface EmailPreviewPanelProps {
+type EmailPreviewPanelProps = {
   lead: Lead
   steps: SequenceStep[]
   emails: WorkflowGeneratedEmail[]
@@ -17,9 +17,8 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
   const { t } = useTranslation()
 
   // Map emails to steps based on nodeId === stepId
-  const getEmailForStep = (step: SequenceStep): WorkflowGeneratedEmail | undefined => {
-    return emails.find((email) => email.nodeId === step.id)
-  }
+  const getEmailForStep = (step: SequenceStep): WorkflowGeneratedEmail | undefined =>
+    emails.find((email) => email.nodeId === step.id)
 
   // Get step type label
   const getStepTypeLabel = (stepOrder: number): string => {
@@ -52,29 +51,29 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
       return <div className="whitespace-pre-wrap text-sm">{body}</div>
     }
     return (
-      <p className="text-sm text-muted-foreground italic">
+      <p className="text-muted-foreground text-sm italic">
         {t("sequences.aiMode.emailPreview.noContent")}
       </p>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-background to-muted/20">
+    <div className="flex h-full flex-col bg-gradient-to-br from-background to-muted/20">
       {/* Header */}
-      <div className="p-6 border-b bg-background/80 backdrop-blur-sm">
+      <div className="border-b bg-background/80 p-6 backdrop-blur-sm">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <h3 className="font-bold text-2xl">
               {lead.companyName || t("sequences.aiMode.emailPreview.unknownCompany")}
             </h3>
             {lead.contactName && (
-              <p className="text-base text-muted-foreground flex items-center gap-2">
+              <p className="flex items-center gap-2 text-base text-muted-foreground">
                 <User className="h-4 w-4" />
                 {lead.contactName}
               </p>
             )}
             {lead.businessType && (
-              <Badge variant="outline" className="mt-2 px-3 py-1">
+              <Badge className="mt-2 px-3 py-1" variant="outline">
                 {lead.businessType}
               </Badge>
             )}
@@ -93,28 +92,28 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
 
               return (
                 <Card
-                  key={step.id}
                   className={
-                    !hasEmail ? "opacity-60" : "shadow-lg hover:shadow-xl transition-shadow"
+                    hasEmail ? "shadow-lg transition-shadow hover:shadow-xl" : "opacity-60"
                   }
+                  key={step.id}
                 >
-                  <CardHeader className="pb-4 bg-gradient-to-r from-muted/40 to-muted/20">
+                  <CardHeader className="bg-gradient-to-r from-muted/40 to-muted/20 pb-4">
                     <div className="flex items-start justify-between">
                       <div className="space-y-2">
-                        <CardTitle className="text-lg flex items-center gap-2.5">
+                        <CardTitle className="flex items-center gap-2.5 text-lg">
                           <Mail className="h-5 w-5 text-primary" />
                           <span className="font-bold">
                             {t("sequences.aiMode.emailPreview.stepTitle", {
                               number: step.stepOrder,
                             })}
                           </span>
-                          <Badge variant="secondary" className="ml-1 px-2.5 py-0.5">
+                          <Badge className="ml-1 px-2.5 py-0.5" variant="secondary">
                             {getStepTypeLabel(step.stepOrder)}
                           </Badge>
                         </CardTitle>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-muted-foreground text-sm">
                           {step.delayDays > 0 && (
-                            <span className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                            <span className="flex items-center gap-1.5 rounded bg-background/60 px-2 py-1">
                               <Clock className="h-3.5 w-3.5" />
                               {t("sequences.aiMode.emailPreview.delayDays", {
                                 days: step.delayDays,
@@ -122,7 +121,7 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
                             </span>
                           )}
                           {step.scheduledHour !== undefined && (
-                            <span className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                            <span className="flex items-center gap-1.5 rounded bg-background/60 px-2 py-1">
                               <Calendar className="h-3.5 w-3.5" />
                               {String(step.scheduledHour).padStart(2, "0")}:
                               {String(step.scheduledMinute || 0).padStart(2, "0")}
@@ -132,15 +131,6 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
                       </div>
                       {email && (
                         <Badge
-                          variant={
-                            email.status === "generated"
-                              ? "default"
-                              : email.status === "edited"
-                                ? "secondary"
-                                : email.status === "failed"
-                                  ? "destructive"
-                                  : "outline"
-                          }
                           className={
                             email.status === "generated"
                               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
@@ -149,6 +139,15 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
                                 : email.status === "failed"
                                   ? ""
                                   : ""
+                          }
+                          variant={
+                            email.status === "generated"
+                              ? "default"
+                              : email.status === "edited"
+                                ? "secondary"
+                                : email.status === "failed"
+                                  ? "destructive"
+                                  : "outline"
                           }
                         >
                           {email.status}
@@ -160,34 +159,34 @@ export function EmailPreviewPanel({ lead, steps, emails }: EmailPreviewPanelProp
                     {email ? (
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
                             {t("sequences.aiMode.emailPreview.subject")}
                           </div>
-                          <p className="font-semibold text-base bg-muted/40 p-3 rounded-md border">
+                          <p className="rounded-md border bg-muted/40 p-3 font-semibold text-base">
                             {email.subject || t("sequences.aiMode.emailPreview.noSubject")}
                           </p>
                         </div>
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
                             {t("sequences.aiMode.emailPreview.body")}
                           </div>
-                          <div className="p-4 bg-muted/40 rounded-md max-h-64 overflow-y-auto border">
+                          <div className="max-h-64 overflow-y-auto rounded-md border bg-muted/40 p-4">
                             {renderEmailBody(email.bodyText, email.bodyHtml)}
                           </div>
                         </div>
                         {email.generationError && (
-                          <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-md border border-destructive/30">
-                            <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-destructive font-medium">
+                          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+                            <p className="font-medium text-destructive text-sm">
                               {email.generationError}
                             </p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-md border border-dashed">
-                        <Mail className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm font-medium">
+                      <div className="rounded-md border border-dashed bg-muted/20 py-8 text-center text-muted-foreground">
+                        <Mail className="mx-auto mb-3 h-10 w-10 opacity-30" />
+                        <p className="font-medium text-sm">
                           {t("sequences.aiMode.emailPreview.notGenerated")}
                         </p>
                       </div>

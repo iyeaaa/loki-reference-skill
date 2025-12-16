@@ -92,7 +92,7 @@ export function SSETestPage() {
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case "connected":
-        return <Activity className="h-5 w-5 text-blue-500 animate-pulse" />
+        return <Activity className="h-5 w-5 animate-pulse text-blue-500" />
       case "completed":
         return <CheckCircle2 className="h-5 w-5 text-green-500" />
       case "error":
@@ -160,9 +160,9 @@ export function SSETestPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">SSE Test Page</h1>
+        <h1 className="mb-2 font-bold text-3xl">SSE Test Page</h1>
         <p className="text-muted-foreground">
           Test Server-Sent Events (SSE) functionality with real-time data streaming
         </p>
@@ -180,10 +180,10 @@ export function SSETestPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <Button
-              onClick={handleStartStream}
-              disabled={isStreaming}
-              size="lg"
               className="w-full sm:w-auto"
+              disabled={isStreaming}
+              onClick={handleStartStream}
+              size="lg"
             >
               {isStreaming ? (
                 <>
@@ -200,8 +200,8 @@ export function SSETestPage() {
           </div>
 
           {errorMessage && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-800 font-medium">Error: {errorMessage}</p>
+            <div className="rounded-md border border-red-200 bg-red-50 p-4">
+              <p className="font-medium text-red-800 text-sm">Error: {errorMessage}</p>
             </div>
           )}
 
@@ -212,16 +212,16 @@ export function SSETestPage() {
                 <span className="font-medium">Progress</span>
                 <span className="text-muted-foreground">{currentProgress}%</span>
               </div>
-              <Progress value={currentProgress} className="h-2" />
+              <Progress className="h-2" value={currentProgress} />
             </div>
           )}
 
           {/* Text Streaming Display */}
           {streamedText && (
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Streamed Text:</h4>
-              <div className="p-4 bg-gray-50 rounded-md border">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{streamedText}</p>
+              <h4 className="font-semibold text-sm">Streamed Text:</h4>
+              <div className="rounded-md border bg-gray-50 p-4">
+                <p className="whitespace-pre-wrap text-gray-700 text-sm">{streamedText}</p>
               </div>
             </div>
           )}
@@ -239,51 +239,51 @@ export function SSETestPage() {
         <CardContent>
           <ScrollArea className="h-[500px] w-full rounded-md border p-4">
             {events.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex h-full items-center justify-center text-muted-foreground">
                 <p>No events yet. Click "Start SSE Stream Test" to begin.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {events.map((event) => (
                   <div
+                    className="rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
                     key={event.id}
-                    className="p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start gap-3">
                       <span className="text-2xl">{getEventIcon(event.type)}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <span
                             className={`font-semibold text-sm uppercase ${getEventColor(event.type)}`}
                           >
                             {event.type}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {new Date(event.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
                         {event.message && (
-                          <p className="text-sm text-gray-700 mb-2">{event.message}</p>
+                          <p className="mb-2 text-gray-700 text-sm">{event.message}</p>
                         )}
                         {event.progress !== undefined && (
                           <div className="flex items-center gap-2">
-                            <Progress value={event.progress} className="h-1.5 flex-1" />
-                            <span className="text-xs text-muted-foreground">{event.progress}%</span>
+                            <Progress className="h-1.5 flex-1" value={event.progress} />
+                            <span className="text-muted-foreground text-xs">{event.progress}%</span>
                           </div>
                         )}
                         {event.chunk && (
-                          <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
-                            <p className="text-xs font-mono text-orange-800">
+                          <div className="mt-2 rounded border border-orange-200 bg-orange-50 p-2">
+                            <p className="font-mono text-orange-800 text-xs">
                               Chunk: "{event.chunk}"
                             </p>
                           </div>
                         )}
                         {event.data !== undefined && (
                           <details className="mt-2">
-                            <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-800">
+                            <summary className="cursor-pointer text-blue-600 text-xs hover:text-blue-800">
                               View data payload
                             </summary>
-                            <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-x-auto">
+                            <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs">
                               {typeof event.data === "string"
                                 ? event.data
                                 : JSON.stringify(event.data, null, 2)}
@@ -291,7 +291,7 @@ export function SSETestPage() {
                           </details>
                         )}
                         {event.totalDuration && (
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="mt-1 text-muted-foreground text-xs">
                             Duration: {event.totalDuration}
                           </p>
                         )}
@@ -310,13 +310,13 @@ export function SSETestPage() {
         <CardHeader>
           <CardTitle>About this test</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className="space-y-2 text-muted-foreground text-sm">
           <p>
             This page tests Server-Sent Events (SSE) functionality, which is used for real-time data
             streaming from the server to the client.
           </p>
           <p>The test stream includes:</p>
-          <ul className="list-disc list-inside space-y-1 ml-4">
+          <ul className="ml-4 list-inside list-disc space-y-1">
             <li>Connection establishment event</li>
             <li>Progress updates (10 steps)</li>
             <li>Data streaming (sample user data)</li>

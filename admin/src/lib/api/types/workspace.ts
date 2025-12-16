@@ -1,4 +1,4 @@
-export interface Workspace {
+export type Workspace = {
   id: string
   name: string
   description: string | null
@@ -22,7 +22,7 @@ export interface Workspace {
   ownerEmail?: string
 }
 
-export interface WorkspaceMember {
+export type WorkspaceMember = {
   id: string
   workspaceId: string
   userId: string
@@ -35,7 +35,7 @@ export interface WorkspaceMember {
   email?: string
 }
 
-export interface WorkspacesParams {
+export type WorkspacesParams = {
   page?: number
   limit?: number
   isActive?: boolean
@@ -44,14 +44,14 @@ export interface WorkspacesParams {
   userId?: string // 권한 기반 필터링용 (관리자가 아니면 자신이 속한 워크스페이스만)
 }
 
-export interface WorkspacesResponse {
+export type WorkspacesResponse = {
   workspaces: Workspace[]
   total: number
   totalPages: number
   currentPage: number
 }
 
-export interface CreateWorkspaceData {
+export type CreateWorkspaceData = {
   name: string
   description?: string | null
   ownerId: string
@@ -70,7 +70,7 @@ export interface CreateWorkspaceData {
   isActive?: boolean
 }
 
-export interface UpdateWorkspaceData {
+export type UpdateWorkspaceData = {
   name: string
   description?: string | null
   ownerId?: string
@@ -89,7 +89,7 @@ export interface UpdateWorkspaceData {
   isActive: boolean
 }
 
-export interface WorkspaceProduct {
+export type WorkspaceProduct = {
   id: string
   workspaceId: string
   name?: string | null
@@ -103,7 +103,7 @@ export interface WorkspaceProduct {
   updatedAt: string
 }
 
-export interface CreateWorkspaceProductData {
+export type CreateWorkspaceProductData = {
   name?: string
   description?: string
   category?: string
@@ -113,7 +113,7 @@ export interface CreateWorkspaceProductData {
   imageUrl?: string
 }
 
-export interface UpdateWorkspaceProductData {
+export type UpdateWorkspaceProductData = {
   name?: string
   description?: string
   category?: string

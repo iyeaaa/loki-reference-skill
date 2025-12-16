@@ -41,10 +41,12 @@ export default function UnifiedDashboardPage() {
 
   // Redirect to /company if onboarding not complete
   useEffect(() => {
-    if (workspacesLoading || onboardingLoading) return
+    if (workspacesLoading || onboardingLoading) {
+      return
+    }
 
     // If no workspace or onboarding not complete, redirect to /company
-    if (!workspaceId || !isOnboardingComplete) {
+    if (!(workspaceId && isOnboardingComplete)) {
       navigate("/company", { replace: true })
     }
   }, [workspaceId, isOnboardingComplete, workspacesLoading, onboardingLoading, navigate])

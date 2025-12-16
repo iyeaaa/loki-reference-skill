@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
-interface MarketRecommendation {
+type MarketRecommendation = {
   rank: number
   countryCode: string
   countryName: string
@@ -50,7 +50,7 @@ interface MarketRecommendation {
   }
 }
 
-interface TrialResultData {
+type TrialResultData = {
   userContext: {
     industryLabel: string
     experienceLabel: string
@@ -515,7 +515,9 @@ export default function TrialResultPage() {
 
   // Analysis animation effect
   useEffect(() => {
-    if (!isAnalyzing) return
+    if (!isAnalyzing) {
+      return
+    }
     if (currentPhase >= analysisPhases.length) {
       setIsAnalyzing(false)
       return
@@ -551,14 +553,14 @@ export default function TrialResultPage() {
     const country = searchParams.get("country") || ""
     const experience = searchParams.get("experience") || ""
 
-    if (!industry || !target || !country || !experience) {
+    if (!(industry && target && country && experience)) {
       toast.error("설문 정보가 없습니다. 다시 시도해주세요.")
       navigate("/onboarding")
       return
     }
 
     // Generate data after analysis is complete
-    if (!isAnalyzing && !resultData) {
+    if (!(isAnalyzing || resultData)) {
       const data = generateMockResultData(industry, target, country, experience, i18n.language)
       setResultData(data)
     }
@@ -574,28 +576,28 @@ export default function TrialResultPage() {
   // Loading/Analysis view
   if (isAnalyzing || !resultData) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-blue-50 via-white to-indigo-50">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-blue-50 via-white to-indigo-50 p-4">
         {/* Language Switcher */}
         <div className="absolute top-4 right-4 z-10">
           <LanguageSwitcher />
         </div>
 
         <div className="w-full max-w-xl space-y-6">
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 relative shadow-lg">
-              <Brain className="w-10 h-10 text-blue-600" />
+          <div className="space-y-4 text-center">
+            <div className="relative inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 shadow-lg">
+              <Brain className="h-10 w-10 text-blue-600" />
               <Loader2
-                className="absolute inset-0 w-20 h-20 text-blue-600/50 animate-spin"
+                className="absolute inset-0 h-20 w-20 animate-spin text-blue-600/50"
                 style={{ animationDuration: "3s" }}
               />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="mb-2 font-bold text-2xl text-gray-900">
                 {isKorean
                   ? "RINDA가 귀사만의 전략을 만들고 있어요"
                   : "RINDA is creating your custom strategy"}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-gray-600 text-sm">
                 {isKorean
                   ? "곧 완성됩니다, 조금만 기다려주세요"
                   : "Almost there, please wait a moment"}
@@ -610,15 +612,15 @@ export default function TrialResultPage() {
               </span>
               <span className="font-bold text-blue-600">{Math.round(overallProgress)}%</span>
             </div>
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+            <div className="h-3 overflow-hidden rounded-full bg-gray-200 shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-blue-600 to-blue-500 rounded-full transition-all duration-300"
+                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-500 transition-all duration-300"
                 style={{ width: `${overallProgress}%` }}
               />
             </div>
           </div>
 
-          <Card className="p-5 bg-white border-2 border-gray-200 shadow-lg">
+          <Card className="border-2 border-gray-200 bg-white p-5 shadow-lg">
             <div className="space-y-3">
               {analysisPhases.map((phase, index) => {
                 const Icon = phase.icon
@@ -627,17 +629,17 @@ export default function TrialResultPage() {
 
                 return (
                   <div
-                    key={phase.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${
+                    className={`flex items-center gap-3 rounded-xl p-3 transition-all duration-300 ${
                       isActive
-                        ? "bg-blue-50 border-2 border-blue-300 shadow-sm"
+                        ? "border-2 border-blue-300 bg-blue-50 shadow-sm"
                         : isCompleted
-                          ? "bg-green-50 border-2 border-green-300"
-                          : "bg-gray-50 border border-gray-200 opacity-60"
+                          ? "border-2 border-green-300 bg-green-50"
+                          : "border border-gray-200 bg-gray-50 opacity-60"
                     }`}
+                    key={phase.id}
                   >
                     <div
-                      className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm ${
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm transition-all ${
                         isCompleted
                           ? "bg-green-500 text-white"
                           : isActive
@@ -646,15 +648,15 @@ export default function TrialResultPage() {
                       }`}
                     >
                       {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5" />
+                        <CheckCircle2 className="h-5 w-5" />
                       ) : (
-                        <Icon className="w-5 h-5" />
+                        <Icon className="h-5 w-5" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center justify-between">
                         <span
-                          className={`text-sm font-semibold ${
+                          className={`font-semibold text-sm ${
                             isActive
                               ? "text-blue-600"
                               : isCompleted
@@ -665,14 +667,14 @@ export default function TrialResultPage() {
                           {isKorean ? phase.labelKo : phase.labelEn}
                         </span>
                         {isCompleted && (
-                          <span className="text-xs text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded-full">
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 font-bold text-green-600 text-xs">
                             {isKorean ? "완료" : "Done"}
                           </span>
                         )}
                       </div>
                       {isActive && (
                         <div className="mt-1.5">
-                          <Progress value={progress} className="h-1.5" />
+                          <Progress className="h-1.5" value={progress} />
                         </div>
                       )}
                     </div>
@@ -683,8 +685,8 @@ export default function TrialResultPage() {
           </Card>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600 bg-blue-50 inline-block px-4 py-2 rounded-full border border-blue-200">
-              <Sparkles className="w-4 h-4 inline mr-1.5 text-blue-600" />
+            <p className="inline-block rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-gray-600 text-sm">
+              <Sparkles className="mr-1.5 inline h-4 w-4 text-blue-600" />
               {isKorean
                 ? "글로벌 시장 데이터를 실시간으로 분석하고 있어요"
                 : "Analyzing global market data in real-time"}
@@ -723,8 +725,8 @@ export default function TrialResultPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-40 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-40 border-b bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <span className="font-medium text-gray-900">
             {resultData.totalLeadsCount}{" "}
             {isKorean ? "잠재 고객 준비 완료!" : "Potential Customers Ready!"}
@@ -733,17 +735,17 @@ export default function TrialResultPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium mb-4">
-            <CheckCircle2 className="w-4 h-4" />
+        <div className="mb-8 text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 font-medium text-sm text-white">
+            <CheckCircle2 className="h-4 w-4" />
             {isKorean ? "AI 분석 완료" : "AI Analysis Complete"}
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+          <h1 className="mb-3 font-bold text-3xl text-gray-900 md:text-4xl">
             {isKorean ? "3개 시장을 찾았어요" : "3 markets found for you"}
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="mx-auto max-w-2xl text-gray-600">
             {isKorean
               ? "RINDA가 전 세계 데이터를 분석하여 귀사에게 가장 적합한 시장을 선정했습니다"
               : "RINDA analyzed global data to find the best markets for your company"}
@@ -751,69 +753,69 @@ export default function TrialResultPage() {
         </div>
 
         {/* 2-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_350px]">
           {/* Left Column */}
           <div className="space-y-6">
             {/* Market Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {resultData.recommendedMarkets.map((market) => (
-                <Card key={market.countryCode} className="p-4 bg-white border border-gray-200">
-                  <div className="flex items-center gap-3 mb-4">
+                <Card className="border border-gray-200 bg-white p-4" key={market.countryCode}>
+                  <div className="mb-4 flex items-center gap-3">
                     {market.countryCode === "ME" ? (
-                      <Landmark className="w-8 h-8 text-gray-600" />
+                      <Landmark className="h-8 w-8 text-gray-600" />
                     ) : (
-                      <span className="text-2xl font-bold text-gray-700">{market.countryCode}</span>
+                      <span className="font-bold text-2xl text-gray-700">{market.countryCode}</span>
                     )}
                     <div>
                       <div className="font-semibold text-gray-900">
                         {isKorean ? market.countryName : market.countryNameEn}
                       </div>
-                      <div className="text-sm text-blue-600 font-medium">
+                      <div className="font-medium text-blue-600 text-sm">
                         {isKorean ? market.marketSize.kr : market.marketSize.en}
                       </div>
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
+                    <div className="mb-1 flex justify-between text-sm">
                       <span className="text-gray-500">{isKorean ? "매칭" : "Match"}</span>
                       <span className="font-bold text-blue-600">{market.score}%</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                       <div
-                        className="h-full bg-blue-600 rounded-full"
+                        className="h-full rounded-full bg-blue-600"
                         style={{ width: `${market.score}%` }}
                       />
                     </div>
                   </div>
 
                   <button
-                    type="button"
+                    className="flex items-center gap-1 font-medium text-blue-600 text-sm hover:text-blue-700"
                     onClick={() => setSelectedMarket(market)}
-                    className="text-blue-600 text-sm font-medium hover:text-blue-700 flex items-center gap-1"
+                    type="button"
                   >
                     {isKorean ? "왜 추천?" : "Why recommend?"}
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="h-3 w-3" />
                   </button>
                 </Card>
               ))}
             </div>
 
             {/* Strategy Card */}
-            <Card className="p-4 bg-white border border-gray-200">
+            <Card className="border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Sparkles className="w-5 h-5 text-blue-600" />
+                <div className="rounded-lg bg-blue-100 p-2">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900">
                     {isKorean ? "귀사 맞춤 글로벌 진출 전략" : "Your Global Expansion Strategy"}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-gray-600 text-sm">
                     {isKorean ? (
                       <>
                         RINDA가{" "}
-                        <span className="text-blue-600 font-semibold">
+                        <span className="font-semibold text-blue-600">
                           {resultData.totalLeadsCount} 잠재 고객
                         </span>
                         에게 맞춤 영업을 진행합니다
@@ -821,7 +823,7 @@ export default function TrialResultPage() {
                     ) : (
                       <>
                         RINDA will conduct customized sales to{" "}
-                        <span className="text-blue-600 font-semibold">
+                        <span className="font-semibold text-blue-600">
                           {resultData.totalLeadsCount} potential customers
                         </span>
                       </>
@@ -832,15 +834,15 @@ export default function TrialResultPage() {
             </Card>
 
             {/* Export Ready Checklist - Moved from right column */}
-            <Card className="p-4 bg-white border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <Card className="border border-gray-200 bg-white p-4">
+              <h3 className="mb-4 font-semibold text-gray-900">
                 {isKorean ? "수출 준비 완료" : "Export Ready"}
               </h3>
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-2">
                 {resultData.lindaSolution.checklist.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">
+                  <div className="flex items-center gap-2" key={idx}>
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500" />
+                    <span className="text-gray-700 text-sm">
                       {isKorean ? item.item_kr : item.item_en}
                     </span>
                   </div>
@@ -850,21 +852,21 @@ export default function TrialResultPage() {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="lg:sticky lg:top-20 lg:self-start space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             {/* What RINDA Does Automatically - Moved from left column */}
-            <Card className="p-4 bg-white border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <Card className="border border-gray-200 bg-white p-4">
+              <h3 className="mb-4 font-semibold text-gray-900">
                 {isKorean ? "RINDA가 자동으로 하는 일" : "What RINDA Does Automatically"}
               </h3>
               <div className="grid grid-cols-1 gap-3">
                 {rindaActions.map((action, idx) => {
                   const Icon = action.icon
                   return (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                        <Icon className="w-4 h-4 text-blue-600" />
+                    <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3" key={idx}>
+                      <div className="flex-shrink-0 rounded-lg bg-blue-100 p-2">
+                        <Icon className="h-4 w-4 text-blue-600" />
                       </div>
-                      <span className="text-sm text-gray-700">
+                      <span className="text-gray-700 text-sm">
                         {isKorean ? action.textKr : action.textEn}
                       </span>
                     </div>
@@ -873,12 +875,12 @@ export default function TrialResultPage() {
               </div>
             </Card>
             <Button
+              className="h-14 w-full bg-blue-600 font-semibold text-base text-white hover:bg-blue-700"
               onClick={handleGetStarted}
-              className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base"
             >
-              <Sparkles className="w-5 h-5 mr-2" />
+              <Sparkles className="mr-2 h-5 w-5" />
               {isKorean ? "캠페인 시작" : "Start Campaign"}
-              <ArrowRight className="w-5 h-5 ml-2" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -889,57 +891,57 @@ export default function TrialResultPage() {
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Overlay */}
           <button
-            type="button"
-            className="absolute inset-0 bg-black/30 border-none cursor-default"
+            aria-label="Close sidebar"
+            className="absolute inset-0 cursor-default border-none bg-black/30"
             onClick={() => setSelectedMarket(null)}
             onKeyDown={(e) => e.key === "Escape" && setSelectedMarket(null)}
-            aria-label="Close sidebar"
+            type="button"
           />
 
           {/* Sidebar */}
-          <div className="relative w-full max-w-md bg-white shadow-2xl overflow-y-auto">
+          <div className="relative w-full max-w-md overflow-y-auto bg-white shadow-2xl">
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white p-4">
               <div className="flex items-center gap-3">
                 {selectedMarket.countryCode === "ME" ? (
-                  <Landmark className="w-8 h-8 text-gray-600" />
+                  <Landmark className="h-8 w-8 text-gray-600" />
                 ) : (
-                  <span className="text-2xl font-bold text-gray-600">
+                  <span className="font-bold text-2xl text-gray-600">
                     {selectedMarket.countryCode}
                   </span>
                 )}
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="font-bold text-gray-900 text-lg">
                     {isKorean ? selectedMarket.countryName : selectedMarket.countryNameEn}
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-gray-500 text-sm">
                     {isKorean ? selectedMarket.marketSize.kr : selectedMarket.marketSize.en}
                   </p>
                 </div>
               </div>
               <button
-                type="button"
+                className="rounded-lg p-2 hover:bg-gray-100"
                 onClick={() => setSelectedMarket(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                type="button"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-4 space-y-5">
+            <div className="space-y-5 p-4">
               {/* Market Analysis */}
-              <Card className="p-4 bg-blue-50 border-blue-200">
+              <Card className="border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
-                  <Building2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                   <div>
-                    <p className="text-xs font-bold text-blue-600 mb-1">
+                    <p className="mb-1 font-bold text-blue-600 text-xs">
                       {isKorean ? "시장 분석" : "Market Analysis"}
                     </p>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                    <p className="mb-1 font-semibold text-gray-900 text-sm">
                       {isKorean ? selectedMarket.reasonTitle.kr : selectedMarket.reasonTitle.en}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-gray-600 text-sm">
                       {isKorean ? selectedMarket.marketTrend.kr : selectedMarket.marketTrend.en}
                     </p>
                   </div>
@@ -948,37 +950,37 @@ export default function TrialResultPage() {
 
               {/* Sales Strategy */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-gray-500" />
+                <div className="mb-2 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-gray-500" />
                   <h3 className="font-semibold text-gray-900">
                     {isKorean ? "영업 전략" : "Sales Strategy"}
                   </h3>
                 </div>
-                <p className="text-sm text-gray-700 p-3 bg-gray-50 rounded-lg">
+                <p className="rounded-lg bg-gray-50 p-3 text-gray-700 text-sm">
                   {isKorean ? selectedMarket.salesStrategy.kr : selectedMarket.salesStrategy.en}
                 </p>
               </div>
 
               {/* Email Strategy */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Mail className="w-4 h-4 text-gray-500" />
+                <div className="mb-2 flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
                   <h3 className="font-semibold text-gray-900">
                     {isKorean ? "이메일 전략" : "Email Strategy"}
                   </h3>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div className="space-y-2 rounded-lg bg-gray-50 p-3">
                   <div>
-                    <span className="text-xs text-gray-500">{isKorean ? "제목:" : "Subject:"}</span>
-                    <p className="text-sm text-gray-800">
+                    <span className="text-gray-500 text-xs">{isKorean ? "제목:" : "Subject:"}</span>
+                    <p className="text-gray-800 text-sm">
                       {selectedMarket.emailStrategy.subjectLine}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-gray-500 text-xs">
                       {isKorean ? "핵심 포인트:" : "Key Focus:"}
                     </span>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-gray-800 text-sm">
                       {isKorean
                         ? selectedMarket.emailStrategy.keyFocus.kr
                         : selectedMarket.emailStrategy.keyFocus.en}
@@ -989,23 +991,23 @@ export default function TrialResultPage() {
 
               {/* Expected Performance */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
+                <h3 className="mb-2 font-semibold text-gray-900">
                   {isKorean ? "예상 성과" : "Expected Performance"}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-blue-50 rounded-lg text-center">
-                    <div className="text-xs text-gray-500 mb-1">
+                  <div className="rounded-lg bg-blue-50 p-3 text-center">
+                    <div className="mb-1 text-gray-500 text-xs">
                       {isKorean ? "오픈율" : "Open Rate"}
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="font-bold text-2xl text-blue-600">
                       {selectedMarket.metrics.openRate}%
                     </div>
                   </div>
-                  <div className="p-3 bg-green-50 rounded-lg text-center">
-                    <div className="text-xs text-gray-500 mb-1">
+                  <div className="rounded-lg bg-green-50 p-3 text-center">
+                    <div className="mb-1 text-gray-500 text-xs">
                       {isKorean ? "응답률" : "Response Rate"}
                     </div>
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="font-bold text-2xl text-green-600">
                       {selectedMarket.metrics.responseRate}%
                     </div>
                   </div>
@@ -1014,14 +1016,14 @@ export default function TrialResultPage() {
 
               {/* Key Insights */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
+                <h3 className="mb-2 font-semibold text-gray-900">
                   {isKorean ? "핵심 인사이트" : "Key Insights"}
                 </h3>
                 <div className="space-y-2">
                   {selectedMarket.highlights.map((highlight, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">
+                    <div className="flex items-center gap-2" key={idx}>
+                      <TrendingUp className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                      <span className="text-gray-700 text-sm">
                         {isKorean ? highlight.kr : highlight.en}
                       </span>
                     </div>
@@ -1031,13 +1033,13 @@ export default function TrialResultPage() {
 
               {/* CTA Button */}
               <Button
+                className="w-full bg-blue-600 py-4 font-medium text-white hover:bg-blue-700"
                 onClick={handleGetStarted}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4"
               >
                 {isKorean
                   ? `${selectedMarket.countryName} 캠페인 시작`
                   : `Start Campaign - ${selectedMarket.countryNameEn}`}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>

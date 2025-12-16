@@ -43,7 +43,7 @@ import { useAuth } from "@/lib/auth-provider"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 import { htmlToMarkdown, markdownToHtml } from "@/lib/utils/markdown"
 
-interface SequenceLaunchModalProps {
+type SequenceLaunchModalProps = {
   isOpen: boolean
   onClose: () => void
   customerGroup: CustomerGroup | null
@@ -89,7 +89,7 @@ export function SequenceLaunchModal({
   const { data: membersData } = useCustomerGroupMembers(
     customerGroup?.id || "",
     1,
-    10000,
+    10_000,
     !!customerGroup?.id,
   )
 
@@ -103,7 +103,9 @@ export function SequenceLaunchModal({
   const { data: leadsData } = useQuery({
     queryKey: ["leads", "customer-group", customerGroup?.id],
     queryFn: () =>
-      customerGroup?.id ? leadsApi.list({ customerGroupId: customerGroup.id, limit: 10000 }) : null,
+      customerGroup?.id
+        ? leadsApi.list({ customerGroupId: customerGroup.id, limit: 10_000 })
+        : null,
     enabled: !!customerGroup?.id,
   })
   const leadsDetail = leadsData?.leads || []
@@ -224,7 +226,9 @@ export function SequenceLaunchModal({
   // 스텝 편집 완료 시 저장
   const handleSaveStep = async (stepId: string) => {
     const step = editedSteps.find((s) => s.id === stepId)
-    if (!step) return
+    if (!step) {
+      return
+    }
 
     // 유효성 검사
     if (!step.emailSubject?.trim()) {
@@ -232,7 +236,7 @@ export function SequenceLaunchModal({
       return
     }
 
-    if (!step.emailBodyText?.trim() && !step.emailBodyHtml?.trim()) {
+    if (!(step.emailBodyText?.trim() || step.emailBodyHtml?.trim())) {
       toast.error(t("sequences.launchModal.error.emailBodyRequired"))
       return
     }
@@ -337,7 +341,7 @@ export function SequenceLaunchModal({
       // 실제 저장된 스텝은 백엔드에서 삭제
       await deleteSequenceStep.mutateAsync({
         sequenceId: selectedSequenceId,
-        stepId: stepId,
+        stepId,
       })
 
       console.log(`✅ 스텝 삭제됨: ${stepId}`)
@@ -548,7 +552,7 @@ export function SequenceLaunchModal({
         toast.error(t("sequences.launchModal.error.stepNeedsSubject", { order: step.stepOrder }))
         return
       }
-      if (!step.emailBodyText?.trim() && !step.emailBodyHtml?.trim()) {
+      if (!(step.emailBodyText?.trim() || step.emailBodyHtml?.trim())) {
         toast.error(t("sequences.launchModal.error.stepNeedsBody", { order: step.stepOrder }))
         return
       }
@@ -607,7 +611,7 @@ export function SequenceLaunchModal({
       toast(t("sequences.launchModal.toast.sequenceCopying"), { icon: "📋" })
       const copiedSequence = await sequencesApi.copy(selectedSequenceId, {
         customerGroupId: customerGroup?.id,
-        selectedLeadIds: selectedLeadIds,
+        selectedLeadIds,
       })
 
       console.log("✅ 시퀀스 복사 완료:", {
@@ -666,33 +670,33 @@ export function SequenceLaunchModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-4 border-b flex-shrink-0">
-          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+    <Dialog onOpenChange={onClose} open={isOpen}>
+      <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col">
+        <DialogHeader className="flex-shrink-0 border-b pb-4">
+          <DialogTitle className="flex items-center gap-2 font-semibold text-xl">
             <Send className="h-5 w-5" />
             {t("sequences.launchModal.title")}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 space-y-6 pr-2">
+        <div className="flex-1 space-y-6 overflow-y-auto pr-2">
           {/* 고객 그룹 정보 */}
           {customerGroup && (
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="border-blue-200 bg-blue-50">
               <CardContent className="pt-4">
                 <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-blue-600 mt-1" />
+                  <Mail className="mt-1 h-5 w-5 text-blue-600" />
                   <div>
                     <h4 className="font-medium text-blue-900">
                       {t("sequences.launchModal.selectedCustomerGroup")}
                     </h4>
-                    <p className="text-sm text-blue-800 mt-1">
+                    <p className="mt-1 text-blue-800 text-sm">
                       <strong>{customerGroup.name}</strong>
                       {customerGroup.description && (
                         <span className="ml-2">- {customerGroup.description}</span>
                       )}
                     </p>
-                    <p className="text-sm text-blue-700 mt-1">
+                    <p className="mt-1 text-blue-700 text-sm">
                       {t("sequences.launchModal.totalLeadsSelected", {
                         total: leads.length,
                         selected: selectedLeadIds.length,
@@ -706,8 +710,8 @@ export function SequenceLaunchModal({
 
           {/* 대상 리드 정보 */}
           {customerGroup && (
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-lg border p-4">
+              <div className="mb-3 flex items-center justify-between">
                 <h4 className="font-medium">{t("sequences.launchModal.enrollmentTargetLeads")}</h4>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">
@@ -715,18 +719,18 @@ export function SequenceLaunchModal({
                   </Badge>
                   <div className="flex gap-1">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedLeadIds(leads.map((lead) => lead.id))}
                       className="h-7 text-xs"
+                      onClick={() => setSelectedLeadIds(leads.map((lead) => lead.id))}
+                      size="sm"
+                      variant="ghost"
                     >
                       {t("sequences.launchModal.selectAllLeads")}
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedLeadIds([])}
                       className="h-7 text-xs"
+                      onClick={() => setSelectedLeadIds([])}
+                      size="sm"
+                      variant="ghost"
                     >
                       {t("sequences.launchModal.deselectAllLeads")}
                     </Button>
@@ -734,11 +738,11 @@ export function SequenceLaunchModal({
                 </div>
               </div>
               {leadsDetail.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-muted-foreground text-sm">
                   {t("sequences.launchModal.noLeadsInGroup")}
                 </p>
               ) : (
-                <div className="max-h-60 overflow-y-auto space-y-2">
+                <div className="max-h-60 space-y-2 overflow-y-auto">
                   {leadsDetail.map((lead) => {
                     const isSelected = selectedLeadIds.includes(lead.id)
                     const primaryEmail = lead.contacts?.find(
@@ -748,9 +752,12 @@ export function SequenceLaunchModal({
                     return (
                       // biome-ignore lint/a11y/useSemanticElements: 복잡한 레이아웃을 위해 div 사용
                       <div
+                        className={`flex cursor-pointer items-center justify-between border-b px-3 py-2 text-sm transition-colors last:border-0 ${
+                          isSelected
+                            ? "border-blue-200 bg-blue-50 hover:bg-blue-100"
+                            : "hover:bg-gray-50"
+                        }`}
                         key={lead.id}
-                        role="button"
-                        tabIndex={0}
                         onClick={() => {
                           if (isSelected) {
                             setSelectedLeadIds(selectedLeadIds.filter((id) => id !== lead.id))
@@ -768,25 +775,22 @@ export function SequenceLaunchModal({
                             }
                           }
                         }}
-                        className={`text-sm flex items-center justify-between py-2 px-3 border-b last:border-0 cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-blue-50 hover:bg-blue-100 border-blue-200"
-                            : "hover:bg-gray-50"
-                        }`}
+                        role="button"
+                        tabIndex={0}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <input
-                              type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
                               className="h-4 w-4 rounded border-gray-300"
+                              onChange={() => {}}
+                              type="checkbox"
                             />
                             <span className="font-medium">
                               {lead.companyName || t("sequences.launchModal.companyNameUnknown")}
                             </span>
                           </div>
-                          <div className="text-xs text-muted-foreground ml-6 mt-0.5">
+                          <div className="mt-0.5 ml-6 text-muted-foreground text-xs">
                             {primaryEmail || t("sequences.launchModal.noEmail")}
                             {lead.country && ` • ${lead.country}`}
                             {lead.businessType && ` • ${lead.businessType}`}
@@ -805,19 +809,19 @@ export function SequenceLaunchModal({
             <div className="flex items-center justify-between">
               <Label>{t("sequences.launchModal.selectSequence")}</Label>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCreatingNewSequence(!isCreatingNewSequence)}
                 disabled={createSequence.isPending}
+                onClick={() => setIsCreatingNewSequence(!isCreatingNewSequence)}
+                size="sm"
+                variant="outline"
               >
                 {isCreatingNewSequence ? (
                   <>
-                    <X className="h-4 w-4 mr-1" />
+                    <X className="mr-1 h-4 w-4" />
                     {t("sequences.launchModal.backToSequenceSelect")}
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4 mr-1" />
+                    <Plus className="mr-1 h-4 w-4" />
                     {t("sequences.launchModal.createNewSequence")}
                   </>
                 )}
@@ -825,44 +829,44 @@ export function SequenceLaunchModal({
             </div>
 
             {isCreatingNewSequence ? (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="pt-4 space-y-4">
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="space-y-4 pt-4">
                   <div className="space-y-2">
                     <Label>{t("sequences.launchModal.sequenceNameLabel")}</Label>
                     <Input
-                      value={newSequenceName}
+                      disabled={createSequence.isPending}
                       onChange={(e) => setNewSequenceName(e.target.value)}
                       placeholder={t("sequences.launchModal.sequenceNamePlaceholder")}
-                      disabled={createSequence.isPending}
+                      value={newSequenceName}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>{t("sequences.launchModal.sequenceDescriptionLabel")}</Label>
                     <Textarea
-                      value={newSequenceDescription}
+                      disabled={createSequence.isPending}
                       onChange={(e) => setNewSequenceDescription(e.target.value)}
                       placeholder={t("sequences.launchModal.sequenceDescriptionPlaceholder")}
                       rows={2}
-                      disabled={createSequence.isPending}
+                      value={newSequenceDescription}
                     />
                   </div>
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex justify-end gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
+                      disabled={createSequence.isPending}
                       onClick={() => {
                         setIsCreatingNewSequence(false)
                         setNewSequenceName("")
                         setNewSequenceDescription("")
                       }}
-                      disabled={createSequence.isPending}
+                      size="sm"
+                      variant="outline"
                     >
                       {t("sequences.launchModal.cancelButton")}
                     </Button>
                     <Button
-                      size="sm"
-                      onClick={handleCreateNewSequence}
                       disabled={!newSequenceName.trim() || createSequence.isPending}
+                      onClick={handleCreateNewSequence}
+                      size="sm"
                     >
                       {createSequence.isPending
                         ? t("sequences.launchModal.creating")
@@ -872,11 +876,11 @@ export function SequenceLaunchModal({
                 </CardContent>
               </Card>
             ) : isLoadingSequences ? (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 {t("sequences.launchModal.loading")}
               </div>
             ) : sequences && sequences.length > 0 ? (
-              <Select value={selectedSequenceId} onValueChange={setSelectedSequenceId}>
+              <Select onValueChange={setSelectedSequenceId} value={selectedSequenceId}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("sequences.launchModal.selectSequencePlaceholder")} />
                 </SelectTrigger>
@@ -887,7 +891,7 @@ export function SequenceLaunchModal({
                         <span>{sequence.name}</span>
                         <Badge variant="outline">{sequence.status}</Badge>
                         {sequence.stepsCount !== undefined && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             ({t("sequences.launchModal.stepsCount", { count: sequence.stepsCount })}
                             )
                           </span>
@@ -911,11 +915,11 @@ export function SequenceLaunchModal({
             <div className="space-y-3">
               <Label>{t("sequences.launchModal.emailAccountLabel")}</Label>
               {isLoadingAccounts ? (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("sequences.launchModal.loading")}
                 </div>
               ) : emailAccounts && emailAccounts.length > 0 ? (
-                <Select value={selectedEmailAccountId} onValueChange={setSelectedEmailAccountId}>
+                <Select onValueChange={setSelectedEmailAccountId} value={selectedEmailAccountId}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("sequences.launchModal.selectEmailAccount")} />
                   </SelectTrigger>
@@ -925,7 +929,7 @@ export function SequenceLaunchModal({
                         <div className="flex items-center gap-2">
                           <span>{account.emailAddress}</span>
                           {account.displayName && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               ({account.displayName})
                             </span>
                           )}
@@ -953,27 +957,27 @@ export function SequenceLaunchModal({
               <div className="flex items-center justify-between">
                 <Label>{t("sequences.launchModal.sequenceSteps")}</Label>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddStep}
                   disabled={bulkEnroll.isPending}
+                  onClick={handleAddStep}
+                  size="sm"
+                  variant="outline"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="mr-1 h-4 w-4" />
                   {t("sequences.launchModal.addStep")}
                 </Button>
               </div>
 
               {isLoadingSteps ? (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("sequences.launchModal.loading")}
                 </div>
               ) : editedSteps.length === 0 ? (
                 <Card className="bg-gray-50">
                   <CardContent className="pt-6 pb-6">
                     <div className="text-center text-muted-foreground">
-                      <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <Mail className="mx-auto mb-3 h-12 w-12 opacity-30" />
                       <p className="text-sm">{t("sequences.launchModal.noStepsYet")}</p>
-                      <p className="text-xs mt-1">{t("sequences.launchModal.addFirstStep")}</p>
+                      <p className="mt-1 text-xs">{t("sequences.launchModal.addFirstStep")}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -983,14 +987,14 @@ export function SequenceLaunchModal({
                     <Card key={step.id}>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <CardTitle className="flex items-center gap-2 font-medium text-sm">
                             <Badge>
                               {t("sequences.launchModal.stepBadge", { order: step.stepOrder })}
                             </Badge>
                             {step.id.startsWith("temp-") && (
                               <Badge
+                                className="border-orange-300 text-orange-600"
                                 variant="outline"
-                                className="text-orange-600 border-orange-300"
                               >
                                 {t("sequences.launchModal.unsavedBadge")}
                               </Badge>
@@ -1005,8 +1009,7 @@ export function SequenceLaunchModal({
                           </CardTitle>
                           <div className="flex gap-2">
                             <Button
-                              variant="ghost"
-                              size="sm"
+                              disabled={updateSequenceStep.isPending}
                               onClick={() => {
                                 if (editingStepId === step.id) {
                                   // 저장
@@ -1016,18 +1019,19 @@ export function SequenceLaunchModal({
                                   setEditingStepId(step.id)
                                 }
                               }}
-                              disabled={updateSequenceStep.isPending}
+                              size="sm"
+                              variant="ghost"
                             >
                               {editingStepId === step.id
                                 ? t("sequences.launchModal.saveButton")
                                 : t("sequences.launchModal.editButton")}
                             </Button>
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveStep(step.id)}
                               className="text-red-600 hover:text-red-700"
                               disabled={deleteSequenceStep.isPending}
+                              onClick={() => handleRemoveStep(step.id)}
+                              size="sm"
+                              variant="ghost"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1041,49 +1045,49 @@ export function SequenceLaunchModal({
                               <div>
                                 <Label>{t("sequences.launchModal.delayDaysLabel")}</Label>
                                 <Input
-                                  type="number"
                                   min="0"
-                                  value={step.delayDays}
                                   onChange={(e) =>
                                     handleStepEdit(
                                       step.id,
                                       "delayDays",
-                                      parseInt(e.target.value, 10) || 0,
+                                      Number.parseInt(e.target.value, 10) || 0,
                                     )
                                   }
+                                  type="number"
+                                  value={step.delayDays}
                                 />
                               </div>
                               <div>
                                 <Label>{t("sequences.launchModal.sendTimeLabel")}</Label>
                                 <div className="flex gap-2">
                                   <Input
-                                    type="number"
-                                    min="0"
                                     max="23"
-                                    value={step.scheduledHour ?? 9}
+                                    min="0"
                                     onChange={(e) =>
                                       handleStepEdit(
                                         step.id,
                                         "scheduledHour",
-                                        parseInt(e.target.value, 10) || 0,
+                                        Number.parseInt(e.target.value, 10) || 0,
                                       )
                                     }
                                     placeholder={t("sequences.launchModal.hourPlaceholder")}
+                                    type="number"
+                                    value={step.scheduledHour ?? 9}
                                   />
                                   <span className="self-center">:</span>
                                   <Input
-                                    type="number"
-                                    min="0"
                                     max="59"
-                                    value={step.scheduledMinute ?? 0}
+                                    min="0"
                                     onChange={(e) =>
                                       handleStepEdit(
                                         step.id,
                                         "scheduledMinute",
-                                        parseInt(e.target.value, 10) || 0,
+                                        Number.parseInt(e.target.value, 10) || 0,
                                       )
                                     }
                                     placeholder={t("sequences.launchModal.minutePlaceholder")}
+                                    type="number"
+                                    value={step.scheduledMinute ?? 0}
                                   />
                                 </div>
                               </div>
@@ -1091,17 +1095,17 @@ export function SequenceLaunchModal({
 
                             {/* AI 생성 섹션 */}
                             {workspaceId && customerGroup && (
-                              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                              <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
                                 <div className="flex items-center justify-between">
-                                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                                  <h3 className="flex items-center gap-2 font-semibold text-sm">
                                     <Sparkles className="h-4 w-4 text-primary" />
                                     {t("sequences.launchModal.aiGeneratorTitle")}
                                   </h3>
                                   <Button
+                                    onClick={() => setShowAIGenerator(!showAIGenerator)}
+                                    size="sm"
                                     type="button"
                                     variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowAIGenerator(!showAIGenerator)}
                                   >
                                     {showAIGenerator
                                       ? t("sequences.launchModal.aiGeneratorClose")
@@ -1110,7 +1114,7 @@ export function SequenceLaunchModal({
                                 </div>
 
                                 {showAIGenerator && (
-                                  <div className="space-y-3 pt-2 border-t">
+                                  <div className="space-y-3 border-t pt-2">
                                     {/* 타겟 국가 입력 */}
                                     <div className="space-y-2">
                                       <Label htmlFor={targetCountryId}>
@@ -1118,16 +1122,16 @@ export function SequenceLaunchModal({
                                         <span className="text-red-500">*</span>
                                       </Label>
                                       <Input
+                                        className="bg-background"
+                                        disabled={isLoadingCountry}
                                         id={targetCountryId}
-                                        value={targetCountry}
                                         onChange={(e) => setTargetCountry(e.target.value)}
                                         placeholder={t(
                                           "sequences.launchModal.targetCountryPlaceholder",
                                         )}
-                                        className="bg-background"
-                                        disabled={isLoadingCountry}
+                                        value={targetCountry}
                                       />
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-muted-foreground text-xs">
                                         {isLoadingCountry
                                           ? t("sequences.launchModal.countryAutoDetecting")
                                           : t("sequences.launchModal.countryAutoDetected")}
@@ -1140,28 +1144,28 @@ export function SequenceLaunchModal({
                                         <span className="text-red-500">*</span>
                                       </Label>
                                       <Textarea
+                                        className="min-h-[100px] bg-background"
                                         id={promptId}
-                                        value={aiPrompt}
                                         onChange={(e) => setAiPrompt(e.target.value)}
                                         placeholder={t(
                                           "sequences.launchModal.emailContentRequestPlaceholder",
                                         )}
-                                        className="bg-background min-h-[100px]"
+                                        value={aiPrompt}
                                       />
                                     </div>
 
                                     <Button
-                                      type="button"
-                                      onClick={handleGenerateWithAI}
+                                      className="w-full"
                                       disabled={
                                         isGenerating ||
                                         !aiPrompt.trim() ||
                                         aiPrompt.trim().length < 10 ||
                                         !targetCountry?.trim()
                                       }
-                                      className="w-full"
+                                      onClick={handleGenerateWithAI}
+                                      type="button"
                                     >
-                                      <Sparkles className="h-4 w-4 mr-2" />
+                                      <Sparkles className="mr-2 h-4 w-4" />
                                       {isGenerating
                                         ? t("sequences.launchModal.generating")
                                         : t("sequences.launchModal.generateWithAI")}
@@ -1174,48 +1178,48 @@ export function SequenceLaunchModal({
                             <div>
                               <Label>{t("sequences.launchModal.emailSubjectLabel")}</Label>
                               <Input
-                                value={step.emailSubject}
                                 onChange={(e) =>
                                   handleStepEdit(step.id, "emailSubject", e.target.value)
                                 }
                                 placeholder={t("sequences.launchModal.emailSubjectPlaceholder")}
+                                value={step.emailSubject}
                               />
                             </div>
                             <div>
-                              <div className="flex items-center justify-between mb-2">
+                              <div className="mb-2 flex items-center justify-between">
                                 <Label>{t("sequences.launchModal.emailBodyLabel")}</Label>
                                 <Button
+                                  className="h-7"
+                                  onClick={() => handleOpenSignatureModal(step.id)}
+                                  size="sm"
                                   type="button"
                                   variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenSignatureModal(step.id)}
-                                  className="h-7"
                                 >
-                                  <Mail className="h-3 w-3 mr-1" />
+                                  <Mail className="mr-1 h-3 w-3" />
                                   {t("sequences.launchModal.editSignature")}
                                 </Button>
                               </div>
                               <RichTextEditor
-                                value={step.emailBodyText || ""}
+                                height="300px"
                                 onChange={(value) =>
                                   handleStepEdit(step.id, "emailBodyText", value)
                                 }
                                 placeholder="이메일 본문을 입력하세요"
-                                height="300px"
+                                value={step.emailBodyText || ""}
                               />
                               <Collapsible className="mt-2">
-                                <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                                <CollapsibleTrigger className="flex items-center gap-2 font-medium text-muted-foreground text-xs transition-colors hover:text-foreground">
                                   <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
                                   {t("sequences.launchModal.viewVariables")}
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="mt-2">
-                                  <div className="text-xs text-muted-foreground rounded-md border bg-muted/30 p-3">
+                                  <div className="rounded-md border bg-muted/30 p-3 text-muted-foreground text-xs">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                       <div className="space-y-1">
                                         <p className="font-medium text-foreground">
                                           {t("sequences.launchModal.variablesCompanyInfo")}
                                         </p>
-                                        <ul className="space-y-0.5 ml-2 text-[11px]">
+                                        <ul className="ml-2 space-y-0.5 text-[11px]">
                                           <li>{"{{회사명}}"}</li>
                                           <li>{"{{웹사이트}}"}</li>
                                           <li>{"{{업종}}"}</li>
@@ -1228,7 +1232,7 @@ export function SequenceLaunchModal({
                                         <p className="font-medium text-foreground">
                                           {t("sequences.launchModal.variablesLocationInfo")}
                                         </p>
-                                        <ul className="space-y-0.5 ml-2 text-[11px]">
+                                        <ul className="ml-2 space-y-0.5 text-[11px]">
                                           <li>{"{{국가}}"}</li>
                                           <li>{"{{도시}}"}</li>
                                           <li>{"{{주/도}}"}</li>
@@ -1239,7 +1243,7 @@ export function SequenceLaunchModal({
                                         <p className="font-medium text-foreground">
                                           {t("sequences.launchModal.variablesContactInfo")}
                                         </p>
-                                        <ul className="space-y-0.5 ml-2 text-[11px]">
+                                        <ul className="ml-2 space-y-0.5 text-[11px]">
                                           <li>{"{{담당자명}}"}</li>
                                           <li>{"{{이메일}}"}</li>
                                         </ul>
@@ -1248,7 +1252,7 @@ export function SequenceLaunchModal({
                                         <p className="font-medium text-foreground">
                                           {t("sequences.launchModal.variablesLeadManagement")}
                                         </p>
-                                        <ul className="space-y-0.5 ml-2 text-[11px]">
+                                        <ul className="ml-2 space-y-0.5 text-[11px]">
                                           <li>{"{{리드소스}}"}</li>
                                           <li>{"{{리드상태}}"}</li>
                                           <li>{"{{리드점수}}"}</li>
@@ -1266,12 +1270,12 @@ export function SequenceLaunchModal({
                               <strong>{t("sequences.launchModal.previewSubject")}</strong>{" "}
                               {step.emailSubject}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-muted-foreground text-sm">
                               <strong>{t("sequences.launchModal.previewBody")}</strong>{" "}
                               {step.emailBodyText?.substring(0, 100)}
                               {(step.emailBodyText?.length || 0) > 100 && "..."}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               {t("sequences.launchModal.sendTime")} {step.scheduledHour ?? 9}:
                               {(step.scheduledMinute ?? 0).toString().padStart(2, "0")}
                             </div>
@@ -1286,21 +1290,20 @@ export function SequenceLaunchModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t mt-4 flex-shrink-0 bg-white dark:bg-gray-950">
-          <Button variant="outline" onClick={onClose} disabled={bulkEnroll.isPending}>
-            <X className="h-4 w-4 mr-1" />
+        <div className="mt-4 flex flex-shrink-0 justify-end gap-2 border-t bg-white pt-4 dark:bg-gray-950">
+          <Button disabled={bulkEnroll.isPending} onClick={onClose} variant="outline">
+            <X className="mr-1 h-4 w-4" />
             {t("sequences.launchModal.cancelButton")}
           </Button>
           <Button
-            onClick={handleLaunch}
             disabled={
-              !selectedSequenceId ||
-              !selectedEmailAccountId ||
+              !(selectedSequenceId && selectedEmailAccountId) ||
               editedSteps.length === 0 ||
               bulkEnroll.isPending
             }
+            onClick={handleLaunch}
           >
-            <Send className="h-4 w-4 mr-1" />
+            <Send className="mr-1 h-4 w-4" />
             {bulkEnroll.isPending
               ? t("sequences.launchModal.launching")
               : t("sequences.launchModal.launchButton")}
@@ -1310,12 +1313,12 @@ export function SequenceLaunchModal({
 
       {/* 서명 편집 모달 */}
       <SignatureEditorModal
+        defaultSignature={getUserSignature()}
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
-        defaultSignature={getUserSignature()}
         onSave={handleSaveSignature}
-        workspaceId={workspaceId}
         userId={user?.id}
+        workspaceId={workspaceId}
       />
     </Dialog>
   )

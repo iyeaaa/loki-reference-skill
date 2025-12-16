@@ -7,7 +7,7 @@ import { animate, motion, useMotionValue } from "framer-motion"
 import { useEffect, useState } from "react"
 import { shouldReduceMotion } from "@/lib/animations"
 
-interface AnimatedNumberProps {
+type AnimatedNumberProps = {
   value: number
   duration?: number
   decimals?: number

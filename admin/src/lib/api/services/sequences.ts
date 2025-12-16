@@ -23,7 +23,9 @@ export const sequencesApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.status && params.status !== "all") {
       searchParams.append("status", params.status)
     }
@@ -49,29 +51,24 @@ export const sequencesApi = {
     }))
   },
 
-  get: (sequenceId: string) => {
-    return apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}`)
-  },
+  get: (sequenceId: string) => apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}`),
 
-  create: (data: CreateSequenceRequest) => {
-    return apiFetch<Sequence>("/api/v1/sequences", {
+  create: (data: CreateSequenceRequest) =>
+    apiFetch<Sequence>("/api/v1/sequences", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (sequenceId: string, data: UpdateSequenceRequest) => {
-    return apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}`, {
+  update: (sequenceId: string, data: UpdateSequenceRequest) =>
+    apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (sequenceId: string) => {
-    return apiFetch(`/api/v1/sequences/${sequenceId}`, {
+  delete: (sequenceId: string) =>
+    apiFetch(`/api/v1/sequences/${sequenceId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
   copy: (
     sequenceId: string,
@@ -81,17 +78,15 @@ export const sequencesApi = {
       selectedLeadIds?: string[]
       createdBy?: string
     },
-  ) => {
-    return apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}/copy`, {
+  ) =>
+    apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}/copy`, {
       method: "POST",
       body: JSON.stringify(data || {}),
-    })
-  },
+    }),
 
   // Sequence steps
-  getSteps: (sequenceId: string) => {
-    return apiFetch<SequenceStep[]>(`/api/v1/sequences/${sequenceId}/steps`)
-  },
+  getSteps: (sequenceId: string) =>
+    apiFetch<SequenceStep[]>(`/api/v1/sequences/${sequenceId}/steps`),
 
   createStep: (sequenceId: string, data: CreateSequenceStepRequest, files?: File[]) => {
     console.log("📎 API - createStep called with files:", files)
@@ -114,9 +109,13 @@ export const sequencesApi = {
       // Ensure scheduledHour and scheduledMinute are not null (use defaults)
       formData.append("scheduledHour", (data.scheduledHour ?? 9).toString())
       formData.append("scheduledMinute", (data.scheduledMinute ?? 0).toString())
-      if (data.timezone) formData.append("timezone", data.timezone)
+      if (data.timezone) {
+        formData.append("timezone", data.timezone)
+      }
       formData.append("emailSubject", data.emailSubject)
-      if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
+      if (data.emailBodyText) {
+        formData.append("emailBodyText", data.emailBodyText)
+      }
       if (data.emailBodyHtml) {
         formData.append("emailBodyHtml", data.emailBodyHtml)
         console.log("📎 API - emailBodyHtml appended to FormData:", {
@@ -126,7 +125,9 @@ export const sequencesApi = {
       } else {
         console.warn("📎 API - emailBodyHtml is missing!")
       }
-      if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
+      if (data.emailTemplateId) {
+        formData.append("emailTemplateId", data.emailTemplateId)
+      }
 
       // Append files
       for (const file of files) {
@@ -188,9 +189,13 @@ export const sequencesApi = {
       // Ensure scheduledHour and scheduledMinute are not null (use defaults)
       formData.append("scheduledHour", (data.scheduledHour ?? 9).toString())
       formData.append("scheduledMinute", (data.scheduledMinute ?? 0).toString())
-      if (data.timezone) formData.append("timezone", data.timezone)
+      if (data.timezone) {
+        formData.append("timezone", data.timezone)
+      }
       formData.append("emailSubject", data.emailSubject)
-      if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
+      if (data.emailBodyText) {
+        formData.append("emailBodyText", data.emailBodyText)
+      }
       if (data.emailBodyHtml) {
         formData.append("emailBodyHtml", data.emailBodyHtml)
         console.log("📎 API - emailBodyHtml appended to FormData:", {
@@ -200,7 +205,9 @@ export const sequencesApi = {
       } else {
         console.warn("📎 API - emailBodyHtml is missing!")
       }
-      if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
+      if (data.emailTemplateId) {
+        formData.append("emailTemplateId", data.emailTemplateId)
+      }
 
       // Append files
       for (const file of files) {
@@ -235,11 +242,10 @@ export const sequencesApi = {
     })
   },
 
-  deleteStep: (sequenceId: string, stepId: string) => {
-    return apiFetch(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
+  deleteStep: (sequenceId: string, stepId: string) =>
+    apiFetch(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
   // Enrollments
   getEnrollments: (
@@ -293,25 +299,23 @@ export const sequencesApi = {
     )
   },
 
-  createEnrollment: (sequenceId: string, data: CreateEnrollmentRequest) => {
-    return apiFetch<SequenceEnrollment>(`/api/v1/sequences/${sequenceId}/enrollments`, {
+  createEnrollment: (sequenceId: string, data: CreateEnrollmentRequest) =>
+    apiFetch<SequenceEnrollment>(`/api/v1/sequences/${sequenceId}/enrollments`, {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  updateEnrollmentStatus: (sequenceId: string, enrollmentId: string, status: string) => {
-    return apiFetch<SequenceEnrollment>(
+  updateEnrollmentStatus: (sequenceId: string, enrollmentId: string, status: string) =>
+    apiFetch<SequenceEnrollment>(
       `/api/v1/sequences/${sequenceId}/enrollments/${enrollmentId}/status`,
       {
         method: "PATCH",
         body: JSON.stringify({ status }),
       },
-    )
-  },
+    ),
 
-  getEnrollmentStepExecutions: (sequenceId: string, enrollmentId: string) => {
-    return apiFetch<
+  getEnrollmentStepExecutions: (sequenceId: string, enrollmentId: string) =>
+    apiFetch<
       {
         id: string
         stepId: string
@@ -323,26 +327,23 @@ export const sequencesApi = {
         errorMessage: string | null
         emailSubject: string
       }[]
-    >(`/api/v1/sequences/${sequenceId}/enrollments/${enrollmentId}/step-executions`)
-  },
+    >(`/api/v1/sequences/${sequenceId}/enrollments/${enrollmentId}/step-executions`),
 
   // Bulk operations
-  bulkUpdateStatus: (data: BulkUpdateSequenceStatusRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/sequences/bulk/status", {
+  bulkUpdateStatus: (data: BulkUpdateSequenceStatusRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/sequences/bulk/status", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkDelete: (sequenceIds: string[]) => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/admin/sequences/bulk", {
+  bulkDelete: (sequenceIds: string[]) =>
+    apiFetch<{ deletedCount: number }>("/api/v1/admin/sequences/bulk", {
       method: "DELETE",
       body: JSON.stringify({ sequenceIds }),
-    })
-  },
+    }),
 
-  bulkEnroll: (data: BulkEnrollRequest) => {
-    return apiFetch<{ enrolledCount: number }>(
+  bulkEnroll: (data: BulkEnrollRequest) =>
+    apiFetch<{ enrolledCount: number }>(
       `/api/v1/admin/sequences/${data.sequenceId}/enrollments/bulk`,
       {
         method: "POST",
@@ -352,46 +353,38 @@ export const sequencesApi = {
           enrolledBy: data.enrolledBy,
         }),
       },
-    )
-  },
+    ),
 
-  bulkUnenroll: (enrollmentIds: string[]) => {
-    return apiFetch<{ unenrolledCount: number }>(
-      "/api/v1/admin/sequences/enrollments/bulk/unenroll",
-      {
-        method: "PUT",
-        body: JSON.stringify({ enrollmentIds }),
-      },
-    )
-  },
+  bulkUnenroll: (enrollmentIds: string[]) =>
+    apiFetch<{ unenrolledCount: number }>("/api/v1/admin/sequences/enrollments/bulk/unenroll", {
+      method: "PUT",
+      body: JSON.stringify({ enrollmentIds }),
+    }),
 
   bulkEnrollWithScheduling: (
     sequenceId: string,
     data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string },
-  ) => {
-    return apiFetch<{
+  ) =>
+    apiFetch<{
       enrolledCount: number
       totalSteps: number
       scheduledExecutions: number
     }>(`/api/v1/admin/sequences/${sequenceId}/enrollments/bulk-with-scheduling`, {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  getByWorkspace: (workspaceId: string) => {
-    return apiFetch<Sequence[]>(`/api/v1/sequences/workspace/${workspaceId}`)
-  },
+  getByWorkspace: (workspaceId: string) =>
+    apiFetch<Sequence[]>(`/api/v1/sequences/workspace/${workspaceId}`),
 
   // Activate step-based sequence
-  activateStepBased: (sequenceId: string) => {
-    return apiFetch<{ success: boolean; message: string; stepsCount: number }>(
+  activateStepBased: (sequenceId: string) =>
+    apiFetch<{ success: boolean; message: string; stepsCount: number }>(
       `/api/v1/sequences/${sequenceId}/activate-step-based`,
       {
         method: "POST",
       },
-    )
-  },
+    ),
 
   // Get sequence metrics
   getMetrics: (sequenceId: string) => {
@@ -530,8 +523,8 @@ export const sequencesApi = {
     prompt: string
     model?: string
     temperature?: number
-  }) => {
-    return apiFetch<{
+  }) =>
+    apiFetch<{
       emailSubject: string
       emailBodyText: string
       emailBodyHtml: string
@@ -539,8 +532,7 @@ export const sequencesApi = {
     }>("/api/v1/sequences/generate-template", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   generateAI: async (
     sequenceId: string,

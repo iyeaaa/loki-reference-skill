@@ -9,7 +9,7 @@ import type { IamAction, IamResource } from "@/lib/constants/iam-resources"
 /**
  * IAM 권한 (리소스 + 액션)
  */
-export interface IamPermission {
+export type IamPermission = {
   resource: IamResource
   action: IamAction
 }
@@ -25,7 +25,7 @@ export type RoutePermission = IamPermission | "public" | "admin-only"
 /**
  * 권한 컨텍스트 타입
  */
-export interface PermissionContextType {
+export type PermissionContextType = {
   // 현재 워크스페이스 ID
   workspaceId: string | null
   setWorkspaceId: (id: string | null) => void
@@ -50,14 +50,14 @@ export interface PermissionContextType {
 /**
  * API 응답: 권한 체크 결과
  */
-export interface PermissionCheckResponse {
+export type PermissionCheckResponse = {
   hasPermission: boolean
 }
 
 /**
  * API 응답: 내 권한 정보
  */
-export interface MyPermissionsResponse {
+export type MyPermissionsResponse = {
   memberId: string | null
   permissions: Array<{ resource: string; action: string }>
   roles: Array<{ id: string; name: string; priority: number }>

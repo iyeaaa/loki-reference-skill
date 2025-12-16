@@ -1,4 +1,4 @@
-export interface ApiKey {
+export type ApiKey = {
   id: string
   workspaceId: string
   name: string
@@ -11,31 +11,31 @@ export interface ApiKey {
   updatedAt: string
 }
 
-export interface CreateApiKeyRequest {
+export type CreateApiKeyRequest = {
   workspaceId: string
   name: string
   apiKey: string
 }
 
-export interface UpdateApiKeyRequest {
+export type UpdateApiKeyRequest = {
   workspaceId: string
   name?: string
   apiKey?: string
   isActive?: boolean
 }
 
-export interface DeleteApiKeyParams {
+export type DeleteApiKeyParams = {
   id: string
   workspaceId: string
 }
 
-export interface ApiKeysResponse {
+export type ApiKeysResponse = {
   success: boolean
   data: ApiKey[]
   error?: string
 }
 
-export interface ApiKeyResponse {
+export type ApiKeyResponse = {
   success: boolean
   data?: ApiKey
   error?: string

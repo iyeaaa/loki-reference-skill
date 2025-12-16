@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import { useEmailAccountsByWorkspace } from "@/lib/api/hooks/email-accounts"
 
-interface EmailReplyFiltersProps {
+type EmailReplyFiltersProps = {
   selectedReadStatus: boolean | undefined
   selectedSentiments: string[]
   selectedEmailAccountId: string | undefined
@@ -56,27 +56,24 @@ export function EmailReplyFilters({
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">필터</span>
+            <span className="font-medium text-sm">필터</span>
           </div>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={onClearFilters}>
-              <X className="h-4 w-4 mr-1" />
+            <Button onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-4 w-4" />
               필터 초기화
             </Button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Read Status Filter */}
           <div>
-            <div className="text-sm font-medium mb-2">읽음 상태</div>
+            <div className="mb-2 font-medium text-sm">읽음 상태</div>
             <Select
-              value={
-                selectedReadStatus === undefined ? "all" : selectedReadStatus ? "read" : "unread"
-              }
               onValueChange={(value) => {
                 if (value === "all") {
                   onReadStatusChange(undefined)
@@ -84,6 +81,9 @@ export function EmailReplyFilters({
                   onReadStatusChange(value === "read")
                 }
               }}
+              value={
+                selectedReadStatus === undefined ? "all" : selectedReadStatus ? "read" : "unread"
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="전체" />
@@ -98,12 +98,12 @@ export function EmailReplyFilters({
 
           {/* Email Account Filter */}
           <div>
-            <div className="text-sm font-medium mb-2">이메일 계정</div>
+            <div className="mb-2 font-medium text-sm">이메일 계정</div>
             <Select
-              value={selectedEmailAccountId || "all"}
               onValueChange={(value) => {
                 onEmailAccountChange(value === "all" ? undefined : value)
               }}
+              value={selectedEmailAccountId || "all"}
             >
               <SelectTrigger>
                 <SelectValue placeholder="전체" />
@@ -121,16 +121,16 @@ export function EmailReplyFilters({
 
           {/* Sentiment Filter */}
           <div>
-            <div className="text-sm font-medium mb-2">감정 분석</div>
+            <div className="mb-2 font-medium text-sm">감정 분석</div>
             <div className="flex flex-wrap gap-2">
               {sentimentOptions.map((option) => (
                 <Badge
-                  key={option.value}
-                  variant={selectedSentiments.includes(option.value) ? "default" : "outline"}
                   className={`cursor-pointer ${
                     selectedSentiments.includes(option.value) ? option.color : ""
                   }`}
+                  key={option.value}
                   onClick={() => toggleSentiment(option.value)}
+                  variant={selectedSentiments.includes(option.value) ? "default" : "outline"}
                 >
                   {option.label}
                 </Badge>

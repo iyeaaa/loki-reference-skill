@@ -41,7 +41,7 @@ import { usePermissions } from "@/lib/permission"
 import { cn } from "@/lib/utils"
 
 // Custom Menu Item Component
-interface CustomMenuItemProps {
+type CustomMenuItemProps = {
   title: string
   url: string
   icon: LucideIcon
@@ -55,16 +55,16 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
     <SidebarMenuItem>
       <SidebarMenuButton
         asChild
-        tooltip={title}
-        isActive={isActive}
         className={cn(
-          "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg group",
+          "group relative h-11 rounded-lg px-3 py-2.5 transition-all duration-200",
           isActive
             ? "bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/95"
             : "bg-transparent text-sidebar-foreground hover:bg-accent/50",
         )}
+        isActive={isActive}
+        tooltip={title}
       >
-        <Link to={url} className="flex items-center gap-3 w-full">
+        <Link className="flex w-full items-center gap-3" to={url}>
           {reducedMotion ? (
             <Icon
               className={cn(
@@ -73,7 +73,7 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
               )}
             />
           ) : (
-            <motion.div variants={iconRotateVariants} initial="rest" whileHover="hover">
+            <motion.div initial="rest" variants={iconRotateVariants} whileHover="hover">
               <Icon
                 className={cn(
                   "h-5 w-5 shrink-0",
@@ -97,7 +97,7 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
 }
 
 // 메뉴 아이템 인터페이스 (권한 정보 포함)
-interface MenuItem {
+type MenuItem = {
   title: string
   url: string
   icon: LucideIcon
@@ -190,7 +190,7 @@ const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
   },
 ]
 
-interface AppSidebarProps {
+type AppSidebarProps = {
   workspaces?: WorkspaceOption[]
   selectedWorkspace?: string
   onWorkspaceChange?: (value: string) => void
@@ -219,7 +219,9 @@ export function AppSidebar({
   // 권한에 따라 메뉴 필터링
   const mainMenuItems = useMemo(() => {
     // 권한 로딩 중이면 빈 배열 (깜박임 방지)
-    if (permissionLoading) return []
+    if (permissionLoading) {
+      return []
+    }
 
     // Admin은 모든 메뉴 표시
     if (isAdmin) {
@@ -229,10 +231,14 @@ export function AppSidebar({
     // 권한에 따라 필터링
     const filteredItems = allMenuItems.filter((item) => {
       // "public"이면 모든 인증된 사용자 접근 가능
-      if (item.permission === "public") return true
+      if (item.permission === "public") {
+        return true
+      }
 
       // permission이 없으면(undefined) Admin만 접근 가능 → 일반 사용자는 숨김
-      if (!item.permission) return false
+      if (!item.permission) {
+        return false
+      }
 
       // 권한 체크
       return hasPermission(item.permission.resource, item.permission.action)
@@ -240,7 +246,7 @@ export function AppSidebar({
 
     return filteredItems
   }, [allMenuItems, isAdmin, hasPermission, permissionLoading])
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
+  const isTrialUser = currentUser?.trialStatus?.isTrialActive
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   // Trial 사용자의 경우 "전체" 옵션을 숨김
@@ -257,23 +263,23 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border pb-3 group-data-[collapsible=icon]:pb-4">
+      <SidebarHeader className="border-sidebar-border border-b pb-3 group-data-[collapsible=icon]:pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="hover:bg-transparent">
+            <SidebarMenuButton asChild className="hover:bg-transparent" size="lg">
               <Link to="/dashboard">
                 <div className="flex aspect-square size-10 items-center justify-center group-data-[collapsible=icon]:size-8">
                   <img
-                    src="/images/rinda-logo.png"
                     alt="Rinda Logo"
-                    className="size-10 object-contain rounded-xl group-data-[collapsible=icon]:size-8"
+                    className="size-10 rounded-xl object-contain group-data-[collapsible=icon]:size-8"
+                    src="/images/rinda-logo.png"
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-bold text-base">
                     {t("sidebar.title.sendGrinda")}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-muted-foreground text-xs">
                     {t("sidebar.subtitle.aiEmailSystem")}
                   </span>
                 </div>
@@ -284,13 +290,13 @@ export function AppSidebar({
 
         {/* 워크스페이스 선택 */}
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
-          <div className="group-data-[collapsible=icon]:hidden mt-3">
+          <div className="mt-3 group-data-[collapsible=icon]:hidden">
             <div className="px-2">
               <WorkspaceSelector
+                className="w-full"
+                onValueChange={onWorkspaceChange}
                 options={workspaceOptions}
                 value={selectedWorkspace}
-                onValueChange={onWorkspaceChange}
-                className="w-full"
               />
             </div>
           </div>
@@ -300,22 +306,22 @@ export function AppSidebar({
         {/* Main Menu Section - Natural workflow order */}
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
+            <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-8">
               {mainMenuItems.map((item, index) => (
                 <Fragment key={item.title}>
                   <CustomMenuItem
-                    title={item.title}
-                    url={item.url}
                     icon={item.icon}
                     isActive={pathname === item.url}
+                    title={item.title}
+                    url={item.url}
                   />
                   {/* 대시보드(첫번째) 밑에 구분선 */}
                   {index === 0 && (
-                    <div className="my-3 border-t border-sidebar-border group-data-[collapsible=icon]:hidden" />
+                    <div className="my-3 border-sidebar-border border-t group-data-[collapsible=icon]:hidden" />
                   )}
                   {/* Rinda GPT(마지막) 위에 구분선 */}
                   {index === mainMenuItems.length - 2 && (
-                    <div className="my-3 border-t border-sidebar-border group-data-[collapsible=icon]:hidden" />
+                    <div className="my-3 border-sidebar-border border-t group-data-[collapsible=icon]:hidden" />
                   )}
                 </Fragment>
               ))}
@@ -323,17 +329,17 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
+      <SidebarFooter className="border-sidebar-border border-t px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
         {/* Language and Settings */}
-        <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
+        <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-8">
           <SidebarMenuItem>
             <LanguageSwitcher className="w-full" />
           </SidebarMenuItem>
           <CustomMenuItem
-            title={t("sidebar.menu.settings")}
-            url="/settings"
             icon={Settings}
             isActive={pathname === "/settings" || pathname === "/company"}
+            title={t("sidebar.menu.settings")}
+            url="/settings"
           />
         </SidebarMenu>
       </SidebarFooter>

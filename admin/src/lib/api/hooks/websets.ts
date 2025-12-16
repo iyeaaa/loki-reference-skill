@@ -15,7 +15,9 @@ export function useWebsets(workspaceId: string, limit = 10, offset = 0) {
           },
         },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return data?.data
     },
     enabled: !!workspaceId && workspaceId !== "all",
@@ -32,7 +34,9 @@ export function useWebset(id: string) {
           path: { id },
         },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return data?.data
     },
     enabled: !!id,
@@ -53,11 +57,13 @@ export function useWebsetRows(id: string, limit = 100, offset = 0) {
           },
         },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return data?.data
     },
     enabled: !!id,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 10_000, // Refetch every 10 seconds
   })
 }
 
@@ -76,7 +82,9 @@ export function useCreateWebset() {
       const { data: response, error } = await client.POST("/api/v1/websets/", {
         body: data,
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return response?.data
     },
     onSuccess: (_data, variables) => {
@@ -104,7 +112,9 @@ export function useUpdateWebset(id: string) {
         },
         body: data,
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return response?.data
     },
     onSuccess: () => {
@@ -124,7 +134,9 @@ export function useDeleteWebset() {
           path: { id },
         },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["websets"] })
@@ -143,7 +155,9 @@ export function useRunWebset(id: string) {
           path: { id },
         },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return data?.data
     },
     onSuccess: () => {
@@ -161,7 +175,9 @@ export function useGenerateCriteria() {
       const { data, error } = await client.POST("/api/v1/websets/criteria", {
         body: { query },
       })
-      if (error) throw error
+      if (error) {
+        throw error
+      }
       return data?.data
     },
   })

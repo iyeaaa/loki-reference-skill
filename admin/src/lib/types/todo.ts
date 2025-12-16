@@ -1,4 +1,4 @@
-export interface Todo {
+export type Todo = {
   id: string
   title: string
   description?: string
@@ -10,7 +10,7 @@ export interface Todo {
   updatedAt: string
 }
 
-export interface CreateTodoRequest {
+export type CreateTodoRequest = {
   title: string
   description?: string
   priority: "low" | "medium" | "high"
@@ -18,7 +18,7 @@ export interface CreateTodoRequest {
   workspaceId?: string
 }
 
-export interface UpdateTodoRequest {
+export type UpdateTodoRequest = {
   title?: string
   description?: string
   completed?: boolean

@@ -52,7 +52,9 @@ export default function CustomerGroupsPage() {
   }
 
   const handleUpdateCustomerGroup = async (customerGroupData: unknown) => {
-    if (!editingCustomerGroup) return
+    if (!editingCustomerGroup) {
+      return
+    }
     const data = customerGroupData as Partial<CustomerGroup>
     updateCustomerGroup.mutate(
       {
@@ -73,14 +75,17 @@ export default function CustomerGroupsPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedCustomerGroups.length === 0) return
+    if (selectedCustomerGroups.length === 0) {
+      return
+    }
 
     if (
       !confirm(
         `선택한 ${selectedCustomerGroups.length}개의 고객 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
-    )
+    ) {
       return
+    }
 
     for (const customerGroupId of selectedCustomerGroups) {
       await deleteCustomerGroup.mutateAsync(customerGroupId)
@@ -139,7 +144,7 @@ export default function CustomerGroupsPage() {
   }, [])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters - 워크스페이스 필터 제거됨 */}
       <CustomerGroupFilters />
 
@@ -149,7 +154,7 @@ export default function CustomerGroupsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">고객 그룹 관리</CardTitle>
             <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="mr-1 h-4 w-4" />
               고객 그룹 생성
             </Button>
           </div>
@@ -158,24 +163,24 @@ export default function CustomerGroupsPage() {
           {/* Search input - positioned below title */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="고객 그룹명으로 검색..."
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder="고객 그룹명으로 검색..."
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -183,18 +188,18 @@ export default function CustomerGroupsPage() {
 
           {/* Bulk Actions */}
           {selectedCustomerGroups.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">{selectedCustomerGroups.length}개 선택됨</span>
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   선택 삭제
                 </Button>
               </div>
@@ -203,21 +208,21 @@ export default function CustomerGroupsPage() {
 
           {/* Single Group Quick Actions */}
           {selectedCustomerGroups.length === 1 && (
-            <div className="flex items-center gap-4 mb-6 p-3 bg-blue-50 rounded-lg">
-              <div className="text-sm text-blue-700 font-medium">1개 그룹 선택됨</div>
+            <div className="mb-6 flex items-center gap-4 rounded-lg bg-blue-50 p-3">
+              <div className="font-medium text-blue-700 text-sm">1개 그룹 선택됨</div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-blue-600 hover:bg-blue-100 hover:text-blue-700"
                   onClick={() => {
                     // Find the selected group
                     // const _group = selectedCustomerGroups[0]
                     // This will be implemented by passing the full customer group object
                     // For now, we can skip this as we have per-row buttons
                   }}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  size="sm"
+                  variant="outline"
                 >
-                  <UserPlus className="h-4 w-4 mr-1" />
+                  <UserPlus className="mr-1 h-4 w-4" />
                   고객 추가
                 </Button>
               </div>
@@ -226,45 +231,45 @@ export default function CustomerGroupsPage() {
 
           {/* Customer Groups Table with Pagination */}
           <CustomerGroupsTableWithPagination
+            onAddMembers={handleAddMembers}
+            onEditCustomerGroup={setEditingCustomerGroup}
+            onToggleAll={toggleAllCustomerGroups}
+            onToggleCustomerGroup={toggleCustomerGroupSelection}
             searchQuery={searchQuery}
             selectedCustomerGroups={selectedCustomerGroups}
-            onToggleCustomerGroup={toggleCustomerGroupSelection}
-            onToggleAll={toggleAllCustomerGroups}
-            onEditCustomerGroup={setEditingCustomerGroup}
-            onAddMembers={handleAddMembers}
           />
         </CardContent>
       </Card>
 
       {/* Create Customer Group Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">고객 그룹 생성</DialogTitle>
+      <Dialog onOpenChange={setShowCreateDialog} open={showCreateDialog}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">고객 그룹 생성</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <CustomerGroupForm
               isEdit={false}
-              onSave={handleCreateCustomerGroup}
               onCancel={() => setShowCreateDialog(false)}
+              onSave={handleCreateCustomerGroup}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Customer Group Dialog */}
-      <Dialog open={!!editingCustomerGroup} onOpenChange={() => setEditingCustomerGroup(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">고객 그룹 정보 수정</DialogTitle>
+      <Dialog onOpenChange={() => setEditingCustomerGroup(null)} open={!!editingCustomerGroup}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">고객 그룹 정보 수정</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingCustomerGroup && (
               <CustomerGroupForm
                 customerGroup={editingCustomerGroup}
                 isEdit={true}
-                onSave={handleUpdateCustomerGroup}
                 onCancel={() => setEditingCustomerGroup(null)}
+                onSave={handleUpdateCustomerGroup}
               />
             )}
           </div>
@@ -273,24 +278,24 @@ export default function CustomerGroupsPage() {
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        actionType={bulkActionType}
+        customerGroupCount={selectedCustomerGroups.length}
         isOpen={showBulkActionModal}
         onClose={() => {
           setShowBulkActionModal(false)
           setBulkActionType(null)
         }}
         onConfirm={handleBulkAction}
-        customerGroupCount={selectedCustomerGroups.length}
-        actionType={bulkActionType}
       />
 
       {/* Add Members Dialog */}
       <AddMembersDialog
+        customerGroup={addingMembersToGroup}
         isOpen={showAddMembersDialog}
         onClose={() => {
           setShowAddMembersDialog(false)
           setAddingMembersToGroup(null)
         }}
-        customerGroup={addingMembersToGroup}
         onSuccess={() => {
           // Optionally refresh the customer groups list
           toast.success("고객이 그룹에 추가되었습니다.")

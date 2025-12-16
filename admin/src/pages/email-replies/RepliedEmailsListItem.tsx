@@ -9,11 +9,17 @@ import { IntentBadge } from "./IntentBadge"
  * Check if a string is Base64 encoded
  */
 function isBase64(str: string): boolean {
-  if (!str || str.length === 0) return false
+  if (!str || str.length === 0) {
+    return false
+  }
   // Base64 strings should be at least 4 chars and have valid characters
   // Also check that it doesn't look like regular HTML or plain text
-  if (str.startsWith("<") || str.startsWith("<!")) return false
-  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) return false
+  if (str.startsWith("<") || str.startsWith("<!")) {
+    return false
+  }
+  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) {
+    return false
+  }
   // Check for Base64 pattern: alphanumeric, +, /, =, and newlines
   const base64Regex = /^[A-Za-z0-9+/\r\n]+=*$/
   // Remove whitespace and check
@@ -46,14 +52,16 @@ function decodeBase64(str: string): string {
  * Decode content if it's Base64 encoded
  */
 function decodeIfBase64(str: string | null | undefined): string {
-  if (!str) return ""
+  if (!str) {
+    return ""
+  }
   if (isBase64(str)) {
     return decodeBase64(str)
   }
   return str
 }
 
-interface RepliedEmailsListItemProps {
+type RepliedEmailsListItemProps = {
   email: RepliedEmail
   isSelected: boolean
   isActive: boolean
@@ -95,32 +103,27 @@ export function RepliedEmailsListItem({
 
   return (
     <button
-      type="button"
-      className={`
-        flex items-start gap-2 px-3 py-2.5 cursor-pointer transition-all w-full text-left
-        hover:bg-gray-50 dark:hover:bg-gray-800/50
-        ${isActive ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500" : "bg-white dark:bg-gray-800"}
-        ${!email.isRead ? "font-semibold" : ""}
-        border-b border-gray-200 dark:border-gray-700
-      `}
+      className={`flex w-full cursor-pointer items-start gap-2 px-3 py-2.5 text-left transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isActive ? "border-blue-500 border-l-4 bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}
+        ${email.isRead ? "" : "font-semibold"}border-b border-gray-200 dark:border-gray-700`}
       onClick={onSelect}
+      type="button"
     >
       {/* Checkbox */}
       <button
-        type="button"
-        onClick={onToggleCheckbox}
-        className="flex-shrink-0 pt-0.5"
         aria-label="Toggle selection"
+        className="flex-shrink-0 pt-0.5"
+        onClick={onToggleCheckbox}
+        type="button"
       >
         <Checkbox checked={isSelected} />
       </button>
 
       {/* Star/Important button */}
       <button
-        type="button"
-        onClick={onToggleImportant}
-        className="flex-shrink-0 pt-0.5 hover:scale-110 transition-transform"
         aria-label="Toggle important"
+        className="flex-shrink-0 pt-0.5 transition-transform hover:scale-110"
+        onClick={onToggleImportant}
+        type="button"
       >
         <Star
           className={`h-4 w-4 ${email.isImportant ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
@@ -128,23 +131,23 @@ export function RepliedEmailsListItem({
       </button>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         {/* Top row: Lead name + Subject + Date */}
         <div className="flex items-center justify-between gap-2">
           {/* Lead name */}
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-            <HighlightedText text={leadDisplayName} searchTerm={searchQuery} />
+          <h3 className="truncate font-semibold text-gray-900 text-sm dark:text-gray-100">
+            <HighlightedText searchTerm={searchQuery} text={leadDisplayName} />
           </h3>
 
           {/* Subject - in the middle */}
           {email.subject && (
-            <div className="flex-1 text-xs text-gray-600 dark:text-gray-400 truncate">
-              <HighlightedText text={email.subject} searchTerm={searchQuery} />
+            <div className="flex-1 truncate text-gray-600 text-xs dark:text-gray-400">
+              <HighlightedText searchTerm={searchQuery} text={email.subject} />
             </div>
           )}
 
           {/* Latest reply date */}
-          <div className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          <div className="flex-shrink-0 whitespace-nowrap text-gray-500 text-xs dark:text-gray-400">
             {formatAbsoluteDateTime(email.latestActivityAt || email.createdAt)}
           </div>
         </div>
@@ -152,18 +155,18 @@ export function RepliedEmailsListItem({
         {/* Second row: Message preview + Tags */}
         <div className="flex items-center gap-2">
           {/* Message preview - 1 line max */}
-          <div className="flex-1 text-xs text-gray-600 dark:text-gray-400 truncate">
-            <HighlightedText text={messagePreview} searchTerm={searchQuery} />
+          <div className="flex-1 truncate text-gray-600 text-xs dark:text-gray-400">
+            <HighlightedText searchTerm={searchQuery} text={messagePreview} />
           </div>
 
           {/* Tags (compact) */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-1">
             {/* Intent badge */}
             {email.replyIntent && <IntentBadge intent={email.replyIntent} size="sm" />}
 
             {/* Message count */}
             {email.messageCount && email.messageCount > 1 && (
-              <span className="flex items-center gap-0.5 text-xs text-gray-500">
+              <span className="flex items-center gap-0.5 text-gray-500 text-xs">
                 <MessageSquare className="h-3 w-3" />
                 {email.messageCount}
               </span>

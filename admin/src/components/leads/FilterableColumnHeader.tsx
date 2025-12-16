@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import type { ColumnFilter, ColumnFilterConfig } from "@/lib/api/types/lead-filters"
 import { ColumnFilterButton } from "./filters/ColumnFilterButton"
 
-interface FilterableColumnHeaderProps<TData> {
+type FilterableColumnHeaderProps<TData> = {
   column: Column<TData, unknown>
   title: string
   filterConfig?: ColumnFilterConfig
@@ -35,13 +35,13 @@ export function FilterableColumnHeader<TData>({
   const canSort = column.getCanSort()
 
   return (
-    <div className="flex items-center justify-between gap-2 min-w-0">
+    <div className="flex min-w-0 items-center justify-between gap-2">
       {/* Column Title with Sort */}
       {canSort ? (
         <button
-          type="button"
-          className="flex items-center gap-1.5 cursor-pointer select-none hover:text-foreground/80 flex-1 min-w-0 text-left border-0 bg-transparent p-0"
+          className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-1.5 border-0 bg-transparent p-0 text-left hover:text-foreground/80"
           onClick={column.getToggleSortingHandler()}
+          type="button"
         >
           <span className="truncate">{title}</span>
           {/* Sort Indicators */}
@@ -52,20 +52,20 @@ export function FilterableColumnHeader<TData>({
           </span>
         </button>
       ) : (
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <span className="truncate">{title}</span>
         </div>
       )}
 
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-1">
         {/* Filter Button */}
         {filterConfig && onFilterChange && (
           <ColumnFilterButton
+            currentFilter={currentFilter}
+            customerGroupId={customerGroupId}
             field={column.id}
             filterConfig={filterConfig}
-            currentFilter={currentFilter}
             onFilterChange={onFilterChange}
-            customerGroupId={customerGroupId}
             workspaceId={workspaceId}
           />
         )}
@@ -73,13 +73,13 @@ export function FilterableColumnHeader<TData>({
         {/* Remove Column Button */}
         {canRemove && onRemove && (
           <Button
-            variant="ghost"
-            size="sm"
             className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/30"
             onClick={(e) => {
               e.stopPropagation()
               onRemove()
             }}
+            size="sm"
+            variant="ghost"
           >
             <X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-600 dark:hover:text-red-400" />
           </Button>

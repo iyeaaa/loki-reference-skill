@@ -66,63 +66,63 @@ export function JobLogsPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 h-full overflow-y-auto">
+      <div className="h-full space-y-6 overflow-y-auto">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">전체</CardTitle>
+              <CardTitle className="font-medium text-muted-foreground text-sm">전체</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalJobs.toLocaleString()}</div>
+              <div className="font-bold text-2xl">{totalJobs.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-600">대기중</CardTitle>
+              <CardTitle className="font-medium text-sm text-yellow-600">대기중</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="font-bold text-2xl text-yellow-600">
                 {(totalCounts.waiting || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-600">처리중</CardTitle>
+              <CardTitle className="font-medium text-blue-600 text-sm">처리중</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="font-bold text-2xl text-blue-600">
                 {(totalCounts.active || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-600">완료</CardTitle>
+              <CardTitle className="font-medium text-green-600 text-sm">완료</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="font-bold text-2xl text-green-600">
                 {(totalCounts.completed || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-600">실패</CardTitle>
+              <CardTitle className="font-medium text-red-600 text-sm">실패</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="font-bold text-2xl text-red-600">
                 {(totalCounts.failed || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-600">지연/정지</CardTitle>
+              <CardTitle className="font-medium text-orange-600 text-sm">지연/정지</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="font-bold text-2xl text-orange-600">
                 {((totalCounts.delayed || 0) + (totalCounts.stalled || 0)).toLocaleString()}
               </div>
             </CardContent>
@@ -131,14 +131,14 @@ export function JobLogsPage() {
 
         {/* Filters */}
         <JobLogsFilters
-          selectedStatuses={selectedStatuses}
-          selectedQueues={selectedQueues}
           dateRange={dateRange}
-          queues={queues || []}
-          onStatusChange={setSelectedStatuses}
-          onQueueChange={setSelectedQueues}
-          onDateRangeChange={setDateRange}
           onClearFilters={clearFilters}
+          onDateRangeChange={setDateRange}
+          onQueueChange={setSelectedQueues}
+          onStatusChange={setSelectedStatuses}
+          queues={queues || []}
+          selectedQueues={selectedQueues}
+          selectedStatuses={selectedStatuses}
         />
 
         {/* Job Logs Table */}
@@ -156,8 +156,8 @@ export function JobLogsPage() {
                           className={`h-3 w-3 ${sseConnected ? "text-green-500" : "text-gray-400"}`}
                         />
                         <Label
+                          className="cursor-pointer text-muted-foreground text-sm"
                           htmlFor={sseId}
-                          className="text-sm text-muted-foreground cursor-pointer"
                         >
                           실시간
                         </Label>
@@ -167,10 +167,10 @@ export function JobLogsPage() {
                       {sseConnected ? "SSE 연결됨 - 실시간 업데이트 중" : "SSE 연결 끊김"}
                     </TooltipContent>
                   </Tooltip>
-                  <Switch id={sseId} checked={useSSE} onCheckedChange={setUseSSE} />
+                  <Switch checked={useSSE} id={sseId} onCheckedChange={setUseSSE} />
                 </div>
-                <Button onClick={() => refetchStats()} variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                <Button onClick={() => refetchStats()} size="sm" variant="outline">
+                  <RefreshCw className="mr-2 h-4 w-4" />
                   새로고침
                 </Button>
               </div>
@@ -180,24 +180,24 @@ export function JobLogsPage() {
             {/* Search input */}
             <div className="mb-4">
               <div className="relative w-full md:w-[400px]">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Job ID, 이름, 에러 메시지로 검색..."
-                  value={searchInput}
+                  className="w-full pr-10 pl-10"
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  className="pl-10 pr-10 w-full"
+                  placeholder="Job ID, 이름, 에러 메시지로 검색..."
+                  value={searchInput}
                 />
                 {searchInput && (
                   <button
-                    type="button"
+                    className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                     onClick={() => {
                       setSearchInput("")
                       setSearchQuery("")
                     }}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    type="button"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -205,10 +205,10 @@ export function JobLogsPage() {
 
             {/* Job Logs Table with Pagination */}
             <JobLogsTableWithPagination
-              searchQuery={searchQuery}
-              selectedStatuses={selectedStatuses}
-              selectedQueues={selectedQueues}
               dateRange={dateRange}
+              searchQuery={searchQuery}
+              selectedQueues={selectedQueues}
+              selectedStatuses={selectedStatuses}
             />
           </CardContent>
         </Card>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-interface AIFollowUpSuggestionProps {
+type AIFollowUpSuggestionProps = {
   onGenerateSuggestion?: () => Promise<void> | void
   isLoading?: boolean
   error?: string | null
@@ -22,7 +22,9 @@ export function AIFollowUpSuggestion({
   const [internalLoading, setInternalLoading] = useState(false)
 
   const handleGenerate = async () => {
-    if (!onGenerateSuggestion) return
+    if (!onGenerateSuggestion) {
+      return
+    }
 
     try {
       setInternalLoading(true)
@@ -37,7 +39,7 @@ export function AIFollowUpSuggestion({
   return (
     <Card
       className={cn(
-        "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900",
+        "border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20",
         className,
       )}
     >
@@ -52,17 +54,17 @@ export function AIFollowUpSuggestion({
       </CardHeader>
       <CardContent className="space-y-3">
         <Button
-          onClick={handleGenerate}
+          className="w-full bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800"
           disabled={disabled || loading}
-          variant="outline"
+          onClick={handleGenerate}
           size="sm"
-          className="w-full bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
+          variant="outline"
         >
           <Sparkles className="size-4" />
           {loading ? "Generating..." : "Generate Suggestion"}
         </Button>
 
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="text-red-600 text-sm dark:text-red-400">{error}</p>}
       </CardContent>
     </Card>
   )

@@ -34,12 +34,12 @@ export default function AppDashboardPage() {
   const today = new Date()
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <p className="text-lg font-medium text-muted-foreground">
+        <p className="font-medium text-lg text-muted-foreground">
           {format(today, "EEEE, MMMM d, yyyy")}
         </p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-muted-foreground text-sm">
           {t(
             "app.dashboard.greeting",
             "Welcome back! You have {{opened}} opened and {{sent}} sent emails.",
@@ -51,7 +51,7 @@ export default function AppDashboardPage() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs onValueChange={setActiveTab} value={activeTab}>
         <TabsList>
           <TabsTrigger value="sent">{t("app.dashboard.sentEmails", "Sent Emails")}</TabsTrigger>
           <TabsTrigger value="opened">
@@ -62,15 +62,15 @@ export default function AppDashboardPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="sent" className="mt-4">
+        <TabsContent className="mt-4" value="sent">
           <SentEmailsTab />
         </TabsContent>
 
-        <TabsContent value="opened" className="mt-4">
+        <TabsContent className="mt-4" value="opened">
           <OpenedEmailsTab />
         </TabsContent>
 
-        <TabsContent value="strategy" className="mt-4">
+        <TabsContent className="mt-4" value="strategy">
           <SalesStrategyTab />
         </TabsContent>
       </Tabs>

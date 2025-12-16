@@ -19,11 +19,15 @@ export const emailTemplatesApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
     if (params?.isShared !== undefined && params.isShared !== "all") {
       searchParams.append("isShared", params.isShared.toString())
     }
-    if (params?.category) searchParams.append("category", params.category)
+    if (params?.category) {
+      searchParams.append("category", params.category)
+    }
     if (params?.workspaceIds && params.workspaceIds.length > 0) {
       searchParams.append("workspaceIds", params.workspaceIds.join(","))
     }
@@ -46,60 +50,49 @@ export const emailTemplatesApi = {
     }))
   },
 
-  get: (templateId: string) => {
-    return apiFetch<EmailTemplate>(`/api/v1/email-templates/${templateId}`)
-  },
+  get: (templateId: string) => apiFetch<EmailTemplate>(`/api/v1/email-templates/${templateId}`),
 
-  create: (data: CreateEmailTemplateRequest) => {
-    return apiFetch<EmailTemplate>("/api/v1/email-templates", {
+  create: (data: CreateEmailTemplateRequest) =>
+    apiFetch<EmailTemplate>("/api/v1/email-templates", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (templateId: string, data: UpdateEmailTemplateRequest) => {
-    return apiFetch<EmailTemplate>(`/api/v1/email-templates/${templateId}`, {
+  update: (templateId: string, data: UpdateEmailTemplateRequest) =>
+    apiFetch<EmailTemplate>(`/api/v1/email-templates/${templateId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (templateId: string) => {
-    return apiFetch(`/api/v1/email-templates/${templateId}`, {
+  delete: (templateId: string) =>
+    apiFetch(`/api/v1/email-templates/${templateId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  bulkUpdateCategory: (data: BulkUpdateCategoryRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/email-templates/bulk/category", {
+  bulkUpdateCategory: (data: BulkUpdateCategoryRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/email-templates/bulk/category", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkUpdateShared: (data: BulkUpdateSharedRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/email-templates/bulk/shared", {
+  bulkUpdateShared: (data: BulkUpdateSharedRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/email-templates/bulk/shared", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkDelete: (templateIds: string[]) => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/admin/email-templates/bulk", {
+  bulkDelete: (templateIds: string[]) =>
+    apiFetch<{ deletedCount: number }>("/api/v1/admin/email-templates/bulk", {
       method: "DELETE",
       body: JSON.stringify({ templateIds }),
-    })
-  },
+    }),
 
-  getByWorkspace: (workspaceId: string) => {
-    return apiFetch<EmailTemplate[]>(`/api/v1/email-templates/workspace/${workspaceId}`)
-  },
+  getByWorkspace: (workspaceId: string) =>
+    apiFetch<EmailTemplate[]>(`/api/v1/email-templates/workspace/${workspaceId}`),
 
-  getCategories: (workspaceId: string) => {
-    return apiFetch<string[]>(`/api/v1/email-templates/workspace/${workspaceId}/categories`)
-  },
+  getCategories: (workspaceId: string) =>
+    apiFetch<string[]>(`/api/v1/email-templates/workspace/${workspaceId}/categories`),
 
-  getShared: (workspaceId: string) => {
-    return apiFetch<EmailTemplate[]>(`/api/v1/email-templates/workspace/${workspaceId}/shared`)
-  },
+  getShared: (workspaceId: string) =>
+    apiFetch<EmailTemplate[]>(`/api/v1/email-templates/workspace/${workspaceId}/shared`),
 }

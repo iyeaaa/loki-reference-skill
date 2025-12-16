@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 
-interface OnboardingStepperProps {
+type OnboardingStepperProps = {
   currentStep: number
   completedSteps?: number[]
 }
@@ -26,32 +26,32 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
   }
 
   return (
-    <div className="flex items-center justify-between mb-8 max-w-2xl mx-auto">
+    <div className="mx-auto mb-8 flex max-w-2xl items-center justify-between">
       {/* Stepper */}
-      <div className="flex items-center gap-0 justify-center">
+      <div className="flex items-center justify-center gap-0">
         {steps.map((step, index) => {
           const isActive = step.number === currentStep
           const isCompleted = completedSteps.includes(step.number)
           const isLast = index === steps.length - 1
 
           return (
-            <div key={step.number} className="flex items-center">
+            <div className="flex items-center" key={step.number}>
               {/* Step circle and label */}
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                    "flex h-7 w-7 items-center justify-center rounded-full font-medium text-sm transition-colors",
                     isActive && "bg-blue-500 text-white",
                     isCompleted && "bg-blue-500 text-white",
-                    !isActive && !isCompleted && "bg-gray-200 text-gray-500",
+                    !(isActive || isCompleted) && "bg-gray-200 text-gray-500",
                   )}
                 >
-                  {isCompleted ? <Check className="w-4 h-4" /> : step.number}
+                  {isCompleted ? <Check className="h-4 w-4" /> : step.number}
                 </div>
                 <span
                   className={cn(
-                    "text-sm whitespace-nowrap",
-                    isActive && "text-gray-900 font-medium",
+                    "whitespace-nowrap text-sm",
+                    isActive && "font-medium text-gray-900",
                     !isActive && "text-gray-400",
                   )}
                 >
@@ -60,7 +60,7 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
               </div>
 
               {/* Dashed line connector */}
-              {!isLast && <div className="w-10 mx-2 border-t-2 border-dashed border-gray-300" />}
+              {!isLast && <div className="mx-2 w-10 border-gray-300 border-t-2 border-dashed" />}
             </div>
           )
         })}
@@ -69,11 +69,11 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
       {/* Back button - only show on step 2+ */}
       {currentStep > 1 ? (
         <button
-          type="button"
+          className="ml-4 flex items-center gap-1 text-gray-500 text-sm hover:text-gray-700"
           onClick={handleGoBack}
-          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 ml-4"
+          type="button"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           {t("app.onboarding.back", "before")}
         </button>
       ) : (

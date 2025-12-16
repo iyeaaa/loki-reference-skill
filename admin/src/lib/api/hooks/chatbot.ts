@@ -28,7 +28,7 @@ export function useChatbotHistory(conversationId: string, enabled = true) {
 }
 
 // 3. Mutations
-interface UseChatbotMutationOptions {
+type UseChatbotMutationOptions = {
   onMessage: (message: ChatMessage) => void
   onMessageUpdate?: (message: ChatMessage) => void
   onThinking: (thinking: string) => void
@@ -75,7 +75,7 @@ export function useChatbotMutation(options: UseChatbotMutationOptions) {
 }
 
 // 4. Convenience Hook (Legacy API compatibility)
-interface UseChatbotOptions {
+type UseChatbotOptions = {
   onMessage: (message: ChatMessage) => void
   onThinking: (thinking: string) => void
   onError?: (error: string) => void

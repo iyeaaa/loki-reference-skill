@@ -8,7 +8,7 @@
 export type JobLogStatus = "waiting" | "active" | "completed" | "failed" | "delayed" | "stalled"
 
 // Job Log 엔티티
-export interface JobLog {
+export type JobLog = {
   id: string
   jobId: string
   queueName: string
@@ -36,7 +36,7 @@ export interface JobLog {
 }
 
 // Job Logs 검색 파라미터
-export interface JobLogsSearchParams {
+export type JobLogsSearchParams = {
   page?: number
   limit?: number
   queueName?: string
@@ -49,7 +49,7 @@ export interface JobLogsSearchParams {
 }
 
 // Job Logs 검색 응답
-export interface JobLogsSearchResponse {
+export type JobLogsSearchResponse = {
   data: JobLog[]
   total: number
   limit: number
@@ -57,7 +57,7 @@ export interface JobLogsSearchResponse {
 }
 
 // Job Logs 통계 응답
-export interface JobLogStats {
+export type JobLogStats = {
   statusCounts: {
     queueName: string
     status: JobLogStatus
@@ -79,7 +79,7 @@ export interface JobLogStats {
 }
 
 // Job Logs 페이지네이션 응답 (프론트엔드 변환용)
-export interface JobLogsPageResponse {
+export type JobLogsPageResponse = {
   logs: JobLog[]
   total: number
   page: number

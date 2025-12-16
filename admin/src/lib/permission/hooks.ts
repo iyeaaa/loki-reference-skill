@@ -14,10 +14,14 @@ export function useHasPermission(resource: IamResource, action: IamAction): bool
   const { hasPermission, isAdmin, isLoading } = usePermissions()
 
   // Admin은 항상 true
-  if (isAdmin) return true
+  if (isAdmin) {
+    return true
+  }
 
   // 로딩 중이면 false
-  if (isLoading) return false
+  if (isLoading) {
+    return false
+  }
 
   return hasPermission(resource, action)
 }

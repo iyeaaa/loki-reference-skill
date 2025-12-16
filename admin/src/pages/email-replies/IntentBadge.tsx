@@ -2,12 +2,12 @@ import { Calendar, Coffee, HelpCircle, Minus, ThumbsDown, ThumbsUp, XCircle } fr
 import { Badge } from "@/components/ui/badge"
 import type { EmailIntent } from "@/lib/api/types/email"
 
-interface IntentBadgeProps {
+type IntentBadgeProps = {
   intent: EmailIntent | null | undefined
   size?: "sm" | "md" | "lg"
 }
 
-interface IntentConfig {
+type IntentConfig = {
   label: string
   color: string
   icon: React.ComponentType<{ className?: string }>
@@ -52,10 +52,14 @@ const intentConfig: Record<EmailIntent, IntentConfig> = {
 }
 
 export function IntentBadge({ intent, size = "md" }: IntentBadgeProps) {
-  if (!intent) return null
+  if (!intent) {
+    return null
+  }
 
   const config = intentConfig[intent]
-  if (!config) return null
+  if (!config) {
+    return null
+  }
 
   const Icon = config.icon
 
@@ -73,8 +77,8 @@ export function IntentBadge({ intent, size = "md" }: IntentBadgeProps) {
 
   return (
     <Badge
+      className={`${config.color} ${sizeClasses[size]} flex w-fit items-center gap-1.5 rounded-full border font-medium`}
       variant="outline"
-      className={`${config.color} ${sizeClasses[size]} font-medium flex items-center gap-1.5 w-fit border rounded-full`}
     >
       <Icon className={iconSizes[size]} />
       {config.label}
@@ -84,12 +88,16 @@ export function IntentBadge({ intent, size = "md" }: IntentBadgeProps) {
 
 // Helper function to get intent label without rendering component
 export function getIntentLabel(intent: EmailIntent | null | undefined): string {
-  if (!intent) return ""
+  if (!intent) {
+    return ""
+  }
   return intentConfig[intent]?.label || ""
 }
 
 // Helper function to get intent color class
 export function getIntentColor(intent: EmailIntent | null | undefined): string {
-  if (!intent) return ""
+  if (!intent) {
+    return ""
+  }
   return intentConfig[intent]?.color || ""
 }

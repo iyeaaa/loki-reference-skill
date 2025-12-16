@@ -13,13 +13,13 @@ export function StarSpinner({ size = 16 }: { size?: number }) {
     <div className="relative" style={{ width: size, height: size }}>
       {/* Main star */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
-        style={{
-          clipPath: starPath,
-        }}
         animate={{
           scale: [1, 1.3, 1],
           rotate: [0, 180, 360],
+        }}
+        className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600"
+        style={{
+          clipPath: starPath,
         }}
         transition={{
           duration: 2,
@@ -30,15 +30,15 @@ export function StarSpinner({ size = 16 }: { size?: number }) {
 
       {/* Inner star glow */}
       <motion.div
-        className="absolute bg-blue-300"
-        style={{
-          clipPath: starPath,
-          inset: size * 0.125, // 1/8 of size for inner glow
-        }}
         animate={{
           scale: [1, 1.5, 1],
           rotate: [360, 180, 0],
           opacity: [0.6, 1, 0.6],
+        }}
+        className="absolute bg-blue-300"
+        style={{
+          clipPath: starPath,
+          inset: size * 0.125, // 1/8 of size for inner glow
         }}
         transition={{
           duration: 2,
@@ -49,15 +49,15 @@ export function StarSpinner({ size = 16 }: { size?: number }) {
 
       {/* Outer glow effect */}
       <motion.div
+        animate={{
+          scale: [1.2, 1.5, 1.2],
+          opacity: [0.4, 0.7, 0.4],
+        }}
         className="absolute inset-0"
         style={{
           clipPath: starPath,
           filter: "blur(4px)",
           background: "radial-gradient(circle, rgba(59, 130, 246, 0.6), transparent)",
-        }}
-        animate={{
-          scale: [1.2, 1.5, 1.2],
-          opacity: [0.4, 0.7, 0.4],
         }}
         transition={{
           duration: 2,

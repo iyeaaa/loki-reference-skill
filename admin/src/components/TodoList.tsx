@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import type { CreateTodoRequest, Todo, UpdateTodoRequest } from "@/lib/types/todo"
 
-interface TodoListProps {
+type TodoListProps = {
   todos: Todo[]
   workspaceId?: string
   onAddTodo: (todo: CreateTodoRequest) => void
@@ -102,30 +102,25 @@ export function TodoList({
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "short",
       day: "numeric",
     })
-  }
 
-  const isOverdue = (dueDate: string) => {
-    return (
-      new Date(dueDate) < new Date() &&
-      new Date(dueDate).toDateString() !== new Date().toDateString()
-    )
-  }
+  const isOverdue = (dueDate: string) =>
+    new Date(dueDate) < new Date() && new Date(dueDate).toDateString() !== new Date().toDateString()
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>{t("todo.title")}</CardTitle>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog onOpenChange={setIsAddDialogOpen} open={isAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 {t("todo.addTodo")}
               </Button>
             </DialogTrigger>
@@ -138,29 +133,29 @@ export function TodoList({
                   <Label htmlFor={titleId}>{t("todo.titleRequired")}</Label>
                   <Input
                     id={titleId}
-                    value={newTodo.title}
                     onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
                     placeholder={t("todo.titlePlaceholder")}
+                    value={newTodo.title}
                   />
                 </div>
                 <div>
                   <Label htmlFor={descriptionId}>{t("todo.descriptionLabel")}</Label>
                   <Textarea
                     id={descriptionId}
-                    value={newTodo.description}
                     onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
                     placeholder={t("todo.descriptionPlaceholder")}
                     rows={3}
+                    value={newTodo.description}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority">{t("todo.priorityLabel")}</Label>
                     <Select
-                      value={newTodo.priority}
                       onValueChange={(value: "low" | "medium" | "high") =>
                         setNewTodo({ ...newTodo, priority: value })
                       }
+                      value={newTodo.priority}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -176,14 +171,14 @@ export function TodoList({
                     <Label htmlFor={dueDateId}>{t("todo.dueDateLabel")}</Label>
                     <Input
                       id={dueDateId}
+                      onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
                       type="date"
                       value={newTodo.dueDate || ""}
-                      onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  <Button onClick={() => setIsAddDialogOpen(false)} variant="outline">
                     {t("todo.cancel")}
                   </Button>
                   <Button onClick={handleAddTodo}>{t("todo.add")}</Button>
@@ -196,36 +191,36 @@ export function TodoList({
       <CardContent>
         <div className="space-y-3">
           {todos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="py-8 text-center text-muted-foreground">
               <p>{t("todo.noTodos")}</p>
               <p className="text-sm">{t("todo.noTodosSubtext")}</p>
             </div>
           ) : (
             todos.map((todo) => (
               <div
-                key={todo.id}
-                className={`p-4 border rounded-lg ${
+                className={`rounded-lg border p-4 ${
                   todo.completed ? "bg-gray-50 opacity-75" : "bg-white"
                 }`}
+                key={todo.id}
               >
                 <div className="flex items-start gap-3">
                   <button
-                    type="button"
-                    onClick={() => handleToggleComplete(todo.id, !todo.completed)}
-                    className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    className={`mt-1 flex h-5 w-5 items-center justify-center rounded border-2 ${
                       todo.completed
-                        ? "bg-green-500 border-green-500 text-white"
+                        ? "border-green-500 bg-green-500 text-white"
                         : "border-gray-300 hover:border-green-500"
                     }`}
+                    onClick={() => handleToggleComplete(todo.id, !todo.completed)}
+                    type="button"
                   >
                     {todo.completed && <Check className="h-3 w-3" />}
                   </button>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
                       <h3
                         className={`font-medium ${
-                          todo.completed ? "line-through text-gray-500" : ""
+                          todo.completed ? "text-gray-500 line-through" : ""
                         }`}
                       >
                         {todo.title}
@@ -234,12 +229,12 @@ export function TodoList({
                         {priorityLabels[todo.priority]}
                       </Badge>
                       {todo.dueDate && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <div className="flex items-center gap-1 text-gray-500 text-xs">
                           <Calendar className="h-3 w-3" />
                           <span
                             className={
                               isOverdue(todo.dueDate) && !todo.completed
-                                ? "text-red-500 font-medium"
+                                ? "font-medium text-red-500"
                                 : ""
                             }
                           >
@@ -251,7 +246,7 @@ export function TodoList({
 
                     {todo.description && (
                       <p
-                        className={`text-sm text-gray-600 ${todo.completed ? "line-through" : ""}`}
+                        className={`text-gray-600 text-sm ${todo.completed ? "line-through" : ""}`}
                       >
                         {todo.description}
                       </p>
@@ -259,14 +254,14 @@ export function TodoList({
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditTodo(todo)}>
+                    <Button onClick={() => handleEditTodo(todo)} size="sm" variant="ghost">
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteTodo(todo.id)}
                       className="text-red-500 hover:text-red-700"
+                      onClick={() => onDeleteTodo(todo.id)}
+                      size="sm"
+                      variant="ghost"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -279,7 +274,7 @@ export function TodoList({
       </CardContent>
 
       {/* 편집 다이얼로그 */}
-      <Dialog open={!!editingTodo} onOpenChange={() => setEditingTodo(null)}>
+      <Dialog onOpenChange={() => setEditingTodo(null)} open={!!editingTodo}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("todo.editTodo")}</DialogTitle>
@@ -290,15 +285,14 @@ export function TodoList({
                 <Label htmlFor={editTitleId}>{t("todo.titleRequired")}</Label>
                 <Input
                   id={editTitleId}
-                  value={editingTodo.title}
                   onChange={(e) => setEditingTodo({ ...editingTodo, title: e.target.value })}
+                  value={editingTodo.title}
                 />
               </div>
               <div>
                 <Label htmlFor={editDescriptionId}>{t("todo.descriptionLabel")}</Label>
                 <Textarea
                   id={editDescriptionId}
-                  value={editingTodo.description || ""}
                   onChange={(e) =>
                     setEditingTodo({
                       ...editingTodo,
@@ -306,16 +300,17 @@ export function TodoList({
                     })
                   }
                   rows={3}
+                  value={editingTodo.description || ""}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-priority">{t("todo.priorityLabel")}</Label>
                   <Select
-                    value={editingTodo.priority}
                     onValueChange={(value: "low" | "medium" | "high") =>
                       setEditingTodo({ ...editingTodo, priority: value })
                     }
+                    value={editingTodo.priority}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -331,19 +326,19 @@ export function TodoList({
                   <Label htmlFor={editDueDateId}>{t("todo.dueDateLabel")}</Label>
                   <Input
                     id={editDueDateId}
-                    type="date"
-                    value={editingTodo.dueDate || ""}
                     onChange={(e) =>
                       setEditingTodo({
                         ...editingTodo,
                         dueDate: e.target.value,
                       })
                     }
+                    type="date"
+                    value={editingTodo.dueDate || ""}
                   />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditingTodo(null)}>
+                <Button onClick={() => setEditingTodo(null)} variant="outline">
                   {t("todo.cancel")}
                 </Button>
                 <Button onClick={handleSaveEdit}>{t("todo.save")}</Button>

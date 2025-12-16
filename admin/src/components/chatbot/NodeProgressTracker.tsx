@@ -2,7 +2,7 @@ import { CheckCircle2, Circle, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 
-export interface NodeProgress {
+export type NodeProgress = {
   nodeName: string
   status: "pending" | "in_progress" | "completed" | "error"
   message?: string
@@ -10,7 +10,7 @@ export interface NodeProgress {
   timestamp: number
 }
 
-interface NodeProgressTrackerProps {
+type NodeProgressTrackerProps = {
   progress: NodeProgress[]
   className?: string
 }
@@ -117,7 +117,7 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
       case "completed":
         return <CheckCircle2 className="h-4 w-4 text-green-600" />
       case "in_progress":
-        return <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
       case "error":
         return <Circle className="h-4 w-4 text-red-600" />
       default:
@@ -132,12 +132,12 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
         node.status === "pending" && "opacity-40",
       )}
     >
-      <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
-      <div className="flex-1 min-w-0">
+      <div className="mt-0.5 flex-shrink-0">{getIcon()}</div>
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "text-sm font-medium",
+              "font-medium text-sm",
               node.status === "completed" && "text-green-700",
               node.status === "in_progress" && "text-blue-700",
               node.status === "error" && "text-red-700",
@@ -147,11 +147,11 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
             {displayName}
           </span>
           {node.status === "in_progress" && node.percent !== undefined && (
-            <span className="text-xs text-muted-foreground">({node.percent}%)</span>
+            <span className="text-muted-foreground text-xs">({node.percent}%)</span>
           )}
         </div>
         {node.status === "in_progress" && loadingMessage && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{loadingMessage}</p>
+          <p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">{loadingMessage}</p>
         )}
       </div>
     </div>
@@ -161,7 +161,9 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
 export function NodeProgressTracker({ progress, className }: NodeProgressTrackerProps) {
   const { t } = useTranslation()
 
-  if (progress.length === 0) return null
+  if (progress.length === 0) {
+    return null
+  }
 
   // Get unique nodes (only show latest status for each node)
   const uniqueNodes = progress.reduce((acc, node) => {
@@ -180,8 +182,8 @@ export function NodeProgressTracker({ progress, className }: NodeProgressTracker
   })
 
   return (
-    <div className={cn("rounded-lg border bg-muted/30 p-3 space-y-1", className)}>
-      <div className="text-xs font-medium text-muted-foreground mb-2">
+    <div className={cn("space-y-1 rounded-lg border bg-muted/30 p-3", className)}>
+      <div className="mb-2 font-medium text-muted-foreground text-xs">
         {t("chatbot.nodeProgress.title")}
       </div>
       {sortedNodes.map((node) => (

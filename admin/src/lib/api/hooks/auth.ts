@@ -85,7 +85,7 @@ export function useLogoutMutation() {
     mutationFn: async () => {
       // Check if current user is trial user before logout
       const currentUser = authApi.getStoredUser()
-      const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
+      const isTrialUser = currentUser?.trialStatus?.isTrialActive
 
       authApi.logout()
 

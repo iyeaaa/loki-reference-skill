@@ -78,7 +78,9 @@ export default function WorkspacesPage() {
   }
 
   const handleUpdateWorkspace = async (workspaceData: unknown) => {
-    if (!editingWorkspace) return
+    if (!editingWorkspace) {
+      return
+    }
     updateWorkspace.mutate(
       {
         workspaceId: editingWorkspace.id,
@@ -93,10 +95,13 @@ export default function WorkspacesPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedWorkspaces.length === 0) return
-
-    if (!confirm(t("settings.workspaces.deleteConfirm", { count: selectedWorkspaces.length })))
+    if (selectedWorkspaces.length === 0) {
       return
+    }
+
+    if (!confirm(t("settings.workspaces.deleteConfirm", { count: selectedWorkspaces.length }))) {
+      return
+    }
 
     for (const workspaceId of selectedWorkspaces) {
       await deleteWorkspace.mutateAsync(workspaceId)
@@ -156,15 +161,15 @@ export default function WorkspacesPage() {
   }, [])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <WorkspaceFilters
-        selectedStatuses={selectedStatuses}
-        selectedOwners={selectedOwners}
-        users={users}
-        onStatusChange={setSelectedStatuses}
-        onOwnerChange={setSelectedOwners}
         onClearFilters={clearFilters}
+        onOwnerChange={setSelectedOwners}
+        onStatusChange={setSelectedStatuses}
+        selectedOwners={selectedOwners}
+        selectedStatuses={selectedStatuses}
+        users={users}
       />
 
       {/* Workspaces Table */}
@@ -173,7 +178,7 @@ export default function WorkspacesPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{t("settings.workspaces.management")}</CardTitle>
             <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="mr-1 h-4 w-4" />
               {t("settings.workspaces.create")}
             </Button>
           </div>
@@ -182,24 +187,24 @@ export default function WorkspacesPage() {
           {/* Search input - positioned below title */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("settings.workspaces.searchPlaceholder")}
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder={t("settings.workspaces.searchPlaceholder")}
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -207,24 +212,24 @@ export default function WorkspacesPage() {
 
           {/* Bulk Actions */}
           {selectedWorkspaces.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">
                   {t("settings.workspaces.selected", { count: selectedWorkspaces.length })}
                 </span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                  <UserCheck className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("status")} size="sm" variant="outline">
+                  <UserCheck className="mr-1 h-4 w-4" />
                   {t("settings.workspaces.changeStatus")}
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   {t("settings.workspaces.deleteSelected")}
                 </Button>
               </div>
@@ -233,53 +238,53 @@ export default function WorkspacesPage() {
 
           {/* Workspaces Table with Pagination */}
           <WorkspacesTableWithPagination
-            searchQuery={searchQuery}
-            selectedStatuses={selectedStatuses}
-            selectedOwners={selectedOwners}
-            selectedWorkspaces={selectedWorkspaces}
-            onToggleWorkspace={toggleWorkspaceSelection}
-            onToggleAll={toggleAllWorkspaces}
             onEditWorkspace={setEditingWorkspace}
+            onToggleAll={toggleAllWorkspaces}
+            onToggleWorkspace={toggleWorkspaceSelection}
+            searchQuery={searchQuery}
+            selectedOwners={selectedOwners}
+            selectedStatuses={selectedStatuses}
+            selectedWorkspaces={selectedWorkspaces}
           />
         </CardContent>
       </Card>
 
       {/* Create Workspace Dialog */}
-      <Dialog open={_showCreateDialog} onOpenChange={(open) => setShowCreateDialog(open)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <Dialog onOpenChange={(open) => setShowCreateDialog(open)} open={_showCreateDialog}>
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="font-semibold text-xl">
               {t("settings.workspaces.create")}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 -mx-6 px-6">
+          <div className="-mx-6 flex-1 overflow-y-auto px-6">
             <WorkspaceForm
               isEdit={false}
-              users={users}
-              onSave={_handleCreateWorkspace}
               onCancel={() => setShowCreateDialog(false)}
+              onSave={_handleCreateWorkspace}
+              users={users}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Workspace Dialog */}
-      <Dialog open={!!editingWorkspace} onOpenChange={(open) => !open && setEditingWorkspace(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <Dialog onOpenChange={(open) => !open && setEditingWorkspace(null)} open={!!editingWorkspace}>
+        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="font-semibold text-xl">
               {t("settings.workspaces.edit")}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 -mx-6 px-6">
+          <div className="-mx-6 flex-1 overflow-y-auto px-6">
             {editingWorkspace && (
               <WorkspaceForm
-                workspace={editingWorkspace}
                 isEdit={true}
-                users={users}
-                onSave={handleUpdateWorkspace}
-                onCancel={() => setEditingWorkspace(null)}
                 onAddMemberClick={() => setShowAddMemberDialog(true)}
+                onCancel={() => setEditingWorkspace(null)}
+                onSave={handleUpdateWorkspace}
+                users={users}
+                workspace={editingWorkspace}
               />
             )}
           </div>
@@ -288,6 +293,7 @@ export default function WorkspacesPage() {
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        actionType={bulkActionType}
         isOpen={showBulkActionModal}
         onClose={() => {
           setShowBulkActionModal(false)
@@ -295,16 +301,15 @@ export default function WorkspacesPage() {
         }}
         onConfirm={handleBulkAction}
         workspaceCount={selectedWorkspaces.length}
-        actionType={bulkActionType}
       />
 
       {/* Add Member Dialog - 최상위 레벨에서 독립적으로 관리 */}
       {editingWorkspace && (
         <AddMemberDialog
-          workspaceId={editingWorkspace.id}
           existingMemberUserIds={members.map((m) => m.userId)}
           isOpen={showAddMemberDialog}
           onClose={() => setShowAddMemberDialog(false)}
+          workspaceId={editingWorkspace.id}
         />
       )}
     </div>

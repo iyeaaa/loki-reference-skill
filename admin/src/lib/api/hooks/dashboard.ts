@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { dashboardApi } from "../services/dashboard"
 
-export interface DateRangeParams {
+export type DateRangeParams = {
   startDate?: string
   endDate?: string
   workspaceId?: string

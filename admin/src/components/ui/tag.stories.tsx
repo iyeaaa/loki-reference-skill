@@ -245,16 +245,16 @@ export const AllSentimentVariants: Story = {
   args: { children: "" },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Tag variant="positive" tooltip="Positive sentiment detected">
+      <Tag tooltip="Positive sentiment detected" variant="positive">
         Positive
       </Tag>
-      <Tag variant="negative" tooltip="Negative sentiment detected">
+      <Tag tooltip="Negative sentiment detected" variant="negative">
         Negative
       </Tag>
-      <Tag variant="other" tooltip="Other sentiment">
+      <Tag tooltip="Other sentiment" variant="other">
         Other
       </Tag>
-      <Tag variant="unclassified" tooltip="Sentiment unclassified">
+      <Tag tooltip="Sentiment unclassified" variant="unclassified">
         Unclassified
       </Tag>
     </div>
@@ -273,13 +273,13 @@ export const AllPriorityVariants: Story = {
   args: { children: "" },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Tag variant="high" tooltip="High priority">
+      <Tag tooltip="High priority" variant="high">
         High
       </Tag>
-      <Tag variant="medium" tooltip="Medium priority">
+      <Tag tooltip="Medium priority" variant="medium">
         Medium
       </Tag>
-      <Tag variant="low" tooltip="Low priority">
+      <Tag tooltip="Low priority" variant="low">
         Low
       </Tag>
     </div>
@@ -298,16 +298,16 @@ export const AllCategoryVariants: Story = {
   args: { children: "" },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Tag variant="meeting-request" tooltip="Meeting request message">
+      <Tag tooltip="Meeting request message" variant="meeting-request">
         Meeting Request
       </Tag>
-      <Tag variant="question" tooltip="Question message">
+      <Tag tooltip="Question message" variant="question">
         Question
       </Tag>
-      <Tag variant="auto" tooltip="Auto-generated message">
+      <Tag tooltip="Auto-generated message" variant="auto">
         Auto
       </Tag>
-      <Tag variant="other-category" tooltip="Other category">
+      <Tag tooltip="Other category" variant="other-category">
         Other
       </Tag>
     </div>
@@ -325,11 +325,11 @@ export const AllCategoryVariants: Story = {
 export const SizeComparison: Story = {
   args: { children: "" },
   render: () => (
-    <div className="flex flex-wrap gap-4 items-center">
-      <Tag variant="positive" size="small">
+    <div className="flex flex-wrap items-center gap-4">
+      <Tag size="small" variant="positive">
         Small
       </Tag>
-      <Tag variant="positive" size="medium">
+      <Tag size="medium" variant="positive">
         Medium
       </Tag>
     </div>
@@ -348,13 +348,13 @@ export const RemovableTags: Story = {
   args: { children: "" },
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Tag variant="positive" removable onRemove={() => console.log("Removed positive")}>
+      <Tag onRemove={() => console.log("Removed positive")} removable variant="positive">
         Positive
       </Tag>
-      <Tag variant="high" removable onRemove={() => console.log("Removed high")}>
+      <Tag onRemove={() => console.log("Removed high")} removable variant="high">
         High Priority
       </Tag>
-      <Tag variant="meeting-request" removable onRemove={() => console.log("Removed meeting")}>
+      <Tag onRemove={() => console.log("Removed meeting")} removable variant="meeting-request">
         Meeting Request
       </Tag>
     </div>
@@ -376,13 +376,13 @@ export const InternationalizedTags: Story = {
     const { t } = useTranslation()
     return (
       <div className="flex flex-wrap gap-2">
-        <Tag variant="positive" tooltip={t("common.tag.tooltip.positive")}>
+        <Tag tooltip={t("common.tag.tooltip.positive")} variant="positive">
           {t("common.tag.sentiment.positive")}
         </Tag>
-        <Tag variant="high" tooltip={t("common.tag.tooltip.high")}>
+        <Tag tooltip={t("common.tag.tooltip.high")} variant="high">
           {t("common.tag.priority.high")}
         </Tag>
-        <Tag variant="meeting-request" tooltip={t("common.tag.tooltip.meetingRequest")}>
+        <Tag tooltip={t("common.tag.tooltip.meetingRequest")} variant="meeting-request">
           {t("common.tag.category.meetingRequest")}
         </Tag>
       </div>
@@ -403,61 +403,61 @@ export const MessageMetadata: Story = {
   args: { children: "" },
   render: () => (
     <div className="space-y-4">
-      <div className="border rounded-lg p-4 bg-background">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="rounded-lg border bg-background p-4">
+        <div className="mb-2 flex items-center gap-2">
           <span className="font-semibold">Message #1</span>
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
+        <p className="mb-3 text-muted-foreground text-sm">
           Hi, I'd like to schedule a meeting to discuss the project proposal...
         </p>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="positive" size="small">
+          <Tag size="small" variant="positive">
             Positive
           </Tag>
-          <Tag variant="high" size="small">
+          <Tag size="small" variant="high">
             High
           </Tag>
-          <Tag variant="meeting-request" size="small">
+          <Tag size="small" variant="meeting-request">
             Meeting Request
           </Tag>
         </div>
       </div>
 
-      <div className="border rounded-lg p-4 bg-background">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="rounded-lg border bg-background p-4">
+        <div className="mb-2 flex items-center gap-2">
           <span className="font-semibold">Message #2</span>
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
+        <p className="mb-3 text-muted-foreground text-sm">
           I have some questions about the billing process...
         </p>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="other" size="small">
+          <Tag size="small" variant="other">
             Other
           </Tag>
-          <Tag variant="medium" size="small">
+          <Tag size="small" variant="medium">
             Medium
           </Tag>
-          <Tag variant="question" size="small">
+          <Tag size="small" variant="question">
             Question
           </Tag>
         </div>
       </div>
 
-      <div className="border rounded-lg p-4 bg-background">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="rounded-lg border bg-background p-4">
+        <div className="mb-2 flex items-center gap-2">
           <span className="font-semibold">Message #3</span>
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
+        <p className="mb-3 text-muted-foreground text-sm">
           This is an automated notification from our system...
         </p>
         <div className="flex flex-wrap gap-2">
-          <Tag variant="unclassified" size="small">
+          <Tag size="small" variant="unclassified">
             Unclassified
           </Tag>
-          <Tag variant="low" size="small">
+          <Tag size="small" variant="low">
             Low
           </Tag>
-          <Tag variant="auto" size="small">
+          <Tag size="small" variant="auto">
             Auto
           </Tag>
         </div>

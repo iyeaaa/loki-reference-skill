@@ -20,7 +20,9 @@ export function NylasRedirect() {
 
   useEffect(() => {
     const code = searchParams.get("code")
-    if (!code || hasProcessed || !workspaceId) return
+    if (!code || hasProcessed || !workspaceId) {
+      return
+    }
 
     setHasProcessed(true)
 
@@ -40,8 +42,8 @@ export function NylasRedirect() {
   }, [searchParams, navigate, hasProcessed, t, workspaceId])
 
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
+    <div className="flex min-h-[60vh] flex-col items-center justify-center">
+      <Loader2 className="mb-4 h-8 w-8 animate-spin text-blue-500" />
       <p className="text-gray-500">{t("redirect.connecting", "이메일 계정을 연동하는 중...")}</p>
     </div>
   )

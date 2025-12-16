@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
 
-interface User {
+type User = {
   id: string
   email: string
   username?: string
@@ -15,7 +15,7 @@ interface User {
   }
 }
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null
   isLoading: boolean
   login: (emailOrToken: string, passwordOrUser?: string | User, isOAuth?: boolean) => Promise<void>

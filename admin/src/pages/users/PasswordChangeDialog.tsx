@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { usersApi } from "@/lib/api/services/users"
 import type { User } from "@/lib/api/types/user"
 
-interface PasswordChangeDialogProps {
+type PasswordChangeDialogProps = {
   user: User
   onClose: () => void
 }
@@ -40,23 +40,23 @@ export function PasswordChangeDialog({ user, onClose }: PasswordChangeDialogProp
       <DialogHeader>
         <DialogTitle>{user.username}의 비밀번호 변경</DialogTitle>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <Label htmlFor={passwordId}>새 비밀번호</Label>
           <Input
             id={passwordId}
-            type="password"
-            value={newPassword}
+            minLength={8}
             onChange={(e) => setNewPassword(e.target.value)}
             required
-            minLength={8}
+            type="password"
+            value={newPassword}
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button onClick={onClose} type="button" variant="outline">
             취소
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} type="submit">
             {loading ? "변경 중..." : "비밀번호 변경"}
           </Button>
         </DialogFooter>

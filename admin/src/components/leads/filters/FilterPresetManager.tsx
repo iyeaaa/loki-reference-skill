@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { ColumnFilter, FilterPreset } from "@/lib/api/types/lead-filters"
 
-interface FilterPresetManagerProps {
+type FilterPresetManagerProps = {
   presets: FilterPreset[]
   currentFilters: ColumnFilter[]
   onLoadPreset: (preset: FilterPreset) => void
@@ -79,7 +79,7 @@ export function FilterPresetManager({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button className="gap-2" size="sm" variant="outline">
             <BookmarkIcon className="h-4 w-4" />
             Filter Presets
           </Button>
@@ -89,43 +89,43 @@ export function FilterPresetManager({
           <DropdownMenuSeparator />
 
           {presets.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">No saved presets</div>
+            <div className="py-6 text-center text-muted-foreground text-sm">No saved presets</div>
           ) : (
             presets.map((preset) => (
               <div
+                className="group flex items-center justify-between rounded-sm px-2 py-1.5 hover:bg-accent"
                 key={preset.id}
-                className="group flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-sm"
               >
                 <button
-                  type="button"
+                  className="flex flex-1 items-center gap-2 text-left text-sm"
                   onClick={() => onLoadPreset(preset)}
-                  className="flex-1 flex items-center gap-2 text-left text-sm"
+                  type="button"
                 >
                   <StarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>{preset.name}</span>
                 </button>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    className="h-6 w-6 p-0"
                     onClick={(e) => {
                       e.stopPropagation()
                       openRenameDialog(preset)
                     }}
-                    className="h-6 w-6 p-0"
+                    size="sm"
                     title="Rename preset"
+                    variant="ghost"
                   >
                     <span className="sr-only">Rename</span>📝
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
                     onClick={(e) => {
                       e.stopPropagation()
                       onDeletePreset(preset.id)
                     }}
-                    className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                    size="sm"
                     title="Delete preset"
+                    variant="ghost"
                   >
                     <TrashIcon className="h-3 w-3" />
                   </Button>
@@ -136,9 +136,9 @@ export function FilterPresetManager({
 
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => setIsSaveDialogOpen(true)}
-            disabled={!hasCurrentFilters}
             className="gap-2"
+            disabled={!hasCurrentFilters}
+            onClick={() => setIsSaveDialogOpen(true)}
           >
             <PlusIcon className="h-4 w-4" />
             Save Current Filters
@@ -147,7 +147,7 @@ export function FilterPresetManager({
       </DropdownMenu>
 
       {/* Save Preset Dialog */}
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+      <Dialog onOpenChange={setIsSaveDialogOpen} open={isSaveDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Save Filter Preset</DialogTitle>
@@ -159,27 +159,27 @@ export function FilterPresetManager({
             <div className="grid gap-2">
               <Label htmlFor={presetNameId}>Preset Name</Label>
               <Input
+                autoFocus
                 id={presetNameId}
-                value={presetName}
                 onChange={(e) => setPresetName(e.target.value)}
-                placeholder="e.g., My Active Leads"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleSavePreset()
                   }
                 }}
-                autoFocus
+                placeholder="e.g., My Active Leads"
+                value={presetName}
               />
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {currentFilters.length} filter{currentFilters.length !== 1 ? "s" : ""} will be saved
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+            <Button onClick={() => setIsSaveDialogOpen(false)} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+            <Button disabled={!presetName.trim()} onClick={handleSavePreset}>
               Save Preset
             </Button>
           </DialogFooter>
@@ -187,7 +187,7 @@ export function FilterPresetManager({
       </Dialog>
 
       {/* Rename Preset Dialog */}
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+      <Dialog onOpenChange={setIsRenameDialogOpen} open={isRenameDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Rename Filter Preset</DialogTitle>
@@ -197,24 +197,24 @@ export function FilterPresetManager({
             <div className="grid gap-2">
               <Label htmlFor={newPresetNameId}>Preset Name</Label>
               <Input
+                autoFocus
                 id={newPresetNameId}
-                value={newPresetName}
                 onChange={(e) => setNewPresetName(e.target.value)}
-                placeholder="Enter new name"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleRenamePreset()
                   }
                 }}
-                autoFocus
+                placeholder="Enter new name"
+                value={newPresetName}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
+            <Button onClick={() => setIsRenameDialogOpen(false)} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleRenamePreset} disabled={!newPresetName.trim()}>
+            <Button disabled={!newPresetName.trim()} onClick={handleRenamePreset}>
               Rename
             </Button>
           </DialogFooter>

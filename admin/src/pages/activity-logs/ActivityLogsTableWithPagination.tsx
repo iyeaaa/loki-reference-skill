@@ -9,7 +9,7 @@ import type { ActivityLog, ActivityLogsParams } from "@/lib/api/types/activity-l
 import { ACTION_TYPES, ENTITY_TYPES } from "@/lib/api/types/activity-log"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface ActivityLogsTableWithPaginationProps {
+type ActivityLogsTableWithPaginationProps = {
   searchQuery: string
   selectedEntityTypes: string[]
   selectedActions: string[]
@@ -32,7 +32,7 @@ export function ActivityLogsTableWithPagination({
   // Build params for API call
   const params: ActivityLogsParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     search: searchQuery || undefined,
     entityType: selectedEntityTypes.length === 1 ? selectedEntityTypes[0] : undefined,
     action: selectedActions.length === 1 ? selectedActions[0] : undefined,
@@ -45,13 +45,11 @@ export function ActivityLogsTableWithPagination({
   const totalPages = logsData?.totalPages || 1
   const total = logsData?.total || 0
 
-  const getEntityTypeLabel = (entityType: string) => {
-    return ENTITY_TYPES.find((e) => e.value === entityType)?.label || entityType
-  }
+  const getEntityTypeLabel = (entityType: string) =>
+    ENTITY_TYPES.find((e) => e.value === entityType)?.label || entityType
 
-  const getActionLabel = (action: string) => {
-    return ACTION_TYPES.find((a) => a.value === action)?.label || action
-  }
+  const getActionLabel = (action: string) =>
+    ACTION_TYPES.find((a) => a.value === action)?.label || action
 
   const getActionBadgeVariant = (action: string) => {
     switch (action) {
@@ -80,7 +78,7 @@ export function ActivityLogsTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -90,7 +88,7 @@ export function ActivityLogsTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -129,126 +127,126 @@ export function ActivityLogsTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "120px" }}
                 >
                   시간
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "100px" }}
                 >
                   사용자
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "120px" }}
                 >
                   워크스페이스
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   엔티티
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   액션
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   엔티티 ID
                 </th>
                 <th
-                  className="p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "100px" }}
                 >
                   IP 주소
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-3 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   상세
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  <td className="p-8 text-center text-gray-500 dark:text-gray-400" colSpan={8}>
                     {isFetching ? "로딩 중..." : "활동 로그가 없습니다."}
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
                   <tr
+                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                     key={log.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <td className="p-3 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <td className="whitespace-nowrap p-3 text-gray-500 text-xs dark:text-gray-400">
                       {formatRelativeTime(log.createdAt)}
                     </td>
                     <td
-                      className="p-3 text-sm font-medium text-gray-900 dark:text-gray-100"
-                      title={log.userEmail || ""}
+                      className="p-3 font-medium text-gray-900 text-sm dark:text-gray-100"
                       style={{
                         maxWidth: "150px",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={log.userEmail || ""}
                     >
                       {log.userName || "-"}
                     </td>
                     <td
-                      className="p-3 text-sm text-gray-900 dark:text-gray-100"
-                      title={log.workspaceName || ""}
+                      className="p-3 text-gray-900 text-sm dark:text-gray-100"
                       style={{
                         maxWidth: "150px",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={log.workspaceName || ""}
                     >
                       {log.workspaceName || "-"}
                     </td>
-                    <td className="p-3 whitespace-nowrap text-sm">
-                      <Badge variant="outline" className="text-xs">
+                    <td className="whitespace-nowrap p-3 text-sm">
+                      <Badge className="text-xs" variant="outline">
                         {getEntityTypeLabel(log.entityType)}
                       </Badge>
                     </td>
-                    <td className="p-3 whitespace-nowrap text-sm">
-                      <Badge variant={getActionBadgeVariant(log.action)} className="text-xs">
+                    <td className="whitespace-nowrap p-3 text-sm">
+                      <Badge className="text-xs" variant={getActionBadgeVariant(log.action)}>
                         {getActionLabel(log.action)}
                       </Badge>
                     </td>
                     <td
-                      className="p-3 text-xs text-gray-500 dark:text-gray-400 font-mono"
-                      title={log.entityId}
+                      className="p-3 font-mono text-gray-500 text-xs dark:text-gray-400"
                       style={{
                         maxWidth: "200px",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
+                      title={log.entityId}
                     >
                       {log.entityId}
                     </td>
-                    <td className="p-3 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <td className="whitespace-nowrap p-3 text-gray-500 text-xs dark:text-gray-400">
                       {log.ipAddress || "-"}
                     </td>
-                    <td className="sticky right-0 z-10 p-3 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                    <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-3 text-sm dark:bg-gray-800">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        className="h-8 px-3 text-xs"
                         onClick={() => setSelectedLog(log)}
-                        className="text-xs h-8 px-3"
+                        size="sm"
+                        variant="outline"
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
@@ -265,7 +263,7 @@ export function ActivityLogsTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -281,22 +279,22 @@ export function ActivityLogsTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             처음
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             이전
@@ -305,12 +303,12 @@ export function ActivityLogsTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -318,11 +316,11 @@ export function ActivityLogsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             다음
             <ChevronRight className="h-4 w-4" />
@@ -330,11 +328,11 @@ export function ActivityLogsTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             마지막
           </Button>
@@ -342,25 +340,25 @@ export function ActivityLogsTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-muted-foreground text-sm">페이지:</span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <Dialog onOpenChange={() => setSelectedLog(null)} open={!!selectedLog}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>활동 로그 상세</DialogTitle>
           </DialogHeader>
@@ -368,32 +366,32 @@ export function ActivityLogsTableWithPagination({
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="text-sm font-medium text-gray-500">ID</span>
-                  <p className="text-sm font-mono">{selectedLog.id}</p>
+                  <span className="font-medium text-gray-500 text-sm">ID</span>
+                  <p className="font-mono text-sm">{selectedLog.id}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">시간</span>
+                  <span className="font-medium text-gray-500 text-sm">시간</span>
                   <p className="text-sm">{new Date(selectedLog.createdAt).toLocaleString()}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">사용자</span>
+                  <span className="font-medium text-gray-500 text-sm">사용자</span>
                   <p className="text-sm">
                     {selectedLog.userName || "-"}
                     {selectedLog.userEmail && (
-                      <span className="text-gray-400 ml-1">({selectedLog.userEmail})</span>
+                      <span className="ml-1 text-gray-400">({selectedLog.userEmail})</span>
                     )}
                   </p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">워크스페이스</span>
+                  <span className="font-medium text-gray-500 text-sm">워크스페이스</span>
                   <p className="text-sm">{selectedLog.workspaceName || "-"}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">엔티티 타입</span>
+                  <span className="font-medium text-gray-500 text-sm">엔티티 타입</span>
                   <p className="text-sm">{getEntityTypeLabel(selectedLog.entityType)}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">액션</span>
+                  <span className="font-medium text-gray-500 text-sm">액션</span>
                   <p className="text-sm">
                     <Badge variant={getActionBadgeVariant(selectedLog.action)}>
                       {getActionLabel(selectedLog.action)}
@@ -401,24 +399,24 @@ export function ActivityLogsTableWithPagination({
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-sm font-medium text-gray-500">엔티티 ID</span>
-                  <p className="text-sm font-mono break-all">{selectedLog.entityId}</p>
+                  <span className="font-medium text-gray-500 text-sm">엔티티 ID</span>
+                  <p className="break-all font-mono text-sm">{selectedLog.entityId}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">IP 주소</span>
+                  <span className="font-medium text-gray-500 text-sm">IP 주소</span>
                   <p className="text-sm">{selectedLog.ipAddress || "-"}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500">User Agent</span>
-                  <p className="text-sm text-gray-500 truncate" title={selectedLog.userAgent || ""}>
+                  <span className="font-medium text-gray-500 text-sm">User Agent</span>
+                  <p className="truncate text-gray-500 text-sm" title={selectedLog.userAgent || ""}>
                     {selectedLog.userAgent || "-"}
                   </p>
                 </div>
               </div>
               {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
                 <div>
-                  <span className="text-sm font-medium text-gray-500">상세 정보</span>
-                  <pre className="mt-1 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
+                  <span className="font-medium text-gray-500 text-sm">상세 정보</span>
+                  <pre className="mt-1 overflow-auto rounded bg-gray-100 p-3 text-xs dark:bg-gray-800">
                     {JSON.stringify(selectedLog.details, null, 2)}
                   </pre>
                 </div>

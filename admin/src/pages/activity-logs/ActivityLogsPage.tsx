@@ -7,12 +7,12 @@ import { workspacesApi } from "@/lib/api/services/workspaces"
 import { ActivityLogsFilters } from "./ActivityLogsFilters"
 import { ActivityLogsTableWithPagination } from "./ActivityLogsTableWithPagination"
 
-interface Workspace {
+type Workspace = {
   id: string
   name: string
 }
 
-interface User {
+type User = {
   id: string
   username: string
   email: string
@@ -81,20 +81,20 @@ export default function ActivityLogsPage() {
   }
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <ActivityLogsFilters
-        selectedEntityTypes={selectedEntityTypes}
-        selectedActions={selectedActions}
-        selectedWorkspaces={selectedWorkspaces}
-        selectedUsers={selectedUsers}
-        workspaces={workspaces}
-        users={users}
-        onEntityTypeChange={setSelectedEntityTypes}
         onActionChange={setSelectedActions}
-        onWorkspaceChange={setSelectedWorkspaces}
-        onUserChange={setSelectedUsers}
         onClearFilters={clearFilters}
+        onEntityTypeChange={setSelectedEntityTypes}
+        onUserChange={setSelectedUsers}
+        onWorkspaceChange={setSelectedWorkspaces}
+        selectedActions={selectedActions}
+        selectedEntityTypes={selectedEntityTypes}
+        selectedUsers={selectedUsers}
+        selectedWorkspaces={selectedWorkspaces}
+        users={users}
+        workspaces={workspaces}
       />
 
       {/* Activity Logs Table */}
@@ -106,24 +106,24 @@ export default function ActivityLogsPage() {
           {/* Search input */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="엔티티 타입, 액션, ID로 검색..."
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder="엔티티 타입, 액션, ID로 검색..."
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -132,10 +132,10 @@ export default function ActivityLogsPage() {
           {/* Activity Logs Table with Pagination */}
           <ActivityLogsTableWithPagination
             searchQuery={searchQuery}
-            selectedEntityTypes={selectedEntityTypes}
             selectedActions={selectedActions}
-            selectedWorkspaces={selectedWorkspaces}
+            selectedEntityTypes={selectedEntityTypes}
             selectedUsers={selectedUsers}
+            selectedWorkspaces={selectedWorkspaces}
           />
         </CardContent>
       </Card>

@@ -133,7 +133,9 @@ export default function RolesPage() {
   }
 
   const handleUpdateRole = async (data: CreateIamRoleRequest) => {
-    if (!editingRole) return
+    if (!editingRole) {
+      return
+    }
     await updateRole.mutateAsync({
       roleId: editingRole.id,
       data: {
@@ -147,8 +149,12 @@ export default function RolesPage() {
   }
 
   const handleDeleteSelected = async () => {
-    if (selectedRoles.length === 0) return
-    if (!confirm(`선택한 ${selectedRoles.length}개의 역할을 삭제하시겠습니까?`)) return
+    if (selectedRoles.length === 0) {
+      return
+    }
+    if (!confirm(`선택한 ${selectedRoles.length}개의 역할을 삭제하시겠습니까?`)) {
+      return
+    }
 
     for (const id of selectedRoles) {
       await deleteRole.mutateAsync(id)
@@ -157,7 +163,9 @@ export default function RolesPage() {
   }
 
   const handleAttachPolicy = async () => {
-    if (!viewingRole || !selectedPolicyId) return
+    if (!(viewingRole && selectedPolicyId)) {
+      return
+    }
     await attachPolicy.mutateAsync({
       roleId: viewingRole.id,
       policyId: selectedPolicyId,
@@ -167,8 +175,12 @@ export default function RolesPage() {
   }
 
   const handleDetachPolicy = async (policyId: string) => {
-    if (!viewingRole) return
-    if (!confirm("이 정책을 역할에서 분리하시겠습니까?")) return
+    if (!viewingRole) {
+      return
+    }
+    if (!confirm("이 정책을 역할에서 분리하시겠습니까?")) {
+      return
+    }
     await detachPolicy.mutateAsync({
       roleId: viewingRole.id,
       policyId,
@@ -182,7 +194,7 @@ export default function RolesPage() {
       minWidth: "120px",
       render: (item) => (
         <div className="max-w-[120px]">
-          <div className="font-medium text-gray-900 dark:text-gray-100 truncate" title={item.name}>
+          <div className="truncate font-medium text-gray-900 dark:text-gray-100" title={item.name}>
             {item.name}
           </div>
         </div>
@@ -195,7 +207,7 @@ export default function RolesPage() {
       render: (item) => (
         <div className="max-w-[160px]">
           <span
-            className="text-xs text-gray-500 line-clamp-2"
+            className="line-clamp-2 text-gray-500 text-xs"
             title={item.description || undefined}
           >
             {item.description || "-"}
@@ -209,7 +221,7 @@ export default function RolesPage() {
       width: "100px",
       render: (item) => (
         <span
-          className="text-sm text-gray-600 truncate block max-w-[100px]"
+          className="block max-w-[100px] truncate text-gray-600 text-sm"
           title={item.workspace?.name}
         >
           {item.workspace?.name || "-"}
@@ -221,7 +233,7 @@ export default function RolesPage() {
       header: "타입",
       width: "70px",
       render: (item) => (
-        <Badge variant={item.isSystem ? "secondary" : "outline"} className="text-xs">
+        <Badge className="text-xs" variant={item.isSystem ? "secondary" : "outline"}>
           {item.isSystem ? "시스템" : "커스텀"}
         </Badge>
       ),
@@ -232,7 +244,7 @@ export default function RolesPage() {
       width: "50px",
       render: (item) =>
         item.isDefault ? (
-          <Badge variant="default" className="text-xs">
+          <Badge className="text-xs" variant="default">
             기본
           </Badge>
         ) : (
@@ -263,7 +275,7 @@ export default function RolesPage() {
       width: "80px",
       render: (item) => (
         <span
-          className="text-xs text-gray-500 truncate block max-w-[80px]"
+          className="block max-w-[80px] truncate text-gray-500 text-xs"
           title={item.creator?.username}
         >
           {item.creator?.username || "시스템"}
@@ -275,7 +287,7 @@ export default function RolesPage() {
       header: "수정일",
       width: "80px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {formatRelativeTime(item.updatedAt)}
         </span>
       ),
@@ -288,35 +300,35 @@ export default function RolesPage() {
       render: (item) => (
         <div className="flex gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => setViewingRole(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="상세 보기"
+            variant="outline"
           >
             <Eye className="h-3 w-3" />
           </Button>
           {!item.isSystem && (
             <>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 w-7 p-0 text-xs"
                 onClick={() => setEditingRole(item)}
-                className="text-xs h-7 w-7 p-0"
+                size="sm"
                 title="수정"
+                variant="outline"
               >
                 <Edit className="h-3 w-3" />
               </Button>
               <Button
-                variant="outline"
-                size="sm"
+                className="h-7 w-7 p-0 text-red-600 text-xs hover:text-red-700"
                 onClick={() => {
                   if (confirm("이 역할을 삭제하시겠습니까?")) {
                     deleteRole.mutate(item.id)
                   }
                 }}
-                className="text-xs h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                size="sm"
                 title="삭제"
+                variant="outline"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -328,13 +340,13 @@ export default function RolesPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <DataFilters
         filters={filterConfigs}
-        values={filterValues}
         onChange={updateFilter}
         onClear={clearFilters}
+        values={filterValues}
       />
 
       {/* Roles Table */}
@@ -343,7 +355,7 @@ export default function RolesPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">역할</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />새 역할
+              <Plus className="mr-1 h-4 w-4" />새 역할
             </Button>
           </div>
         </CardHeader>
@@ -351,72 +363,72 @@ export default function RolesPage() {
           {/* Search */}
           <div className="mb-4">
             <SearchInput
-              value={searchQuery}
               onChange={handleSearch}
               placeholder="역할명, 설명으로 검색..."
+              value={searchQuery}
             />
           </div>
 
           {/* Bulk Actions */}
           <BulkActionsBar
-            selectedCount={selectedRoles.length}
             actions={[
               {
                 id: "delete",
                 label: "삭제",
-                icon: <Trash2 className="h-4 w-4 mr-1" />,
+                icon: <Trash2 className="mr-1 h-4 w-4" />,
                 variant: "destructive",
                 onClick: handleDeleteSelected,
               },
             ]}
+            selectedCount={selectedRoles.length}
           />
 
           {/* Table */}
           <DataTable
-            data={roles}
             columns={columns}
-            pagination={pagination}
-            isLoading={isFetching}
-            selectable
-            selectedIds={selectedRoles}
+            data={roles}
+            emptyMessage="아직 역할이 없어요"
             getItemId={(item) => item.id}
+            isLoading={isFetching}
+            onPageChange={handlePageChange}
             onToggleSelect={handleToggleSelect}
             onToggleSelectAll={handleToggleSelectAll}
-            onPageChange={handlePageChange}
-            emptyMessage="아직 역할이 없어요"
+            pagination={pagination}
+            selectable
+            selectedIds={selectedRoles}
           />
         </CardContent>
       </Card>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">새 역할</DialogTitle>
+      <Dialog onOpenChange={setIsCreateDialogOpen} open={isCreateDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">새 역할</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <RoleForm
-              onSave={handleCreateRole}
-              onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createRole.isPending}
+              onCancel={() => setIsCreateDialogOpen(false)}
+              onSave={handleCreateRole}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingRole} onOpenChange={() => setEditingRole(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">역할 편집</DialogTitle>
+      <Dialog onOpenChange={() => setEditingRole(null)} open={!!editingRole}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">역할 편집</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingRole && (
               <RoleForm
-                role={editingRole}
-                onSave={handleUpdateRole}
-                onCancel={() => setEditingRole(null)}
                 isLoading={updateRole.isPending}
+                onCancel={() => setEditingRole(null)}
+                onSave={handleUpdateRole}
+                role={editingRole}
               />
             )}
           </div>
@@ -424,22 +436,22 @@ export default function RolesPage() {
       </Dialog>
 
       {/* View Dialog */}
-      <Dialog open={!!viewingRole} onOpenChange={() => setViewingRole(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">역할 상세</DialogTitle>
+      <Dialog onOpenChange={() => setViewingRole(null)} open={!!viewingRole}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">역할 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {viewingRole && (
               <div className="space-y-6">
                 {/* Role Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">역할명</span>
+                    <span className="font-medium text-gray-500 text-sm">역할명</span>
                     <p className="mt-1 font-medium">{viewingRole.name}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">타입</span>
+                    <span className="font-medium text-gray-500 text-sm">타입</span>
                     <p className="mt-1">
                       <Badge variant={viewingRole.isSystem ? "secondary" : "outline"}>
                         {viewingRole.isSystem ? "시스템" : "커스텀"}
@@ -447,43 +459,43 @@ export default function RolesPage() {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-sm font-medium text-gray-500">설명</span>
+                    <span className="font-medium text-gray-500 text-sm">설명</span>
                     <p className="mt-1 text-gray-600">{viewingRole.description || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">기본 역할</span>
+                    <span className="font-medium text-gray-500 text-sm">기본 역할</span>
                     <p className="mt-1">{viewingRole.isDefault ? "예" : "아니오"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">우선순위</span>
+                    <span className="font-medium text-gray-500 text-sm">우선순위</span>
                     <p className="mt-1">{viewingRole.priority}</p>
                   </div>
                 </div>
 
                 {/* Tabs for Policies and Members */}
-                <Tabs defaultValue="policies" className="pt-4 border-t">
+                <Tabs className="border-t pt-4" defaultValue="policies">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="policies" className="flex items-center gap-2">
+                    <TabsTrigger className="flex items-center gap-2" value="policies">
                       <Link className="h-4 w-4" />
                       정책 ({rolePolicies?.length || 0})
                     </TabsTrigger>
-                    <TabsTrigger value="members" className="flex items-center gap-2">
+                    <TabsTrigger className="flex items-center gap-2" value="members">
                       <Users className="h-4 w-4" />
                       멤버 ({roleMembers?.length || 0})
                     </TabsTrigger>
                   </TabsList>
 
                   {/* Policies Tab */}
-                  <TabsContent value="policies" className="mt-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-sm font-medium text-gray-700">연결된 정책</h4>
+                  <TabsContent className="mt-4" value="policies">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="font-medium text-gray-700 text-sm">연결된 정책</h4>
                       {!viewingRole.isSystem && (
                         <Button
+                          onClick={() => setIsAttachPolicyDialogOpen(true)}
                           size="sm"
                           variant="outline"
-                          onClick={() => setIsAttachPolicyDialogOpen(true)}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
+                          <Plus className="mr-1 h-3 w-3" />
                           연결
                         </Button>
                       )}
@@ -492,26 +504,26 @@ export default function RolesPage() {
                       <div className="space-y-2">
                         {rolePolicies.map((rp) => (
                           <div
+                            className="flex items-center justify-between rounded-lg border bg-gray-50 p-3 dark:bg-gray-800"
                             key={rp.id}
-                            className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border flex items-center justify-between"
                           >
                             <div>
                               <div className="font-medium text-sm">{rp.policy?.name || "-"}</div>
                               {rp.policy?.description && (
-                                <div className="text-xs text-gray-500">{rp.policy.description}</div>
+                                <div className="text-gray-500 text-xs">{rp.policy.description}</div>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-400">
+                              <span className="text-gray-400 text-xs">
                                 {rp.attachedAt && formatRelativeTime(rp.attachedAt)}
                               </span>
                               {!viewingRole.isSystem && (
                                 <Button
-                                  size="sm"
-                                  variant="ghost"
+                                  className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
                                   onClick={() => handleDetachPolicy(rp.policyId)}
-                                  className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  size="sm"
                                   title="정책 분리"
+                                  variant="ghost"
                                 >
                                   <Unlink className="h-3 w-3" />
                                 </Button>
@@ -526,17 +538,17 @@ export default function RolesPage() {
                   </TabsContent>
 
                   {/* Members Tab */}
-                  <TabsContent value="members" className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">역할 멤버</h4>
+                  <TabsContent className="mt-4" value="members">
+                    <h4 className="mb-3 font-medium text-gray-700 text-sm">역할 멤버</h4>
                     {roleMembers && roleMembers.length > 0 ? (
                       <div className="space-y-2">
                         {roleMembers.map((rm) => (
                           <div
+                            className="flex items-center justify-between rounded-lg border bg-gray-50 p-3 dark:bg-gray-800"
                             key={rm.id}
-                            className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border flex items-center justify-between"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                                 <Users className="h-4 w-4 text-gray-500" />
                               </div>
                               <div>
@@ -544,13 +556,13 @@ export default function RolesPage() {
                                   {rm.member?.user?.username || rm.member?.user?.email || "Unknown"}
                                 </div>
                                 {rm.member?.user?.email && (
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-gray-500 text-xs">
                                     {rm.member.user.email}
                                   </div>
                                 )}
                               </div>
                             </div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-gray-400 text-xs">
                               {rm.grantedAt && formatRelativeTime(rm.grantedAt)}
                             </div>
                           </div>
@@ -568,15 +580,15 @@ export default function RolesPage() {
       </Dialog>
 
       {/* Attach Policy Dialog */}
-      <Dialog open={isAttachPolicyDialogOpen} onOpenChange={setIsAttachPolicyDialogOpen}>
+      <Dialog onOpenChange={setIsAttachPolicyDialogOpen} open={isAttachPolicyDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-lg font-semibold">정책 연결</DialogTitle>
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-lg">정책 연결</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>정책 선택</Label>
-              <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
+              <Select onValueChange={setSelectedPolicyId} value={selectedPolicyId}>
                 <SelectTrigger>
                   <SelectValue placeholder="연결할 정책을 선택하세요" />
                 </SelectTrigger>
@@ -586,7 +598,7 @@ export default function RolesPage() {
                       <div className="flex flex-col">
                         <span>{policy.name}</span>
                         {policy.description && (
-                          <span className="text-xs text-gray-500">{policy.description}</span>
+                          <span className="text-gray-500 text-xs">{policy.description}</span>
                         )}
                       </div>
                     </SelectItem>
@@ -594,22 +606,22 @@ export default function RolesPage() {
                 </SelectContent>
               </Select>
               {attachablePolicies.length === 0 && (
-                <p className="text-sm text-gray-500">연결 가능한 정책이 없습니다.</p>
+                <p className="text-gray-500 text-sm">연결 가능한 정책이 없습니다.</p>
               )}
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 border-t pt-4">
               <Button
-                variant="outline"
                 onClick={() => {
                   setSelectedPolicyId("")
                   setIsAttachPolicyDialogOpen(false)
                 }}
+                variant="outline"
               >
                 취소
               </Button>
               <Button
-                onClick={handleAttachPolicy}
                 disabled={!selectedPolicyId || attachPolicy.isPending}
+                onClick={handleAttachPolicy}
               >
                 {attachPolicy.isPending ? "연결 중..." : "확인"}
               </Button>

@@ -61,7 +61,9 @@ export const webExtractionApi = {
           buffer = events.pop() || ""
 
           for (const eventStr of events) {
-            if (!eventStr.trim() || eventStr.trim().startsWith(":")) continue
+            if (!eventStr.trim() || eventStr.trim().startsWith(":")) {
+              continue
+            }
 
             const lines = eventStr.split("\n")
             let eventType: string | undefined
@@ -263,7 +265,9 @@ export const webExtractionApi = {
           buffer = events.pop() || ""
 
           for (const eventStr of events) {
-            if (!eventStr.trim() || eventStr.trim().startsWith(":")) continue
+            if (!eventStr.trim() || eventStr.trim().startsWith(":")) {
+              continue
+            }
 
             const lines = eventStr.split("\n")
             let eventType: string | undefined

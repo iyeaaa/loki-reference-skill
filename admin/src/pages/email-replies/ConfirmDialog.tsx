@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface ConfirmDialogProps {
+type ConfirmDialogProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
@@ -36,7 +36,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -53,12 +53,12 @@ export function ConfirmDialog({
         </DialogHeader>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             {cancelText}
           </Button>
           <Button
-            variant={variant === "destructive" ? "destructive" : "default"}
             onClick={handleConfirm}
+            variant={variant === "destructive" ? "destructive" : "default"}
           >
             {confirmText}
           </Button>

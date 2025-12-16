@@ -27,7 +27,7 @@ import type { Workspace } from "@/lib/api/types/workspace"
 import { WorkspaceEmailAccountsSection } from "./WorkspaceEmailAccountsSection"
 import { WorkspaceMembersSection } from "./WorkspaceMembersSection"
 
-interface WorkspaceFormProps {
+type WorkspaceFormProps = {
   workspace?: Workspace
   isEdit?: boolean
   users: User[]
@@ -84,8 +84,8 @@ export function WorkspaceForm({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <form onSubmit={handleSubmit} className="flex-1 space-y-6">
+    <div className="flex h-full flex-col">
+      <form className="flex-1 space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={nameId}>
@@ -93,10 +93,10 @@ export function WorkspaceForm({
             </Label>
             <Input
               id={nameId}
-              value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
               placeholder={t("settings.workspaces.form.workspaceNamePlaceholder")}
+              required
+              value={formData.name}
             />
           </div>
 
@@ -104,21 +104,21 @@ export function WorkspaceForm({
             <Label htmlFor={companyNameId}>{t("settings.workspaces.form.clientName")}</Label>
             <Input
               id={companyNameId}
-              value={formData.companyName}
               onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
               placeholder={t("settings.workspaces.form.clientNamePlaceholder")}
+              value={formData.companyName}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={companyWebsiteId}>{t("settings.workspace.companyWebsite")}</Label>
               <Input
                 id={companyWebsiteId}
-                type="url"
-                value={formData.companyWebsite}
                 onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
                 placeholder={t("settings.workspace.companyWebsitePlaceholder")}
+                type="url"
+                value={formData.companyWebsite}
               />
             </div>
 
@@ -126,10 +126,10 @@ export function WorkspaceForm({
               <Label htmlFor={companyPhoneId}>{t("settings.workspace.companyPhone")}</Label>
               <Input
                 id={companyPhoneId}
-                type="tel"
-                value={formData.companyPhone}
                 onChange={(e) => setFormData({ ...formData, companyPhone: e.target.value })}
                 placeholder={t("settings.workspace.companyPhonePlaceholder")}
+                type="tel"
+                value={formData.companyPhone}
               />
             </div>
 
@@ -137,9 +137,9 @@ export function WorkspaceForm({
               <Label htmlFor={companySizeId}>{t("settings.workspace.companySize")}</Label>
               <Input
                 id={companySizeId}
-                value={formData.companySize}
                 onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
                 placeholder={t("settings.workspace.companySizePlaceholder")}
+                value={formData.companySize}
               />
             </div>
 
@@ -147,9 +147,9 @@ export function WorkspaceForm({
               <Label htmlFor={industryId}>{t("settings.workspace.industry")}</Label>
               <Input
                 id={industryId}
-                value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
                 placeholder={t("settings.workspace.industryPlaceholder")}
+                value={formData.industry}
               />
             </div>
           </div>
@@ -158,9 +158,9 @@ export function WorkspaceForm({
             <Label htmlFor={companyAddressId}>{t("settings.workspace.companyAddress")}</Label>
             <Input
               id={companyAddressId}
-              value={formData.companyAddress}
               onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
               placeholder={t("settings.workspace.companyAddressPlaceholder")}
+              value={formData.companyAddress}
             />
           </div>
 
@@ -170,10 +170,10 @@ export function WorkspaceForm({
             </Label>
             <Textarea
               id={companyDescriptionId}
-              value={formData.companyDescription}
               onChange={(e) => setFormData({ ...formData, companyDescription: e.target.value })}
               placeholder={t("settings.workspace.companyDescriptionPlaceholder")}
               rows={4}
+              value={formData.companyDescription}
             />
           </div>
 
@@ -182,8 +182,8 @@ export function WorkspaceForm({
               {t("settings.workspaces.form.description")} <span className="text-red-500">*</span>
             </Label>
             <Textarea
+              className="min-h-[72px] resize-none overflow-hidden"
               id={descriptionId}
-              value={formData.description}
               onChange={(e) => {
                 setFormData({ ...formData, description: e.target.value })
                 // Auto-expand textarea
@@ -191,17 +191,17 @@ export function WorkspaceForm({
                 target.style.height = "auto"
                 target.style.height = `${Math.max(72, target.scrollHeight)}px`
               }}
-              required
               placeholder={t("settings.workspaces.form.descriptionPlaceholder")}
-              rows={3}
-              className="min-h-[72px] resize-none overflow-hidden"
-              style={{ height: "auto" }}
               ref={(el) => {
                 if (el && formData.description) {
                   el.style.height = "auto"
                   el.style.height = `${Math.max(72, el.scrollHeight)}px`
                 }
               }}
+              required
+              rows={3}
+              style={{ height: "auto" }}
+              value={formData.description}
             />
           </div>
 
@@ -209,19 +209,19 @@ export function WorkspaceForm({
             <Label htmlFor="owner">
               {t("settings.workspaces.form.owner")} <span className="text-red-500">*</span>
             </Label>
-            <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+            <Popover onOpenChange={setOwnerOpen} open={ownerOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
-                  role="combobox"
                   aria-expanded={ownerOpen}
-                  className="w-full justify-between font-normal h-auto py-2"
+                  className="h-auto w-full justify-between py-2 font-normal"
+                  role="combobox"
                   type="button"
+                  variant="outline"
                 >
                   {formData.ownerId ? (
                     <div className="flex flex-col items-start">
                       <span>{users.find((user) => user.id === formData.ownerId)?.username}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {users.find((user) => user.id === formData.ownerId)?.email}
                       </span>
                     </div>
@@ -234,9 +234,9 @@ export function WorkspaceForm({
               <PopoverContent className="w-full p-0">
                 <Command className="max-h-[300px]">
                   <CommandInput
+                    onValueChange={setOwnerSearch}
                     placeholder={t("settings.workspaces.form.searchUsers")}
                     value={ownerSearch}
-                    onValueChange={setOwnerSearch}
                   />
                   <CommandList>
                     <CommandEmpty>{t("settings.workspaces.form.noUsersFound")}</CommandEmpty>
@@ -244,7 +244,6 @@ export function WorkspaceForm({
                       {filteredUsers.map((user) => (
                         <CommandItem
                           key={user.id}
-                          value={`${user.username} ${user.email}`}
                           onSelect={() => {
                             setFormData({
                               ...formData,
@@ -253,6 +252,7 @@ export function WorkspaceForm({
                             setOwnerOpen(false)
                             setOwnerSearch("")
                           }}
+                          value={`${user.username} ${user.email}`}
                         >
                           <Check
                             className={`mr-2 h-4 w-4 ${
@@ -261,7 +261,7 @@ export function WorkspaceForm({
                           />
                           <div className="flex flex-col">
                             <span>{user.username}</span>
-                            <span className="text-xs text-gray-500">{user.email}</span>
+                            <span className="text-gray-500 text-xs">{user.email}</span>
                           </div>
                         </CommandItem>
                       ))}
@@ -274,8 +274,8 @@ export function WorkspaceForm({
 
           <div className="flex items-center space-x-2">
             <Checkbox
-              id={isActiveId}
               checked={formData.isActive}
+              id={isActiveId}
               onCheckedChange={(checked) => setFormData({ ...formData, isActive: !!checked })}
             />
             <Label htmlFor={isActiveId}>{t("settings.workspaces.form.active")}</Label>
@@ -284,28 +284,28 @@ export function WorkspaceForm({
 
         {workspace?.id && (
           <>
-            <div className="pt-6 border-t">
+            <div className="border-t pt-6">
               <WorkspaceMembersSection
-                workspaceId={workspace.id}
                 isEdit={isEdit}
                 onAddMemberClick={onAddMemberClick || (() => {})}
+                workspaceId={workspace.id}
               />
             </div>
 
-            <div className="pt-6 border-t">
-              <WorkspaceEmailAccountsSection workspaceId={workspace.id} isEdit={isEdit} />
+            <div className="border-t pt-6">
+              <WorkspaceEmailAccountsSection isEdit={isEdit} workspaceId={workspace.id} />
             </div>
           </>
         )}
 
-        <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white pt-6">
+          <Button onClick={onCancel} type="button" variant="outline">
             {t("settings.workspaces.form.cancel")}
           </Button>
           <Button
-            type="submit"
             className="min-w-[100px]"
-            disabled={!formData.name || !formData.ownerId}
+            disabled={!(formData.name && formData.ownerId)}
+            type="submit"
           >
             {isEdit ? t("settings.workspaces.form.save") : t("settings.workspaces.form.create")}
           </Button>

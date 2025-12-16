@@ -14,7 +14,7 @@ import {
 } from "@/lib/api/hooks/sequences"
 import { useWorkspaces } from "@/lib/api/hooks/workspaces"
 
-interface EmailStep {
+type EmailStep = {
   id?: string // Step ID if it exists in DB
   stepOrder: number
   delayDays: number
@@ -26,7 +26,7 @@ interface EmailStep {
   files?: File[]
 }
 
-interface CreateCampaignStep3Props {
+type CreateCampaignStep3Props = {
   sequenceId: string | null
   data: {
     workspaceId: string
@@ -294,9 +294,9 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
   // Show loading state if sequence is not ready
   if (!sequenceId) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+      <div className="flex h-full items-center justify-center">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-primary border-b-2" />
           <p className="text-muted-foreground">{t("sequences.step3.preparingCampaign")}</p>
         </div>
       </div>
@@ -304,32 +304,32 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
   }
 
   return (
-    <div className="h-full grid grid-cols-3 gap-6">
+    <div className="grid h-full grid-cols-3 gap-6">
       {/* Panel 1: Recipients Summary */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+        <h3 className="flex items-center gap-2 font-semibold text-lg">
           <Users className="h-5 w-5 text-primary" />
           {t("sequences.step3.sendTarget")}
         </h3>
 
-        <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{t("sequences.step3.workspace")}</span>
+            <span className="font-medium text-sm">{t("sequences.step3.workspace")}</span>
             <Check className="h-4 w-4 text-green-600" />
           </div>
 
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center py-2 border-b">
+            <div className="flex items-center justify-between border-b py-2">
               <span className="text-muted-foreground">{t("sequences.step3.workspace")}</span>
               <span className="font-medium">{workspace?.name || "-"}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
+            <div className="flex items-center justify-between border-b py-2">
               <span className="text-muted-foreground">{t("sequences.step3.customerGroup")}</span>
               <span className="font-medium">{customerGroup?.name || "-"}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
+            <div className="flex items-center justify-between py-2">
               <span className="text-muted-foreground">{t("sequences.step3.recipientCount")}</span>
-              <span className="font-medium text-primary text-lg">
+              <span className="font-medium text-lg text-primary">
                 {recipientCount}
                 {t("sequences.step3.people")}
               </span>
@@ -337,8 +337,8 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
           </div>
 
           {data.selectedLeadIds.length > 0 && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md">
-              <p className="text-xs text-blue-900 dark:text-blue-200">
+            <div className="mt-3 rounded-md bg-blue-50 p-3 dark:bg-blue-950/20">
+              <p className="text-blue-900 text-xs dark:text-blue-200">
                 {t("sequences.step3.specificRecipients", { count: data.selectedLeadIds.length })}
               </p>
             </div>
@@ -346,21 +346,21 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
         </div>
 
         {/* Campaign Info at bottom of first panel */}
-        <div className="rounded-lg border p-4 space-y-3">
+        <div className="space-y-3 rounded-lg border p-4">
           <h4 className="font-semibold text-sm">{t("sequences.step3.campaignInfo")}</h4>
           <div className="space-y-2">
             <div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {t("sequences.step3.campaignName")}
               </span>
-              <p className="text-sm font-medium mt-1">{data.name || t("sequences.step3.noName")}</p>
+              <p className="mt-1 font-medium text-sm">{data.name || t("sequences.step3.noName")}</p>
             </div>
             {data.description && (
               <div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {t("sequences.step3.description")}
                 </span>
-                <p className="text-sm mt-1">{data.description}</p>
+                <p className="mt-1 text-sm">{data.description}</p>
               </div>
             )}
           </div>
@@ -369,14 +369,14 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
       {/* Panel 2: Email Scenario Summary */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+        <h3 className="flex items-center gap-2 font-semibold text-lg">
           <Mail className="h-5 w-5 text-primary" />
           {t("sequences.step3.emailScenario")}
         </h3>
 
-        <div className="rounded-lg border p-4 bg-muted/30">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium">
+        <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="font-medium text-sm">
               {t("sequences.step3.totalSteps", { count: data.steps.length })}
             </span>
             <Check className="h-4 w-4 text-green-600" />
@@ -385,13 +385,13 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
           <ScrollArea className="h-[calc(100vh-400px)]">
             <div className="space-y-3 pr-4">
               {data.steps.map((step) => (
-                <div key={step.stepOrder} className="rounded-lg border bg-background p-4">
+                <div className="rounded-lg border bg-background p-4" key={step.stepOrder}>
                   <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold flex-shrink-0">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground text-sm">
                       {step.stepOrder}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
                         <Clock className="h-3 w-3" />
                         {step.delayDays === 0
                           ? t("sequences.step3.sendImmediately")
@@ -400,12 +400,12 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
                       </div>
-                      <p className="text-sm font-medium mb-2">{step.emailSubject}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-3">
+                      <p className="mb-2 font-medium text-sm">{step.emailSubject}</p>
+                      <p className="line-clamp-3 text-muted-foreground text-xs">
                         {step.emailBodyText}
                       </p>
                       {step.files && step.files.length > 0 && (
-                        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="mt-2 flex items-center gap-1 text-muted-foreground text-xs">
                           <Mail className="h-3 w-3" />
                           {t("sequences.step3.attachments", { count: step.files.length })}
                         </div>
@@ -420,23 +420,23 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       </div>
 
       {/* Panel 3: Memo & Actions */}
-      <div className="space-y-4 flex flex-col">
-        <h3 className="text-lg font-semibold">{t("sequences.step3.memo")}</h3>
+      <div className="flex flex-col space-y-4">
+        <h3 className="font-semibold text-lg">{t("sequences.step3.memo")}</h3>
 
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4">
           <div className="flex-1">
             <Textarea
-              value={memo}
+              className="h-full min-h-[200px] resize-none"
               onChange={(e) => setMemo(e.target.value)}
               placeholder={t("sequences.step3.memoPlaceholder")}
-              className="h-full min-h-[200px] resize-none"
+              value={memo}
             />
           </div>
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4">
-              <p className="text-xs text-blue-900 dark:text-blue-200 space-y-2">
+            <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
+              <p className="space-y-2 text-blue-900 text-xs dark:text-blue-200">
                 <span className="block">
                   <strong>{t("sequences.step3.draftNote")}</strong>{" "}
                   {t("sequences.step3.draftNoteDescription")}
@@ -450,9 +450,9 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
             <div className="flex flex-col gap-2">
               <Button
-                onClick={handleSaveReady}
+                className="h-11 w-full"
                 disabled={updateSequence.isPending}
-                className="w-full h-11"
+                onClick={handleSaveReady}
                 size="lg"
               >
                 {updateSequence.isPending
@@ -460,11 +460,11 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                   : t("sequences.step3.ready")}
               </Button>
               <Button
-                variant="outline"
-                onClick={handleSaveDraft}
+                className="h-11 w-full"
                 disabled={updateSequence.isPending}
-                className="w-full h-11"
+                onClick={handleSaveDraft}
                 size="lg"
+                variant="outline"
               >
                 {t("sequences.step3.saveDraft")}
               </Button>

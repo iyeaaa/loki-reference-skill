@@ -2,7 +2,7 @@ import { Paperclip, X } from "lucide-react"
 import { useRef } from "react"
 import { Button } from "./ui/button"
 
-interface FileAttachmentProps {
+type FileAttachmentProps = {
   files: File[]
   onFilesChange: (files: File[]) => void
   maxSize?: number // in bytes, default 30MB
@@ -50,7 +50,9 @@ export function FileAttachment({
   }
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes"
+    if (bytes === 0) {
+      return "0 Bytes"
+    }
     const k = 1024
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -63,50 +65,50 @@ export function FileAttachment({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Button
+          className="gap-2"
+          onClick={() => fileInputRef.current?.click()}
+          size="sm"
           type="button"
           variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          className="gap-2"
         >
           <Paperclip className="h-4 w-4" />
           파일 첨부
         </Button>
         {files.length > 0 && (
-          <span className="text-sm text-gray-500">
+          <span className="text-gray-500 text-sm">
             {files.length}개 파일 ({formatFileSize(totalSize)})
           </span>
         )}
       </div>
 
       <input
-        ref={fileInputRef}
-        type="file"
+        className="hidden"
         multiple
         onChange={handleFileSelect}
-        className="hidden"
+        ref={fileInputRef}
+        type="file"
       />
 
       {files.length > 0 && (
         <div className="space-y-1">
           {files.map((file, index) => (
             <div
+              className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 p-2"
               key={`${file.name}-${index}`}
-              className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded border border-gray-200"
             >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Paperclip className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm truncate" title={file.name}>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Paperclip className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                <span className="truncate text-sm" title={file.name}>
                   {file.name}
                 </span>
-                <span className="text-xs text-gray-500 flex-shrink-0">
+                <span className="flex-shrink-0 text-gray-500 text-xs">
                   {formatFileSize(file.size)}
                 </span>
               </div>
               <button
-                type="button"
+                className="flex-shrink-0 text-gray-400 hover:text-red-500"
                 onClick={() => removeFile(index)}
-                className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                type="button"
               >
                 <X className="h-4 w-4" />
               </button>

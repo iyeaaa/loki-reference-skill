@@ -1,14 +1,17 @@
 import * as SwitchPrimitives from "@radix-ui/react-switch"
 import { motion } from "framer-motion"
-import * as React from "react"
+import type * as React from "react"
 
 import { shouldReduceMotion } from "@/lib/animations"
 import { cn } from "@/lib/utils"
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => {
+const Switch = ({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
+  ref?: React.RefObject<React.ElementRef<typeof SwitchPrimitives.Root> | null>
+}) => {
   const reducedMotion = shouldReduceMotion()
 
   return (
@@ -41,7 +44,7 @@ const Switch = React.forwardRef<
       </SwitchPrimitives.Thumb>
     </SwitchPrimitives.Root>
   )
-})
+}
 Switch.displayName = SwitchPrimitives.Root.displayName
 
 export { Switch }

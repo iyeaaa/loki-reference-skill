@@ -114,7 +114,9 @@ export default function PlansPage() {
   }
 
   const handleUpdatePlan = async (data: CreateBillingPlanRequest) => {
-    if (!editingPlan) return
+    if (!editingPlan) {
+      return
+    }
     await updatePlan.mutateAsync({
       planId: editingPlan.id,
       data: {
@@ -134,8 +136,12 @@ export default function PlansPage() {
   }
 
   const handleDeleteSelected = async () => {
-    if (selectedPlans.length === 0) return
-    if (!confirm(`선택한 ${selectedPlans.length}개의 요금제를 삭제하시겠습니까?`)) return
+    if (selectedPlans.length === 0) {
+      return
+    }
+    if (!confirm(`선택한 ${selectedPlans.length}개의 요금제를 삭제하시겠습니까?`)) {
+      return
+    }
 
     for (const id of selectedPlans) {
       await deletePlan.mutateAsync(id)
@@ -143,13 +149,12 @@ export default function PlansPage() {
     setSelectedPlans([])
   }
 
-  const formatPrice = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("ko-KR", {
+  const formatPrice = (amount: number, currency: string) =>
+    new Intl.NumberFormat("ko-KR", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
     }).format(amount)
-  }
 
   const columns: Column<BillingPlan>[] = [
     {
@@ -158,11 +163,11 @@ export default function PlansPage() {
       minWidth: "160px",
       render: (item) => (
         <div className="max-w-[160px]">
-          <div className="font-medium text-gray-900 dark:text-gray-100 truncate" title={item.name}>
+          <div className="truncate font-medium text-gray-900 dark:text-gray-100" title={item.name}>
             {item.name}
           </div>
           {item.description && (
-            <div className="text-xs text-gray-500 line-clamp-2" title={item.description}>
+            <div className="line-clamp-2 text-gray-500 text-xs" title={item.description}>
               {item.description}
             </div>
           )}
@@ -175,11 +180,11 @@ export default function PlansPage() {
       minWidth: "120px",
       render: (item) => (
         <div className="max-w-[120px]">
-          <div className="font-medium truncate" title={item.product?.name}>
+          <div className="truncate font-medium" title={item.product?.name}>
             {item.product?.name || "-"}
           </div>
           {item.product?.tier && (
-            <Badge variant="outline" className="text-xs mt-1">
+            <Badge className="mt-1 text-xs" variant="outline">
               {SUBSCRIPTION_TIER_LABELS[item.product.tier]}
             </Badge>
           )}
@@ -191,10 +196,10 @@ export default function PlansPage() {
       header: "가격",
       width: "100px",
       render: (item) => (
-        <div className="text-right whitespace-nowrap">
+        <div className="whitespace-nowrap text-right">
           <div className="font-medium">{formatPrice(item.amount, item.currency)}</div>
           {item.planType === "recurring" && item.billingInterval && (
-            <div className="text-xs text-gray-500">
+            <div className="text-gray-500 text-xs">
               / {item.intervalCount > 1 ? `${item.intervalCount}` : ""}
               {PLAN_INTERVAL_LABELS[item.billingInterval]}
             </div>
@@ -208,8 +213,8 @@ export default function PlansPage() {
       width: "70px",
       render: (item) => (
         <Badge
-          variant={item.planType === "recurring" ? "default" : "secondary"}
           className="text-xs"
+          variant={item.planType === "recurring" ? "default" : "secondary"}
         >
           {PLAN_TYPE_LABELS[item.planType]}
         </Badge>
@@ -221,7 +226,7 @@ export default function PlansPage() {
       width: "50px",
       render: (item) =>
         item.trialDays > 0 ? (
-          <span className="text-sm whitespace-nowrap">{item.trialDays}일</span>
+          <span className="whitespace-nowrap text-sm">{item.trialDays}일</span>
         ) : (
           <span className="text-gray-400">-</span>
         ),
@@ -232,11 +237,11 @@ export default function PlansPage() {
       width: "100px",
       render: (item) => (
         <div className="flex flex-wrap gap-1">
-          <Badge variant={item.isActive ? "default" : "secondary"} className="text-xs">
+          <Badge className="text-xs" variant={item.isActive ? "default" : "secondary"}>
             {item.isActive ? "활성" : "비활성"}
           </Badge>
           {item.isDefault && (
-            <Badge variant="outline" className="text-xs">
+            <Badge className="text-xs" variant="outline">
               기본
             </Badge>
           )}
@@ -248,7 +253,7 @@ export default function PlansPage() {
       header: "구독",
       width: "60px",
       render: (item) => (
-        <span className="text-gray-600 whitespace-nowrap">{item.subscriptionsCount || 0}건</span>
+        <span className="whitespace-nowrap text-gray-600">{item.subscriptionsCount || 0}건</span>
       ),
     },
     {
@@ -259,33 +264,33 @@ export default function PlansPage() {
       render: (item) => (
         <div className="flex gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => setViewingPlan(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="상세 보기"
+            variant="outline"
           >
             <Eye className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => setEditingPlan(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="수정"
+            variant="outline"
           >
             <Edit className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-red-600 text-xs hover:text-red-700"
             onClick={() => {
               if (confirm("이 요금제을 삭제하시겠습니까?")) {
                 deletePlan.mutate(item.id)
               }
             }}
-            className="text-xs h-7 w-7 p-0 text-red-600 hover:text-red-700"
+            size="sm"
             title="삭제"
+            variant="outline"
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -295,13 +300,13 @@ export default function PlansPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <DataFilters
         filters={filterConfigs}
-        values={filterValues}
         onChange={updateFilter}
         onClear={clearFilters}
+        values={filterValues}
       />
 
       {/* Plans Table */}
@@ -310,7 +315,7 @@ export default function PlansPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">요금제</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />새 요금제
+              <Plus className="mr-1 h-4 w-4" />새 요금제
             </Button>
           </div>
         </CardHeader>
@@ -318,74 +323,74 @@ export default function PlansPage() {
           {/* Search */}
           <div className="mb-4">
             <SearchInput
-              value={searchQuery}
               onChange={handleSearch}
               placeholder="요금제명, 설명으로 검색..."
+              value={searchQuery}
             />
           </div>
 
           {/* Bulk Actions */}
           <BulkActionsBar
-            selectedCount={selectedPlans.length}
             actions={[
               {
                 id: "delete",
                 label: "삭제",
-                icon: <Trash2 className="h-4 w-4 mr-1" />,
+                icon: <Trash2 className="mr-1 h-4 w-4" />,
                 variant: "destructive",
                 onClick: handleDeleteSelected,
               },
             ]}
+            selectedCount={selectedPlans.length}
           />
 
           {/* Table */}
           <DataTable
-            data={plans}
             columns={columns}
-            pagination={pagination}
-            isLoading={isFetching}
-            selectable
-            selectedIds={selectedPlans}
+            data={plans}
+            emptyMessage="아직 요금제가 없어요"
             getItemId={(item) => item.id}
+            isLoading={isFetching}
+            onPageChange={handlePageChange}
             onToggleSelect={handleToggleSelect}
             onToggleSelectAll={handleToggleSelectAll}
-            onPageChange={handlePageChange}
-            emptyMessage="아직 요금제가 없어요"
+            pagination={pagination}
+            selectable
+            selectedIds={selectedPlans}
           />
         </CardContent>
       </Card>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">새 요금제</DialogTitle>
+      <Dialog onOpenChange={setIsCreateDialogOpen} open={isCreateDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">새 요금제</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <PlanForm
-              products={products}
-              onSave={handleCreatePlan}
-              onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createPlan.isPending}
+              onCancel={() => setIsCreateDialogOpen(false)}
+              onSave={handleCreatePlan}
+              products={products}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingPlan} onOpenChange={() => setEditingPlan(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">요금제 편집</DialogTitle>
+      <Dialog onOpenChange={() => setEditingPlan(null)} open={!!editingPlan}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">요금제 편집</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingPlan && (
               <PlanForm
+                isLoading={updatePlan.isPending}
+                onCancel={() => setEditingPlan(null)}
+                onSave={handleUpdatePlan}
                 plan={editingPlan}
                 products={products}
-                onSave={handleUpdatePlan}
-                onCancel={() => setEditingPlan(null)}
-                isLoading={updatePlan.isPending}
               />
             )}
           </div>
@@ -393,35 +398,35 @@ export default function PlansPage() {
       </Dialog>
 
       {/* View Dialog */}
-      <Dialog open={!!viewingPlan} onOpenChange={() => setViewingPlan(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">요금제 상세</DialogTitle>
+      <Dialog onOpenChange={() => setViewingPlan(null)} open={!!viewingPlan}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">요금제 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {viewingPlan && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">요금제명</span>
+                    <span className="font-medium text-gray-500 text-sm">요금제명</span>
                     <p className="mt-1 font-medium">{viewingPlan.name}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">상품</span>
+                    <span className="font-medium text-gray-500 text-sm">상품</span>
                     <p className="mt-1">{viewingPlan.product?.name || "-"}</p>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-sm font-medium text-gray-500">설명</span>
+                    <span className="font-medium text-gray-500 text-sm">설명</span>
                     <p className="mt-1 text-gray-600">{viewingPlan.description || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">가격</span>
+                    <span className="font-medium text-gray-500 text-sm">가격</span>
                     <p className="mt-1 font-medium">
                       {formatPrice(viewingPlan.amount, viewingPlan.currency)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">결제 유형</span>
+                    <span className="font-medium text-gray-500 text-sm">결제 유형</span>
                     <p className="mt-1">
                       <Badge
                         variant={viewingPlan.planType === "recurring" ? "default" : "secondary"}
@@ -432,7 +437,7 @@ export default function PlansPage() {
                   </div>
                   {viewingPlan.planType === "recurring" && viewingPlan.billingInterval && (
                     <div>
-                      <span className="text-sm font-medium text-gray-500">결제 주기</span>
+                      <span className="font-medium text-gray-500 text-sm">결제 주기</span>
                       <p className="mt-1">
                         {viewingPlan.intervalCount > 1 ? `${viewingPlan.intervalCount}` : ""}
                         {PLAN_INTERVAL_LABELS[viewingPlan.billingInterval]}마다
@@ -440,13 +445,13 @@ export default function PlansPage() {
                     </div>
                   )}
                   <div>
-                    <span className="text-sm font-medium text-gray-500">체험 기간</span>
+                    <span className="font-medium text-gray-500 text-sm">체험 기간</span>
                     <p className="mt-1">
                       {viewingPlan.trialDays > 0 ? `${viewingPlan.trialDays}일` : "없음"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">상태</span>
+                    <span className="font-medium text-gray-500 text-sm">상태</span>
                     <p className="mt-1 flex gap-1">
                       <Badge variant={viewingPlan.isActive ? "default" : "secondary"}>
                         {viewingPlan.isActive ? "활성" : "비활성"}

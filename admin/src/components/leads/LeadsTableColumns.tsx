@@ -1,4 +1,4 @@
-import type { ColumnDef, RowData } from "@tanstack/react-table"
+import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import { formatDistanceToNow } from "date-fns"
 import { ColumnSelector } from "@/components/leads/ColumnSelector"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { FilterableColumnHeader } from "./FilterableColumnHeader"
 
 // Extend TanStack Table meta types
 declare module "@tanstack/react-table" {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: Interface required for TypeScript module augmentation (declaration merging)
   // biome-ignore lint/correctness/noUnusedVariables: Must match TanStack Table's type parameters exactly
   interface ColumnMeta<TData extends RowData, TValue> {
     filterConfig?: ColumnFilterConfig
@@ -38,12 +39,20 @@ function LeadStatusBadge({ status }: { status: LeadStatus }) {
 
 // Lead Score Display Component
 function LeadScoreDisplay({ score }: { score: number | null | undefined }) {
-  if (score === null || score === undefined) return <span className="text-muted-foreground">-</span>
+  if (score === null || score === undefined) {
+    return <span className="text-muted-foreground">-</span>
+  }
 
   const getScoreColor = (value: number) => {
-    if (value >= 80) return "text-green-600 dark:text-green-400"
-    if (value >= 60) return "text-blue-600 dark:text-blue-400"
-    if (value >= 40) return "text-yellow-600 dark:text-yellow-400"
+    if (value >= 80) {
+      return "text-green-600 dark:text-green-400"
+    }
+    if (value >= 60) {
+      return "text-blue-600 dark:text-blue-400"
+    }
+    if (value >= 40) {
+      return "text-yellow-600 dark:text-yellow-400"
+    }
     return "text-red-600 dark:text-red-400"
   }
 
@@ -51,7 +60,7 @@ function LeadScoreDisplay({ score }: { score: number | null | undefined }) {
 }
 
 // Helper type for additional table meta
-interface LeadsTableMeta {
+type LeadsTableMeta = {
   onToggleLead?: (leadId: string) => void
   onToggleAll?: () => void
   isSelectAllMode?: boolean
@@ -74,7 +83,9 @@ interface LeadsTableMeta {
 // Helper function to create filter change handler
 function createFilterChangeHandler(columnId: string, meta: LeadsTableMeta | undefined) {
   return (filter: ColumnFilter | null) => {
-    if (!meta?.setColumnFilters) return
+    if (!meta?.setColumnFilters) {
+      return
+    }
 
     if (filter) {
       // Add or update filter
@@ -96,22 +107,21 @@ function createColumnHeader(
   meta: LeadsTableMeta | undefined,
   currentFilter: ColumnFilter | undefined,
   filterConfig: ColumnFilterConfig | undefined,
-  // biome-ignore lint/suspicious/noExplicitAny: Column type from TanStack Table is complex
-  column: any,
+  column: Column<Lead, unknown>,
 ) {
   const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === columnId)
 
   return (
     <FilterableColumnHeader
-      column={column}
-      title={title}
-      filterConfig={filterConfig}
-      currentFilter={currentFilter}
-      onFilterChange={createFilterChangeHandler(columnId, meta)}
-      workspaceId={meta?.workspaceId}
-      customerGroupId={meta?.customerGroupId}
       canRemove={columnDef?.canHide}
+      column={column}
+      currentFilter={currentFilter}
+      customerGroupId={meta?.customerGroupId}
+      filterConfig={filterConfig}
+      onFilterChange={createFilterChangeHandler(columnId, meta)}
       onRemove={() => meta?.onRemoveColumn?.(columnId)}
+      title={title}
+      workspaceId={meta?.workspaceId}
     />
   )
 }
@@ -128,9 +138,9 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <Checkbox
+          aria-label="Select all"
           checked={checked}
           onCheckedChange={() => meta?.onToggleAll?.()}
-          aria-label="Select all"
         />
       )
     },
@@ -143,9 +153,9 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <Checkbox
+          aria-label="Select row"
           checked={checked}
           onCheckedChange={() => meta?.onToggleLead?.(leadId)}
-          aria-label="Select row"
         />
       )
     },
@@ -161,15 +171,15 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <FilterableColumnHeader
-          column={column}
-          title="Company Name"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
           canRemove={columnDef?.canHide}
+          column={column}
+          currentFilter={currentFilter}
+          customerGroupId={meta?.customerGroupId}
+          filterConfig={column.columnDef.meta?.filterConfig}
+          onFilterChange={createFilterChangeHandler(column.id, meta)}
           onRemove={() => meta?.onRemoveColumn?.(column.id)}
+          title="Company Name"
+          workspaceId={meta?.workspaceId}
         />
       )
     },
@@ -187,7 +197,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
         <div className="flex flex-col">
           <span className="font-medium">{companyName || "-"}</span>
           {row.original.foundCompanyName && row.original.foundCompanyName !== companyName && (
-            <span className="text-xs text-muted-foreground">{row.original.foundCompanyName}</span>
+            <span className="text-muted-foreground text-xs">{row.original.foundCompanyName}</span>
           )}
         </div>
       )
@@ -202,15 +212,15 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <FilterableColumnHeader
-          column={column}
-          title="Contact"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
           canRemove={columnDef?.canHide}
+          column={column}
+          currentFilter={currentFilter}
+          customerGroupId={meta?.customerGroupId}
+          filterConfig={column.columnDef.meta?.filterConfig}
+          onFilterChange={createFilterChangeHandler(column.id, meta)}
           onRemove={() => meta?.onRemoveColumn?.(column.id)}
+          title="Contact"
+          workspaceId={meta?.workspaceId}
         />
       )
     },
@@ -237,15 +247,15 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <FilterableColumnHeader
-          column={column}
-          title="Email"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler("email", meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
           canRemove={columnDef?.canHide}
+          column={column}
+          currentFilter={currentFilter}
+          customerGroupId={meta?.customerGroupId}
+          filterConfig={column.columnDef.meta?.filterConfig}
+          onFilterChange={createFilterChangeHandler("email", meta)}
           onRemove={() => meta?.onRemoveColumn?.("email")}
+          title="Email"
+          workspaceId={meta?.workspaceId}
         />
       )
     },
@@ -272,15 +282,15 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <FilterableColumnHeader
-          column={column}
-          title="Status"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
           canRemove={columnDef?.canHide}
+          column={column}
+          currentFilter={currentFilter}
+          customerGroupId={meta?.customerGroupId}
+          filterConfig={column.columnDef.meta?.filterConfig}
+          onFilterChange={createFilterChangeHandler(column.id, meta)}
           onRemove={() => meta?.onRemoveColumn?.(column.id)}
+          title="Status"
+          workspaceId={meta?.workspaceId}
         />
       )
     },
@@ -321,15 +331,15 @@ export const leadsColumns: ColumnDef<Lead>[] = [
 
       return (
         <FilterableColumnHeader
-          column={column}
-          title="Score"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
           canRemove={columnDef?.canHide}
+          column={column}
+          currentFilter={currentFilter}
+          customerGroupId={meta?.customerGroupId}
+          filterConfig={column.columnDef.meta?.filterConfig}
+          onFilterChange={createFilterChangeHandler(column.id, meta)}
           onRemove={() => meta?.onRemoveColumn?.(column.id)}
+          title="Score"
+          workspaceId={meta?.workspaceId}
         />
       )
     },
@@ -590,14 +600,16 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     },
     cell: ({ row }) => {
       const url = row.original.websiteUrl
-      if (!url) return "-"
+      if (!url) {
+        return "-"
+      }
       return (
         <a
-          href={url.startsWith("http") ? url : `https://${url}`}
-          target="_blank"
-          rel="noopener noreferrer"
           className="text-blue-600 hover:underline dark:text-blue-400"
+          href={url.startsWith("http") ? url : `https://${url}`}
           onClick={(e) => e.stopPropagation()}
+          rel="noopener noreferrer"
+          target="_blank"
         >
           {url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 30)}
         </a>
@@ -676,7 +688,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       return (
         <div className="flex flex-col">
           <span>{date.toLocaleDateString()}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {formatDistanceToNow(date, { addSuffix: true })}
           </span>
         </div>
@@ -711,7 +723,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       return (
         <div className="flex flex-col">
           <span>{date.toLocaleDateString()}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {formatDistanceToNow(date, { addSuffix: true })}
           </span>
         </div>
@@ -725,8 +737,8 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       return (
         <div className="flex items-center justify-center">
           <ColumnSelector
-            visibleColumns={meta?.visibleColumns || []}
             onAddColumn={meta?.onAddColumn || (() => {})}
+            visibleColumns={meta?.visibleColumns || []}
           />
         </div>
       )

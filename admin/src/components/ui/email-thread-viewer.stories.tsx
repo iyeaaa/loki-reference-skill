@@ -32,7 +32,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="h-[800px] max-w-4xl mx-auto">
+      <div className="mx-auto h-[800px] max-w-4xl">
         <Story />
       </div>
     ),

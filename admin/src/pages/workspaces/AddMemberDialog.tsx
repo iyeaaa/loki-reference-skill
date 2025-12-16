@@ -23,7 +23,7 @@ import { useUsers } from "@/lib/api/hooks/users"
 import { useAddWorkspaceMember } from "@/lib/api/hooks/workspaces"
 import type { User } from "@/lib/api/types/user"
 
-interface AddMemberDialogProps {
+type AddMemberDialogProps = {
   workspaceId: string
   existingMemberUserIds: string[]
   isOpen: boolean
@@ -78,7 +78,9 @@ export function AddMemberDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedUserId) return
+    if (!selectedUserId) {
+      return
+    }
 
     addMember.mutate(
       {
@@ -133,67 +135,69 @@ export function AddMemberDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog onOpenChange={handleClose} open={isOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>멤버 추가</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor={userSelectId}>
               사용자 <span className="text-red-500">*</span>
             </Label>
-            <Popover open={userOpen} onOpenChange={setUserOpen} modal={true}>
+            <Popover modal={true} onOpenChange={setUserOpen} open={userOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  id={userSelectId}
-                  variant="outline"
-                  role="combobox"
                   aria-expanded={userOpen}
                   className="w-full justify-between font-normal"
+                  id={userSelectId}
+                  role="combobox"
                   type="button"
+                  variant="outline"
                 >
                   {selectedUser ? selectedUser.username : "사용자 선택"}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
                 <Command className="max-h-[400px]">
                   <CommandInput
+                    onValueChange={setUserSearch}
                     placeholder="사용자 검색..."
                     value={userSearch}
-                    onValueChange={setUserSearch}
                   />
                   <CommandList>
-                    {!debouncedSearch ? (
-                      <CommandEmpty>이름 또는 이메일로 검색해주세요.</CommandEmpty>
-                    ) : isLoading ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                        <span className="ml-2 text-sm text-gray-500">검색 중...</span>
-                      </div>
-                    ) : availableUsers.length === 0 ? (
-                      <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
+                    {debouncedSearch ? (
+                      isLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          <span className="ml-2 text-gray-500 text-sm">검색 중...</span>
+                        </div>
+                      ) : availableUsers.length === 0 ? (
+                        <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
+                      ) : (
+                        <CommandGroup>
+                          {availableUsers.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              onSelect={() => handleSelectUser(user)}
+                              value={`${user.username} ${user.email}`}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedUserId === user.id ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              <div className="flex flex-col">
+                                <span>{user.username}</span>
+                                <span className="text-gray-500 text-xs">{user.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )
                     ) : (
-                      <CommandGroup>
-                        {availableUsers.map((user) => (
-                          <CommandItem
-                            key={user.id}
-                            value={`${user.username} ${user.email}`}
-                            onSelect={() => handleSelectUser(user)}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${
-                                selectedUserId === user.id ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            <div className="flex flex-col">
-                              <span>{user.username}</span>
-                              <span className="text-xs text-gray-500">{user.email}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      <CommandEmpty>이름 또는 이메일로 검색해주세요.</CommandEmpty>
                     )}
                   </CommandList>
                 </Command>
@@ -206,10 +210,10 @@ export function AddMemberDialog({
               역할 <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={selectedRole}
               onValueChange={(value) =>
                 setSelectedRole(value as "owner" | "admin" | "member" | "viewer")
               }
+              value={selectedRole}
             >
               <SelectTrigger id={roleSelectId}>
                 <SelectValue />
@@ -223,14 +227,14 @@ export function AddMemberDialog({
             </Select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex justify-end gap-3 border-t pt-4">
+            <Button onClick={handleClose} type="button" variant="outline">
               취소
             </Button>
             <Button
-              type="submit"
-              disabled={!selectedUserId || addMember.isPending}
               className="min-w-[100px]"
+              disabled={!selectedUserId || addMember.isPending}
+              type="submit"
             >
               {addMember.isPending ? "추가 중..." : "추가"}
             </Button>

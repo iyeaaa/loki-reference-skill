@@ -24,7 +24,7 @@ import { useUpdateEmailIntent } from "@/lib/api/hooks/emails"
 import type { EmailIntent } from "@/lib/api/types/email"
 import { IntentBadge } from "./IntentBadge"
 
-interface IntentSelectorProps {
+type IntentSelectorProps = {
   emailReplyId?: string // Optional: for backward compatibility
   emailId?: string // New: email ID to set intent directly
   currentIntent: EmailIntent | null | undefined
@@ -72,6 +72,7 @@ export function IntentSelector({
   return (
     // biome-ignore lint/a11y/useSemanticElements: wrapper for event propagation control
     <div
+      aria-label="Intent 태그 선택"
       className="flex items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
@@ -80,17 +81,16 @@ export function IntentSelector({
         }
       }}
       role="group"
-      aria-label="Intent 태그 선택"
     >
       {currentIntent && <IntentBadge intent={currentIntent} size={size} />}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="h-6 gap-1 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={(e) => e.stopPropagation()}
+            size="sm"
+            variant="ghost"
           >
             {currentIntent ? (
               <>
@@ -114,14 +114,14 @@ export function IntentSelector({
             const isSelected = currentIntent === option.value
             return (
               <DropdownMenuItem
+                className={`cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}`}
                 key={option.value}
                 onClick={(e) => {
                   e.stopPropagation()
                   handleSelectIntent(option.value)
                 }}
-                className={`cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}`}
               >
-                <Icon className="h-4 w-4 mr-2" />
+                <Icon className="mr-2 h-4 w-4" />
                 <span>{option.label}</span>
               </DropdownMenuItem>
             )
@@ -130,13 +130,13 @@ export function IntentSelector({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                className="cursor-pointer text-red-600 dark:text-red-400"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleSelectIntent(null)
                 }}
-                className="cursor-pointer text-red-600 dark:text-red-400"
               >
-                <XCircle className="h-4 w-4 mr-2" />
+                <XCircle className="mr-2 h-4 w-4" />
                 태그 제거
               </DropdownMenuItem>
             </>

@@ -2,7 +2,7 @@
  * Column visibility management for Leads table
  */
 
-export interface ColumnDefinition {
+export type ColumnDefinition = {
   id: string
   label: string
   isDefault: boolean

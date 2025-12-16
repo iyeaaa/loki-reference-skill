@@ -143,13 +143,13 @@ export function BullMQTestPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 h-full overflow-y-auto">
+      <div className="h-full space-y-6 overflow-y-auto">
         {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Redis Status */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-medium text-sm">
                 <Activity className="h-4 w-4" />
                 Redis 연결
               </CardTitle>
@@ -179,7 +179,7 @@ export function BullMQTestPage() {
           {/* Worker Status */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-medium text-sm">
                 <Zap className="h-4 w-4" />
                 워커 상태
               </CardTitle>
@@ -194,7 +194,7 @@ export function BullMQTestPage() {
                     {currentWorkerStatus.running ? "실행 중" : "정지됨"}
                   </span>
                   {currentWorkerStatus.running && (
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       (x{currentWorkerStatus.concurrency})
                     </span>
                   )}
@@ -202,19 +202,19 @@ export function BullMQTestPage() {
                 <div className="flex gap-2">
                   {currentWorkerStatus.running ? (
                     <Button
+                      disabled={stopWorkerMutation.isPending}
+                      onClick={() => stopWorkerMutation.mutate()}
                       size="sm"
                       variant="outline"
-                      onClick={() => stopWorkerMutation.mutate()}
-                      disabled={stopWorkerMutation.isPending}
                     >
                       <Pause className="h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
+                      disabled={startWorkerMutation.isPending}
+                      onClick={() => startWorkerMutation.mutate()}
                       size="sm"
                       variant="default"
-                      onClick={() => startWorkerMutation.mutate()}
-                      disabled={startWorkerMutation.isPending}
                     >
                       <Play className="h-4 w-4" />
                     </Button>
@@ -227,13 +227,13 @@ export function BullMQTestPage() {
           {/* Test Queue Summary */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">테스트 큐 요약</CardTitle>
+              <CardTitle className="font-medium text-sm">테스트 큐 요약</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 text-sm">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-help">
+                    <div className="flex cursor-help items-center gap-1">
                       <Clock className="h-4 w-4 text-gray-500" />
                       <span>{testQueueCounts.waiting}</span>
                     </div>
@@ -242,7 +242,7 @@ export function BullMQTestPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-help">
+                    <div className="flex cursor-help items-center gap-1">
                       <Loader2 className="h-4 w-4 text-blue-500" />
                       <span>{testQueueCounts.active}</span>
                     </div>
@@ -251,7 +251,7 @@ export function BullMQTestPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-help">
+                    <div className="flex cursor-help items-center gap-1">
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                       <span>{testQueueCounts.completed}</span>
                     </div>
@@ -260,7 +260,7 @@ export function BullMQTestPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-help">
+                    <div className="flex cursor-help items-center gap-1">
                       <XCircle className="h-4 w-4 text-red-500" />
                       <span>{testQueueCounts.failed}</span>
                     </div>
@@ -269,7 +269,7 @@ export function BullMQTestPage() {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 cursor-help">
+                    <div className="flex cursor-help items-center gap-1">
                       <Clock className="h-4 w-4 text-yellow-500" />
                       <span>{testQueueCounts.delayed}</span>
                     </div>
@@ -284,13 +284,13 @@ export function BullMQTestPage() {
         {/* Filters */}
         {showFilters && (
           <JobFilters
-            selectedStatuses={selectedStatuses}
-            onStatusChange={setSelectedStatuses}
             onClearFilters={handleClearFilters}
+            onStatusChange={setSelectedStatuses}
+            selectedStatuses={selectedStatuses}
           />
         )}
 
-        <Tabs defaultValue="jobs" className="space-y-4">
+        <Tabs className="space-y-4" defaultValue="jobs">
           <TabsList>
             <TabsTrigger value="jobs">작업 목록</TabsTrigger>
             <TabsTrigger value="queue-control">큐 제어</TabsTrigger>
@@ -298,7 +298,7 @@ export function BullMQTestPage() {
           </TabsList>
 
           {/* Jobs Tab */}
-          <TabsContent value="jobs" className="space-y-4">
+          <TabsContent className="space-y-4" value="jobs">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -307,10 +307,10 @@ export function BullMQTestPage() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
-                          variant="ghost"
-                          size="sm"
                           className="h-6 w-6 p-0"
                           onClick={() => setIsHelpModalOpen(true)}
+                          size="sm"
+                          variant="ghost"
                         >
                           <HelpCircle className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -328,8 +328,8 @@ export function BullMQTestPage() {
                               className={`h-3 w-3 ${sseConnected ? "text-green-500" : "text-gray-400"}`}
                             />
                             <Label
+                              className="cursor-pointer text-muted-foreground text-sm"
                               htmlFor={sseId}
-                              className="text-sm text-muted-foreground cursor-pointer"
                             >
                               실시간
                             </Label>
@@ -340,28 +340,30 @@ export function BullMQTestPage() {
                         </TooltipContent>
                       </Tooltip>
                       <Switch
-                        id={sseId}
                         checked={useSSE}
+                        id={sseId}
                         onCheckedChange={(checked) => {
                           setUseSSE(checked)
-                          if (!checked) setAutoRefresh(false)
+                          if (!checked) {
+                            setAutoRefresh(false)
+                          }
                         }}
                       />
                     </div>
                     {/* Polling Toggle (only when SSE is off) */}
                     {!useSSE && (
                       <div className="flex items-center gap-2">
-                        <Label htmlFor={autoRefreshId} className="text-sm text-muted-foreground">
+                        <Label className="text-muted-foreground text-sm" htmlFor={autoRefreshId}>
                           폴링
                         </Label>
                         <Switch
-                          id={autoRefreshId}
                           checked={autoRefresh}
+                          id={autoRefreshId}
                           onCheckedChange={setAutoRefresh}
                         />
                       </div>
                     )}
-                    <Button onClick={handleRefreshAll} variant="outline" size="sm">
+                    <Button onClick={handleRefreshAll} size="sm" variant="outline">
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
@@ -369,33 +371,33 @@ export function BullMQTestPage() {
               </CardHeader>
               <CardContent>
                 {/* Search and Actions */}
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
-                  <div className="flex gap-2 items-center flex-1">
+                <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="flex flex-1 items-center gap-2">
                     <div className="relative w-full md:w-[400px]">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
                       <Input
+                        className="w-full pr-10 pl-10"
+                        onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="ID, 이름, 데이터로 검색..."
                         value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        className="pl-10 pr-10 w-full"
                       />
                       {searchInput && (
                         <button
-                          type="button"
+                          className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                           onClick={() => {
                             setSearchInput("")
                             setSearchQuery("")
                           }}
-                          className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                          type="button"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="h-4 w-4" />
                         </button>
                       )}
                     </div>
                     <Button
-                      variant={showFilters ? "secondary" : "outline"}
-                      onClick={() => setShowFilters(!showFilters)}
                       className="flex items-center gap-2"
+                      onClick={() => setShowFilters(!showFilters)}
+                      variant={showFilters ? "secondary" : "outline"}
                     >
                       <Filter className="h-4 w-4" />
                       필터
@@ -405,26 +407,26 @@ export function BullMQTestPage() {
                         <ChevronDown className="h-4 w-4" />
                       )}
                       {hasActiveFilters && (
-                        <Badge variant="secondary" className="ml-1">
+                        <Badge className="ml-1" variant="secondary">
                           {selectedStatuses.length}
                         </Badge>
                       )}
                     </Button>
                   </div>
                   <Button onClick={() => setIsAddJobModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     작업 추가
                   </Button>
                 </div>
 
                 {/* Jobs Table */}
                 <JobsTableWithPagination
-                  searchQuery={searchQuery}
-                  selectedStatuses={selectedStatuses}
-                  selectedJobs={selectedJobs}
-                  onToggleJob={handleToggleJob}
-                  onToggleAll={handleToggleAllJobs}
                   autoRefresh={autoRefresh}
+                  onToggleAll={handleToggleAllJobs}
+                  onToggleJob={handleToggleJob}
+                  searchQuery={searchQuery}
+                  selectedJobs={selectedJobs}
+                  selectedStatuses={selectedStatuses}
                 />
               </CardContent>
             </Card>
@@ -438,44 +440,44 @@ export function BullMQTestPage() {
                 <CardDescription>테스트 큐 상태 관리</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   <Button
-                    variant="outline"
-                    onClick={() => pauseQueueMutation.mutate()}
                     disabled={queuesData["test-queue"]?.paused || pauseQueueMutation.isPending}
+                    onClick={() => pauseQueueMutation.mutate()}
+                    variant="outline"
                   >
-                    <Pause className="h-4 w-4 mr-2" />큐 일시정지
+                    <Pause className="mr-2 h-4 w-4" />큐 일시정지
                   </Button>
 
                   <Button
-                    variant="outline"
-                    onClick={() => resumeQueueMutation.mutate()}
                     disabled={!queuesData["test-queue"]?.paused || resumeQueueMutation.isPending}
+                    onClick={() => resumeQueueMutation.mutate()}
+                    variant="outline"
                   >
-                    <Play className="h-4 w-4 mr-2" />큐 재개
+                    <Play className="mr-2 h-4 w-4" />큐 재개
                   </Button>
 
                   <Button
-                    variant="outline"
-                    onClick={() => cleanQueueMutation.mutate({})}
                     disabled={cleanQueueMutation.isPending}
+                    onClick={() => cleanQueueMutation.mutate({})}
+                    variant="outline"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     완료/실패 정리
                   </Button>
 
                   <Button
-                    variant="destructive"
-                    onClick={() => drainQueueMutation.mutate()}
                     disabled={drainQueueMutation.isPending}
+                    onClick={() => drainQueueMutation.mutate()}
+                    variant="destructive"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />큐 비우기
+                    <XCircle className="mr-2 h-4 w-4" />큐 비우기
                   </Button>
                 </div>
 
-                <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <h4 className="font-medium mb-2">큐 상태</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div className="mt-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                  <h4 className="mb-2 font-medium">큐 상태</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
                     <div>
                       <span className="text-muted-foreground">일시정지:</span>{" "}
                       <span className="font-medium">
@@ -531,7 +533,7 @@ export function BullMQTestPage() {
                   <TableBody>
                     {Object.entries(queuesData).length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell className="text-center text-muted-foreground" colSpan={7}>
                           큐가 없습니다
                         </TableCell>
                       </TableRow>
@@ -560,17 +562,17 @@ export function BullMQTestPage() {
         </Tabs>
 
         {/* Add Job Modal */}
-        <AddJobModal open={isAddJobModalOpen} onOpenChange={setIsAddJobModalOpen} />
+        <AddJobModal onOpenChange={setIsAddJobModalOpen} open={isAddJobModalOpen} />
 
         {/* Help Modal */}
-        <Dialog open={isHelpModalOpen} onOpenChange={setIsHelpModalOpen}>
+        <Dialog onOpenChange={setIsHelpModalOpen} open={isHelpModalOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>BullMQ 테스트 안내</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 text-sm text-muted-foreground">
+            <div className="space-y-4 text-muted-foreground text-sm">
               <p>Redis 기반 BullMQ 큐 기능을 테스트합니다:</p>
-              <ul className="list-disc list-inside space-y-2 ml-2">
+              <ul className="ml-2 list-inside list-disc space-y-2">
                 <li>
                   <strong className="text-foreground">작업 추가:</strong> 단일 또는 대량 작업을
                   다양한 옵션으로 추가
@@ -592,7 +594,7 @@ export function BullMQTestPage() {
                   업데이트
                 </li>
               </ul>
-              <div className="pt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="rounded-lg bg-blue-50 p-3 pt-2 dark:bg-blue-900/20">
                 <p className="font-medium text-blue-700 dark:text-blue-300">
                   팁: 먼저 워커를 시작한 후 작업을 추가하면 처리 과정을 확인할 수 있습니다!
                 </p>

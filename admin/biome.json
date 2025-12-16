@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,46 +7,69 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "experimentalScannerIgnores": ["node_modules", "dist", "build", ".next", "*.min.js", "*.lock"],
-    "includes": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"]
+    "experimentalScannerIgnores": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "*.min.js",
+      "*.lock",
+      "src/lib/api/generated/**"
+    ]
   },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "complexity": {
-        "noForEach": "off"
-      },
       "suspicious": {
-        "noExplicitAny": "warn",
-        "noArrayIndexKey": "off"
+        "noExplicitAny": "error",
+        "noArrayIndexKey": "off",
+        "noAlert": "off",
+        "noEmptyBlockStatements": "off",
+        "useAwait": "off",
+        "noEvolvingTypes": "off"
       },
       "style": {
         "noNonNullAssertion": "warn",
-        "useConst": "error",
-        "useTemplate": "error"
+        "useFilenamingConvention": "off",
+        "noNestedTernary": "off",
+        "useCollapsedIf": "off",
+        "noExportedImports": "off",
+        "useCollapsedElseIf": "off",
+        "useDefaultSwitchClause": "off",
+        "useForOf": "off"
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
-        "noUnusedVariables": "error",
-        "noUnusedImports": "error",
-        "noUndeclaredVariables": "error"
+        "useImageSize": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noForEach": "off"
       },
       "a11y": {
-        "useKeyWithClickEvents": "off"
+        "useKeyWithClickEvents": "off",
+        "noNoninteractiveElementInteractions": "off"
+      },
+      "nursery": {
+        "noLeakedRender": "off",
+        "noShadow": "off",
+        "useMaxParams": "off",
+        "noIncrementDecrement": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off",
+        "noNamespaceImport": "off",
+        "noBarrelFile": "off",
+        "noDelete": "off"
       }
     }
   },
   "overrides": [
     {
-      "includes": ["src/lib/api/generated/**"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noExplicitAny": "off"
-          }
-        }
-      }
+      "includes": [
+        "src/lib/api/generated/**"
+      ]
     }
   ],
   "formatter": {
@@ -68,5 +91,9 @@
       "bracketSpacing": true,
       "bracketSameLine": false
     }
-  }
+  },
+  "extends": [
+    "ultracite/core",
+    "ultracite/react"
+  ]
 }

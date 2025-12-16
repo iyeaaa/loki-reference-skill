@@ -60,7 +60,7 @@ import { API_BASE_URL } from "@/lib/env"
 import { cn } from "@/lib/utils"
 
 // Enrichment 결과 타입
-interface EnrichmentResult {
+type EnrichmentResult = {
   domain: string
   emails: Array<{
     value: string
@@ -273,7 +273,7 @@ const DATA_DICTIONARIES: Record<
   },
 }
 
-interface Message {
+type Message = {
   id: string
   role: "user" | "assistant"
   content: string
@@ -284,7 +284,7 @@ interface Message {
   isLoading?: boolean
 }
 
-interface LeadResult {
+type LeadResult = {
   // 공통 필드
   first_name?: string
   last_name?: string
@@ -379,7 +379,7 @@ const EXAMPLE_QUERY_KEYS = [
 ]
 
 // 입력 컴포넌트 분리 - inputValue 변경 시 메시지 목록 리렌더링 방지
-interface ChatInputProps {
+type ChatInputProps = {
   onSubmit: (value: string) => void
   isLoading: boolean
 }
@@ -393,7 +393,9 @@ const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProp
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
-      if (!localInput.trim() || isLoading) return
+      if (!localInput.trim() || isLoading) {
+        return
+      }
       onSubmit(localInput.trim())
       setLocalInput("")
     },
@@ -414,33 +416,33 @@ const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProp
   )
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-      <div className="relative border rounded-2xl shadow-sm bg-background">
+    <form className="mx-auto max-w-4xl" onSubmit={handleSubmit}>
+      <div className="relative rounded-2xl border bg-background shadow-sm">
         <Textarea
-          ref={textareaRef}
+          className="max-h-[200px] min-h-[44px] resize-none rounded-2xl border-0 bg-transparent py-2.5 pr-14 pl-4 leading-6 focus-visible:ring-0 focus-visible:ring-offset-0"
+          disabled={isLoading}
           id={inputId}
-          value={localInput}
           onChange={(e) => setLocalInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("bigquery-search.input.placeholder")}
-          className="min-h-[44px] max-h-[200px] pl-4 pr-14 py-2.5 resize-none rounded-2xl border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent leading-6"
-          disabled={isLoading}
+          ref={textareaRef}
+          value={localInput}
         />
         <Button
-          type="submit"
-          size="icon"
+          className="-translate-y-1/2 absolute top-1/2 right-3 h-8 w-8 rounded-full"
           disabled={!localInput.trim() || isLoading}
-          className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+          size="icon"
+          type="submit"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="mt-3 flex items-center justify-center gap-4">
+        <div className="flex items-center gap-2 text-muted-foreground text-xs">
           <Sparkles className="h-3 w-3" />
           <span>{t("bigquery-search.input.hint.nlToSql")}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground text-xs">
           <Database className="h-3 w-3" />
           <span>{t("bigquery-search.input.hint.leadCount", { total: "1,048,575" })}</span>
         </div>
@@ -520,7 +522,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
   // 고객 그룹 목록 가져오기
   const fetchCustomerGroups = useCallback(async () => {
-    if (!workspaceId || workspaceId === "all") return
+    if (!workspaceId || workspaceId === "all") {
+      return
+    }
 
     try {
       const response = await fetch(
@@ -532,7 +536,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
         },
       )
 
-      if (!response.ok) throw new Error("Failed to fetch customer groups")
+      if (!response.ok) {
+        throw new Error("Failed to fetch customer groups")
+      }
 
       const result = await response.json()
 
@@ -557,7 +563,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
   // biome-ignore lint/correctness/useExhaustiveDependencies: i18n.language triggers update on language change, t is stable
   const handleChatSubmit = useCallback(
     async (messageContent: string) => {
-      if (!messageContent.trim() || isLoading) return
+      if (!messageContent.trim() || isLoading) {
+        return
+      }
 
       const userMessage: Message = {
         id: `user-${Date.now()}`,
@@ -856,9 +864,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
   const lastResults = getLastResults()
 
   // 페이지네이션 함수들
-  const getPageState = (messageId: string) => {
-    return paginationState[messageId] || { page: 1, pageSize: 25 }
-  }
+  const getPageState = (messageId: string) =>
+    paginationState[messageId] || { page: 1, pageSize: 25 }
 
   const setPage = (messageId: string, page: number) => {
     setPaginationState((prev) => ({
@@ -887,9 +894,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* 헤더 */}
-      <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
+      <div className="flex-none border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
@@ -897,8 +904,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 <Database className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold">{t("bigquery-search.header.title")}</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="font-semibold text-lg">{t("bigquery-search.header.title")}</h1>
+                <p className="text-muted-foreground text-sm">
                   {t("bigquery-search.header.description")}
                 </p>
               </div>
@@ -906,17 +913,17 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
             {/* DB 선택 드롭다운 */}
             <Select
-              value={selectedDatabase}
               onValueChange={(value: DatabaseType) => setSelectedDatabase(value)}
+              value={selectedDatabase}
             >
               <SelectTrigger className="w-[220px] border-dashed">
                 <div className="flex items-center gap-2">
                   <span>{DATABASE_OPTIONS[selectedDatabase].icon}</span>
                   <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">
+                    <span className="font-medium text-sm">
                       {DATABASE_OPTIONS[selectedDatabase].label}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {DATABASE_OPTIONS[selectedDatabase].description}
                     </span>
                   </div>
@@ -929,7 +936,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                       <span>{DATABASE_OPTIONS[dbKey].icon}</span>
                       <div className="flex flex-col">
                         <span className="font-medium">{DATABASE_OPTIONS[dbKey].label}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {DATABASE_OPTIONS[dbKey].description}
                         </span>
                       </div>
@@ -943,7 +950,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
           {/* 캠페인 추가 버튼 */}
           {lastResults.length > 0 && (
             <div className="flex items-center gap-3">
-              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+              <Select onValueChange={setSelectedGroupId} value={selectedGroupId}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder={t("bigquery-search.header.selectGroup")} />
                 </SelectTrigger>
@@ -956,9 +963,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 </SelectContent>
               </Select>
               <Button
-                onClick={() => handleAddToCampaign(lastResults)}
-                disabled={isAddingToCampaign || !selectedGroupId}
                 className="gap-2"
+                disabled={isAddingToCampaign || !selectedGroupId}
+                onClick={() => handleAddToCampaign(lastResults)}
               >
                 {isAddingToCampaign ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -969,18 +976,15 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 {selectedResults.size > 0 && `(${selectedResults.size})`}
               </Button>
               <Button
-                variant="outline"
-                onClick={() =>
-                  handleDownloadExcel(lastResults, messages[messages.length - 1]?.id || "results")
-                }
                 className="gap-2"
+                onClick={() => handleDownloadExcel(lastResults, messages.at(-1)?.id || "results")}
+                variant="outline"
               >
                 <Download className="h-4 w-4" />
                 Excel
               </Button>
               <Button
-                variant="ghost"
-                size="icon"
+                className="text-muted-foreground hover:text-destructive"
                 onClick={() => {
                   localStorage.removeItem(STORAGE_KEY)
                   localStorage.removeItem(COLLAPSED_STORAGE_KEY)
@@ -989,8 +993,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                   setCollapsedResults(new Set())
                   toast.success(t("bigquery-search.campaign.historyCleared"))
                 }}
-                className="text-muted-foreground hover:text-destructive"
+                size="icon"
                 title={t("bigquery-search.header.clearHistory")}
+                variant="ghost"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -1001,19 +1006,19 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
       {/* 메시지 영역 */}
       <ScrollArea className="flex-1 px-6 py-4">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="mx-auto max-w-5xl space-y-6">
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
                 className={cn(
-                  "flex gap-4 items-center",
+                  "flex items-center gap-4",
                   message.role === "user" ? "justify-end" : "justify-start",
                 )}
+                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: 20 }}
+                key={message.id}
+                transition={{ duration: 0.3 }}
               >
                 {message.role === "assistant" && (
                   <div className="flex-none">
@@ -1025,7 +1030,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
                 <div
                   className={cn(
-                    "flex flex-col gap-2 max-w-[85%]",
+                    "flex max-w-[85%] flex-col gap-2",
                     message.role === "user" ? "items-end" : "items-start",
                   )}
                 >
@@ -1033,7 +1038,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                     className={cn(
                       "rounded-2xl px-4 py-2.5",
                       message.role === "user"
-                        ? "bg-primary text-primary-foreground max-w-[80%]"
+                        ? "max-w-[80%] bg-primary text-primary-foreground"
                         : "bg-muted",
                     )}
                   >
@@ -1048,7 +1053,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                           className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary"
                           style={{ animationDelay: "0.4s" }}
                         />
-                        <span className="ml-1 text-sm text-muted-foreground">
+                        <span className="ml-1 text-muted-foreground text-sm">
                           {t("bigquery-search.loading.searching")}
                         </span>
                       </div>
@@ -1057,13 +1062,13 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                         <div className="whitespace-pre-wrap text-sm">{message.content}</div>
                         {/* Welcome 메시지일 때 예시 질문 버튼 표시 */}
                         {message.id === "welcome" && (
-                          <div className="flex flex-wrap gap-2 mt-3">
+                          <div className="mt-3 flex flex-wrap gap-2">
                             {EXAMPLE_QUERY_KEYS.map((key) => (
                               <button
+                                className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-primary text-xs transition-colors hover:border-primary/40 hover:bg-primary/20"
                                 key={key}
-                                type="button"
                                 onClick={() => handleChatSubmit(t(`bigquery-search.${key}`))}
-                                className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20 hover:border-primary/40"
+                                type="button"
                               >
                                 {t(`bigquery-search.${key}`)}
                               </button>
@@ -1078,9 +1083,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                   {message.sql && (
                     <div className="w-full">
                       <button
-                        type="button"
+                        className="flex items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-foreground"
                         onClick={() => toggleSqlExpand(message.id)}
-                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        type="button"
                       >
                         {expandedSql.has(message.id) ? (
                           <ChevronUp className="h-3 w-3" />
@@ -1093,19 +1098,19 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                       <AnimatePresence>
                         {expandedSql.has(message.id) && (
                           <motion.div
-                            initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
+                            exit={{ height: 0, opacity: 0 }}
+                            initial={{ height: 0, opacity: 0 }}
                           >
-                            <div className="mt-2 relative group">
-                              <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
+                            <div className="group relative mt-2">
+                              <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-gray-100 text-xs dark:bg-gray-950">
                                 <code>{message.sql}</code>
                               </pre>
                               <button
-                                type="button"
+                                className="absolute top-2 right-2 rounded-md bg-gray-800 p-1.5 opacity-0 transition-colors hover:bg-gray-700 group-hover:opacity-100"
                                 onClick={() => handleCopySql(message.sql ?? "", message.id)}
-                                className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-800 hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
+                                type="button"
                               >
                                 {copiedId === message.id ? (
                                   <Check className="h-3.5 w-3.5 text-green-400" />
@@ -1130,41 +1135,41 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                       const userQuery = messageIndex > 0 ? messages[messageIndex - 1]?.content : ""
 
                       return (
-                        <Card className="w-full mt-2 border-0 shadow-lg">
+                        <Card className="mt-2 w-full border-0 shadow-lg">
                           <CardContent className="py-12">
-                            <div className="flex flex-col items-center justify-center text-center gap-4">
-                              <Database className="h-12 w-12 text-muted-foreground mb-2" />
+                            <div className="flex flex-col items-center justify-center gap-4 text-center">
+                              <Database className="mb-2 h-12 w-12 text-muted-foreground" />
                               <div className="space-y-2">
-                                <p className="text-lg font-medium text-muted-foreground">
+                                <p className="font-medium text-lg text-muted-foreground">
                                   {t("bigquery-search.empty.title")}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-muted-foreground text-sm">
                                   {t("bigquery-search.empty.description", { query: userQuery })}
                                 </p>
                               </div>
-                              <div className="w-full max-w-2xl mt-2">
-                                <p className="text-xs font-medium text-muted-foreground mb-3">
+                              <div className="mt-2 w-full max-w-2xl">
+                                <p className="mb-3 font-medium text-muted-foreground text-xs">
                                   {t("bigquery-search.empty.industries")}
                                 </p>
-                                <div className="flex flex-wrap gap-1.5 justify-center">
+                                <div className="flex flex-wrap justify-center gap-1.5">
                                   {currentDataDictionary.industries.slice(0, 12).map((industry) => (
                                     <Badge
+                                      className="cursor-pointer text-xs transition-colors hover:bg-primary/20"
                                       key={industry}
-                                      variant="secondary"
-                                      className="text-xs cursor-pointer hover:bg-primary/20 transition-colors"
                                       onClick={() =>
                                         handleChatSubmit(
                                           t("bigquery-search.empty.industryQuery", { industry }),
                                         )
                                       }
+                                      variant="secondary"
                                     >
                                       {industry}
                                     </Badge>
                                   ))}
                                   {currentDataDictionary.industries.length > 12 && (
                                     <Badge
+                                      className="text-muted-foreground text-xs"
                                       variant="outline"
-                                      className="text-xs text-muted-foreground"
                                     >
                                       {t("bigquery-search.empty.moreIndustries", {
                                         count: currentDataDictionary.industries.length - 12,
@@ -1190,18 +1195,18 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                       const startIndex = (page - 1) * pageSize
 
                       return (
-                        <Card className="w-full mt-2 overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow">
+                        <Card className="mt-2 w-full overflow-hidden border-0 shadow-lg transition-shadow hover:shadow-xl">
                           <CardHeader
-                            className="py-3 bg-muted cursor-pointer select-none"
+                            className="cursor-pointer select-none bg-muted py-3"
                             onClick={() => toggleResultsCollapse(message.id)}
                           >
-                            <div className="flex items-center justify-between flex-wrap gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
                               <div className="flex items-center gap-2">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                                   <Table className="h-4 w-4" />
                                 </div>
                                 <div>
-                                  <CardTitle className="text-sm font-semibold">
+                                  <CardTitle className="font-semibold text-sm">
                                     {t("bigquery-search.results.title")}
                                   </CardTitle>
                                   <CardDescription className="text-xs">
@@ -1212,12 +1217,12 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                   </CardDescription>
                                 </div>
                                 <button
-                                  type="button"
-                                  className="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                  className="ml-2 rounded p-1 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     toggleResultsCollapse(message.id)
                                   }}
+                                  type="button"
                                 >
                                   {collapsedResults.has(message.id) ? (
                                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -1235,14 +1240,14 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => e.stopPropagation()}
                                 >
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     {t("bigquery-search.results.pageSize")}
                                   </span>
                                   <Select
-                                    value={pageSize.toString()}
                                     onValueChange={(v) => setPageSize(message.id, Number(v))}
+                                    value={pageSize.toString()}
                                   >
-                                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                                    <SelectTrigger className="h-8 w-[80px] text-xs">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1254,10 +1259,10 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                     </SelectContent>
                                   </Select>
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 text-xs gap-1.5"
+                                    className="h-8 gap-1.5 text-xs"
                                     onClick={() => handleDownloadCSV(results, message.id)}
+                                    size="sm"
+                                    variant="outline"
                                   >
                                     <Download className="h-3.5 w-3.5" />
                                     CSV
@@ -1269,9 +1274,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                           <AnimatePresence>
                             {!collapsedResults.has(message.id) && (
                               <motion.div
-                                initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
+                                initial={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.2 }}
                               >
                                 <CardContent className="p-0">
@@ -1310,7 +1315,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                           <TableHead className="font-semibold">
                                             {t("bigquery-search.table.employees")}
                                           </TableHead>
-                                          <TableHead className="font-semibold text-center">
+                                          <TableHead className="text-center font-semibold">
                                             {t("bigquery-search.table.info")}
                                           </TableHead>
                                         </TableRow>
@@ -1320,12 +1325,12 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                           const globalIndex = startIndex + index
                                           return (
                                             <TableRow
-                                              key={globalIndex}
                                               className={cn(
                                                 "transition-colors hover:bg-gray-50 dark:hover:bg-gray-700",
                                                 selectedResults.has(globalIndex) &&
                                                   "bg-blue-50/50 dark:bg-blue-950/30",
                                               )}
+                                              key={globalIndex}
                                             >
                                               <TableCell>
                                                 <Checkbox
@@ -1335,15 +1340,16 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                   }
                                                 />
                                               </TableCell>
-                                              <TableCell className="text-xs text-muted-foreground font-mono">
+                                              <TableCell className="font-mono text-muted-foreground text-xs">
                                                 {globalIndex + 1}
                                               </TableCell>
-                                              <TableCell className="font-medium max-w-[200px] truncate">
+                                              <TableCell className="max-w-[200px] truncate font-medium">
                                                 {result.company_name || result.company || "-"}
                                               </TableCell>
                                               <TableCell className="max-w-[180px]">
                                                 {result.web_address || result.website ? (
                                                   <a
+                                                    className="inline-flex items-center gap-1 text-blue-600 text-xs hover:text-blue-800 hover:underline"
                                                     href={
                                                       (
                                                         result.web_address ||
@@ -1353,12 +1359,11 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                         ? result.web_address || result.website
                                                         : `https://${result.web_address || result.website}`
                                                     }
-                                                    target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                                    target="_blank"
                                                     title={result.web_address || result.website}
                                                   >
-                                                    <span className="truncate max-w-[140px]">
+                                                    <span className="max-w-[140px] truncate">
                                                       {(
                                                         result.web_address ||
                                                         result.website ||
@@ -1368,7 +1373,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                     <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                                   </a>
                                                 ) : (
-                                                  <span className="text-xs text-muted-foreground">
+                                                  <span className="text-muted-foreground text-xs">
                                                     -
                                                   </span>
                                                 )}
@@ -1387,7 +1392,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                     {result.industry || "-"}
                                                   </span>
                                                   {result.sub_industry && (
-                                                    <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                                    <span className="max-w-[150px] truncate text-muted-foreground text-xs">
                                                       {result.sub_industry}
                                                     </span>
                                                   )}
@@ -1405,25 +1410,25 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                               </TableCell>
                                               <TableCell>
                                                 <Badge
+                                                  className="font-normal text-xs"
                                                   variant="outline"
-                                                  className="text-xs font-normal"
                                                 >
                                                   {result.employee || result.employees || "-"}
                                                 </Badge>
                                               </TableCell>
                                               <TableCell className="text-center">
                                                 <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="sm"
                                                   className="h-7 w-7 p-0"
-                                                  onClick={() => handleEnrichLead(result)}
                                                   disabled={!(result.web_address || result.website)}
+                                                  onClick={() => handleEnrichLead(result)}
+                                                  size="sm"
                                                   title={
                                                     result.web_address || result.website
                                                       ? t("bigquery-search.tooltip.viewCompanyInfo")
                                                       : t("bigquery-search.tooltip.noWebsite")
                                                   }
+                                                  type="button"
+                                                  variant="ghost"
                                                 >
                                                   <Info className="h-4 w-4" />
                                                 </Button>
@@ -1437,8 +1442,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
                                   {/* 페이지네이션 UI */}
                                   {totalPages > 1 && (
-                                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/50">
-                                      <div className="text-xs text-muted-foreground">
+                                    <div className="flex items-center justify-between border-t bg-muted/50 px-4 py-3">
+                                      <div className="text-muted-foreground text-xs">
                                         <span className="font-medium text-foreground">
                                           {startIndex + 1}-
                                           {Math.min(startIndex + pageSize, results.length)}
@@ -1451,28 +1456,28 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                       <div className="flex items-center gap-1">
                                         {/* 처음으로 */}
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => setPage(message.id, 1)}
                                           disabled={page === 1}
+                                          onClick={() => setPage(message.id, 1)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           <ChevronsLeft className="h-4 w-4" />
                                         </Button>
 
                                         {/* 이전 */}
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => setPage(message.id, page - 1)}
                                           disabled={page === 1}
+                                          onClick={() => setPage(message.id, page - 1)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           <ChevronLeft className="h-4 w-4" />
                                         </Button>
 
                                         {/* 페이지 번호들 */}
-                                        <div className="flex items-center gap-1 mx-1">
+                                        <div className="mx-1 flex items-center gap-1">
                                           {(() => {
                                             const pages: (number | string)[] = []
                                             const showPages = 5
@@ -1488,7 +1493,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
                                             if (start > 1) {
                                               pages.push(1)
-                                              if (start > 2) pages.push("...")
+                                              if (start > 2) {
+                                                pages.push("...")
+                                              }
                                             }
 
                                             for (let i = start; i <= end; i++) {
@@ -1496,7 +1503,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                             }
 
                                             if (end < totalPages) {
-                                              if (end < totalPages - 1) pages.push("...")
+                                              if (end < totalPages - 1) {
+                                                pages.push("...")
+                                              }
                                               pages.push(totalPages)
                                             }
 
@@ -1504,8 +1513,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                               if (p === "...") {
                                                 return (
                                                   <span
-                                                    key={`ellipsis-${idx < 3 ? "start" : "end"}`}
                                                     className="px-2 text-muted-foreground"
+                                                    key={`ellipsis-${idx < 3 ? "start" : "end"}`}
                                                   >
                                                     ⋯
                                                   </span>
@@ -1513,15 +1522,15 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                               }
                                               return (
                                                 <Button
-                                                  key={p}
-                                                  variant={page === p ? "default" : "ghost"}
-                                                  size="icon"
                                                   className={cn(
-                                                    "h-8 w-8 text-xs font-medium transition-all",
+                                                    "h-8 w-8 font-medium text-xs transition-all",
                                                     page !== p &&
                                                       "hover:bg-gray-100 dark:hover:bg-gray-800",
                                                   )}
+                                                  key={p}
                                                   onClick={() => setPage(message.id, p as number)}
+                                                  size="icon"
+                                                  variant={page === p ? "default" : "ghost"}
                                                 >
                                                   {p}
                                                 </Button>
@@ -1532,28 +1541,28 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
                                         {/* 다음 */}
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => setPage(message.id, page + 1)}
                                           disabled={page === totalPages}
+                                          onClick={() => setPage(message.id, page + 1)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           <ChevronRight className="h-4 w-4" />
                                         </Button>
 
                                         {/* 마지막으로 */}
                                         <Button
-                                          variant="ghost"
-                                          size="icon"
                                           className="h-8 w-8"
-                                          onClick={() => setPage(message.id, totalPages)}
                                           disabled={page === totalPages}
+                                          onClick={() => setPage(message.id, totalPages)}
+                                          size="icon"
+                                          variant="ghost"
                                         >
                                           <ChevronsRight className="h-4 w-4" />
                                         </Button>
                                       </div>
 
-                                      <div className="text-xs text-muted-foreground">
+                                      <div className="text-muted-foreground text-xs">
                                         {t("bigquery-search.results.pageInfo", {
                                           page,
                                           total: totalPages,
@@ -1585,13 +1594,13 @@ ${t("bigquery-search.welcome.exampleHint")}`,
       </ScrollArea>
 
       {/* 입력 영역 - 별도 컴포넌트로 분리하여 리렌더링 최적화 */}
-      <div className="flex-none border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
-        <ChatInput onSubmit={handleChatSubmit} isLoading={isLoading} />
+      <div className="flex-none border-t bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <ChatInput isLoading={isLoading} onSubmit={handleChatSubmit} />
       </div>
 
       {/* 회사 정보 조회 모달 */}
-      <Dialog open={enrichmentModalOpen} onOpenChange={setEnrichmentModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <Dialog onOpenChange={setEnrichmentModalOpen} open={enrichmentModalOpen}>
+        <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-500" />
@@ -1602,6 +1611,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
             <DialogDescription>
               {(selectedLeadForEnrichment?.web_address || selectedLeadForEnrichment?.website) && (
                 <a
+                  className="inline-flex items-center gap-1 text-blue-500 hover:underline"
                   href={
                     (
                       selectedLeadForEnrichment.web_address ||
@@ -1611,9 +1621,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                       ? selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website
                       : `https://${selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website}`
                   }
-                  target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-500 hover:underline"
+                  target="_blank"
                 >
                   {selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website}
                   <ExternalLink className="h-3 w-3" />
@@ -1622,13 +1631,13 @@ ${t("bigquery-search.welcome.exampleHint")}`,
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
+          <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
             {isEnriching ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <div className="flex flex-col items-center justify-center gap-4 py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 <div className="text-center">
                   <p className="font-medium">{t("bigquery-search.enrichment.loading")}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="mt-1 text-muted-foreground text-sm">
                     {t("bigquery-search.enrichment.loadingDesc")}
                   </p>
                 </div>
@@ -1638,15 +1647,15 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 {/* 회사 설명 */}
                 {enrichmentData.companyInfo?.description && (
                   <div className="space-y-2">
-                    <h4 className="font-semibold flex items-center gap-2">
+                    <h4 className="flex items-center gap-2 font-semibold">
                       <Building2 className="h-4 w-4 text-gray-500" />
                       {t("bigquery-search.enrichment.companyIntro")}
                     </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <p className="rounded-lg bg-gray-50 p-4 text-muted-foreground text-sm leading-relaxed dark:bg-gray-900">
                       {enrichmentData.companyInfo.description}
                     </p>
                     {enrichmentData.companyInfo?.industry && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge className="text-xs" variant="secondary">
                         {enrichmentData.companyInfo.industry}
                       </Badge>
                     )}
@@ -1656,7 +1665,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 {/* 이메일 목록 */}
                 {enrichmentData.emails && enrichmentData.emails.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2">
+                    <h4 className="flex items-center gap-2 font-semibold">
                       <Mail className="h-4 w-4 text-blue-500" />
                       {t("bigquery-search.enrichment.emailsFound", {
                         count: enrichmentData.emails.length,
@@ -1665,43 +1674,43 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                     <div className="space-y-2">
                       {enrichmentData.emails.map((email, idx) => (
                         <div
+                          className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-900"
                           key={email.value}
-                          className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-xs text-muted-foreground font-mono">
+                            <span className="font-mono text-muted-foreground text-xs">
                               {idx + 1}
                             </span>
                             <a
+                              className="font-mono text-blue-600 text-sm hover:underline"
                               href={`mailto:${email.value}`}
-                              className="font-mono text-sm text-blue-600 hover:underline"
                             >
                               {email.value}
                             </a>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge
-                              variant={email.type === "generic" ? "default" : "secondary"}
                               className="text-xs"
+                              variant={email.type === "generic" ? "default" : "secondary"}
                             >
                               {email.type === "generic"
                                 ? t("bigquery-search.enrichment.emailGeneric")
                                 : email.type}
                             </Badge>
                             {email.confidence !== undefined && email.confidence > 0 && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground text-xs">
                                 {Math.round(email.confidence)}%
                               </span>
                             )}
                             <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
                               className="h-7 w-7 p-0"
                               onClick={() => {
                                 navigator.clipboard.writeText(email.value)
                                 toast.success(t("bigquery-search.enrichment.emailCopied"))
                               }}
+                              size="sm"
+                              type="button"
+                              variant="ghost"
                             >
                               <Copy className="h-3 w-3" />
                             </Button>
@@ -1714,12 +1723,12 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
                 {/* 이메일 없음 */}
                 {(!enrichmentData.emails || enrichmentData.emails.length === 0) && (
-                  <div className="text-center py-6 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                    <Mail className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <div className="rounded-lg bg-amber-50 py-6 text-center dark:bg-amber-950/30">
+                    <Mail className="mx-auto mb-2 h-8 w-8 text-amber-500" />
+                    <p className="text-amber-700 text-sm dark:text-amber-400">
                       {t("bigquery-search.enrichment.noEmails")}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="mt-1 text-muted-foreground text-xs">
                       {t("bigquery-search.enrichment.hunterHint")}
                     </p>
                   </div>
@@ -1728,38 +1737,38 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 {/* 기존 리드 정보 */}
                 {selectedLeadForEnrichment && (
                   <div className="space-y-2">
-                    <h4 className="font-semibold flex items-center gap-2">
+                    <h4 className="flex items-center gap-2 font-semibold">
                       <User className="h-4 w-4 text-gray-500" />
                       {t("bigquery-search.enrichment.existingLead")}
                     </h4>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       {selectedLeadForEnrichment.email && (
-                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
+                          <span className="text-muted-foreground text-xs">
                             {t("bigquery-search.lead.email")}
                           </span>
-                          <p className="font-mono truncate">{selectedLeadForEnrichment.email}</p>
+                          <p className="truncate font-mono">{selectedLeadForEnrichment.email}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.phone && (
-                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
+                          <span className="text-muted-foreground text-xs">
                             {t("bigquery-search.lead.phone")}
                           </span>
                           <p>{selectedLeadForEnrichment.phone}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.industry && (
-                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
+                          <span className="text-muted-foreground text-xs">
                             {t("bigquery-search.lead.industry")}
                           </span>
                           <p>{selectedLeadForEnrichment.industry}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.employee && (
-                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
+                          <span className="text-muted-foreground text-xs">
                             {t("bigquery-search.lead.employees")}
                           </span>
                           <p>{selectedLeadForEnrichment.employee}</p>
@@ -1770,9 +1779,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <div className="flex flex-col items-center justify-center gap-4 py-12">
                 <X className="h-8 w-8 text-red-500" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {t("bigquery-search.enrichment.loadFailed")}
                 </p>
               </div>

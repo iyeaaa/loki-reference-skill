@@ -1,13 +1,13 @@
 import { apiFetch } from "../client"
 
-export interface NodeStatistics {
+export type NodeStatistics = {
   nodeId: string
   sentCount: number
   repliedCount: number
   waitingCount: number
 }
 
-export interface WorkflowEnrollment {
+export type WorkflowEnrollment = {
   id: string
   sequenceId: string
   leadId: string
@@ -24,20 +24,18 @@ export interface WorkflowEnrollment {
 
 export const workflowExecutionApi = {
   // Get node statistics
-  getNodeStats: async (sequenceId: string, nodeId: string): Promise<NodeStatistics> => {
-    return await apiFetch<NodeStatistics>(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/stats`)
-  },
+  getNodeStats: async (sequenceId: string, nodeId: string): Promise<NodeStatistics> =>
+    await apiFetch<NodeStatistics>(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/stats`),
 
   // Get workflow enrollments
   getEnrollments: async (
     sequenceId: string,
     limit = 50,
     offset = 0,
-  ): Promise<WorkflowEnrollment[]> => {
-    return await apiFetch<WorkflowEnrollment[]>(
+  ): Promise<WorkflowEnrollment[]> =>
+    await apiFetch<WorkflowEnrollment[]>(
       `/api/v1/sequences/${sequenceId}/workflow-enrollments?limit=${limit}&offset=${offset}`,
-    )
-  },
+    ),
 
   // Bulk enroll from customer group
   bulkEnroll: async (data: {

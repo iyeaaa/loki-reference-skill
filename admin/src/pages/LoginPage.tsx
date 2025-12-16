@@ -116,103 +116,103 @@ export default function AdminLoginPage() {
   // Show loading state while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   return (
     <motion.div
-      className="min-h-screen flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50"
-      variants={reducedMotion ? undefined : fadeVariants}
-      initial="hidden"
       animate="visible"
+      className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-4 py-8 sm:px-6 sm:py-12 lg:px-8"
+      initial="hidden"
+      variants={reducedMotion ? undefined : fadeVariants}
     >
       <motion.div
-        className="w-full max-w-lg"
-        variants={reducedMotion ? undefined : scaleVariants}
-        initial="hidden"
         animate="visible"
+        className="w-full max-w-lg"
+        initial="hidden"
+        variants={reducedMotion ? undefined : scaleVariants}
       >
-        <div className="flex justify-end mb-4">
-          <LanguageSwitcher className="bg-white/80 backdrop-blur-sm shadow-sm border border-gray-200/50 rounded-lg" />
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher className="rounded-lg border border-gray-200/50 bg-white/80 shadow-sm backdrop-blur-sm" />
         </div>
-        <Card className="w-full shadow-2xl border-0">
-          <CardHeader className="text-center pb-0 pt-8">
+        <Card className="w-full border-0 shadow-2xl">
+          <CardHeader className="pt-8 pb-0 text-center">
             <motion.div
-              className="flex justify-center mb-6"
-              variants={reducedMotion ? undefined : slideUpVariants}
-              initial="hidden"
               animate="visible"
+              className="mb-6 flex justify-center"
+              initial="hidden"
+              variants={reducedMotion ? undefined : slideUpVariants}
             >
-              <div className="relative w-24 h-24 sm:w-32 sm:h-32">
+              <div className="relative h-24 w-24 sm:h-32 sm:w-32">
                 <img
-                  src="/images/rinda-logo.png"
                   alt="Rinda Logo"
-                  className="w-full h-full object-contain rounded-3xl"
+                  className="h-full w-full rounded-3xl object-contain"
+                  src="/images/rinda-logo.png"
                 />
               </div>
             </motion.div>
             <motion.div
-              variants={reducedMotion ? undefined : slideUpVariants}
-              initial="hidden"
               animate="visible"
+              initial="hidden"
               transition={{ delay: 0.1 }}
+              variants={reducedMotion ? undefined : slideUpVariants}
             >
-              <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent px-2">
+              <CardTitle className="bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text px-2 font-bold text-transparent text-xl sm:text-2xl">
                 {t("login.title")}
               </CardTitle>
-              <CardDescription className="text-sm sm:text-base text-gray-600 mt-2 px-2">
+              <CardDescription className="mt-2 px-2 text-gray-600 text-sm sm:text-base">
                 {t("login.description")}
               </CardDescription>
             </motion.div>
           </CardHeader>
-          <CardContent className="pt-6 px-4 sm:px-6 pb-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100 p-1.5 gap-1.5">
+          <CardContent className="px-4 pt-6 pb-8 sm:px-6">
+            <Tabs className="w-full" onValueChange={setActiveTab} value={activeTab}>
+              <TabsList className="grid h-12 w-full grid-cols-2 gap-1.5 bg-gray-100 p-1.5">
                 <TabsTrigger
+                  className="h-full rounded-md px-4 py-2.5 font-medium data-[state=active]:bg-white data-[state=active]:text-indigo-600"
                   value="login"
-                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium h-full px-4 py-2.5 rounded-md"
                 >
                   {t("login.tab.login")}
                 </TabsTrigger>
                 <TabsTrigger
+                  className="h-full rounded-md px-4 py-2.5 font-medium data-[state=active]:bg-white data-[state=active]:text-indigo-600"
                   value="signup"
-                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium h-full px-4 py-2.5 rounded-md"
                 >
                   {t("login.tab.signup")}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="login" className="space-y-4 mt-6">
+              <TabsContent className="mt-6 space-y-4" value="login">
                 <motion.form
-                  onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                  className="space-y-4"
-                  variants={reducedMotion ? undefined : staggerContainerVariants}
-                  initial="hidden"
                   animate="visible"
+                  className="space-y-4"
+                  initial="hidden"
+                  onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                  variants={reducedMotion ? undefined : staggerContainerVariants}
                 >
                   <motion.div
                     className="space-y-2"
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    <Label className="font-medium text-gray-700 text-sm" htmlFor="email">
                       {t("login.field.email")}
                     </Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={loginEmailId}
-                        type="email"
                         placeholder={t("login.placeholder.email")}
-                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type="email"
                         {...loginForm.register("email")}
                         disabled={isLoading}
                       />
                     </div>
                     {loginForm.formState.errors.email && (
-                      <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
+                      <p className="text-red-600 text-sm">{t("login.error.emailInvalid")}</p>
                     )}
                   </motion.div>
 
@@ -220,23 +220,23 @@ export default function AdminLoginPage() {
                     className="space-y-2"
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                    <Label className="font-medium text-gray-700 text-sm" htmlFor="password">
                       {t("login.field.password")}
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Lock className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pr-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={loginPasswordId}
-                        type={showPassword ? "text" : "password"}
                         placeholder={t("login.placeholder.password")}
-                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type={showPassword ? "text" : "password"}
                         {...loginForm.register("password")}
                         disabled={isLoading}
                       />
                       <button
-                        type="button"
+                        className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        type="button"
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -246,20 +246,20 @@ export default function AdminLoginPage() {
                       </button>
                     </div>
                     {loginForm.formState.errors.password && (
-                      <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
+                      <p className="text-red-600 text-sm">{t("login.error.passwordMin")}</p>
                     )}
                   </motion.div>
 
                   <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
                     <Button
-                      type="submit"
-                      size="xl"
-                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] font-medium text-white shadow-lg transition-all duration-200 hover:from-[#5936B1] hover:to-[#2B72E6] hover:shadow-xl"
                       disabled={isLoading}
+                      size="xl"
+                      type="submit"
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="h-4 w-4 animate-spin rounded-full border-white border-b-2" />
                           {t("login.loading.login")}
                         </div>
                       ) : (
@@ -308,34 +308,34 @@ export default function AdminLoginPage() {
               </Button> */}
               </TabsContent>
 
-              <TabsContent value="signup" className="space-y-4 mt-6">
+              <TabsContent className="mt-6 space-y-4" value="signup">
                 <motion.form
-                  onSubmit={signupForm.handleSubmit(onSignupSubmit)}
-                  className="space-y-4"
-                  variants={reducedMotion ? undefined : staggerContainerVariants}
-                  initial="hidden"
                   animate="visible"
+                  className="space-y-4"
+                  initial="hidden"
+                  onSubmit={signupForm.handleSubmit(onSignupSubmit)}
+                  variants={reducedMotion ? undefined : staggerContainerVariants}
                 >
                   <motion.div
                     className="space-y-2"
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
-                    <Label htmlFor="signup-username" className="text-sm font-medium text-gray-700">
+                    <Label className="font-medium text-gray-700 text-sm" htmlFor="signup-username">
                       {t("login.field.username")}
                     </Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <User className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={signupUsernameId}
-                        type="text"
                         placeholder={t("login.placeholder.username")}
-                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type="text"
                         {...signupForm.register("username")}
                         disabled={isLoading}
                       />
                     </div>
                     {signupForm.formState.errors.username && (
-                      <p className="text-sm text-red-600">
+                      <p className="text-red-600 text-sm">
                         {signupForm.formState.errors.username.message ===
                         "String must contain at least 3 character(s)"
                           ? t("login.error.usernameMin")
@@ -348,22 +348,22 @@ export default function AdminLoginPage() {
                     className="space-y-2"
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
-                    <Label htmlFor="signup-email" className="text-sm font-medium text-gray-700">
+                    <Label className="font-medium text-gray-700 text-sm" htmlFor="signup-email">
                       {t("login.field.email")}
                     </Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={signupEmailId}
-                        type="email"
                         placeholder={t("login.placeholder.emailInput")}
-                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type="email"
                         {...signupForm.register("email")}
                         disabled={isLoading}
                       />
                     </div>
                     {signupForm.formState.errors.email && (
-                      <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
+                      <p className="text-red-600 text-sm">{t("login.error.emailInvalid")}</p>
                     )}
                   </motion.div>
 
@@ -371,23 +371,23 @@ export default function AdminLoginPage() {
                     className="space-y-2"
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
-                    <Label htmlFor="signup-password" className="text-sm font-medium text-gray-700">
+                    <Label className="font-medium text-gray-700 text-sm" htmlFor="signup-password">
                       {t("login.field.password")}
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Lock className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pr-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={signupPasswordId}
-                        type={showSignupPassword ? "text" : "password"}
                         placeholder={t("login.placeholder.password")}
-                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type={showSignupPassword ? "text" : "password"}
                         {...signupForm.register("password")}
                         disabled={isLoading}
                       />
                       <button
-                        type="button"
+                        className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
                         onClick={() => setShowSignupPassword(!showSignupPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        type="button"
                       >
                         {showSignupPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -397,7 +397,7 @@ export default function AdminLoginPage() {
                       </button>
                     </div>
                     {signupForm.formState.errors.password && (
-                      <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
+                      <p className="text-red-600 text-sm">{t("login.error.passwordMin")}</p>
                     )}
                   </motion.div>
 
@@ -406,25 +406,25 @@ export default function AdminLoginPage() {
                     variants={reducedMotion ? undefined : staggerItemVariants}
                   >
                     <Label
+                      className="font-medium text-gray-700 text-sm"
                       htmlFor="signup-confirm-password"
-                      className="text-sm font-medium text-gray-700"
                     >
                       {t("login.field.confirmPassword")}
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Lock className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                       <Input
+                        className="h-12 border-gray-200 pr-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                         id={signupConfirmPasswordId}
-                        type={showConfirmPassword ? "text" : "password"}
                         placeholder={t("login.placeholder.confirmPassword")}
-                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        type={showConfirmPassword ? "text" : "password"}
                         {...signupForm.register("confirmPassword")}
                         disabled={isLoading}
                       />
                       <button
-                        type="button"
+                        className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        type="button"
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -434,20 +434,20 @@ export default function AdminLoginPage() {
                       </button>
                     </div>
                     {signupForm.formState.errors.confirmPassword && (
-                      <p className="text-sm text-red-600">{t("login.error.passwordMismatch")}</p>
+                      <p className="text-red-600 text-sm">{t("login.error.passwordMismatch")}</p>
                     )}
                   </motion.div>
 
                   <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
                     <Button
-                      type="submit"
-                      size="xl"
-                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] font-medium text-white shadow-lg transition-all duration-200 hover:from-[#5936B1] hover:to-[#2B72E6] hover:shadow-xl"
                       disabled={isLoading}
+                      size="xl"
+                      type="submit"
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="h-4 w-4 animate-spin rounded-full border-white border-b-2" />
                           {t("login.loading.signup")}
                         </div>
                       ) : (
@@ -460,13 +460,13 @@ export default function AdminLoginPage() {
             </Tabs>
 
             {/* Trial Link */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="mt-6 border-gray-200 border-t pt-6">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-3">처음 사용하시나요?</p>
+                <p className="mb-3 text-gray-600 text-sm">처음 사용하시나요?</p>
                 <Button
-                  variant="outline"
-                  onClick={() => navigate("/trial/survey/1")}
                   className="w-full"
+                  onClick={() => navigate("/trial/survey/1")}
+                  variant="outline"
                 >
                   7일 무료 체험 시작하기
                 </Button>

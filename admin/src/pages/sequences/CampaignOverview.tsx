@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { useSequence, useSequenceMetrics, useSequenceSteps } from "@/lib/api/hooks/sequences"
 import { cn } from "@/lib/utils"
 
-interface CampaignOverviewProps {
+type CampaignOverviewProps = {
   sequenceId: string
 }
 
@@ -28,7 +28,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
 
   if (!sequence) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-muted-foreground">{t("sequences.campaignOverview.loading")}</div>
       </div>
     )
@@ -71,10 +71,10 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
             <div className="flex-1">
               <CardTitle className="text-2xl">{sequence.name}</CardTitle>
               {sequence.description && (
-                <p className="text-sm text-muted-foreground mt-2">{sequence.description}</p>
+                <p className="mt-2 text-muted-foreground text-sm">{sequence.description}</p>
               )}
             </div>
-            <Badge variant="secondary" className={cn("text-sm", getStatusColor(sequence.status))}>
+            <Badge className={cn("text-sm", getStatusColor(sequence.status))} variant="secondary">
               {t(`sequences.table.status.${sequence.status}`)}
             </Badge>
           </div>
@@ -84,10 +84,10 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {t("sequences.campaignOverview.created")}
                 </div>
-                <div className="text-sm font-medium">
+                <div className="font-medium text-sm">
                   {new Date(sequence.createdAt).toLocaleDateString("ko-KR")}
                 </div>
               </div>
@@ -95,19 +95,19 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
             <div className="flex items-center gap-3">
               <Users className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {t("sequences.campaignOverview.workspace")}
                 </div>
-                <div className="text-sm font-medium">{sequence.workspaceName || "-"}</div>
+                <div className="font-medium text-sm">{sequence.workspaceName || "-"}</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {t("sequences.campaignOverview.creator")}
                 </div>
-                <div className="text-sm font-medium">{sequence.createdByUsername || "-"}</div>
+                <div className="font-medium text-sm">{sequence.createdByUsername || "-"}</div>
               </div>
             </div>
           </div>
@@ -124,17 +124,17 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
                 {t("sequences.campaignOverview.customerGroup")}
               </span>
-              <span className="text-sm font-medium">{sequence.customerGroupName || "-"}</span>
+              <span className="font-medium text-sm">{sequence.customerGroupName || "-"}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
                 {t("sequences.campaignOverview.recipientCount")}
               </span>
-              <span className="text-sm font-medium">
+              <span className="font-medium text-sm">
                 {metrics?.totalEnrollments || 0}
                 {t("sequences.campaignOverview.peopleCount")}
               </span>
@@ -153,25 +153,25 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
                 {t("sequences.campaignOverview.totalSteps")}
               </span>
-              <span className="text-sm font-medium">
+              <span className="font-medium text-sm">
                 {steps.length}
                 {t("sequences.campaignOverview.stepCount")}
               </span>
             </div>
 
             {steps.length > 0 && (
-              <div className="space-y-2 pt-2 border-t">
+              <div className="space-y-2 border-t pt-2">
                 {steps.map((step, _index) => (
-                  <div key={step.id} className="flex items-start gap-3 p-2 rounded-lg bg-muted/30">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold flex-shrink-0">
+                  <div className="flex items-start gap-3 rounded-lg bg-muted/30 p-2" key={step.id}>
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground text-xs">
                       {step.stepOrder}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2 text-muted-foreground text-xs">
                         <Clock className="h-3 w-3" />
                         {step.delayDays === 0
                           ? t("sequences.campaignOverview.immediately")
@@ -180,7 +180,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
                       </div>
-                      <p className="text-sm font-medium truncate">{step.emailSubject}</p>
+                      <p className="truncate font-medium text-sm">{step.emailSubject}</p>
                     </div>
                   </div>
                 ))}
@@ -204,41 +204,41 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <div className="flex items-center justify-between text-sm mb-2">
+                <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     {t("sequences.campaignOverview.overallProgress")}
                   </span>
                   <span className="font-medium">{Math.round(progress)}%</span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress className="h-2" value={progress} />
               </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-3 gap-4 border-t pt-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{metrics.totalSent || 0}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="font-bold text-2xl">{metrics.totalSent || 0}</div>
+                  <div className="text-muted-foreground text-xs">
                     {t("sequences.campaignOverview.totalSent")}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">
+                  <div className="font-bold text-2xl">
                     {metrics.totalSent > 0
                       ? Math.round(((metrics.opened || 0) / metrics.totalSent) * 100)
                       : 0}
                     %
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {t("sequences.campaignOverview.openRate")}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold">
+                  <div className="font-bold text-2xl">
                     {metrics.opened > 0
                       ? Math.round(((metrics.replied || 0) / metrics.opened) * 100)
                       : 0}
                     %
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {t("sequences.campaignOverview.replyRate")}
                   </div>
                 </div>
@@ -249,47 +249,47 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                 (metrics.avgTimeToReply !== undefined ||
                   metrics.minTimeToReply !== undefined ||
                   metrics.maxTimeToReply !== undefined) && (
-                  <div className="pt-6 border-t mt-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-950">
+                  <div className="mt-6 border-t pt-6">
+                    <div className="mb-4 flex items-center gap-2">
+                      <div className="rounded-md bg-blue-50 p-1.5 dark:bg-blue-950">
                         <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <span className="text-sm font-semibold text-foreground">회신 시간 통계</span>
+                      <span className="font-semibold text-foreground text-sm">회신 시간 통계</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       {metrics.avgTimeToReply !== undefined && (
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                        <div className="rounded-lg border border-blue-200/50 bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 dark:border-blue-800/50 dark:from-blue-950/50 dark:to-blue-900/30">
                           <div className="text-center">
-                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                            <div className="mb-1 font-bold text-blue-700 text-xl dark:text-blue-300">
                               {formatReplyTime(metrics.avgTimeToReply)}
                             </div>
-                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                            <div className="font-medium text-blue-600/80 text-xs dark:text-blue-400/80">
                               평균 회신 시간
                             </div>
                           </div>
                         </div>
                       )}
                       {metrics.minTimeToReply !== undefined && (
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                        <div className="rounded-lg border border-blue-200/50 bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 dark:border-blue-800/50 dark:from-blue-950/50 dark:to-blue-900/30">
                           <div className="text-center">
-                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center justify-center gap-1">
+                            <div className="mb-1 flex items-center justify-center gap-1 font-bold text-blue-700 text-xl dark:text-blue-300">
                               <TrendingDown className="h-4 w-4" />
                               {formatReplyTime(metrics.minTimeToReply)}
                             </div>
-                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                            <div className="font-medium text-blue-600/80 text-xs dark:text-blue-400/80">
                               최단 회신 시간
                             </div>
                           </div>
                         </div>
                       )}
                       {metrics.maxTimeToReply !== undefined && (
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                        <div className="rounded-lg border border-blue-200/50 bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 dark:border-blue-800/50 dark:from-blue-950/50 dark:to-blue-900/30">
                           <div className="text-center">
-                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center justify-center gap-1">
+                            <div className="mb-1 flex items-center justify-center gap-1 font-bold text-blue-700 text-xl dark:text-blue-300">
                               <TrendingUp className="h-4 w-4" />
                               {formatReplyTime(metrics.maxTimeToReply)}
                             </div>
-                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                            <div className="font-medium text-blue-600/80 text-xs dark:text-blue-400/80">
                               최장 회신 시간
                             </div>
                           </div>
@@ -303,35 +303,35 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
               {metrics.replied > 0 &&
                 metrics.replySummaries &&
                 metrics.replySummaries.length > 0 && (
-                  <div className="pt-6 border-t mt-6">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="mt-6 border-t pt-6">
+                    <div className="mb-4 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-950">
+                        <div className="rounded-md bg-blue-50 p-1.5 dark:bg-blue-950">
                           <Reply className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <span className="text-sm font-semibold text-foreground">
+                        <span className="font-semibold text-foreground text-sm">
                           회신 내용 요약
                         </span>
                       </div>
-                      <Badge variant="secondary" className="text-xs font-medium">
+                      <Badge className="font-medium text-xs" variant="secondary">
                         {metrics.replySummaries.length}개
                       </Badge>
                     </div>
-                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                    <div className="max-h-72 space-y-2.5 overflow-y-auto pr-1">
                       {metrics.replySummaries.map((summary, index) => (
                         <div
+                          className="group relative rounded-lg border border-border/50 bg-gradient-to-r from-muted/30 to-muted/10 p-3 transition-all duration-200 hover:border-primary/30 hover:shadow-sm dark:from-muted/20 dark:to-muted/5 dark:hover:border-primary/20"
                           key={summary.originalEmailId}
-                          className="group relative bg-gradient-to-r from-muted/30 to-muted/10 dark:from-muted/20 dark:to-muted/5 rounded-lg p-3 border border-border/50 hover:border-primary/30 dark:hover:border-primary/20 transition-all duration-200 hover:shadow-sm"
                         >
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="mb-2 flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
                               <Badge
+                                className="shrink-0 bg-background font-semibold text-xs"
                                 variant="outline"
-                                className="text-xs font-semibold shrink-0 bg-background"
                               >
                                 #{index + 1}
                               </Badge>
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                                 <Clock className="h-3 w-3" />
                                 <span className="font-medium">
                                   {formatReplyTime(summary.replyTime)}
@@ -340,6 +340,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                             </div>
                             {summary.sentiment && (
                               <Badge
+                                className="shrink-0 font-medium text-xs"
                                 variant={
                                   summary.sentiment === "positive"
                                     ? "default"
@@ -347,7 +348,6 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                                       ? "destructive"
                                       : "secondary"
                                 }
-                                className="text-xs font-medium shrink-0"
                               >
                                 {summary.sentiment === "positive"
                                   ? "긍정"
@@ -360,15 +360,15 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                           {summary.intent && (
                             <div className="mb-2">
                               <Badge
+                                className="bg-background/50 font-medium text-xs"
                                 variant="outline"
-                                className="text-xs font-medium bg-background/50"
                               >
                                 의도: {summary.intent}
                               </Badge>
                             </div>
                           )}
                           {summary.aiSummary && (
-                            <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2 group-hover:text-foreground/80 transition-colors">
+                            <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed transition-colors group-hover:text-foreground/80">
                               {summary.aiSummary}
                             </p>
                           )}
@@ -388,13 +388,13 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
 function formatReplyTime(minutes: number): string {
   if (minutes < 60) {
     return `${Math.round(minutes)}분`
-  } else if (minutes < 1440) {
+  }
+  if (minutes < 1440) {
     const hours = Math.floor(minutes / 60)
     const mins = Math.round(minutes % 60)
     return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`
-  } else {
-    const days = Math.floor(minutes / 1440)
-    const hours = Math.floor((minutes % 1440) / 60)
-    return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
   }
+  const days = Math.floor(minutes / 1440)
+  const hours = Math.floor((minutes % 1440) / 60)
+  return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
 }

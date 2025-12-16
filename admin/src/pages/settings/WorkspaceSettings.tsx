@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useEnrichWorkspace, useUpdateWorkspace, useWorkspace } from "@/lib/api/hooks/workspaces"
 
-interface WorkspaceSettingsProps {
+type WorkspaceSettingsProps = {
   workspaceId: string
 }
 
@@ -53,7 +53,9 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!workspace) return
+    if (!workspace) {
+      return
+    }
 
     const websiteChanged = formData.companyWebsite !== (workspace.companyWebsite || "")
 
@@ -117,16 +119,16 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
         <CardDescription className="text-xs">{t("settings.workspace.description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={companyNameId}>{t("settings.workspace.companyName")}</Label>
               <Input
                 id={companyNameId}
                 name="companyName"
-                value={formData.companyName}
                 onChange={handleChange}
                 placeholder="Acme Corporation"
+                value={formData.companyName}
               />
             </div>
 
@@ -135,10 +137,10 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
               <Input
                 id={companyWebsiteId}
                 name="companyWebsite"
-                type="url"
-                value={formData.companyWebsite}
                 onChange={handleChange}
                 placeholder="https://example.com"
+                type="url"
+                value={formData.companyWebsite}
               />
             </div>
 
@@ -147,10 +149,10 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
               <Input
                 id={companyPhoneId}
                 name="companyPhone"
-                type="tel"
-                value={formData.companyPhone}
                 onChange={handleChange}
                 placeholder="+1-555-0123"
+                type="tel"
+                value={formData.companyPhone}
               />
             </div>
 
@@ -159,9 +161,9 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
               <Input
                 id={industryId}
                 name="industry"
-                value={formData.industry}
                 onChange={handleChange}
                 placeholder="Technology"
+                value={formData.industry}
               />
             </div>
 
@@ -170,9 +172,9 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
               <Input
                 id={companySizeId}
                 name="companySize"
-                value={formData.companySize}
                 onChange={handleChange}
                 placeholder="50-100 employees"
+                value={formData.companySize}
               />
             </div>
           </div>
@@ -182,9 +184,9 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
             <Input
               id={companyAddressId}
               name="companyAddress"
-              value={formData.companyAddress}
               onChange={handleChange}
               placeholder="123 Main Street, City, Country"
+              value={formData.companyAddress}
             />
           </div>
 
@@ -195,14 +197,14 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
             <Textarea
               id={companyDescriptionId}
               name="companyDescription"
-              value={formData.companyDescription}
               onChange={handleChange}
               placeholder="Brief description of your company..."
               rows={4}
+              value={formData.companyDescription}
             />
           </div>
 
-          <Button type="submit" disabled={updateWorkspaceMutation.isPending}>
+          <Button disabled={updateWorkspaceMutation.isPending} type="submit">
             {updateWorkspaceMutation.isPending
               ? t("settings.workspace.saving")
               : t("settings.workspace.saveChanges")}

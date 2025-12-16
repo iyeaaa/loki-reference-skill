@@ -26,7 +26,7 @@ const THINKING_MESSAGE_KEYS: Record<string, string> = {
   "Analyzing lead data with AI...": "chatbot.thinking.analyzingLeadData",
 }
 
-interface StreamingMessageContainerProps {
+type StreamingMessageContainerProps = {
   message: ChatMessage | null
   isStreaming: boolean
   needsConfirmation: boolean
@@ -63,7 +63,9 @@ export const StreamingMessageContainer = React.memo(function StreamingMessageCon
 
   // Translate thinking message if it matches a known key
   const translatedThinkingMessage = useMemo(() => {
-    if (!thinkingMessage) return null
+    if (!thinkingMessage) {
+      return null
+    }
     const translationKey = THINKING_MESSAGE_KEYS[thinkingMessage]
     return translationKey ? t(translationKey) : thinkingMessage
   }, [thinkingMessage, t])
@@ -80,27 +82,27 @@ export const StreamingMessageContainer = React.memo(function StreamingMessageCon
     <div className="w-full space-y-3">
       {/* Section 1: Thinking indicator with star spinner */}
       {hasThinking && (
-        <div className="animate-in fade-in duration-200 flex items-center gap-2.5">
+        <div className="fade-in flex animate-in items-center gap-2.5 duration-200">
           <StarSpinner size={16} />
-          <p className="text-sm text-muted-foreground font-medium">{translatedThinkingMessage}</p>
+          <p className="font-medium text-muted-foreground text-sm">{translatedThinkingMessage}</p>
         </div>
       )}
 
       {/* Section 2: Main message content */}
       {message && (
         <MessageBubble
-          message={message}
+          hideArtifact={hideArtifact}
           isStreaming={isStreaming}
+          message={message}
           needsConfirmation={needsConfirmation}
           onConfirm={onConfirm}
-          hideArtifact={hideArtifact}
         />
       )}
 
       {/* Section 3: Progress indicators - Always below content */}
       {hasProgress && (
         <div className="ml-12">
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="fade-in slide-in-from-bottom-2 animate-in duration-300">
             <NodeProgressTracker progress={nodeProgress} />
           </div>
         </div>

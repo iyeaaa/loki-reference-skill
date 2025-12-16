@@ -4,7 +4,7 @@ import { getFieldConfig } from "@/lib/api/types/lead-filters"
 /**
  * Search token representation
  */
-export interface SearchToken {
+export type SearchToken = {
   id: string
   field: string
   fieldLabel: string
@@ -107,10 +107,14 @@ export function filtersToQueryString(filters: ColumnFilter[]): string {
 export function parseTokenInput(input: string): { field: string; value: string } | null {
   // Expected format: "@fieldName: value" or "fieldName: value"
   const match = input.match(/^@?([a-zA-Z]+):\s*(.+)$/)
-  if (!match) return null
+  if (!match) {
+    return null
+  }
 
   const [, field, value] = match
-  if (!field || !value) return null
+  if (!(field && value)) {
+    return null
+  }
 
   return { field: field.trim(), value: value.trim() }
 }

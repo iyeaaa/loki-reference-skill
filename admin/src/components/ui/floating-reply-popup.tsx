@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
-interface FloatingReplyPopupProps {
+type FloatingReplyPopupProps = {
   isOpen: boolean
   onClose: () => void
   onSend: (replyText: string, subject: string, files?: File[]) => void | Promise<void>
@@ -45,7 +45,9 @@ export function FloatingReplyPopup({
   }, [isOpen, initialText, subject])
 
   const handleSendReply = async () => {
-    if (!replyText.trim()) return
+    if (!replyText.trim()) {
+      return
+    }
 
     try {
       await onSend(replyText, editableSubject, files.length > 0 ? files : undefined)
@@ -67,79 +69,81 @@ export function FloatingReplyPopup({
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    return null
+  }
 
   const popupContent = (
     <>
       {isMaximized && (
         <button
-          type="button"
-          className="fixed inset-0 bg-black/20 z-40 border-0 p-0 cursor-default"
+          aria-label="Close maximized view"
+          className="fixed inset-0 z-40 cursor-default border-0 bg-black/20 p-0"
           onClick={() => setIsMaximized(false)}
           onKeyDown={(e) => e.key === "Escape" && setIsMaximized(false)}
-          aria-label="Close maximized view"
+          type="button"
         />
       )}
 
       <Card
-        className={`fixed z-50 shadow-2xl transition-all duration-200 bg-white dark:bg-gray-900 ${
+        className={`fixed z-50 bg-white shadow-2xl transition-all duration-200 dark:bg-gray-900 ${
           isMaximized
-            ? "inset-4 md:inset-8 flex flex-col"
+            ? "inset-4 flex flex-col md:inset-8"
             : isMinimized
-              ? "bottom-0 right-4 w-[600px]"
-              : "bottom-0 right-4 w-[600px] h-[700px] flex flex-col"
+              ? "right-4 bottom-0 w-[600px]"
+              : "right-4 bottom-0 flex h-[700px] w-[600px] flex-col"
         }`}
       >
-        <div className="w-full flex items-center justify-between px-4 py-3 border-b bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+        <div className="flex w-full flex-shrink-0 items-center justify-between border-b bg-gray-50 px-4 py-3 dark:bg-gray-800">
           <button
-            type="button"
-            tabIndex={isMinimized ? 0 : -1}
-            className="text-sm font-medium truncate flex-1 text-left cursor-pointer"
+            aria-label={isMinimized ? "Expand reply window" : "Reply header"}
+            className="flex-1 cursor-pointer truncate text-left font-medium text-sm"
+            disabled={!isMinimized}
             onClick={() => isMinimized && setIsMinimized(false)}
             onKeyDown={(e) => isMinimized && e.key === "Enter" && setIsMinimized(false)}
-            aria-label={isMinimized ? "Expand reply window" : "Reply header"}
-            disabled={!isMinimized}
+            tabIndex={isMinimized ? 0 : -1}
+            type="button"
           >
             답장
           </button>
           <div className="flex items-center gap-1">
-            {!isMaximized && !isMinimized && (
+            {!(isMaximized || isMinimized) && (
               <Button
-                type="button"
-                variant="ghost"
-                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsMinimized(true)
                 }}
-                className="h-8 w-8 p-0"
+                size="sm"
+                type="button"
+                variant="ghost"
               >
                 <Minimize2 className="h-4 w-4" />
               </Button>
             )}
             {!isMinimized && (
               <Button
-                type="button"
-                variant="ghost"
-                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsMaximized(!isMaximized)
                 }}
-                className="h-8 w-8 p-0"
+                size="sm"
+                type="button"
+                variant="ghost"
               >
                 <Maximize2 className="h-4 w-4" />
               </Button>
             )}
             <Button
-              type="button"
-              variant="ghost"
-              size="sm"
+              className="h-8 w-8 p-0"
               onClick={(e) => {
                 e.stopPropagation()
                 handleClose()
               }}
-              className="h-8 w-8 p-0"
+              size="sm"
+              type="button"
+              variant="ghost"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -148,70 +152,70 @@ export function FloatingReplyPopup({
 
         {!isMinimized && (
           <>
-            <div className="px-4 py-2 border-b bg-white dark:bg-gray-900 flex-shrink-0">
+            <div className="flex-shrink-0 border-b bg-white px-4 py-2 dark:bg-gray-900">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
+                <span className="w-20 flex-shrink-0 font-medium text-gray-700 text-sm dark:text-gray-300">
                   받는사람
                 </span>
                 <Input
+                  className="h-9 flex-1 border-0 bg-gray-50 px-2 text-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-gray-800 dark:text-gray-100"
+                  disabled
                   type="text"
                   value={to}
-                  disabled
-                  className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-9 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
+              <div className="mt-2 flex items-center gap-2">
+                <span className="w-20 flex-shrink-0 font-medium text-gray-700 text-sm dark:text-gray-300">
                   제목
                 </span>
                 <Input
+                  className="h-9 flex-1 border-0 bg-white px-2 text-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-gray-900 dark:text-gray-100"
+                  onChange={(e) => setEditableSubject(e.target.value)}
                   type="text"
                   value={editableSubject}
-                  onChange={(e) => setEditableSubject(e.target.value)}
-                  className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-9 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              <div className="flex items-start gap-2 mt-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0 pt-1">
+              <div className="mt-2 flex items-start gap-2">
+                <span className="w-20 flex-shrink-0 pt-1 font-medium text-gray-700 text-sm dark:text-gray-300">
                   첨부
                 </span>
                 <div className="flex-1">
                   <FileAttachment
                     files={files}
-                    onFilesChange={setFiles}
                     maxSize={20 * 1024 * 1024}
+                    onFilesChange={setFiles}
                   />
                 </div>
               </div>
             </div>
 
-            <div className={`p-4 flex-1 flex flex-col overflow-hidden`}>
+            <div className={"flex flex-1 flex-col overflow-hidden p-4"}>
               <Textarea
-                value={replyText}
+                autoFocus
+                className={`resize-none border-0 text-base text-gray-900 placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-gray-100 ${
+                  isMaximized ? "h-full flex-1" : "min-h-[450px]"
+                }`}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="메시지를 입력하세요..."
-                className={`resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base text-gray-900 dark:text-gray-100 placeholder:text-gray-400 ${
-                  isMaximized ? "flex-1 h-full" : "min-h-[450px]"
-                }`}
-                autoFocus
+                value={replyText}
               />
             </div>
 
-            <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center justify-between border-t bg-gray-50 px-4 py-3 dark:bg-gray-800">
               <Button
-                onClick={handleSendReply}
-                disabled={!replyText.trim() || isSending}
-                size="default"
                 className="font-medium"
+                disabled={!replyText.trim() || isSending}
+                onClick={handleSendReply}
+                size="default"
               >
                 {isSending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     전송 중...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4 mr-2" />
+                    <Send className="mr-2 h-4 w-4" />
                     전송
                   </>
                 )}

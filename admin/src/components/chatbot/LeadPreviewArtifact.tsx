@@ -14,7 +14,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { PreviewLeadData } from "@/lib/api/services/lead-import"
 
-interface LeadPreviewArtifactProps {
+type LeadPreviewArtifactProps = {
   data: {
     totalRows: number
     previewRows: number
@@ -35,58 +35,58 @@ export function LeadPreviewArtifact({
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* Header Section */}
-      <div className="flex-none px-2 pt-3 pb-2 space-y-2">
-        <h2 className="text-base font-semibold">{t("chatbot.leadPreview.title")}</h2>
+      <div className="flex-none space-y-2 px-2 pt-3 pb-2">
+        <h2 className="font-semibold text-base">{t("chatbot.leadPreview.title")}</h2>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="gap-1 text-xs font-medium">
+          <Badge className="gap-1 font-medium text-xs" variant="secondary">
             <FileSpreadsheet className="h-3 w-3" />
             {data.sheetName}
           </Badge>
-          <Badge variant="outline" className="gap-1 text-xs font-medium">
+          <Badge className="gap-1 font-medium text-xs" variant="outline">
             {t("chatbot.leadPreview.totalRecords", { count: data.totalRows })}
           </Badge>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             • {t("chatbot.leadPreview.duplicateNote")}
           </span>
         </div>
       </div>
 
       {/* Data Preview Section */}
-      <div className="flex-1 min-h-0 px-2">
+      <div className="min-h-0 flex-1 px-2">
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-scroll overflow-y-auto h-[calc(100vh-350px)] min-h-[400px]">
+            <div className="h-[calc(100vh-350px)] min-h-[400px] overflow-y-auto overflow-x-scroll">
               <TooltipProvider delayDuration={300}>
-                <Table className="table-fixed w-full">
-                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                <Table className="w-full table-fixed">
+                  <TableHeader className="sticky top-0 z-10 border-b bg-background">
                     <TableRow>
-                      <TableHead className="w-[50px] text-xs font-medium sticky left-0 bg-white dark:bg-background z-20 border-r">
+                      <TableHead className="sticky left-0 z-20 w-[50px] border-r bg-white font-medium text-xs dark:bg-background">
                         #
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">
+                      <TableHead className="w-[120px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.company")}
                       </TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">
+                      <TableHead className="w-[140px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.website")}
                       </TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">
+                      <TableHead className="w-[160px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.email")}
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">
+                      <TableHead className="w-[120px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.phone")}
                       </TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">
+                      <TableHead className="w-[160px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.address")}
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">
+                      <TableHead className="w-[120px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.sector")}
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">
+                      <TableHead className="w-[120px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.industry")}
                       </TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">
+                      <TableHead className="w-[140px] font-medium text-xs">
                         {t("chatbot.leadPreview.column.product")}
                       </TableHead>
                     </TableRow>
@@ -94,21 +94,21 @@ export function LeadPreviewArtifact({
                   <TableBody>
                     {data.leads.map((lead, index) => (
                       <TableRow
-                        key={lead.rowNumber}
                         className={index % 2 === 0 ? "bg-muted/30" : ""}
+                        key={lead.rowNumber}
                       >
-                        <TableCell className="font-mono text-xs text-muted-foreground sticky left-0 bg-white dark:bg-background z-10 border-r">
+                        <TableCell className="sticky left-0 z-10 border-r bg-white font-mono text-muted-foreground text-xs dark:bg-background">
                           {lead.rowNumber}
                         </TableCell>
-                        <TableCell className="text-xs font-medium">
+                        <TableCell className="font-medium text-xs">
                           {lead.companyName ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default">{lead.companyName}</div>
+                                <div className="cursor-default truncate">{lead.companyName}</div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.companyName}
                               </TooltipContent>
@@ -122,21 +122,21 @@ export function LeadPreviewArtifact({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <a
+                                  className="block truncate text-blue-600 hover:text-blue-800 hover:underline"
                                   href={
                                     lead.websiteUrl.startsWith("http")
                                       ? lead.websiteUrl
                                       : `https://${lead.websiteUrl}`
                                   }
-                                  target="_blank"
                                   rel="noopener noreferrer"
-                                  className="truncate block text-blue-600 hover:text-blue-800 hover:underline"
+                                  target="_blank"
                                 >
                                   {lead.websiteUrl}
                                 </a>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.websiteUrl}
                               </TooltipContent>
@@ -149,18 +149,18 @@ export function LeadPreviewArtifact({
                           {lead.emails && lead.emails.length > 0 ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default">
+                                <div className="cursor-default truncate">
                                   {lead.emails[0]}
                                   {lead.emails.length > 1 && (
-                                    <span className="text-muted-foreground ml-1">
+                                    <span className="ml-1 text-muted-foreground">
                                       +{lead.emails.length - 1}
                                     </span>
                                   )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.emails.join(", ")}
                               </TooltipContent>
@@ -173,18 +173,18 @@ export function LeadPreviewArtifact({
                           {lead.phoneNumbers && lead.phoneNumbers.length > 0 ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default">
+                                <div className="cursor-default truncate">
                                   {lead.phoneNumbers[0]}
                                   {lead.phoneNumbers.length > 1 && (
-                                    <span className="text-muted-foreground ml-1">
+                                    <span className="ml-1 text-muted-foreground">
                                       +{lead.phoneNumbers.length - 1}
                                     </span>
                                   )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.phoneNumbers.join(", ")}
                               </TooltipContent>
@@ -197,11 +197,11 @@ export function LeadPreviewArtifact({
                           {lead.address ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default">{lead.address}</div>
+                                <div className="cursor-default truncate">{lead.address}</div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.address}
                               </TooltipContent>
@@ -214,33 +214,33 @@ export function LeadPreviewArtifact({
                           {lead.businessSectors && lead.businessSectors.length > 0 ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default flex items-center gap-0.5">
+                                <div className="flex cursor-default items-center gap-0.5 truncate">
                                   {lead.businessSectors.slice(0, 2).map((sector, idx) => (
                                     <Badge
+                                      className="shrink-0 px-1.5 py-0 text-[10px]"
                                       key={idx}
                                       variant="outline"
-                                      className="text-[10px] px-1.5 py-0 shrink-0"
                                     >
                                       {sector}
                                     </Badge>
                                   ))}
                                   {lead.businessSectors.length > 2 && (
-                                    <span className="text-muted-foreground text-[10px] shrink-0">
+                                    <span className="shrink-0 text-[10px] text-muted-foreground">
                                       +{lead.businessSectors.length - 2}
                                     </span>
                                   )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs bg-background border border-border text-foreground shadow-md"
                               >
                                 <div className="flex flex-wrap gap-1">
                                   {lead.businessSectors.map((sector, idx) => (
                                     <Badge
+                                      className="px-1.5 py-0 text-[10px]"
                                       key={idx}
                                       variant="outline"
-                                      className="text-[10px] px-1.5 py-0"
                                     >
                                       {sector}
                                     </Badge>
@@ -256,33 +256,33 @@ export function LeadPreviewArtifact({
                           {lead.industryTypes && lead.industryTypes.length > 0 ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default flex items-center gap-0.5">
+                                <div className="flex cursor-default items-center gap-0.5 truncate">
                                   {lead.industryTypes.slice(0, 2).map((industry, idx) => (
                                     <Badge
+                                      className="shrink-0 px-1.5 py-0 text-[10px]"
                                       key={idx}
                                       variant="secondary"
-                                      className="text-[10px] px-1.5 py-0 shrink-0"
                                     >
                                       {industry}
                                     </Badge>
                                   ))}
                                   {lead.industryTypes.length > 2 && (
-                                    <span className="text-muted-foreground text-[10px] shrink-0">
+                                    <span className="shrink-0 text-[10px] text-muted-foreground">
                                       +{lead.industryTypes.length - 2}
                                     </span>
                                   )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs bg-background border border-border text-foreground shadow-md"
                               >
                                 <div className="flex flex-wrap gap-1">
                                   {lead.industryTypes.map((industry, idx) => (
                                     <Badge
+                                      className="px-1.5 py-0 text-[10px]"
                                       key={idx}
                                       variant="secondary"
-                                      className="text-[10px] px-1.5 py-0"
                                     >
                                       {industry}
                                     </Badge>
@@ -298,18 +298,18 @@ export function LeadPreviewArtifact({
                           {lead.products && lead.products.length > 0 ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="truncate cursor-default">
+                                <div className="cursor-default truncate">
                                   {lead.products[0]}
                                   {lead.products.length > 1 && (
-                                    <span className="text-muted-foreground ml-1">
+                                    <span className="ml-1 text-muted-foreground">
                                       +{lead.products.length - 1}
                                     </span>
                                   )}
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent
+                                className="max-w-xs break-words border border-border bg-background text-foreground shadow-md"
                                 side="top"
-                                className="max-w-xs break-words bg-background border border-border text-foreground shadow-md"
                               >
                                 {lead.products.join(", ")}
                               </TooltipContent>
@@ -329,22 +329,22 @@ export function LeadPreviewArtifact({
       </div>
 
       {/* Action Section */}
-      <div className="flex-none px-2 py-2 border-t bg-background">
+      <div className="flex-none border-t bg-background px-2 py-2">
         <div className="flex items-center gap-2">
           <Button
-            onClick={onReject}
-            variant="outline"
+            className="flex-1 gap-1.5"
             disabled={isProcessing}
-            className="gap-1.5 flex-1"
+            onClick={onReject}
             size="default"
+            variant="outline"
           >
             <XCircle className="h-4 w-4" />
             {t("chatbot.button.cancel")}
           </Button>
           <Button
-            onClick={onApprove}
+            className="flex-1 gap-1.5"
             disabled={isProcessing}
-            className="gap-1.5 flex-1"
+            onClick={onApprove}
             size="default"
           >
             <CheckCircle2 className="h-4 w-4" />

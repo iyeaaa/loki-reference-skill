@@ -27,7 +27,7 @@ import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
-interface CampaignCardViewProps {
+type CampaignCardViewProps = {
   searchQuery: string
   selectedStatuses: string[]
   selectedSequences?: string[]
@@ -56,7 +56,7 @@ export function CampaignCardView({
   // Build params for API call
   const params: SequencesParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     status:
       selectedStatuses?.length === 1
         ? (selectedStatuses[0] as SequenceStatus)
@@ -137,7 +137,7 @@ export function CampaignCardView({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -147,7 +147,7 @@ export function CampaignCardView({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -173,16 +173,16 @@ export function CampaignCardView({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-          <Card key={i} className="animate-pulse">
+          <Card className="animate-pulse" key={i}>
             <CardHeader>
-              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-4 w-3/4 rounded bg-muted" />
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="h-3 bg-muted rounded w-full" />
-                <div className="h-3 bg-muted rounded w-2/3" />
+                <div className="h-3 w-full rounded bg-muted" />
+                <div className="h-3 w-2/3 rounded bg-muted" />
               </div>
             </CardContent>
           </Card>
@@ -194,9 +194,9 @@ export function CampaignCardView({
   if (sequences.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-lg font-medium text-muted-foreground">캠페인이 없습니다</p>
-        <p className="text-sm text-muted-foreground">
+        <Mail className="mb-4 h-12 w-12 text-muted-foreground" />
+        <p className="font-medium text-lg text-muted-foreground">캠페인이 없습니다</p>
+        <p className="text-muted-foreground text-sm">
           "새 캠페인" 버튼을 눌러 첫 캠페인을 만들어보세요
         </p>
       </div>
@@ -205,7 +205,7 @@ export function CampaignCardView({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {sequences.map((sequence) => {
           const isActive = ["active", "paused", "completed", "archived"].includes(sequence.status)
           const progress = isActive
@@ -216,7 +216,7 @@ export function CampaignCardView({
           const isSelected = selectedSequences.includes(sequence.id)
 
           return (
-            <Card key={sequence.id} className="hover:shadow-md transition-shadow relative">
+            <Card className="relative transition-shadow hover:shadow-md" key={sequence.id}>
               {/* Checkbox - 오른쪽 위 */}
               {onToggleSequence && (
                 <div className="absolute top-3 right-3 z-10">
@@ -229,29 +229,29 @@ export function CampaignCardView({
               )}
 
               <button
-                type="button"
-                className="cursor-pointer w-full text-left"
+                className="w-full cursor-pointer text-left"
                 onClick={() => onEditSequence(sequence)}
+                type="button"
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-base line-clamp-1 flex-1">{sequence.name}</h3>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h3 className="line-clamp-1 flex-1 font-semibold text-base">{sequence.name}</h3>
                     {onToggleSequence && <div className="w-6" />}
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <Badge
-                      variant="secondary"
                       className={cn(
-                        "text-xs flex items-center gap-1",
+                        "flex items-center gap-1 text-xs",
                         getStatusColor(sequence.status),
                       )}
+                      variant="secondary"
                     >
                       {getStatusIcon(sequence.status)}
                       {t(`sequences.table.status.${sequence.status}`)}
                     </Badge>
                   </div>
                   {sequence.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="line-clamp-2 text-muted-foreground text-sm">
                       {sequence.description}
                     </p>
                   )}
@@ -262,7 +262,7 @@ export function CampaignCardView({
                     {/* Basic Info - 아이콘과 함께 깔끔하게 */}
                     <div className="flex items-center gap-1.5 text-xs">
                       <Users className="h-4 w-4 text-blue-500" />
-                      <span className="text-muted-foreground truncate">
+                      <span className="truncate text-muted-foreground">
                         {sequence.customerGroupName || "그룹 미지정"}
                       </span>
                     </div>
@@ -284,7 +284,7 @@ export function CampaignCardView({
 
                     {/* Progress Section */}
                     {isActive && (
-                      <div className="pt-2 space-y-1">
+                      <div className="space-y-1 pt-2">
                         <div className="flex items-center gap-1.5 text-xs">
                           <BarChart3 className="h-4 w-4 text-green-500" />
                           <span className="font-medium">
@@ -293,46 +293,46 @@ export function CampaignCardView({
                           </span>
                           <span className="text-muted-foreground">진행중</span>
                         </div>
-                        <Progress value={progress} className="h-1.5" />
+                        <Progress className="h-1.5" value={progress} />
                       </div>
                     )}
 
                     {/* Stats Section - Use new fields if available, fallback to aggregated */}
-                    <div className="pt-3 border-t space-y-2">
+                    <div className="space-y-2 border-t pt-3">
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-4 w-4 text-blue-500" />
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold">
+                            <span className="font-semibold text-xs">
                               {sequence.sentCount ?? sequence.totalSent ?? 0}
                             </span>
-                            <span className="text-xs text-muted-foreground">발송</span>
+                            <span className="text-muted-foreground text-xs">발송</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-4 w-4 text-orange-500" />
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold">
+                            <span className="font-semibold text-xs">
                               {sequence.deliveredCount && sequence.openedCount
                                 ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
                                 : sequence.openRate !== undefined
                                   ? `${sequence.openRate}%`
                                   : "-"}
                             </span>
-                            <span className="text-xs text-muted-foreground">오픈율</span>
+                            <span className="text-muted-foreground text-xs">오픈율</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-4 w-4 text-green-500" />
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold">
+                            <span className="font-semibold text-xs">
                               {sequence.deliveredCount && sequence.repliedCount
                                 ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
                                 : sequence.replyRate !== undefined
                                   ? `${sequence.replyRate}%`
                                   : "-"}
                             </span>
-                            <span className="text-xs text-muted-foreground">회신율</span>
+                            <span className="text-muted-foreground text-xs">회신율</span>
                           </div>
                         </div>
                       </div>
@@ -341,9 +341,9 @@ export function CampaignCardView({
                 </CardContent>
               </button>
 
-              <CardFooter className="pt-3 border-t flex-col gap-2 items-start">
+              <CardFooter className="flex-col items-start gap-2 border-t pt-3">
                 {/* 최종 수정일 */}
-                <div className="w-full text-left text-xs text-muted-foreground">
+                <div className="w-full text-left text-muted-foreground text-xs">
                   {new Date(sequence.updatedAt).toLocaleDateString("ko-KR", {
                     year: "numeric",
                     month: "long",
@@ -354,38 +354,38 @@ export function CampaignCardView({
                 {/* Action Button - 중앙 정렬 */}
                 {sequence.status === "active" ? (
                   <Button
-                    variant="outline"
-                    size="sm"
                     className="w-full"
                     onClick={(e) => handleStatusToggle(sequence, e)}
+                    size="sm"
+                    variant="outline"
                   >
-                    <Pause className="h-3.5 w-3.5 mr-1" />
+                    <Pause className="mr-1 h-3.5 w-3.5" />
                     일시정지
                   </Button>
                 ) : sequence.status === "paused" ||
                   sequence.status === "ready" ||
                   sequence.status === "draft" ? (
                   <Button
-                    variant="outline"
-                    size="sm"
                     className="w-full"
-                    onClick={(e) => handleStatusToggle(sequence, e)}
                     disabled={sequence.status === "draft"}
+                    onClick={(e) => handleStatusToggle(sequence, e)}
+                    size="sm"
+                    variant="outline"
                   >
-                    <Play className="h-3.5 w-3.5 mr-1" />
+                    <Play className="mr-1 h-3.5 w-3.5" />
                     활성화
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
-                    size="sm"
                     className="w-full"
                     onClick={(e) => {
                       e.stopPropagation()
                       onEditSequence(sequence)
                     }}
+                    size="sm"
+                    variant="outline"
                   >
-                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    <Edit className="mr-1 h-3.5 w-3.5" />
                     편집
                   </Button>
                 )}
@@ -399,7 +399,7 @@ export function CampaignCardView({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -415,22 +415,22 @@ export function CampaignCardView({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.first")}
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             {t("sequences.table.pagination.previous")}
@@ -439,12 +439,12 @@ export function CampaignCardView({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -452,11 +452,11 @@ export function CampaignCardView({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.next")}
             <ChevronRight className="h-4 w-4" />
@@ -464,11 +464,11 @@ export function CampaignCardView({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             {t("sequences.table.pagination.last")}
           </Button>
@@ -476,21 +476,21 @@ export function CampaignCardView({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {t("sequences.table.pagination.page")}
           </span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </>

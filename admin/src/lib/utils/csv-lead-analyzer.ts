@@ -65,7 +65,9 @@ const getMostCommonBusinessType = (csvLeads: LeadCSVData[]): string => {
 const getAverageCompanyScale = (csvLeads: LeadCSVData[]): CompanyScale => {
   const employeeCounts = csvLeads
     .map((lead) => {
-      if (!lead.employeeCount) return null
+      if (!lead.employeeCount) {
+        return null
+      }
       const count = Number.parseInt(lead.employeeCount, 10)
       return Number.isNaN(count) ? null : count
     })

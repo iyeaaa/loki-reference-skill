@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
-interface DangerZoneProps {
+type DangerZoneProps = {
   canDelete: boolean
   workspacesRequiringTransfer: Array<{ id: string; name: string; memberCount: number }>
   workspacesToBeDeleted: Array<{ id: string; name: string }>
@@ -23,10 +23,10 @@ export function DangerZone({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   return (
-    <div className="mt-8 border border-red-200 rounded-lg p-6 bg-red-50/50">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="mt-8 rounded-lg border border-red-200 bg-red-50/50 p-6">
+      <div className="mb-4 flex items-center gap-2">
         <AlertTriangle className="h-5 w-5 text-red-600" />
-        <h3 className="text-lg font-semibold text-red-600">
+        <h3 className="font-semibold text-lg text-red-600">
           {t("settings.dangerZone.title", "위험 구역")}
         </h3>
       </div>
@@ -36,7 +36,7 @@ export function DangerZone({
           <h4 className="font-medium text-gray-900">
             {t("settings.dangerZone.deleteAccount", "계정 삭제")}
           </h4>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600 text-sm">
             {t(
               "settings.dangerZone.deleteWarning",
               "계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
@@ -46,14 +46,14 @@ export function DangerZone({
 
         {/* Workspaces requiring ownership transfer */}
         {workspacesRequiringTransfer.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-            <p className="text-sm text-yellow-800 font-medium mb-2">
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4">
+            <p className="mb-2 font-medium text-sm text-yellow-800">
               {t(
                 "settings.dangerZone.ownershipWarning",
                 "계정을 삭제하기 전에 소유한 워크스페이스의 소유권을 이전해야 합니다.",
               )}
             </p>
-            <ul className="text-sm text-yellow-700 list-disc list-inside">
+            <ul className="list-inside list-disc text-sm text-yellow-700">
               {workspacesRequiringTransfer.map((ws) => (
                 <li key={ws.id}>
                   {ws.name}{" "}
@@ -69,14 +69,14 @@ export function DangerZone({
 
         {/* Workspaces that will be deleted */}
         {workspacesToBeDeleted.length > 0 && canDelete && (
-          <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
-            <p className="text-sm text-orange-800 font-medium mb-2">
+          <div className="rounded-md border border-orange-200 bg-orange-50 p-4">
+            <p className="mb-2 font-medium text-orange-800 text-sm">
               {t(
                 "settings.dangerZone.workspaceDeletionWarning",
                 "다음 워크스페이스도 함께 삭제됩니다:",
               )}
             </p>
-            <ul className="text-sm text-orange-700 list-disc list-inside">
+            <ul className="list-inside list-disc text-orange-700 text-sm">
               {workspacesToBeDeleted.map((ws) => (
                 <li key={ws.id}>{ws.name}</li>
               ))}
@@ -85,10 +85,10 @@ export function DangerZone({
         )}
 
         <Button
-          variant="destructive"
-          onClick={() => setShowConfirmDialog(true)}
-          disabled={!canDelete || isDeleting}
           className="gap-2"
+          disabled={!canDelete || isDeleting}
+          onClick={() => setShowConfirmDialog(true)}
+          variant="destructive"
         >
           <Trash2 className="h-4 w-4" />
           {isDeleting
@@ -98,9 +98,8 @@ export function DangerZone({
       </div>
 
       <ConfirmDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        title={t("settings.dangerZone.confirmTitle", "계정 삭제")}
+        cancelText={t("common.cancel", "취소")}
+        confirmText={t("settings.dangerZone.confirmButton", "계정 삭제")}
         description={
           workspacesToBeDeleted.length > 0
             ? t(
@@ -113,9 +112,10 @@ export function DangerZone({
                 "정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다.",
               )
         }
-        confirmText={t("settings.dangerZone.confirmButton", "계정 삭제")}
-        cancelText={t("common.cancel", "취소")}
         onConfirm={onDeleteAccount}
+        onOpenChange={setShowConfirmDialog}
+        open={showConfirmDialog}
+        title={t("settings.dangerZone.confirmTitle", "계정 삭제")}
         variant="destructive"
       />
     </div>

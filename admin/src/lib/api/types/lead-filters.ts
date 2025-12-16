@@ -32,7 +32,7 @@ export type FilterValue =
 /**
  * Column filter definition
  */
-export interface ColumnFilter {
+export type ColumnFilter = {
   field: string
   operator: FilterOperator
   value: FilterValue
@@ -41,7 +41,7 @@ export interface ColumnFilter {
 /**
  * Column filter configuration
  */
-export interface ColumnFilterConfig {
+export type ColumnFilterConfig = {
   type: "text" | "number" | "date" | "enum" | "select"
   operators: FilterOperator[]
   loadOptions?: (context?: {
@@ -54,7 +54,7 @@ export interface ColumnFilterConfig {
 /**
  * Filter preset - saved collection of filters
  */
-export interface FilterPreset {
+export type FilterPreset = {
   id: string
   name: string
   filters: ColumnFilter[]
@@ -64,7 +64,7 @@ export interface FilterPreset {
 /**
  * Searchable field configuration
  */
-export interface SearchableField {
+export type SearchableField = {
   field: string
   type: "string" | "number" | "date" | "enum"
   options?: string[]

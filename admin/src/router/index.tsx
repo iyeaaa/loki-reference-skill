@@ -89,7 +89,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 function LoginRedirect() {
   const [searchParams] = useSearchParams()
   const search = searchParams.toString()
-  return <Navigate to={`/auth${search ? `?${search}` : ""}`} replace />
+  return <Navigate replace to={`/auth${search ? `?${search}` : ""}`} />
 }
 
 /**
@@ -130,7 +130,7 @@ function TrialRedirect() {
   }
 
   // 4. No survey data → redirect to survey
-  return <Navigate to="/trial/survey/1" replace />
+  return <Navigate replace to="/trial/survey/1" />
 }
 
 export const router = createBrowserRouter([
@@ -156,7 +156,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "trial/survey",
-        element: <Navigate to="/trial/survey/1" replace />,
+        element: <Navigate replace to="/trial/survey/1" />,
       },
       {
         path: "trial/survey/:step",
@@ -168,7 +168,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "onboarding",
-        element: <Navigate to="/trial/survey/1" replace />,
+        element: <Navigate replace to="/trial/survey/1" />,
       },
       // Standalone dashboard route - layout is inside UnifiedDashboardPage based on user role
       {
@@ -203,11 +203,11 @@ export const router = createBrowserRouter([
       // Backward compatibility redirects
       {
         path: "app",
-        element: <Navigate to="/company" replace />,
+        element: <Navigate replace to="/company" />,
       },
       {
         path: "app/dashboard",
-        element: <Navigate to="/dashboard" replace />,
+        element: <Navigate replace to="/dashboard" />,
       },
       // DashboardLayout routes - RouteGuard가 ROUTE_PERMISSIONS 기반으로 자동 권한 체크
       // 등록되지 않은 라우트는 Admin만 접근 가능 (보안 우선)
@@ -221,7 +221,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/dashboard" replace />,
+            element: <Navigate replace to="/dashboard" />,
           },
           {
             path: "analytics",

@@ -16,9 +16,15 @@ export const activityLogsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
-    if (params?.entityType) searchParams.append("entityType", params.entityType)
-    if (params?.action) searchParams.append("action", params.action)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params?.entityType) {
+      searchParams.append("entityType", params.entityType)
+    }
+    if (params?.action) {
+      searchParams.append("action", params.action)
+    }
     if (params?.workspaceIds && params.workspaceIds.length > 0) {
       searchParams.append("workspaceIds", params.workspaceIds.join(","))
     }
@@ -47,20 +53,19 @@ export const activityLogsApi = {
     }))
   },
 
-  get: (logId: string) => {
-    return apiFetch<ActivityLog>(`/api/v1/activity-logs/${logId}`)
-  },
+  get: (logId: string) => apiFetch<ActivityLog>(`/api/v1/activity-logs/${logId}`),
 
-  create: (data: CreateActivityLogRequest) => {
-    return apiFetch<ActivityLog>("/api/v1/activity-logs", {
+  create: (data: CreateActivityLogRequest) =>
+    apiFetch<ActivityLog>("/api/v1/activity-logs", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   getRecent: (limit = 20, workspaceId?: string) => {
     const searchParams = new URLSearchParams({ limit: limit.toString() })
-    if (workspaceId) searchParams.append("workspaceId", workspaceId)
+    if (workspaceId) {
+      searchParams.append("workspaceId", workspaceId)
+    }
 
     return apiFetch<{ data: ActivityLog[]; limit: number }>(
       `/api/v1/activity-logs/recent?${searchParams.toString()}`,

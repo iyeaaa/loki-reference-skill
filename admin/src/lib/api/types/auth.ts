@@ -2,18 +2,18 @@
 // Auth Types
 // ========================================
 
-export interface LoginRequest {
+export type LoginRequest = {
   email: string
   password: string
 }
 
-export interface SignupRequest {
+export type SignupRequest = {
   username: string
   email: string
   password: string
 }
 
-export interface AuthUser {
+export type AuthUser = {
   id: string
   username: string
   email: string
@@ -34,12 +34,12 @@ export interface AuthUser {
   }
 }
 
-export interface AuthResponse {
+export type AuthResponse = {
   token: string
   user: AuthUser
 }
 
-export interface SignupResponse {
+export type SignupResponse = {
   message: string
   user: {
     id: string
@@ -48,13 +48,13 @@ export interface SignupResponse {
   }
 }
 
-export interface UpdateProfileRequest {
+export type UpdateProfileRequest = {
   username: string
   email: string
   employeeId?: string
   profilePicture?: string | null
 }
 
-export interface UpdateProfileResponse {
+export type UpdateProfileResponse = {
   user: AuthUser
 }

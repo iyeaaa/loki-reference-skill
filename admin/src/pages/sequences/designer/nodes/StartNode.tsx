@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-interface StartNodeProps {
+type StartNodeProps = {
   data: {
     onAddNode?: (type: string) => void
   }
@@ -26,26 +26,26 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg border-2 border-green-700 min-w-[200px]">
+    <div className="min-w-[200px] rounded-lg border-2 border-green-700 bg-gradient-to-r from-green-500 to-green-600 shadow-lg">
       <div className="p-4">
         <div className="flex items-center gap-2">
-          <div className="bg-white rounded-full p-2">
-            <div className="w-3 h-3 bg-green-600 rounded-full" />
+          <div className="rounded-full bg-white p-2">
+            <div className="h-3 w-3 rounded-full bg-green-600" />
           </div>
-          <span className="text-white font-semibold text-lg">
+          <span className="font-semibold text-lg text-white">
             {t("sequences.designer.startNode.start")}
           </span>
         </div>
-        <p className="text-green-50 text-sm mt-2">
+        <p className="mt-2 text-green-50 text-sm">
           {t("sequences.designer.startNode.description")}
         </p>
       </div>
 
-      <div className="border-t border-green-700 p-3 bg-green-600/30">
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <div className="border-green-700 border-t bg-green-600/30 p-3">
+        <DropdownMenu onOpenChange={setIsOpen} open={isOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-full text-white hover:bg-green-700/50">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="w-full text-white hover:bg-green-700/50" size="sm" variant="ghost">
+              <Plus className="mr-2 h-4 w-4" />
               {t("sequences.designer.startNode.addNode")}
             </Button>
           </DropdownMenuTrigger>
@@ -58,9 +58,9 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
       </div>
 
       <Handle
-        type="source"
+        className="h-3 w-3 border-2 border-white bg-green-600"
         position={Position.Bottom}
-        className="w-3 h-3 bg-green-600 border-2 border-white"
+        type="source"
       />
     </div>
   )

@@ -31,7 +31,9 @@ export function NylasEmailTest() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit) {
+      return
+    }
 
     await sendNylasTestEmail.mutateAsync({
       toEmail: toEmail.trim(),
@@ -54,17 +56,17 @@ export function NylasEmailTest() {
         <CardDescription>{t("settings.nylasTest.description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSend} className="space-y-4 max-w-2xl">
+        <form className="max-w-2xl space-y-4" onSubmit={handleSend}>
           <div className="space-y-2">
             <Label htmlFor={toEmailId}>{t("settings.nylasTest.toEmail")}</Label>
             <Input
+              autoComplete="email"
               id={toEmailId}
-              type="email"
-              value={toEmail}
               onChange={(e) => setToEmail(e.target.value)}
               placeholder="recipient@example.com"
-              autoComplete="email"
               required
+              type="email"
+              value={toEmail}
             />
           </div>
 
@@ -72,10 +74,10 @@ export function NylasEmailTest() {
             <Label htmlFor={subjectId}>{t("settings.nylasTest.subject")}</Label>
             <Input
               id={subjectId}
-              value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder={t("settings.nylasTest.subjectPlaceholder")}
               required
+              value={subject}
             />
           </div>
 
@@ -83,29 +85,29 @@ export function NylasEmailTest() {
             <Label htmlFor={contentId}>{t("settings.nylasTest.content")}</Label>
             <Textarea
               id={contentId}
-              value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder={t("settings.nylasTest.contentPlaceholder")}
-              rows={8}
               required
+              rows={8}
+              value={content}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor={grantIdId}>{t("settings.nylasTest.grantId")}</Label>
             <Input
+              autoComplete="off"
               id={grantIdId}
-              type="password"
-              value={grantId}
               onChange={(e) => setGrantId(e.target.value)}
               placeholder={t("settings.nylasTest.grantIdPlaceholder")}
-              autoComplete="off"
               required
+              type="password"
+              value={grantId}
             />
-            <p className="text-xs text-muted-foreground">{t("settings.nylasTest.grantIdHint")}</p>
+            <p className="text-muted-foreground text-xs">{t("settings.nylasTest.grantIdHint")}</p>
           </div>
 
-          <Button type="submit" disabled={!canSubmit} className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto" disabled={!canSubmit} type="submit">
             {sendNylasTestEmail.isPending
               ? t("settings.nylasTest.sending")
               : t("settings.nylasTest.send")}

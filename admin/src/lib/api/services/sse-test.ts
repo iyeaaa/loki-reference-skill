@@ -73,14 +73,16 @@ export const sseTestApi = {
 
         // Process complete events
         for (const eventStr of events) {
-          if (!eventStr.trim()) continue
+          if (!eventStr.trim()) {
+            continue
+          }
 
           const lines = eventStr.split("\n")
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
                 const event: SSETestEvent = JSON.parse(line.slice(6))
-                console.log(`[SSE Test] Received event:`, event.type, event)
+                console.log("[SSE Test] Received event:", event.type, event)
                 onEvent(event)
 
                 // If it's a done or error event, mark as complete

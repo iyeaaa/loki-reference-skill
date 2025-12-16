@@ -43,7 +43,7 @@ import {
   validateMappings,
 } from "@/lib/utils/smart-csv-parser"
 
-interface ColumnMappingModalProps {
+type ColumnMappingModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (mappings: Record<string, keyof LeadCSVData | null>, hasHeaders: boolean) => void
@@ -78,7 +78,7 @@ function ConfidenceBadge({ confidence }: { confidence: ColumnAnalysis["confidenc
   const { label, className } = config[confidence]
 
   return (
-    <Badge variant="outline" className={`text-xs ${className}`}>
+    <Badge className={`text-xs ${className}`} variant="outline">
       {confidence === "high" && <Sparkles className="mr-1 h-3 w-3" />}
       {label}
     </Badge>
@@ -97,7 +97,7 @@ function DataTypeBadge({ dataType }: { dataType: ColumnAnalysis["dataType"] }) {
 
   const { label, className } = config[dataType]
 
-  return <span className={`text-xs font-medium ${className}`}>{label}</span>
+  return <span className={`font-medium text-xs ${className}`}>{label}</span>
 }
 
 function FieldSelector({
@@ -120,14 +120,14 @@ function FieldSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
           className={`w-full justify-between ${
-            !currentField
-              ? "border-dashed text-muted-foreground"
-              : currentFieldDef?.required
+            currentField
+              ? currentFieldDef?.required
                 ? "border-emerald-500/50"
                 : ""
+              : "border-dashed text-muted-foreground"
           }`}
+          variant="outline"
         >
           <span className="flex items-center gap-2">
             {currentField ? (
@@ -144,8 +144,8 @@ function FieldSelector({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 max-h-80 overflow-y-auto">
-        <DropdownMenuItem onClick={() => onSelect(null)} className="text-muted-foreground">
+      <DropdownMenuContent className="max-h-80 w-56 overflow-y-auto">
+        <DropdownMenuItem className="text-muted-foreground" onClick={() => onSelect(null)}>
           <X className="mr-2 h-4 w-4" />
           매핑 안함
         </DropdownMenuItem>
@@ -159,16 +159,16 @@ function FieldSelector({
           const isUsed = usedFields.has(field.key) && field.key !== currentField
           return (
             <DropdownMenuItem
+              className={isUsed ? "opacity-50" : ""}
+              disabled={isUsed}
               key={field.key}
               onClick={() => onSelect(field.key)}
-              disabled={isUsed}
-              className={isUsed ? "opacity-50" : ""}
             >
-              <div className="flex items-center justify-between w-full">
+              <div className="flex w-full items-center justify-between">
                 <span>{field.labelKo}</span>
                 {field.key === currentField && <Check className="h-4 w-4 text-emerald-600" />}
                 {isUsed && field.key !== currentField && (
-                  <span className="text-xs text-muted-foreground">사용 중</span>
+                  <span className="text-muted-foreground text-xs">사용 중</span>
                 )}
               </div>
             </DropdownMenuItem>
@@ -181,16 +181,16 @@ function FieldSelector({
           const isUsed = usedFields.has(field.key) && field.key !== currentField
           return (
             <DropdownMenuItem
+              className={isUsed ? "opacity-50" : ""}
+              disabled={isUsed}
               key={field.key}
               onClick={() => onSelect(field.key)}
-              disabled={isUsed}
-              className={isUsed ? "opacity-50" : ""}
             >
-              <div className="flex items-center justify-between w-full">
+              <div className="flex w-full items-center justify-between">
                 <span>{field.labelKo}</span>
                 {field.key === currentField && <Check className="h-4 w-4 text-emerald-600" />}
                 {isUsed && field.key !== currentField && (
-                  <span className="text-xs text-muted-foreground">사용 중</span>
+                  <span className="text-muted-foreground text-xs">사용 중</span>
                 )}
               </div>
             </DropdownMenuItem>
@@ -223,15 +223,15 @@ export function ColumnMappingModal({
   const usedFields = useMemo(() => {
     const fields = new Set<keyof LeadCSVData>()
     Object.values(mappings).forEach((field) => {
-      if (field) fields.add(field)
+      if (field) {
+        fields.add(field)
+      }
     })
     return fields
   }, [mappings])
 
   // 매핑 유효성 검사
-  const validation = useMemo(() => {
-    return validateMappings(mappings)
-  }, [mappings])
+  const validation = useMemo(() => validateMappings(mappings), [mappings])
 
   // 매핑 변경 핸들러
   const handleMappingChange = useCallback(
@@ -261,14 +261,16 @@ export function ColumnMappingModal({
     onClose()
   }, [mappings, hasHeaders, onConfirm, onClose])
 
-  if (!parseResult) return null
+  if (!parseResult) {
+    return null
+  }
 
   const mappedCount = Object.values(mappings).filter(Boolean).length
   const totalColumns = parseResult.columns.length
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+    <Dialog onOpenChange={onClose} open={isOpen}>
+      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
@@ -280,7 +282,7 @@ export function ColumnMappingModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {/* 요약 정보 및 헤더 토글 */}
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-4 text-sm">
@@ -297,32 +299,32 @@ export function ColumnMappingModal({
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-600 dark:text-emerald-400 text-sm">●</span>
-                <span className="text-sm text-muted-foreground">= 필수 필드</span>
+                <span className="text-emerald-600 text-sm dark:text-emerald-400">●</span>
+                <span className="text-muted-foreground text-sm">= 필수 필드</span>
               </div>
             </div>
           </div>
 
           {/* 헤더 행 토글 */}
-          <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg">
+          <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">첫 번째 행이 헤더입니까?</span>
+              <span className="font-medium text-sm">첫 번째 행이 헤더입니까?</span>
               {parseResult.detectedHasHeaders !== hasHeaders && (
-                <Badge variant="outline" className="text-xs">
+                <Badge className="text-xs" variant="outline">
                   변경됨
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {parseResult.detectedHasHeaders ? "자동 감지: 헤더 있음" : "자동 감지: 헤더 없음"}
               </span>
               <button
-                type="button"
-                onClick={() => handleToggleHeaders(!hasHeaders)}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   hasHeaders ? "bg-emerald-500" : "bg-gray-300"
                 }`}
+                onClick={() => handleToggleHeaders(!hasHeaders)}
+                type="button"
               >
                 <span
                   className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
@@ -350,7 +352,7 @@ export function ColumnMappingModal({
               <Info className="h-4 w-4" />
               <AlertTitle>참고 사항</AlertTitle>
               <AlertDescription>
-                <ul className="list-disc pl-4 mt-1 text-sm">
+                <ul className="mt-1 list-disc pl-4 text-sm">
                   {parseResult.warnings.map((warning, index) => (
                     <li key={index}>{warning}</li>
                   ))}
@@ -360,15 +362,15 @@ export function ColumnMappingModal({
           )}
 
           {/* 매핑 테이블 */}
-          <div className="flex-1 overflow-auto border rounded-lg">
+          <div className="flex-1 overflow-auto rounded-lg border">
             <Table>
-              <TableHeader className="sticky top-0 bg-background z-10">
+              <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow>
                   <TableHead className="w-[200px]">원본 컬럼</TableHead>
                   <TableHead className="w-[100px]">데이터 타입</TableHead>
                   <TableHead className="w-[100px]">신뢰도</TableHead>
                   <TableHead className="w-[60px] text-center">
-                    <ArrowRight className="h-4 w-4 mx-auto text-muted-foreground" />
+                    <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
                   </TableHead>
                   <TableHead className="w-[200px]">리드 필드</TableHead>
                   <TableHead>샘플 데이터</TableHead>
@@ -384,7 +386,7 @@ export function ColumnMappingModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger className="text-left">
-                              <span className="truncate max-w-[180px] inline-block">
+                              <span className="inline-block max-w-[180px] truncate">
                                 {column.originalHeader}
                               </span>
                             </TooltipTrigger>
@@ -399,21 +401,21 @@ export function ColumnMappingModal({
                         <ConfidenceBadge confidence={column.confidence} />
                       </TableCell>
                       <TableCell className="text-center">
-                        <ArrowRight className="h-4 w-4 mx-auto text-muted-foreground" />
+                        <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
                       </TableCell>
                       <TableCell>
                         <FieldSelector
                           currentField={currentField}
-                          usedFields={usedFields}
                           onSelect={(field) => handleMappingChange(column.originalHeader, field)}
+                          usedFields={usedFields}
                         />
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           {column.sampleValues.slice(0, 2).map((value, idx) => (
                             <span
+                              className="max-w-[200px] truncate text-muted-foreground text-xs"
                               key={idx}
-                              className="text-xs text-muted-foreground truncate max-w-[200px]"
                               title={value}
                             >
                               {value || <span className="italic">빈 값</span>}
@@ -431,8 +433,8 @@ export function ColumnMappingModal({
           {/* 데이터 미리보기 */}
           {parseResult.previewData.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">데이터 미리보기</h4>
-              <div className="border rounded-lg overflow-x-auto">
+              <h4 className="font-medium text-muted-foreground text-sm">데이터 미리보기</h4>
+              <div className="overflow-x-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -441,7 +443,7 @@ export function ColumnMappingModal({
                         .filter(([, field]) => field)
                         .slice(0, 5)
                         .map(([header, field]) => (
-                          <TableHead key={header} className="min-w-[150px]">
+                          <TableHead className="min-w-[150px]" key={header}>
                             {LEAD_FIELD_DEFINITIONS.find((f) => f.key === field)?.labelKo || field}
                           </TableHead>
                         ))}
@@ -457,7 +459,7 @@ export function ColumnMappingModal({
                           .filter(([, field]) => field)
                           .slice(0, 5)
                           .map(([header]) => (
-                            <TableCell key={header} className="truncate max-w-[200px]">
+                            <TableCell className="max-w-[200px] truncate" key={header}>
                               {row[header] || "-"}
                             </TableCell>
                           ))}
@@ -471,10 +473,10 @@ export function ColumnMappingModal({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             취소
           </Button>
-          <Button onClick={handleConfirm} disabled={!validation.valid}>
+          <Button disabled={!validation.valid} onClick={handleConfirm}>
             <Check className="mr-2 h-4 w-4" />
             매핑 확인 ({mappedCount}개 필드)
           </Button>

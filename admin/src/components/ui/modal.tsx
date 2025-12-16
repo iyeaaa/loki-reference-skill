@@ -13,15 +13,21 @@ type ModalProps = {
 
 export function Modal({ open, title, onClose, children, footer, className }: ModalProps) {
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      return
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
+      if (e.key === "Escape") {
+        onClose()
+      }
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open) {
+    return null
+  }
 
   return (
     <div
@@ -29,29 +35,31 @@ export function Modal({ open, title, onClose, children, footer, className }: Mod
       role="presentation"
     >
       <button
-        type="button"
         aria-label="배경 클릭 시 닫기"
         className="absolute inset-0"
         onClick={onClose}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") onClose()
+          if (e.key === "Enter" || e.key === " ") {
+            onClose()
+          }
         }}
+        type="button"
       />
       <div
+        aria-modal="true"
         className={cn(
           "relative z-[1] w-[520px] max-w-[92vw] rounded-md border bg-white text-card-foreground shadow-lg",
           "outline-none",
           className,
         )}
         role="dialog"
-        aria-modal="true"
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="text-base font-semibold">{title}</h3>
+          <h3 className="font-semibold text-base">{title}</h3>
           <button
-            onClick={onClose}
-            className="rounded p-1 text-sm hover:bg-muted"
             aria-label="닫기"
+            className="rounded p-1 text-sm hover:bg-muted"
+            onClick={onClose}
             type="button"
           >
             ×

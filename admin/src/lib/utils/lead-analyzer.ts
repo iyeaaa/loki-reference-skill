@@ -96,7 +96,9 @@ const getMostCommonBusinessSector = (leads: Lead[]): string => {
 const getAverageCompanyScale = (leads: Lead[]): CompanyScale => {
   const employeeCounts = leads
     .map((lead) => {
-      if (!lead.employeeCount) return null
+      if (!lead.employeeCount) {
+        return null
+      }
       // Parse employee count string to number
       const count = Number.parseInt(lead.employeeCount, 10)
       return Number.isNaN(count) ? null : count

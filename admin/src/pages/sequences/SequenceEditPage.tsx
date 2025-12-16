@@ -70,7 +70,9 @@ export default function SequenceEditPage() {
   }, [sequence])
 
   const handleUpdateSequence = async (sequenceData: unknown) => {
-    if (!sequenceId) return
+    if (!sequenceId) {
+      return
+    }
 
     updateSequence.mutate(
       {
@@ -94,7 +96,7 @@ export default function SequenceEditPage() {
   }
 
   const handleSaveTitleDescription = async () => {
-    if (!sequenceId || !editedName.trim()) {
+    if (!(sequenceId && editedName.trim())) {
       toast.error(t("sequences.editPage.enterName"))
       return
     }
@@ -126,7 +128,9 @@ export default function SequenceEditPage() {
   }
 
   const handleSaveMemo = async () => {
-    if (!sequenceId) return
+    if (!sequenceId) {
+      return
+    }
 
     // Check if memo is empty
     if (!memo.trim()) {
@@ -153,7 +157,7 @@ export default function SequenceEditPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground">{t("sequences.editPage.loading")}</div>
       </div>
     )
@@ -182,11 +186,11 @@ export default function SequenceEditPage() {
       ]
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Header */}
       <div className="border-b bg-background px-6 py-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
+          <Button className="gap-2" onClick={handleBack} size="sm" variant="ghost">
             <ArrowLeft className="h-4 w-4" />
             {t("sequences.editPage.back")}
           </Button>
@@ -195,38 +199,38 @@ export default function SequenceEditPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Input
-                    value={editedName}
+                    className="h-auto py-1 font-bold text-2xl"
                     onChange={(e) => setEditedName(e.target.value)}
                     placeholder={t("sequences.editPage.campaignName")}
-                    className="text-2xl font-bold h-auto py-1"
+                    value={editedName}
                   />
-                  <Button size="sm" variant="ghost" onClick={handleSaveTitleDescription}>
+                  <Button onClick={handleSaveTitleDescription} size="sm" variant="ghost">
                     <Check className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={handleCancelTitleEdit}>
+                  <Button onClick={handleCancelTitleEdit} size="sm" variant="ghost">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
                 <Input
-                  value={editedDescription}
+                  className="text-sm"
                   onChange={(e) => setEditedDescription(e.target.value)}
                   placeholder={t("sequences.editPage.campaignDescPlaceholder")}
-                  className="text-sm"
+                  value={editedDescription}
                 />
               </div>
             ) : (
               <div className="flex items-start gap-2">
                 <div className="flex-1">
-                  <h1 className="text-2xl font-bold">{sequence.name}</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <h1 className="font-bold text-2xl">{sequence.name}</h1>
+                  <p className="text-muted-foreground text-sm">
                     {sequence.description || t("sequences.editPage.campaignDetail")}
                   </p>
                 </div>
                 <Button
+                  className="gap-2"
+                  onClick={() => setIsEditingTitle(true)}
                   size="sm"
                   variant="ghost"
-                  onClick={() => setIsEditingTitle(true)}
-                  className="gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
                   {t("sequences.editPage.edit")}
@@ -238,24 +242,24 @@ export default function SequenceEditPage() {
       </div>
 
       {/* 2-Panel Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Menu */}
         <div className="w-64 border-r bg-muted/30">
           <ScrollArea className="h-full">
-            <div className="p-4 space-y-1">
+            <div className="space-y-1 p-4">
               {menuItems.map((item) => {
                 const Icon = item.icon
                 return (
                   <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => setSelectedMenu(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                      "flex w-full items-center gap-3 rounded-lg px-4 py-3 font-medium text-sm transition-colors",
                       selectedMenu === item.id
                         ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted text-muted-foreground",
+                        : "text-muted-foreground hover:bg-muted",
                     )}
+                    key={item.id}
+                    onClick={() => setSelectedMenu(item.id)}
+                    type="button"
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
@@ -274,14 +278,14 @@ export default function SequenceEditPage() {
               <>
                 {selectedMenu === "customer-selection" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.customerGroupMenu")}
                     </h2>
                     <SequenceForm
-                      sequence={sequence}
                       isEdit={true}
-                      onSave={handleUpdateSequence}
                       onCancel={handleBack}
+                      onSave={handleUpdateSequence}
+                      sequence={sequence}
                       stepsCount={sequence.stepsCount || 0}
                     />
                   </Card>
@@ -289,29 +293,29 @@ export default function SequenceEditPage() {
 
                 {selectedMenu === "scenario" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.scenarioMenu")}
                     </h2>
-                    <SequenceStepsList sequenceId={sequence.id} isEdit={true} />
+                    <SequenceStepsList isEdit={true} sequenceId={sequence.id} />
                   </div>
                 )}
 
                 {selectedMenu === "memo" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.memoMenu")}
                     </h2>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="mb-4 text-muted-foreground text-sm">
                       {t("sequences.editPage.memoNote")}
                     </p>
                     <Textarea
-                      value={memo}
                       onChange={(e) => setMemo(e.target.value)}
                       placeholder={t("sequences.editPage.memoPlaceholder")}
                       rows={10}
+                      value={memo}
                     />
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button onClick={handleSaveMemo} disabled={updateSequence.isPending}>
+                    <div className="mt-4 flex justify-end gap-2">
+                      <Button disabled={updateSequence.isPending} onClick={handleSaveMemo}>
                         {updateSequence.isPending
                           ? t("sequences.editPage.saving")
                           : t("sequences.editPage.save")}
@@ -327,8 +331,8 @@ export default function SequenceEditPage() {
               <>
                 {selectedMenu === "overview" && (
                   <div>
-                    <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
-                      <p className="text-sm text-muted-foreground">
+                    <div className="mb-4 rounded-lg border bg-muted/50 p-4">
+                      <p className="text-muted-foreground text-sm">
                         {t("sequences.editPage.readOnlyNotice")}
                       </p>
                     </div>
@@ -338,11 +342,11 @@ export default function SequenceEditPage() {
 
                 {selectedMenu === "scenario" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.scenarioMenu")}
                     </h2>
-                    <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
+                      <p className="text-blue-700 text-sm dark:text-blue-300">
                         ℹ️{" "}
                         {t(
                           "sequences.editPage.partialEditNotice",
@@ -350,13 +354,13 @@ export default function SequenceEditPage() {
                         )}
                       </p>
                     </div>
-                    <SequenceStepsList sequenceId={sequence.id} isEdit={true} readOnly={true} />
+                    <SequenceStepsList isEdit={true} readOnly={true} sequenceId={sequence.id} />
                   </div>
                 )}
 
                 {selectedMenu === "enrollment" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.enrollmentMenu")}
                     </h2>
                     <SequenceEnrollmentsTable sequenceId={sequence.id} />
@@ -365,20 +369,20 @@ export default function SequenceEditPage() {
 
                 {selectedMenu === "memo" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">
+                    <h2 className="mb-4 font-semibold text-xl">
                       {t("sequences.editPage.memoMenu")}
                     </h2>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="mb-4 text-muted-foreground text-sm">
                       {t("sequences.editPage.memoNote")}
                     </p>
                     <Textarea
-                      value={memo}
                       onChange={(e) => setMemo(e.target.value)}
                       placeholder={t("sequences.editPage.memoPlaceholder")}
                       rows={10}
+                      value={memo}
                     />
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button onClick={handleSaveMemo} disabled={updateSequence.isPending}>
+                    <div className="mt-4 flex justify-end gap-2">
+                      <Button disabled={updateSequence.isPending} onClick={handleSaveMemo}>
                         {updateSequence.isPending
                           ? t("sequences.editPage.saving")
                           : t("sequences.editPage.save")}

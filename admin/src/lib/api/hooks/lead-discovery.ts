@@ -29,7 +29,7 @@ export type LeadDiscoveryStatus =
   | "error"
 
 // Clarification question type
-export interface ClarificationQuestion {
+export type ClarificationQuestion = {
   field: "country" | "industry" | "employeeRange"
   label: string
   options: string[]
@@ -37,7 +37,7 @@ export interface ClarificationQuestion {
 }
 
 // Clarification data from interrupt
-export interface ClarificationData {
+export type ClarificationData = {
   questions: ClarificationQuestion[]
   understood: {
     country?: string
@@ -49,7 +49,7 @@ export interface ClarificationData {
 }
 
 // SSE 이벤트 데이터 타입
-export interface LeadDiscoveryEventData {
+export type LeadDiscoveryEventData = {
   status: LeadDiscoveryStatus
   message: string
   progress: number
@@ -75,7 +75,7 @@ export interface LeadDiscoveryEventData {
 }
 
 // Mutation 옵션 (콜백 기반)
-export interface UseLeadDiscoveryMutationOptions {
+export type UseLeadDiscoveryMutationOptions = {
   onStatusChange?: (data: LeadDiscoveryEventData) => void
   onWebsiteAnalysis?: (analysis: WebsiteAnalysis) => void
   onRecommendations?: (recommendations: BuyerRecommendation[], sessionId: string) => void
@@ -88,13 +88,13 @@ export interface UseLeadDiscoveryMutationOptions {
 }
 
 // API 요청 타입
-interface SearchRequest {
+type SearchRequest = {
   query: string
   workspaceId: string
   locale?: string
 }
 
-interface SelectRequest {
+type SelectRequest = {
   sessionId: string
   selectedRecommendationId: string
   workspaceId: string
@@ -156,8 +156,12 @@ function parseSSEChunk(chunk: string): Array<{ event: string; data: unknown }> {
 
     for (const line of lines) {
       const { event, data } = parseSSELine(line.trim())
-      if (event) eventType = event
-      if (data) eventData = data
+      if (event) {
+        eventType = event
+      }
+      if (data) {
+        eventData = data
+      }
     }
 
     if (eventType && eventData) {
@@ -179,7 +183,9 @@ async function processSSEStream(
   sessionIdRef: { current: string | undefined },
 ): Promise<LeadDiscoveryEventData | null> {
   const reader = response.body?.getReader()
-  if (!reader) throw new Error("스트림을 읽을 수 없습니다")
+  if (!reader) {
+    throw new Error("스트림을 읽을 수 없습니다")
+  }
 
   const decoder = new TextDecoder()
   let buffer = ""
@@ -491,7 +497,9 @@ async function processSSEStream(
 
   while (true) {
     const { done, value } = await reader.read()
-    if (done) break
+    if (done) {
+      break
+    }
 
     buffer += decoder.decode(value, { stream: true })
 
@@ -618,7 +626,7 @@ export function useLeadDiscoverySelectMutation(options: UseLeadDiscoveryMutation
 }
 
 // Clarify request type
-interface ClarifyRequest {
+type ClarifyRequest = {
   sessionId: string
   answers: Record<string, string>
   workspaceId: string
@@ -688,7 +696,7 @@ export const leadDiscoveryKeys = {
 // Fit Score API
 // ============================================
 
-export interface LeadForScoring {
+export type LeadForScoring = {
   id: string
   company_name?: string
   email?: string
@@ -702,7 +710,7 @@ export interface LeadForScoring {
   title?: string
 }
 
-export interface FitScoreCallbackOptions {
+export type FitScoreCallbackOptions = {
   onScore?: (leadId: string, score: number) => void
   onProgress?: (progress: number) => void
   onComplete?: (totalProcessed: number) => void
@@ -751,14 +759,18 @@ export async function calculateFitScores(
     }
 
     const reader = response.body?.getReader()
-    if (!reader) throw new Error("스트림을 읽을 수 없습니다")
+    if (!reader) {
+      throw new Error("스트림을 읽을 수 없습니다")
+    }
 
     const decoder = new TextDecoder()
     let buffer = ""
 
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        break
+      }
 
       buffer += decoder.decode(value, { stream: true })
 
@@ -799,7 +811,7 @@ export async function calculateFitScores(
 // Lead Enrichment API (Lead Discovery 전용)
 // ============================================
 
-export interface EnrichmentResult {
+export type EnrichmentResult = {
   // 기본 정보
   foundCompanyName?: string
   description?: string
@@ -827,13 +839,13 @@ export interface EnrichmentResult {
   industryTypes?: string
 }
 
-export interface EnrichLeadRequest {
+export type EnrichLeadRequest = {
   webAddress: string
   companyName: string
   workspaceId: string
 }
 
-export interface EnrichLeadResponse {
+export type EnrichLeadResponse = {
   success: boolean
   data: EnrichmentResult | null
   error?: string
@@ -863,8 +875,8 @@ const transformWebExtractionData = (data: Record<string, unknown>): EnrichmentRe
 })
 
 // 데이터에 유효한 값이 있는지 확인
-const hasValidData = (data: EnrichmentResult): boolean => {
-  return !!(
+const hasValidData = (data: EnrichmentResult): boolean =>
+  !!(
     data.description ||
     data.email ||
     data.phoneNumber ||
@@ -872,7 +884,6 @@ const hasValidData = (data: EnrichmentResult): boolean => {
     data.products ||
     data.businessSectors
   )
-}
 
 // 단일 리드 enrichment (lead-discovery 전용 API 사용)
 export const enrichLead = async (
@@ -1006,7 +1017,7 @@ export const enrichLeads = async (
 // Load More Results (더 가져오기)
 // ============================================
 
-interface LoadMoreResponse {
+type LoadMoreResponse = {
   success: boolean
   results?: BigQueryResult[]
   hasMore?: boolean
@@ -1023,8 +1034,8 @@ interface LoadMoreResponse {
  */
 export async function loadMoreResults(
   sessionId: string,
-  offset: number = 100,
-  limit: number = 100,
+  offset = 100,
+  limit = 100,
 ): Promise<LoadMoreResponse> {
   console.log(
     `[load-more] Loading more results: sessionId=${sessionId}, offset=${offset}, limit=${limit}`,

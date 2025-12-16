@@ -22,7 +22,7 @@ import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
 
-interface BulkActionModalProps {
+type BulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (actionType: string, value: string | string[]) => void
@@ -56,7 +56,9 @@ export function BulkActionModal({
   const workspaceSelectId = useId()
 
   const handleConfirm = () => {
-    if (!actionType || !selectedValue) return
+    if (!(actionType && selectedValue)) {
+      return
+    }
 
     onConfirm(actionType, selectedValue)
     setSelectedValue("")
@@ -184,7 +186,7 @@ export function BulkActionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog onOpenChange={handleClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
@@ -195,7 +197,7 @@ export function BulkActionModal({
           {actionType === "status" && (
             <div className="space-y-2">
               <Label htmlFor={statusSelectId}>상태 선택</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger id={statusSelectId}>
                   <SelectValue placeholder="상태를 선택하세요" />
                 </SelectTrigger>
@@ -215,9 +217,9 @@ export function BulkActionModal({
               <Label htmlFor={businessTypeInputId}>업종</Label>
               <Input
                 id={businessTypeInputId}
-                value={selectedValue}
                 onChange={(e) => setSelectedValue(e.target.value)}
                 placeholder="업종을 입력하세요 (예: IT, 제조업, 서비스업)"
+                value={selectedValue}
               />
             </div>
           )}
@@ -227,7 +229,7 @@ export function BulkActionModal({
               {workspaces.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor={workspaceSelectId}>워크스페이스 선택</Label>
-                  <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+                  <Select onValueChange={setSelectedWorkspaceId} value={selectedWorkspaceId}>
                     <SelectTrigger id={workspaceSelectId}>
                       <SelectValue placeholder="워크스페이스를 선택하세요" />
                     </SelectTrigger>
@@ -240,14 +242,14 @@ export function BulkActionModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     💡 워크스페이스를 선택하면 해당 워크스페이스의 그룹만 표시됩니다.
                   </p>
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor={groupSelectId}>대상 고객 그룹</Label>
-                <Select value={selectedValue} onValueChange={setSelectedValue}>
+                <Select onValueChange={setSelectedValue} value={selectedValue}>
                   <SelectTrigger id={groupSelectId}>
                     <SelectValue
                       placeholder={isLoadingGroups ? "그룹 로딩 중..." : "그룹을 선택하세요"}
@@ -271,7 +273,7 @@ export function BulkActionModal({
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   💡 선택한 리드들이 해당 그룹에 추가됩니다 (기존 그룹 소속 유지)
                 </p>
               </div>
@@ -280,10 +282,10 @@ export function BulkActionModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button onClick={handleClose} variant="outline">
             취소
           </Button>
-          <Button onClick={handleConfirm} disabled={!selectedValue}>
+          <Button disabled={!selectedValue} onClick={handleConfirm}>
             확인
           </Button>
         </DialogFooter>

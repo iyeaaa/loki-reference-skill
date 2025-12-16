@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-interface UseTypingEffectOptions {
+type UseTypingEffectOptions = {
   text: string
   speed?: number // milliseconds per character
   enabled?: boolean
@@ -48,10 +48,9 @@ export function useTypingEffect({
         previousTextRef.current = text
       })
       return
-    } else {
-      // New text or text changed completely, start from beginning
-      setDisplayedText("")
     }
+    // New text or text changed completely, start from beginning
+    setDisplayedText("")
 
     previousTextRef.current = text
 

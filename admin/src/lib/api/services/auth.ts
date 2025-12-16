@@ -9,31 +9,27 @@ import type {
   UpdateProfileResponse,
 } from "../types"
 export const authApi = {
-  login: (credentials: LoginRequest) => {
-    return apiFetch<AuthResponse>("/api/v1/auth/login", {
+  login: (credentials: LoginRequest) =>
+    apiFetch<AuthResponse>("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify(credentials),
-    })
-  },
+    }),
 
-  signup: (data: SignupRequest) => {
-    return apiFetch<SignupResponse>("/api/v1/auth/signup", {
+  signup: (data: SignupRequest) =>
+    apiFetch<SignupResponse>("/api/v1/auth/signup", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  verify: () => {
-    return apiFetch<{ user: AuthUser }>("/api/v1/auth/verify", {
+  verify: () =>
+    apiFetch<{ user: AuthUser }>("/api/v1/auth/verify", {
       method: "POST",
-    })
-  },
+    }),
 
-  refresh: () => {
-    return apiFetch<{ token: string }>("/api/v1/auth/refresh", {
+  refresh: () =>
+    apiFetch<{ token: string }>("/api/v1/auth/refresh", {
       method: "POST",
-    })
-  },
+    }),
 
   logout: () => {
     removeToken()
@@ -47,7 +43,9 @@ export const authApi = {
 
   getStoredUser: (): AuthUser | null => {
     const userStr = localStorage.getItem("user")
-    if (!userStr) return null
+    if (!userStr) {
+      return null
+    }
     try {
       return JSON.parse(userStr) as AuthUser
     } catch {
@@ -55,37 +53,33 @@ export const authApi = {
     }
   },
 
-  updateProfile: (data: UpdateProfileRequest) => {
-    return apiFetch<UpdateProfileResponse>("/api/v1/auth/profile", {
+  updateProfile: (data: UpdateProfileRequest) =>
+    apiFetch<UpdateProfileResponse>("/api/v1/auth/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   // Google OAuth methods
-  getGoogleAuthUrl: () => {
-    return apiFetch<{ authUrl: string }>("/api/v1/auth/google", {
+  getGoogleAuthUrl: () =>
+    apiFetch<{ authUrl: string }>("/api/v1/auth/google", {
       method: "GET",
-    })
-  },
+    }),
 
-  googleCallback: (code: string) => {
-    return apiFetch<AuthResponse>("/api/v1/auth/google/callback", {
+  googleCallback: (code: string) =>
+    apiFetch<AuthResponse>("/api/v1/auth/google/callback", {
       method: "POST",
       body: JSON.stringify({ code }),
-    })
-  },
+    }),
 
-  verifyGoogleToken: (idToken: string) => {
-    return apiFetch<AuthResponse>("/api/v1/auth/google/verify", {
+  verifyGoogleToken: (idToken: string) =>
+    apiFetch<AuthResponse>("/api/v1/auth/google/verify", {
       method: "POST",
       body: JSON.stringify({ idToken }),
-    })
-  },
+    }),
 
   // Account deletion methods
-  checkDeletionEligibility: () => {
-    return apiFetch<{
+  checkDeletionEligibility: () =>
+    apiFetch<{
       canDelete: boolean
       ownedWorkspaces: Array<{
         id: string
@@ -95,15 +89,13 @@ export const authApi = {
       }>
       workspacesRequiringTransfer: Array<{ id: string; name: string; memberCount: number }>
       workspacesToBeDeleted: Array<{ id: string; name: string }>
-    }>("/api/v1/auth/account/deletion-check")
-  },
+    }>("/api/v1/auth/account/deletion-check"),
 
-  deleteAccount: () => {
-    return apiFetch<{
+  deleteAccount: () =>
+    apiFetch<{
       message: string
       deletedWorkspaces?: Array<{ id: string; name: string }>
     }>("/api/v1/auth/account", {
       method: "DELETE",
-    })
-  },
+    }),
 }

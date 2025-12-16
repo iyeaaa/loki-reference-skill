@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx"
 
-export interface LeadCSVData {
+export type LeadCSVData = {
   companyName: string
   foundCompanyName?: string
   contactName?: string
@@ -59,7 +59,9 @@ export function parseXLSX(file: File): Promise<LeadCSVData[]> {
 
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i]
-          if (row.length === 0) continue
+          if (row.length === 0) {
+            continue
+          }
 
           const lead: LeadCSVData = {
             companyName: row[0] || "",
@@ -68,7 +70,9 @@ export function parseXLSX(file: File): Promise<LeadCSVData[]> {
           // 헤더 매핑 (CSV 파싱과 동일한 로직)
           headers.forEach((header, index) => {
             const value = row[index]
-            if (!value) return
+            if (!value) {
+              return
+            }
 
             const lowerHeader = header.toLowerCase()
 
@@ -83,7 +87,7 @@ export function parseXLSX(file: File): Promise<LeadCSVData[]> {
             } else if (lowerHeader.includes("employee") || lowerHeader.includes("직원")) {
               lead.employeeCount = value
             } else if (lowerHeader.includes("founded") || lowerHeader.includes("설립")) {
-              lead.foundedYear = parseInt(value, 10) || undefined
+              lead.foundedYear = Number.parseInt(value, 10) || undefined
             } else if (lowerHeader.includes("country") || lowerHeader.includes("국가")) {
               lead.country = value
             } else if (lowerHeader.includes("city") || lowerHeader.includes("도시")) {
@@ -112,7 +116,7 @@ export function parseXLSX(file: File): Promise<LeadCSVData[]> {
                 lead.leadStatus = value.toLowerCase() as LeadCSVData["leadStatus"]
               }
             } else if (lowerHeader.includes("score") || lowerHeader.includes("점수")) {
-              lead.leadScore = parseInt(value, 10) || undefined
+              lead.leadScore = Number.parseInt(value, 10) || undefined
             } else if (
               lowerHeader.includes("contact") ||
               lowerHeader.includes("담당자") ||
@@ -187,7 +191,9 @@ export function parseCSV(csvText: string): LeadCSVData[] {
   console.log("Total lines:", lines.length)
   console.log("First line:", lines[0])
 
-  if (lines.length < 2) return []
+  if (lines.length < 2) {
+    return []
+  }
 
   // 더 견고한 CSV 파싱 (쉼표로만 분리하지 않고 따옴표 처리)
   const parseCSVLine = (line: string): string[] => {
@@ -232,7 +238,9 @@ export function parseCSV(csvText: string): LeadCSVData[] {
     // 헤더 매핑
     headers.forEach((header, index) => {
       const value = values[index]
-      if (!value) return
+      if (!value) {
+        return
+      }
 
       const lowerHeader = header.toLowerCase()
 
@@ -247,7 +255,7 @@ export function parseCSV(csvText: string): LeadCSVData[] {
       } else if (lowerHeader.includes("employee") || lowerHeader.includes("직원")) {
         lead.employeeCount = value // 문자열로 저장
       } else if (lowerHeader.includes("founded") || lowerHeader.includes("설립")) {
-        lead.foundedYear = parseInt(value, 10) || undefined
+        lead.foundedYear = Number.parseInt(value, 10) || undefined
       } else if (lowerHeader.includes("country") || lowerHeader.includes("국가")) {
         lead.country = value
       } else if (lowerHeader.includes("city") || lowerHeader.includes("도시")) {
@@ -276,7 +284,7 @@ export function parseCSV(csvText: string): LeadCSVData[] {
           lead.leadStatus = value.toLowerCase() as LeadCSVData["leadStatus"]
         }
       } else if (lowerHeader.includes("score") || lowerHeader.includes("점수")) {
-        lead.leadScore = parseInt(value, 10) || undefined
+        lead.leadScore = Number.parseInt(value, 10) || undefined
       } else if (
         lowerHeader.includes("contact") ||
         lowerHeader.includes("담당자") ||

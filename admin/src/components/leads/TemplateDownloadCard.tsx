@@ -23,7 +23,7 @@ import {
   generateSimpleXLSXTemplate,
 } from "@/lib/csv-utils"
 
-interface TemplateOption {
+type TemplateOption = {
   id: "simple" | "detailed"
   name: string
   description: string
@@ -72,7 +72,7 @@ function downloadFile(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-interface TemplateCardProps {
+type TemplateCardProps = {
   template: TemplateOption
   onDownload: (templateId: "simple" | "detailed", format: "csv" | "xlsx") => void
 }
@@ -83,13 +83,13 @@ function TemplateCard({ template, onDownload }: TemplateCardProps) {
       className={`relative ${template.recommended ? "border-primary ring-1 ring-primary/20" : ""}`}
     >
       {template.recommended && (
-        <Badge className="absolute -top-2 left-4 bg-primary">
+        <Badge className="-top-2 absolute left-4 bg-primary">
           <Sparkles className="mr-1 h-3 w-3" />
           추천
         </Badge>
       )}
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <FileSpreadsheet className="h-5 w-5 text-primary" />
           {template.name}
         </CardTitle>
@@ -98,15 +98,15 @@ function TemplateCard({ template, onDownload }: TemplateCardProps) {
       <CardContent className="space-y-4">
         {/* 포함된 필드 목록 */}
         <div>
-          <h4 className="text-sm font-medium mb-2">포함된 필드:</h4>
+          <h4 className="mb-2 font-medium text-sm">포함된 필드:</h4>
           <div className="flex flex-wrap gap-1.5">
             {template.fields.map((field, idx) => (
               <Badge
-                key={field}
-                variant={idx < 5 ? "default" : "secondary"}
                 className={
                   idx < 5 ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : ""
                 }
+                key={field}
+                variant={idx < 5 ? "default" : "secondary"}
               >
                 {idx < 3 && <Check className="mr-1 h-3 w-3" />}
                 {field}
@@ -163,9 +163,9 @@ export function TemplateDownloadCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {TEMPLATE_OPTIONS.map((template) => (
-            <TemplateCard key={template.id} template={template} onDownload={handleDownload} />
+            <TemplateCard key={template.id} onDownload={handleDownload} template={template} />
           ))}
         </div>
       </CardContent>
@@ -198,29 +198,29 @@ export function TemplateDownloadButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button size="sm" variant="outline">
           <Download className="mr-2 h-4 w-4" />
           템플릿 다운로드
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <div className="px-2 py-1.5">
-          <p className="text-xs text-muted-foreground mb-2">템플릿 선택</p>
+          <p className="mb-2 text-muted-foreground text-xs">템플릿 선택</p>
           <div className="space-y-1">
             {TEMPLATE_OPTIONS.map((template) => (
               <button
-                type="button"
-                key={template.id}
-                className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors ${
+                className={`w-full rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted ${
                   selectedTemplate === template.id ? "bg-muted" : ""
                 }`}
+                key={template.id}
                 onClick={() => setSelectedTemplate(template.id)}
+                type="button"
               >
                 <div className="flex items-center justify-between">
                   <span>{template.name}</span>
                   {selectedTemplate === template.id && <Check className="h-4 w-4 text-primary" />}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {template.fields.length}개 필드
                 </span>
               </button>
@@ -228,22 +228,22 @@ export function TemplateDownloadButton() {
           </div>
         </div>
         <div className="border-t px-2 py-1.5">
-          <p className="text-xs text-muted-foreground mb-2">다운로드 형식</p>
+          <p className="mb-2 text-muted-foreground text-xs">다운로드 형식</p>
           <div className="flex gap-2">
             <Button
-              size="sm"
-              variant="outline"
               className="flex-1"
               onClick={() => handleDownload("xlsx")}
+              size="sm"
+              variant="outline"
             >
               <FileSpreadsheet className="mr-1 h-4 w-4" />
               Excel
             </Button>
             <Button
-              size="sm"
-              variant="outline"
               className="flex-1"
               onClick={() => handleDownload("csv")}
+              size="sm"
+              variant="outline"
             >
               <FileText className="mr-1 h-4 w-4" />
               CSV

@@ -2,7 +2,7 @@
 
 export type EmailAccountStatus = "active" | "inactive" | "error" | "rate_limited" | "suspended"
 
-export interface UserEmailAccount {
+export type UserEmailAccount = {
   id: string
   userId: string
   workspaceId: string
@@ -33,7 +33,7 @@ export interface UserEmailAccount {
   workspaceName?: string
 }
 
-export interface CreateEmailAccountRequest {
+export type CreateEmailAccountRequest = {
   userId: string
   workspaceId: string
   emailAddress: string
@@ -47,7 +47,7 @@ export interface CreateEmailAccountRequest {
   status?: EmailAccountStatus
 }
 
-export interface UpdateEmailAccountRequest {
+export type UpdateEmailAccountRequest = {
   emailAddress: string
   displayName?: string | null
   apiKey: string
@@ -59,14 +59,14 @@ export interface UpdateEmailAccountRequest {
   status: EmailAccountStatus
 }
 
-export interface EmailAccountsResponse {
+export type EmailAccountsResponse = {
   data: UserEmailAccount[]
   total: number
   limit: number
   offset: number
 }
 
-export interface EmailAccountsParams {
+export type EmailAccountsParams = {
   page?: number
   limit?: number
   status?: EmailAccountStatus | "all"
@@ -77,16 +77,16 @@ export interface EmailAccountsParams {
   workspaceIds?: string[]
 }
 
-export interface SetAsDefaultRequest {
+export type SetAsDefaultRequest = {
   userId: string
   workspaceId: string
 }
 
-export interface UpdateErrorRequest {
+export type UpdateErrorRequest = {
   errorMessage: string
 }
 
-export interface BulkUpdateEmailAccountStatusRequest {
+export type BulkUpdateEmailAccountStatusRequest = {
   accountIds: string[]
   status: EmailAccountStatus
 }

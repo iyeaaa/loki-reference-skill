@@ -2,7 +2,7 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
-interface RepliedEmailFiltersProps {
+type RepliedEmailFiltersProps = {
   selectedStatuses: string[]
   onStatusChange: (statuses: string[]) => void
   onClearFilters: () => void
@@ -61,22 +61,22 @@ export function RepliedEmailFilters({
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedStatuses.map((status) => {
                 const statusLabel = statuses.find((s) => s.value === status)?.label || status
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300"
                     key={status}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full"
                   >
                     상태: {statusLabel}
                     <button
-                      type="button"
-                      onClick={() => toggleStatus(status)}
                       className="ml-1 hover:text-green-600 dark:hover:text-green-200"
+                      onClick={() => toggleStatus(status)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -87,9 +87,9 @@ export function RepliedEmailFilters({
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               필터 초기화
             </Button>
           </div>

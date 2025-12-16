@@ -14,13 +14,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
-export interface MultiSelectOption {
+export type MultiSelectOption = {
   value: string
   label: string
   sublabel?: string
 }
 
-interface MultiSelectComboboxProps {
+type MultiSelectComboboxProps = {
   options: MultiSelectOption[]
   value?: string[]
   onValueChange?: (value: string[]) => void
@@ -49,7 +49,9 @@ export function MultiSelectCombobox({
   const selectedOptions = options.filter((option) => value.includes(option.value))
 
   const filteredOptions = React.useMemo(() => {
-    if (!searchValue) return options
+    if (!searchValue) {
+      return options
+    }
 
     const searchLower = searchValue.toLowerCase()
     return options.filter(
@@ -77,30 +79,25 @@ export function MultiSelectCombobox({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between min-h-10 h-auto", className)}
+          className={cn("h-auto min-h-10 w-full justify-between", className)}
           disabled={disabled}
+          role="combobox"
+          variant="outline"
         >
-          <div className="flex flex-wrap gap-1 flex-1">
+          <div className="flex flex-1 flex-wrap gap-1">
             {selectedOptions.length > 0 ? (
               selectedOptions.length <= 3 ? (
                 selectedOptions.map((option) => (
-                  <Badge key={option.value} variant="outline" className="mr-1">
+                  <Badge className="mr-1" key={option.value} variant="outline">
                     {option.label}
                     {/* biome-ignore lint/a11y/useSemanticElements: Avoiding nested button elements */}
                     <span
-                      role="button"
-                      tabIndex={0}
-                      className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0 inline-flex items-center"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                      }}
+                      aria-label={`Remove ${option.label}`}
+                      className="ml-1 inline-flex cursor-pointer items-center rounded-full border-0 bg-transparent p-0 outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       onClick={(e) => handleRemove(option.value, e)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -108,24 +105,24 @@ export function MultiSelectCombobox({
                           handleRemove(option.value, e)
                         }
                       }}
-                      aria-label={`Remove ${option.label}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </span>
                   </Badge>
                 ))
               ) : (
-                <Badge variant="outline" className="mr-1">
+                <Badge className="mr-1" variant="outline">
                   {selectedOptions.length}개 선택됨
                   {/* biome-ignore lint/a11y/useSemanticElements: Avoiding nested button elements */}
                   <span
-                    role="button"
-                    tabIndex={0}
-                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0 inline-flex items-center"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
+                    aria-label="Clear all selections"
+                    className="ml-1 inline-flex cursor-pointer items-center rounded-full border-0 bg-transparent p-0 outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     onClick={handleClear}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -133,7 +130,12 @@ export function MultiSelectCombobox({
                         handleClear(e)
                       }
                     }}
-                    aria-label="Clear all selections"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </span>
@@ -146,12 +148,12 @@ export function MultiSelectCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-white dark:bg-gray-950 border" align="start">
-        <Command shouldFilter={false} className="bg-white dark:bg-gray-950">
+      <PopoverContent align="start" className="w-full border bg-white p-0 dark:bg-gray-950">
+        <Command className="bg-white dark:bg-gray-950" shouldFilter={false}>
           <CommandInput
+            onValueChange={setSearchValue}
             placeholder={searchPlaceholder}
             value={searchValue}
-            onValueChange={setSearchValue}
           />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
@@ -159,6 +161,7 @@ export function MultiSelectCombobox({
               <CommandGroup>
                 {filteredOptions.length > 0 && (
                   <CommandItem
+                    className="font-semibold"
                     onSelect={() => {
                       if (value.length === filteredOptions.length) {
                         onValueChange?.([])
@@ -166,7 +169,6 @@ export function MultiSelectCombobox({
                         onValueChange?.(filteredOptions.map((o) => o.value))
                       }
                     }}
-                    className="font-semibold"
                   >
                     <Check
                       className={cn(
@@ -180,9 +182,9 @@ export function MultiSelectCombobox({
                 {filteredOptions.map((option) => (
                   <CommandItem
                     key={option.value}
-                    value={option.value}
                     keywords={[option.label, option.sublabel || ""]}
                     onSelect={() => handleSelect(option.value)}
+                    value={option.value}
                   >
                     <Check
                       className={cn(

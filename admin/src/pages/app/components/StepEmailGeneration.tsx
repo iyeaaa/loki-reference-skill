@@ -39,13 +39,16 @@ export function StepEmailGeneration() {
   const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
 
   // Get lead IDs from DB onboarding progress
-  const leadIds = useMemo<string[]>(() => {
-    return onboardingProgress?.selectedLeadIds || []
-  }, [onboardingProgress])
+  const leadIds = useMemo<string[]>(
+    () => onboardingProgress?.selectedLeadIds || [],
+    [onboardingProgress],
+  )
 
   // Map emails from DB to display format
   const emails = useMemo(() => {
-    if (!emailsData?.emails) return []
+    if (!emailsData?.emails) {
+      return []
+    }
     return emailsData.emails.map((email) => ({
       id: email.id,
       subject: email.subject || "",
@@ -66,7 +69,9 @@ export function StepEmailGeneration() {
 
   // Poll for emails if not yet available
   useEffect(() => {
-    if (isGenerationComplete || isLoadingEmails) return
+    if (isGenerationComplete || isLoadingEmails) {
+      return
+    }
 
     // Not complete yet, poll for updates
     const pollInterval = setInterval(() => {
@@ -88,14 +93,14 @@ export function StepEmailGeneration() {
     emails.length > 0 && leadCount > 0 ? Math.ceil(emails.length / leadCount) : emails.length
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-purple-500" />
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Sparkles className="h-6 w-6 text-purple-500" />
             {t("app.onboarding.step3.generatingTitle", "AI 이메일 생성 중")}
           </CardTitle>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600 text-sm">
             {t(
               "app.onboarding.step3.generatingDescription",
               "잠재 고객에게 보낼 맞춤형 이메일을 생성하고 있습니다",
@@ -105,22 +110,22 @@ export function StepEmailGeneration() {
         <CardContent className="space-y-6">
           {isLoadingEmails || !isGenerationComplete ? (
             // Generating state - waiting for backend auto-generation
-            <div className="py-8 space-y-6">
+            <div className="space-y-6 py-8">
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
                 </div>
-                <p className="text-lg font-medium text-gray-900">
+                <p className="font-medium text-gray-900 text-lg">
                   {t("app.onboarding.step3.generating", "생성 중...")}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="mt-1 text-gray-500 text-sm">
                   {isKorean
                     ? "AI가 이메일을 생성하고 있습니다. 잠시만 기다려주세요..."
                     : "AI is generating emails. Please wait..."}
                 </p>
               </div>
-              <Progress value={isLoadingEmails ? 40 : 80} className="h-2" />
-              <p className="text-center text-sm text-gray-500">
+              <Progress className="h-2" value={isLoadingEmails ? 40 : 80} />
+              <p className="text-center text-gray-500 text-sm">
                 {isKorean
                   ? "리드 탐색 및 이메일 템플릿 생성 중..."
                   : "Discovering leads and generating email templates..."}
@@ -130,22 +135,22 @@ export function StepEmailGeneration() {
               <div className="flex justify-end pt-4">
                 <Button onClick={handleNext} variant="outline">
                   {isKorean ? "건너뛰기" : "Skip"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           ) : (
             // Generation complete - show results
             <div className="space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-green-600" />
                 <div>
                   <p className="font-medium text-green-800">
                     {isKorean
                       ? `${emails.length}개 이메일이 생성되었습니다`
                       : `${emails.length} emails generated successfully`}
                   </p>
-                  <p className="text-sm text-green-600 mt-1">
+                  <p className="mt-1 text-green-600 text-sm">
                     {leadCount > 0
                       ? isKorean
                         ? `${leadCount}개 리드 × ${templateCount}개 템플릿`
@@ -160,30 +165,30 @@ export function StepEmailGeneration() {
               {/* Email preview - show first 3 samples */}
               {emails.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
+                  <h3 className="flex items-center gap-2 font-medium text-gray-900">
+                    <Mail className="h-4 w-4" />
                     {isKorean ? "이메일 미리보기 (샘플)" : "Email Preview (Samples)"}
                   </h3>
                   {emails.slice(0, 3).map((email) => (
                     <button
-                      type="button"
+                      className="w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100"
                       key={email.id}
-                      className="w-full text-left p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => setShowFullEmail(true)}
+                      type="button"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs text-blue-600 font-medium">{email.leadName}</p>
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="font-medium text-blue-600 text-xs">{email.leadName}</p>
                       </div>
-                      <p className="font-medium text-gray-900 mb-2 text-sm">
+                      <p className="mb-2 font-medium text-gray-900 text-sm">
                         {isKorean ? "제목:" : "Subject:"} {email.subject}
                       </p>
-                      <p className="text-sm text-gray-600 whitespace-pre-line line-clamp-3">
+                      <p className="line-clamp-3 whitespace-pre-line text-gray-600 text-sm">
                         {email.body}
                       </p>
                     </button>
                   ))}
                   {emails.length > 3 && (
-                    <p className="text-sm text-gray-500 text-center">
+                    <p className="text-center text-gray-500 text-sm">
                       {isKorean
                         ? `+${emails.length - 3}개 이메일 더 있음`
                         : `+${emails.length - 3} more emails`}
@@ -192,47 +197,47 @@ export function StepEmailGeneration() {
 
                   {/* View All Button */}
                   <button
-                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 p-3 text-center text-blue-600 text-sm transition-colors hover:bg-gray-50"
                     onClick={() => setShowFullEmail(true)}
-                    className="w-full p-3 border border-gray-200 rounded-lg text-center text-sm text-blue-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                    type="button"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="h-4 w-4" />
                     {isKorean ? "전체 이메일 보기" : "View All Emails"}
                   </button>
 
                   {/* Full Email Dialog - Show All Emails */}
-                  <Dialog open={showFullEmail} onOpenChange={setShowFullEmail}>
-                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                  <Dialog onOpenChange={setShowFullEmail} open={showFullEmail}>
+                    <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                          <Mail className="w-5 h-5 text-blue-600" />
+                          <Mail className="h-5 w-5 text-blue-600" />
                           {isKorean
                             ? `전체 이메일 보기 (${emails.length}개)`
                             : `All Emails (${emails.length})`}
                         </DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto">
+                      <div className="max-h-[60vh] space-y-4 overflow-y-auto pt-4">
                         {emails.map((email, index) => (
                           <div
+                            className="rounded-lg border border-gray-200 bg-gray-50 p-4"
                             key={email.id}
-                            className="p-4 bg-gray-50 rounded-lg border border-gray-200"
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-blue-600">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="font-medium text-blue-600 text-xs">
                                 #{index + 1} - {email.leadName}
                               </span>
                             </div>
                             <div className="mb-2">
-                              <p className="text-xs text-gray-500 mb-1">
+                              <p className="mb-1 text-gray-500 text-xs">
                                 {isKorean ? "제목" : "Subject"}
                               </p>
                               <p className="font-medium text-gray-900 text-sm">{email.subject}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500 mb-1">
+                              <p className="mb-1 text-gray-500 text-xs">
                                 {isKorean ? "본문" : "Body"}
                               </p>
-                              <p className="text-gray-800 whitespace-pre-line text-sm leading-relaxed line-clamp-6">
+                              <p className="line-clamp-6 whitespace-pre-line text-gray-800 text-sm leading-relaxed">
                                 {email.body}
                               </p>
                             </div>
@@ -246,9 +251,9 @@ export function StepEmailGeneration() {
 
               {/* Next Button */}
               <div className="flex justify-end pt-4">
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
                   {t("app.onboarding.step1.nextButton", "다음 단계")}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>

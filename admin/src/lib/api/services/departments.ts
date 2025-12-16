@@ -3,31 +3,24 @@ import type { DepartmentCreateRequest, DepartmentUpdateRequest } from "../types/
 import type { Department } from "../types/user"
 
 export const departmentsApi = {
-  list: () => {
-    return apiFetch<Department[]>("/api/v1/departments")
-  },
+  list: () => apiFetch<Department[]>("/api/v1/departments"),
 
-  get: (id: string) => {
-    return apiFetch<Department>(`/api/v1/departments/${id}`)
-  },
+  get: (id: string) => apiFetch<Department>(`/api/v1/departments/${id}`),
 
-  create: (data: DepartmentCreateRequest) => {
-    return apiFetch<Department>("/api/v1/departments", {
+  create: (data: DepartmentCreateRequest) =>
+    apiFetch<Department>("/api/v1/departments", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (id: string, data: DepartmentUpdateRequest) => {
-    return apiFetch<Department>(`/api/v1/departments/${id}`, {
+  update: (id: string, data: DepartmentUpdateRequest) =>
+    apiFetch<Department>(`/api/v1/departments/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (id: string) => {
-    return apiFetch(`/api/v1/departments/${id}`, {
+  delete: (id: string) =>
+    apiFetch(`/api/v1/departments/${id}`, {
       method: "DELETE",
-    })
-  },
+    }),
 }

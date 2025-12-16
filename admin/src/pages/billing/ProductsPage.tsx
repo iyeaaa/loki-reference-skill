@@ -130,14 +130,20 @@ export default function ProductsPage() {
   }
 
   const handleUpdateProduct = async (data: CreateBillingProductRequest) => {
-    if (!editingProduct) return
+    if (!editingProduct) {
+      return
+    }
     await updateProduct.mutateAsync({ productId: editingProduct.id, data })
     setEditingProduct(null)
   }
 
   const handleDeleteSelected = async () => {
-    if (selectedProducts.length === 0) return
-    if (!confirm(`선택한 ${selectedProducts.length}개의 상품을 삭제하시겠습니까?`)) return
+    if (selectedProducts.length === 0) {
+      return
+    }
+    if (!confirm(`선택한 ${selectedProducts.length}개의 상품을 삭제하시겠습니까?`)) {
+      return
+    }
 
     for (const id of selectedProducts) {
       await deleteProduct.mutateAsync(id)
@@ -152,11 +158,11 @@ export default function ProductsPage() {
       minWidth: "180px",
       render: (item) => (
         <div className="max-w-[180px]">
-          <div className="font-medium text-gray-900 dark:text-gray-100 truncate" title={item.name}>
+          <div className="truncate font-medium text-gray-900 dark:text-gray-100" title={item.name}>
             {item.name}
           </div>
           {item.description && (
-            <div className="text-xs text-gray-500 line-clamp-2" title={item.description}>
+            <div className="line-clamp-2 text-gray-500 text-xs" title={item.description}>
               {item.description}
             </div>
           )}
@@ -171,8 +177,8 @@ export default function ProductsPage() {
         const variant = SUBSCRIPTION_TIER_VARIANTS[item.tier]
         return (
           <Badge
-            variant={variant === "success" ? "default" : "outline"}
             className={`text-xs ${variant === "warning" ? "bg-yellow-100 text-yellow-800" : ""}`}
+            variant={variant === "success" ? "default" : "outline"}
           >
             {SUBSCRIPTION_TIER_LABELS[item.tier]}
           </Badge>
@@ -184,7 +190,7 @@ export default function ProductsPage() {
       header: "상태",
       width: "70px",
       render: (item) => (
-        <Badge variant={item.isActive ? "default" : "secondary"} className="text-xs">
+        <Badge className="text-xs" variant={item.isActive ? "default" : "secondary"}>
           {item.isActive ? "활성" : "비활성"}
         </Badge>
       ),
@@ -212,18 +218,18 @@ export default function ProductsPage() {
       header: "기능",
       minWidth: "180px",
       render: (item) => (
-        <div className="flex flex-wrap gap-1 max-w-[180px]">
+        <div className="flex max-w-[180px] flex-wrap gap-1">
           {(item.features || []).slice(0, 3).map((feature, idx) => (
             <span
+              className="inline-block max-w-[55px] truncate rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-700"
               key={idx}
-              className="inline-block px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded truncate max-w-[55px]"
               title={feature}
             >
               {feature}
             </span>
           ))}
           {(item.features || []).length > 3 && (
-            <span className="text-xs text-gray-500">+{item.features.length - 3}</span>
+            <span className="text-gray-500 text-xs">+{item.features.length - 3}</span>
           )}
         </div>
       ),
@@ -233,7 +239,7 @@ export default function ProductsPage() {
       header: "수정일",
       width: "80px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {formatRelativeTime(item.updatedAt)}
         </span>
       ),
@@ -246,33 +252,33 @@ export default function ProductsPage() {
       render: (item) => (
         <div className="flex gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => setViewingProduct(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="상세 보기"
+            variant="outline"
           >
             <Eye className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => setEditingProduct(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="수정"
+            variant="outline"
           >
             <Edit className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-red-600 text-xs hover:text-red-700"
             onClick={() => {
               if (confirm("이 상품을 삭제하시겠습니까?")) {
                 deleteProduct.mutate(item.id)
               }
             }}
-            className="text-xs h-7 w-7 p-0 text-red-600 hover:text-red-700"
+            size="sm"
             title="삭제"
+            variant="outline"
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -282,13 +288,13 @@ export default function ProductsPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <DataFilters
         filters={filterConfigs}
-        values={filterValues}
         onChange={updateFilter}
         onClear={clearFilters}
+        values={filterValues}
       />
 
       {/* Products Table */}
@@ -297,7 +303,7 @@ export default function ProductsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">상품</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />새 상품
+              <Plus className="mr-1 h-4 w-4" />새 상품
             </Button>
           </div>
         </CardHeader>
@@ -305,72 +311,72 @@ export default function ProductsPage() {
           {/* Search */}
           <div className="mb-4">
             <SearchInput
-              value={searchQuery}
               onChange={handleSearch}
               placeholder="상품명, 설명으로 검색..."
+              value={searchQuery}
             />
           </div>
 
           {/* Bulk Actions */}
           <BulkActionsBar
-            selectedCount={selectedProducts.length}
             actions={[
               {
                 id: "delete",
                 label: "삭제",
-                icon: <Trash2 className="h-4 w-4 mr-1" />,
+                icon: <Trash2 className="mr-1 h-4 w-4" />,
                 variant: "destructive",
                 onClick: handleDeleteSelected,
               },
             ]}
+            selectedCount={selectedProducts.length}
           />
 
           {/* Table */}
           <DataTable
-            data={products}
             columns={columns}
-            pagination={pagination}
-            isLoading={isFetching}
-            selectable
-            selectedIds={selectedProducts}
+            data={products}
+            emptyMessage="아직 상품이 없어요"
             getItemId={(item) => item.id}
+            isLoading={isFetching}
+            onPageChange={handlePageChange}
             onToggleSelect={handleToggleSelect}
             onToggleSelectAll={handleToggleSelectAll}
-            onPageChange={handlePageChange}
-            emptyMessage="아직 상품이 없어요"
+            pagination={pagination}
+            selectable
+            selectedIds={selectedProducts}
           />
         </CardContent>
       </Card>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">새 상품</DialogTitle>
+      <Dialog onOpenChange={setIsCreateDialogOpen} open={isCreateDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">새 상품</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <ProductForm
-              onSave={handleCreateProduct}
-              onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createProduct.isPending}
+              onCancel={() => setIsCreateDialogOpen(false)}
+              onSave={handleCreateProduct}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">상품 편집</DialogTitle>
+      <Dialog onOpenChange={() => setEditingProduct(null)} open={!!editingProduct}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">상품 편집</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingProduct && (
               <ProductForm
-                product={editingProduct}
-                onSave={handleUpdateProduct}
-                onCancel={() => setEditingProduct(null)}
                 isLoading={updateProduct.isPending}
+                onCancel={() => setEditingProduct(null)}
+                onSave={handleUpdateProduct}
+                product={editingProduct}
               />
             )}
           </div>
@@ -378,22 +384,22 @@ export default function ProductsPage() {
       </Dialog>
 
       {/* View Dialog - Product Detail with Plans */}
-      <Dialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">상품 상세</DialogTitle>
+      <Dialog onOpenChange={() => setViewingProduct(null)} open={!!viewingProduct}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">상품 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {viewingProduct && (
               <div className="space-y-6">
                 {/* Product Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">상품명</span>
+                    <span className="font-medium text-gray-500 text-sm">상품명</span>
                     <p className="mt-1 font-medium">{viewingProduct.name}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">등급</span>
+                    <span className="font-medium text-gray-500 text-sm">등급</span>
                     <p className="mt-1">
                       <Badge variant="outline">
                         {SUBSCRIPTION_TIER_LABELS[viewingProduct.tier]}
@@ -401,11 +407,11 @@ export default function ProductsPage() {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-sm font-medium text-gray-500">설명</span>
+                    <span className="font-medium text-gray-500 text-sm">설명</span>
                     <p className="mt-1 text-gray-600">{viewingProduct.description || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">상태</span>
+                    <span className="font-medium text-gray-500 text-sm">상태</span>
                     <p className="mt-1">
                       <Badge variant={viewingProduct.isActive ? "default" : "secondary"}>
                         {viewingProduct.isActive ? "활성" : "비활성"}
@@ -413,20 +419,20 @@ export default function ProductsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">표시 순서</span>
+                    <span className="font-medium text-gray-500 text-sm">표시 순서</span>
                     <p className="mt-1">{viewingProduct.displayOrder}</p>
                   </div>
                 </div>
 
                 {/* Features */}
                 {viewingProduct.features && viewingProduct.features.length > 0 && (
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">기능</h4>
+                  <div className="border-t pt-4">
+                    <h4 className="mb-3 font-medium text-gray-700 text-sm">기능</h4>
                     <div className="flex flex-wrap gap-2">
                       {viewingProduct.features.map((feature, idx) => (
                         <span
+                          className="inline-block rounded bg-gray-100 px-2 py-1 text-sm dark:bg-gray-700"
                           key={idx}
-                          className="inline-block px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 rounded"
                         >
                           {feature}
                         </span>
@@ -436,42 +442,42 @@ export default function ProductsPage() {
                 )}
 
                 {/* Plans */}
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-sm font-medium text-gray-700">
+                <div className="border-t pt-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="font-medium text-gray-700 text-sm">
                       요금제 ({productPlans?.data?.length || 0}개)
                     </h4>
                     <Button
+                      onClick={() => setIsCreatePlanDialogOpen(true)}
                       size="sm"
                       variant="outline"
-                      onClick={() => setIsCreatePlanDialogOpen(true)}
                     >
-                      <Plus className="h-3 w-3 mr-1" />새 요금제
+                      <Plus className="mr-1 h-3 w-3" />새 요금제
                     </Button>
                   </div>
                   {productPlans?.data && productPlans.data.length > 0 ? (
                     <div className="space-y-2">
                       {productPlans.data.map((plan) => (
                         <div
+                          className="flex items-center justify-between rounded-lg border bg-gray-50 p-3 dark:bg-gray-800"
                           key={plan.id}
-                          className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border flex items-center justify-between"
                         >
                           <div>
-                            <div className="font-medium text-sm flex items-center gap-2">
+                            <div className="flex items-center gap-2 font-medium text-sm">
                               {plan.name}
                               <Badge
-                                variant={plan.planType === "recurring" ? "default" : "secondary"}
                                 className="text-xs"
+                                variant={plan.planType === "recurring" ? "default" : "secondary"}
                               >
                                 {PLAN_TYPE_LABELS[plan.planType]}
                               </Badge>
                               {!plan.isActive && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge className="text-xs" variant="outline">
                                   비활성
                                 </Badge>
                               )}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="mt-1 text-gray-500 text-xs">
                               {new Intl.NumberFormat("ko-KR", {
                                 style: "currency",
                                 currency: plan.currency,
@@ -484,19 +490,19 @@ export default function ProductsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">
+                            <span className="text-gray-400 text-xs">
                               {formatRelativeTime(plan.updatedAt)}
                             </span>
                             <Button
-                              size="sm"
-                              variant="ghost"
+                              className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
                               onClick={() => {
                                 if (confirm("이 요금제를 삭제하시겠습니까?")) {
                                   deletePlan.mutate(plan.id)
                                 }
                               }}
-                              className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              size="sm"
                               title="요금제 삭제"
+                              variant="ghost"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -515,24 +521,24 @@ export default function ProductsPage() {
       </Dialog>
 
       {/* Create Plan Dialog */}
-      <Dialog open={isCreatePlanDialogOpen} onOpenChange={setIsCreatePlanDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
+      <Dialog onOpenChange={setIsCreatePlanDialogOpen} open={isCreatePlanDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">
               새 요금제 - {viewingProduct?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {viewingProduct && (
               <PlanForm
-                products={[viewingProduct]}
                 defaultProductId={viewingProduct.id}
+                isLoading={createPlan.isPending}
+                onCancel={() => setIsCreatePlanDialogOpen(false)}
                 onSave={async (data) => {
                   await createPlan.mutateAsync(data)
                   setIsCreatePlanDialogOpen(false)
                 }}
-                onCancel={() => setIsCreatePlanDialogOpen(false)}
-                isLoading={createPlan.isPending}
+                products={[viewingProduct]}
               />
             )}
           </div>

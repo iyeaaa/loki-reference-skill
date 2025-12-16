@@ -12,20 +12,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface TargetBuyer {
+type TargetBuyer = {
   industry: string
   country: string
   countryCode: string
   companyCount: number
 }
 
-interface EmailScheduleItem {
+type EmailScheduleItem = {
   day: string
   title: string
   description: string
 }
 
-interface SalesStrategy {
+type SalesStrategy = {
   id: string
   countryCode: string
   countryName: string
@@ -69,9 +69,14 @@ const dummyStrategies: SalesStrategy[] = [
         industry: "Manufacturing",
         country: "United States",
         countryCode: "US",
-        companyCount: 450000,
+        companyCount: 450_000,
       },
-      { industry: "Technology", country: "United States", countryCode: "US", companyCount: 320000 },
+      {
+        industry: "Technology",
+        country: "United States",
+        countryCode: "US",
+        companyCount: 320_000,
+      },
     ],
     emailSchedule: defaultEmailSchedule,
   },
@@ -89,12 +94,12 @@ const dummyStrategies: SalesStrategy[] = [
     },
     isSuggested: false,
     targetBuyers: [
-      { industry: "Automotive", country: "Germany", countryCode: "DE", companyCount: 280000 },
+      { industry: "Automotive", country: "Germany", countryCode: "DE", companyCount: 280_000 },
       {
         industry: "Industrial Equipment",
         country: "Germany",
         countryCode: "DE",
-        companyCount: 195000,
+        companyCount: 195_000,
       },
     ],
     emailSchedule: defaultEmailSchedule,
@@ -117,9 +122,9 @@ const dummyStrategies: SalesStrategy[] = [
         industry: "Finance & Banking",
         country: "Singapore",
         countryCode: "SG",
-        companyCount: 85000,
+        companyCount: 85_000,
       },
-      { industry: "Logistics", country: "Singapore", countryCode: "SG", companyCount: 62000 },
+      { industry: "Logistics", country: "Singapore", countryCode: "SG", companyCount: 62_000 },
     ],
     emailSchedule: defaultEmailSchedule,
   },
@@ -134,11 +139,11 @@ export function SalesStrategyTab() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Target className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">
+          <Target className="mb-4 h-12 w-12 text-muted-foreground" />
+          <h3 className="font-medium text-lg">
             {t("app.dashboard.noStrategies", "No sales strategies available")}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground text-sm">
             {t(
               "app.dashboard.noStrategiesDesc",
               "Complete the onboarding process to generate sales strategies",
@@ -152,9 +157,9 @@ export function SalesStrategyTab() {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {strategies.map((strategy) => (
-        <Card key={strategy.id} className="relative">
+        <Card className="relative" key={strategy.id}>
           {strategy.isSuggested && (
-            <Badge className="absolute -top-2 -right-2 bg-primary">
+            <Badge className="-top-2 -right-2 absolute bg-primary">
               {t("app.dashboard.suggested", "Suggested")}
             </Badge>
           )}
@@ -165,7 +170,7 @@ export function SalesStrategyTab() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground line-clamp-3">{strategy.description}</p>
+            <p className="line-clamp-3 text-muted-foreground text-sm">{strategy.description}</p>
 
             <div className="flex items-center gap-2 text-sm">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -179,9 +184,9 @@ export function SalesStrategyTab() {
             </div>
 
             <Button
-              variant="outline"
               className="w-full"
               onClick={() => setSelectedStrategy(strategy)}
+              variant="outline"
             >
               {t("app.dashboard.viewDetails", "View Details")}
             </Button>
@@ -190,8 +195,8 @@ export function SalesStrategyTab() {
       ))}
 
       {/* Strategy Details Dialog */}
-      <Dialog open={!!selectedStrategy} onOpenChange={(open) => !open && setSelectedStrategy(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <Dialog onOpenChange={(open) => !open && setSelectedStrategy(null)} open={!!selectedStrategy}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
           {selectedStrategy && (
             <>
               <DialogHeader>
@@ -207,35 +212,35 @@ export function SalesStrategyTab() {
                 <DialogDescription>{selectedStrategy.description}</DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-6 mt-4">
+              <div className="mt-4 space-y-6">
                 {/* Metrics */}
                 <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <h4 className="mb-3 flex items-center gap-2 font-medium">
                     <TrendingUp className="h-4 w-4" />
                     {t("app.dashboard.metrics", "Performance Metrics")}
                   </h4>
-                  <div className="grid grid-cols-3 gap-4 text-center py-4 bg-muted/50 rounded-lg">
+                  <div className="grid grid-cols-3 gap-4 rounded-lg bg-muted/50 py-4 text-center">
                     <div>
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="font-bold text-2xl text-green-600">
                         {selectedStrategy.metrics.openRate}%
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         {t("app.dashboard.openRate", "Open Rate")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-blue-600">
+                      <div className="font-bold text-2xl text-blue-600">
                         {selectedStrategy.metrics.responseRate}%
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         {t("app.dashboard.responseRate", "Response")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-purple-600">
+                      <div className="font-bold text-2xl text-purple-600">
                         {selectedStrategy.metrics.meetingRate}%
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         {t("app.dashboard.meetingRate", "Meeting")}
                       </div>
                     </div>
@@ -244,23 +249,23 @@ export function SalesStrategyTab() {
 
                 {/* Target Buyers */}
                 <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <h4 className="mb-3 flex items-center gap-2 font-medium">
                     <Users className="h-4 w-4" />
                     {t("app.dashboard.targetBuyers", "Target Buyers")}
                   </h4>
                   <div className="space-y-2">
                     {selectedStrategy.targetBuyers.map((buyer, idx) => (
                       <div
+                        className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
                         key={idx}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div>
                           <div className="font-medium">{buyer.industry}</div>
-                          <div className="text-sm text-muted-foreground">{buyer.country}</div>
+                          <div className="text-muted-foreground text-sm">{buyer.country}</div>
                         </div>
                         <div className="text-right">
                           <div className="font-medium">{buyer.companyCount.toLocaleString()}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-muted-foreground text-sm">
                             {t("app.dashboard.companies", "companies")}
                           </div>
                         </div>
@@ -271,19 +276,19 @@ export function SalesStrategyTab() {
 
                 {/* Email Schedule */}
                 <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <h4 className="mb-3 flex items-center gap-2 font-medium">
                     <Calendar className="h-4 w-4" />
                     {t("app.dashboard.emailSchedule", "Email Schedule")}
                   </h4>
                   <div className="space-y-2">
                     {selectedStrategy.emailSchedule.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Badge variant="outline" className="shrink-0">
+                      <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3" key={idx}>
+                        <Badge className="shrink-0" variant="outline">
                           {item.day}
                         </Badge>
                         <div>
                           <div className="font-medium">{item.title}</div>
-                          <div className="text-sm text-muted-foreground">{item.description}</div>
+                          <div className="text-muted-foreground text-sm">{item.description}</div>
                         </div>
                       </div>
                     ))}

@@ -5,7 +5,7 @@
 
 import { API_BASE_URL, apiFetch, getToken } from "../client"
 
-export interface ProgressLog {
+export type ProgressLog = {
   timestamp: number
   message: string
   type: "info" | "success" | "warning" | "error"
@@ -13,20 +13,20 @@ export interface ProgressLog {
   total?: number
 }
 
-export interface SheetNamesResponse {
+export type SheetNamesResponse = {
   success: boolean
   sheetNames: string[]
   error?: string
 }
 
-export interface DuplicateEmailInfo {
+export type DuplicateEmailInfo = {
   email: string
   existingLeadId: string
   rowNumber: number
   companyName: string | null
 }
 
-export interface SkippedLeadInfo {
+export type SkippedLeadInfo = {
   rowNumber: number
   companyName: string | null
   websiteUrl: string | null
@@ -34,7 +34,7 @@ export interface SkippedLeadInfo {
   existingLeadId?: string
 }
 
-export interface ImportProgress {
+export type ImportProgress = {
   type: "init" | "progress" | "complete" | "error"
   message?: string
   timestamp?: string
@@ -52,7 +52,7 @@ export interface ImportProgress {
   customerGroupName?: string
 }
 
-export interface ImportResult {
+export type ImportResult = {
   total: number
   success: number
   skipped: number
@@ -84,7 +84,7 @@ export interface ImportResult {
   duration: number
 }
 
-export interface PreviewLeadData {
+export type PreviewLeadData = {
   rowNumber: number
   // Lead 메인 정보
   companyName: string | null
@@ -111,7 +111,7 @@ export interface PreviewLeadData {
   industryTypes: string[]
 }
 
-export interface PreviewResponse {
+export type PreviewResponse = {
   success: boolean
   data?: {
     totalRows: number
@@ -226,10 +226,14 @@ export async function uploadLeadsFile(params: {
 
       // 완전한 이벤트 처리 (better-sse 패턴)
       for (const eventStr of events) {
-        if (!eventStr.trim()) continue
+        if (!eventStr.trim()) {
+          continue
+        }
 
         // Heartbeat 무시
-        if (eventStr.trim().startsWith(":")) continue
+        if (eventStr.trim().startsWith(":")) {
+          continue
+        }
 
         // 이벤트 파싱: event: <type>\ndata: <json> 형식
         const lines = eventStr.split("\n")

@@ -12,7 +12,7 @@ import {
 import type { ColumnFilter, FilterOperator } from "@/lib/api/types/lead-filters"
 import { OPERATOR_LABELS } from "@/lib/api/types/lead-filters"
 
-interface ColumnFilterNumberProps {
+type ColumnFilterNumberProps = {
   field: string
   onFilterChange: (filter: ColumnFilter | null) => void
   initialFilter?: ColumnFilter
@@ -37,8 +37,12 @@ export function ColumnFilterNumber({
 
   // Initialize values based on initial filter
   const getInitialValue = () => {
-    if (!initialFilter?.value) return ""
-    if (typeof initialFilter.value === "number") return initialFilter.value.toString()
+    if (!initialFilter?.value) {
+      return ""
+    }
+    if (typeof initialFilter.value === "number") {
+      return initialFilter.value.toString()
+    }
     return ""
   }
 
@@ -61,7 +65,9 @@ export function ColumnFilterNumber({
   const requiresValue = !["isEmpty", "isNotEmpty"].includes(operator)
 
   const parseNumber = (str: string): number | null => {
-    if (!str.trim()) return null
+    if (!str.trim()) {
+      return null
+    }
     const num = Number(str)
     return Number.isNaN(num) ? null : num
   }
@@ -142,7 +148,7 @@ export function ColumnFilterNumber({
       {/* Operator Selection */}
       <div className="space-y-2">
         <Label htmlFor={operatorId}>Operator</Label>
-        <Select value={operator} onValueChange={(val) => setOperator(val as FilterOperator)}>
+        <Select onValueChange={(val) => setOperator(val as FilterOperator)} value={operator}>
           <SelectTrigger id={operatorId}>
             <SelectValue />
           </SelectTrigger>
@@ -164,24 +170,24 @@ export function ColumnFilterNumber({
               <div className="space-y-2">
                 <Label htmlFor={minId}>Minimum</Label>
                 <Input
+                  autoFocus
                   id={minId}
-                  type="number"
-                  value={rangeMin}
                   onChange={(e) => setRangeMin(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Min value"
-                  autoFocus
+                  type="number"
+                  value={rangeMin}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor={maxId}>Maximum</Label>
                 <Input
                   id={maxId}
-                  type="number"
-                  value={rangeMax}
                   onChange={(e) => setRangeMax(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Max value"
+                  type="number"
+                  value={rangeMax}
                 />
               </div>
             </>
@@ -189,13 +195,13 @@ export function ColumnFilterNumber({
             <div className="space-y-2">
               <Label htmlFor={valueId}>Value</Label>
               <Input
+                autoFocus
                 id={valueId}
-                type="number"
-                value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter number..."
-                autoFocus
+                type="number"
+                value={value}
               />
             </div>
           )}
@@ -204,10 +210,10 @@ export function ColumnFilterNumber({
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" size="sm" onClick={handleClear}>
+        <Button onClick={handleClear} size="sm" variant="outline">
           Clear
         </Button>
-        <Button size="sm" onClick={handleApply}>
+        <Button onClick={handleApply} size="sm">
           Apply
         </Button>
       </div>

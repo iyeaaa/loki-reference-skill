@@ -1,7 +1,7 @@
 import { GripVertical } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-interface ResizableDividerProps {
+type ResizableDividerProps = {
   onResize: (leftWidthPercent: number) => void
   onDragStart?: () => void
   onDragEnd?: () => void
@@ -44,7 +44,9 @@ export function ResizableDivider({
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isDragging) return
+      if (!isDragging) {
+        return
+      }
 
       // Cancel previous frame if it hasn't executed yet
       if (rafIdRef.current !== null) {
@@ -55,7 +57,9 @@ export function ResizableDivider({
       rafIdRef.current = requestAnimationFrame(() => {
         const now = performance.now()
         // Throttle to ~60fps (16ms between updates)
-        if (now - lastUpdateRef.current < 16) return
+        if (now - lastUpdateRef.current < 16) {
+          return
+        }
 
         lastUpdateRef.current = now
 
@@ -133,39 +137,28 @@ export function ResizableDivider({
 
   return (
     <div
-      ref={dividerRef}
-      role="slider"
       aria-label="Resize panels"
       aria-orientation="vertical"
-      aria-valuenow={50}
-      aria-valuemin={minLeftWidth}
       aria-valuemax={maxLeftWidth}
-      tabIndex={0}
-      onMouseDown={handleMouseDown}
-      onKeyDown={handleKeyDown}
-      className={`
-        group relative w-4 flex-shrink-0 cursor-col-resize
-        flex items-center justify-center
-        transition-all duration-150
-        ${isDragging ? "bg-blue-50 dark:bg-blue-950" : "hover:bg-accent focus:outline-none focus:ring-2 focus:ring-blue-500"}
+      aria-valuemin={minLeftWidth}
+      aria-valuenow={50}
+      className={`group relative flex w-4 flex-shrink-0 cursor-col-resize items-center justify-center transition-all duration-150 ${isDragging ? "bg-blue-50 dark:bg-blue-950" : "hover:bg-accent focus:outline-none focus:ring-2 focus:ring-blue-500"}
       `}
+      onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
+      ref={dividerRef}
+      role="slider"
+      tabIndex={0}
     >
       {/* Center line - always visible */}
       <div
-        className={`
-          absolute left-1/2 -translate-x-1/2 w-px h-full
-          transition-colors duration-150
-          ${isDragging ? "bg-blue-500" : "bg-border group-hover:bg-blue-400"}
+        className={`-translate-x-1/2 absolute left-1/2 h-full w-px transition-colors duration-150 ${isDragging ? "bg-blue-500" : "bg-border group-hover:bg-blue-400"}
         `}
       />
 
       {/* Grip icon - shows on hover or drag */}
       <div
-        className={`
-          relative z-10 flex items-center justify-center
-          w-4 h-8 rounded
-          transition-all duration-150
-          ${isDragging ? "bg-blue-500 text-white scale-110" : "bg-transparent text-muted-foreground group-hover:text-blue-500 group-hover:bg-background group-hover:shadow-sm"}
+        className={`relative z-10 flex h-8 w-4 items-center justify-center rounded transition-all duration-150 ${isDragging ? "scale-110 bg-blue-500 text-white" : "bg-transparent text-muted-foreground group-hover:bg-background group-hover:text-blue-500 group-hover:shadow-sm"}
         `}
       >
         <GripVertical className="h-3.5 w-3.5" />

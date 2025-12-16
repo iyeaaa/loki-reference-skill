@@ -68,11 +68,11 @@ export function OpenAIApiKeyManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!workspaceId || !formData.name.trim()) {
+    if (!(workspaceId && formData.name.trim())) {
       return
     }
 
-    if (!editingKey && !formData.apiKey.trim()) {
+    if (!(editingKey || formData.apiKey.trim())) {
       return
     }
 
@@ -99,7 +99,9 @@ export function OpenAIApiKeyManagement() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("이 API 키를 삭제하시겠습니까?")) return
+    if (!confirm("이 API 키를 삭제하시겠습니까?")) {
+      return
+    }
 
     await deleteMutation.mutateAsync({ id, workspaceId })
   }
@@ -115,7 +117,9 @@ export function OpenAIApiKeyManagement() {
   }
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "사용 안함"
+    if (!dateString) {
+      return "사용 안함"
+    }
     const date = new Date(dateString)
     return date.toLocaleString("ko-KR")
   }
@@ -155,10 +159,10 @@ export function OpenAIApiKeyManagement() {
       </CardHeader>
       <CardContent className="space-y-4">
         {apiKeys.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <div className="py-8 text-center text-muted-foreground">
+            <Key className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>등록된 API 키가 없습니다</p>
-            <p className="text-sm mt-2">
+            <p className="mt-2 text-sm">
               API 키를 추가하지 않으면 서버의 환경 변수에 설정된 기본 키가 사용됩니다
             </p>
           </div>
@@ -166,32 +170,32 @@ export function OpenAIApiKeyManagement() {
           <div className="space-y-3">
             {apiKeys.map((key, index) => (
               <div
+                className={`rounded-lg border p-4 ${key.isActive ? "bg-background" : "bg-muted/50 opacity-60"}`}
                 key={key.id}
-                className={`border rounded-lg p-4 ${key.isActive ? "bg-background" : "bg-muted/50 opacity-60"}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary text-sm">
                         {index + 1}
                       </span>
                       <h3 className="font-semibold">{key.name}</h3>
                       {key.isActive ? (
-                        <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full">
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
                           활성
                         </span>
                       ) : (
-                        <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-800 text-xs dark:bg-gray-800 dark:text-gray-300">
                           비활성
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm font-mono text-muted-foreground mb-2">
+                    <div className="mb-2 flex items-center gap-2 font-mono text-muted-foreground text-sm">
                       <span>{key.apiKey}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-4 text-sm text-muted-foreground">
+                    <div className="grid grid-cols-2 gap-x-4 text-muted-foreground text-sm">
                       <div>
                         <span className="font-medium">마지막 사용:</span>{" "}
                         {formatDate(key.lastUsedAt)}
@@ -204,20 +208,20 @@ export function OpenAIApiKeyManagement() {
 
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(key)}
-                      title={key.isActive ? "비활성화" : "활성화"}
                       disabled={updateMutation.isPending}
+                      onClick={() => handleToggleActive(key)}
+                      size="sm"
+                      title={key.isActive ? "비활성화" : "활성화"}
+                      variant="outline"
                     >
                       {key.isActive ? "비활성화" : "활성화"}
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(key.id)}
-                      title="삭제"
                       disabled={deleteMutation.isPending}
+                      onClick={() => handleDelete(key.id)}
+                      size="icon"
+                      title="삭제"
+                      variant="ghost"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -232,17 +236,17 @@ export function OpenAIApiKeyManagement() {
           <Key className="h-4 w-4" />
           <AlertTitle>사용 방법</AlertTitle>
           <AlertDescription>
-            <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
               <li>여러 개의 API 키를 추가하면 순서대로 번갈아가며 사용됩니다 (Round-robin)</li>
               <li>비활성화된 키는 사용되지 않습니다</li>
               <li>모든 키가 비활성화되거나 없으면 서버의 기본 API 키가 사용됩니다</li>
               <li>
                 OpenAI API 키는{" "}
                 <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="underline"
+                  href="https://platform.openai.com/api-keys"
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   OpenAI 플랫폼
                 </a>
@@ -253,7 +257,7 @@ export function OpenAIApiKeyManagement() {
         </Alert>
       </CardContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+      <Dialog onOpenChange={handleCloseDialog} open={isDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingKey ? "API 키 수정" : "API 키 추가"}</DialogTitle>
@@ -264,15 +268,15 @@ export function OpenAIApiKeyManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor={keyNameId}>키 이름</Label>
               <Input
                 id={keyNameId}
-                value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="예: Main Key, Backup Key 1"
                 required={!editingKey}
+                value={formData.name}
               />
             </div>
 
@@ -280,13 +284,13 @@ export function OpenAIApiKeyManagement() {
               <Label htmlFor={apiKeyId}>API 키</Label>
               <Input
                 id={apiKeyId}
-                type="password"
-                value={formData.apiKey}
                 onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
                 placeholder="sk-..."
                 required={!editingKey}
+                type="password"
+                value={formData.apiKey}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {editingKey
                   ? "새 API 키를 입력하지 않으면 기존 키가 유지됩니다"
                   : "OpenAI 플랫폼에서 발급받은 API 키를 입력하세요"}
@@ -294,11 +298,11 @@ export function OpenAIApiKeyManagement() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+              <Button onClick={handleCloseDialog} type="button" variant="outline">
                 <X className="mr-2 h-4 w-4" />
                 취소
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button disabled={createMutation.isPending || updateMutation.isPending} type="submit">
                 <Save className="mr-2 h-4 w-4" />
                 {editingKey ? "수정" : "추가"}
               </Button>

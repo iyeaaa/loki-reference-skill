@@ -24,7 +24,7 @@ import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email"
 
 type EmailData = WorkflowGeneratedEmail
 
-interface EmailManagementModalProps {
+type EmailManagementModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   sequenceId: string
@@ -105,28 +105,28 @@ export function EmailManagementModal({
     switch (status) {
       case "generated":
         return (
-          <Badge variant="default" className="gap-1">
+          <Badge className="gap-1" variant="default">
             <CheckCircle className="h-3 w-3" />
             생성됨
           </Badge>
         )
       case "generating":
         return (
-          <Badge variant="secondary" className="gap-1">
+          <Badge className="gap-1" variant="secondary">
             <Loader2 className="h-3 w-3 animate-spin" />
             생성 중
           </Badge>
         )
       case "edited":
         return (
-          <Badge variant="outline" className="gap-1">
+          <Badge className="gap-1" variant="outline">
             <Edit className="h-3 w-3" />
             수정됨
           </Badge>
         )
       case "failed":
         return (
-          <Badge variant="destructive" className="gap-1">
+          <Badge className="gap-1" variant="destructive">
             <XCircle className="h-3 w-3" />
             실패
           </Badge>
@@ -138,8 +138,8 @@ export function EmailManagementModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
+      <Dialog onOpenChange={onOpenChange} open={open}>
+        <DialogContent className="max-h-[90vh] max-w-6xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -154,35 +154,35 @@ export function EmailManagementModal({
 
           <div className="space-y-4">
             {/* 설정 정보 */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="rounded-lg bg-gray-50 p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm font-medium text-gray-700">대상 고객그룹</div>
-                  <div className="text-sm text-gray-900 font-medium">
+                  <div className="font-medium text-gray-700 text-sm">대상 고객그룹</div>
+                  <div className="font-medium text-gray-900 text-sm">
                     {sequence?.customerGroupName || "고객그룹 미지정"}
                   </div>
                   {!sequence?.customerGroupName && (
-                    <div className="text-xs text-red-600 mt-1">
+                    <div className="mt-1 text-red-600 text-xs">
                       ⚠️ 시퀀스에 고객그룹을 먼저 지정해주세요
                     </div>
                   )}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-700">작성 방식</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="font-medium text-gray-700 text-sm">작성 방식</div>
+                  <div className="text-gray-600 text-sm">
                     {generationMode === "ai" ? "AI 자동 생성" : "수동 작성/템플릿"}
                   </div>
                 </div>
                 {generationMode === "ai" && aiPrompt && (
                   <div className="col-span-2">
-                    <div className="text-sm font-medium text-gray-700">AI 프롬프트</div>
-                    <div className="text-sm text-gray-600 truncate">{aiPrompt}</div>
+                    <div className="font-medium text-gray-700 text-sm">AI 프롬프트</div>
+                    <div className="truncate text-gray-600 text-sm">{aiPrompt}</div>
                   </div>
                 )}
                 {generationMode === "manual" && templateSubject && (
                   <div className="col-span-2">
-                    <div className="text-sm font-medium text-gray-700">제목 템플릿</div>
-                    <div className="text-sm text-gray-600 truncate">{templateSubject}</div>
+                    <div className="font-medium text-gray-700 text-sm">제목 템플릿</div>
+                    <div className="truncate text-gray-600 text-sm">{templateSubject}</div>
                   </div>
                 )}
               </div>
@@ -191,17 +191,17 @@ export function EmailManagementModal({
             {/* 통계 */}
             {totalEmails > 0 && (
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <div className="text-sm text-blue-700">총 이메일</div>
-                  <div className="text-2xl font-bold text-blue-900">{totalEmails}</div>
+                <div className="rounded-lg bg-blue-50 p-3">
+                  <div className="text-blue-700 text-sm">총 이메일</div>
+                  <div className="font-bold text-2xl text-blue-900">{totalEmails}</div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="text-sm text-green-700">생성 완료</div>
-                  <div className="text-2xl font-bold text-green-900">{generatedEmails}</div>
+                <div className="rounded-lg bg-green-50 p-3">
+                  <div className="text-green-700 text-sm">생성 완료</div>
+                  <div className="font-bold text-2xl text-green-900">{generatedEmails}</div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-3">
-                  <div className="text-sm text-red-700">실패</div>
-                  <div className="text-2xl font-bold text-red-900">{failedEmails}</div>
+                <div className="rounded-lg bg-red-50 p-3">
+                  <div className="text-red-700 text-sm">실패</div>
+                  <div className="font-bold text-2xl text-red-900">{failedEmails}</div>
                 </div>
               </div>
             )}
@@ -209,49 +209,49 @@ export function EmailManagementModal({
             {/* 액션 버튼 */}
             <div className="flex gap-2">
               <Button
-                onClick={() => handleGenerateAll(true)}
-                disabled={isGenerating || !sequence?.customerGroupId}
-                variant="default"
                 className="flex-1"
+                disabled={isGenerating || !sequence?.customerGroupId}
+                onClick={() => handleGenerateAll(true)}
                 title={
-                  !sequence?.customerGroupId
-                    ? "시퀀스에 고객그룹을 먼저 설정해주세요"
-                    : "이미 생성된 이메일은 유지하고 새로운 연락처에만 생성합니다"
+                  sequence?.customerGroupId
+                    ? "이미 생성된 이메일은 유지하고 새로운 연락처에만 생성합니다"
+                    : "시퀀스에 고객그룹을 먼저 설정해주세요"
                 }
+                variant="default"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     생성 중...
                   </>
                 ) : (
                   <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    {!sequence?.customerGroupId
-                      ? "⚠️ 고객그룹 미지정"
-                      : totalEmails > 0
+                    <Mail className="mr-2 h-4 w-4" />
+                    {sequence?.customerGroupId
+                      ? totalEmails > 0
                         ? "새로운 연락처만 생성"
-                        : "모든 연락처에 대해 생성"}
+                        : "모든 연락처에 대해 생성"
+                      : "⚠️ 고객그룹 미지정"}
                   </>
                 )}
               </Button>
 
               {totalEmails > 0 && (
                 <Button
-                  onClick={() => handleGenerateAll(false)}
-                  disabled={isGenerating || !sequence?.customerGroupId}
-                  variant="outline"
                   className="flex-1"
+                  disabled={isGenerating || !sequence?.customerGroupId}
+                  onClick={() => handleGenerateAll(false)}
                   title="기존 이메일을 모두 삭제하고 전체 재생성합니다"
+                  variant="outline"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       재생성 중...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
+                      <RefreshCw className="mr-2 h-4 w-4" />
                       전체 재생성
                     </>
                   )}
@@ -270,14 +270,14 @@ export function EmailManagementModal({
                 </div>
                 <Progress value={generationProgress} />
                 {progress.failed > 0 && (
-                  <div className="text-xs text-red-600">{progress.failed}개 실패</div>
+                  <div className="text-red-600 text-xs">{progress.failed}개 실패</div>
                 )}
               </div>
             )}
 
             {/* 이메일 목록 */}
             {totalEmails > 0 && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-hidden rounded-lg border">
                 <div className="max-h-[400px] overflow-y-auto">
                   <Table>
                     <TableHeader>
@@ -304,16 +304,16 @@ export function EmailManagementModal({
                             <div className="max-w-[300px] truncate text-sm">{email.subject}</div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                              <Button size="sm" variant="outline" onClick={() => handleEdit(email)}>
-                                <Edit className="h-3 w-3 mr-1" />
+                            <div className="flex justify-end gap-2">
+                              <Button onClick={() => handleEdit(email)} size="sm" variant="outline">
+                                <Edit className="mr-1 h-3 w-3" />
                                 보기/수정
                               </Button>
                               {generationMode === "ai" && (
                                 <Button
+                                  onClick={() => handleRegenerate(email)}
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => handleRegenerate(email)}
                                 >
                                   <RefreshCw className="h-3 w-3" />
                                 </Button>
@@ -330,10 +330,10 @@ export function EmailManagementModal({
 
             {/* 빈 상태 */}
             {totalEmails === 0 && !isGenerating && !isLoading && (
-              <div className="text-center py-12 text-gray-500">
-                <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">생성된 이메일이 없습니다</p>
-                <p className="text-sm mt-1">
+              <div className="py-12 text-center text-gray-500">
+                <Mail className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                <p className="font-medium text-lg">생성된 이메일이 없습니다</p>
+                <p className="mt-1 text-sm">
                   위의 버튼을 클릭하여 모든 연락처에 대한 이메일을 생성하세요
                 </p>
               </div>
@@ -341,15 +341,15 @@ export function EmailManagementModal({
 
             {/* 로딩 상태 */}
             {isLoading && (
-              <div className="text-center py-12 text-gray-500">
-                <Loader2 className="h-12 w-12 mx-auto mb-4 text-gray-300 animate-spin" />
-                <p className="text-lg font-medium">로딩 중...</p>
+              <div className="py-12 text-center text-gray-500">
+                <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-gray-300" />
+                <p className="font-medium text-lg">로딩 중...</p>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button onClick={() => onOpenChange(false)} variant="outline">
               닫기
             </Button>
           </div>
@@ -359,13 +359,13 @@ export function EmailManagementModal({
       {/* 개별 이메일 편집 다이얼로그 */}
       {selectedEmail && (
         <EmailEditDialog
-          sequenceId={sequenceId}
-          nodeId={nodeId}
           email={selectedEmail}
-          open={!!selectedEmail}
-          onOpenChange={(open) => !open && setSelectedEmail(null)}
-          onClose={() => setSelectedEmail(null)}
           generationMode={generationMode}
+          nodeId={nodeId}
+          onClose={() => setSelectedEmail(null)}
+          onOpenChange={(open) => !open && setSelectedEmail(null)}
+          open={!!selectedEmail}
+          sequenceId={sequenceId}
         />
       )}
     </>
@@ -373,7 +373,7 @@ export function EmailManagementModal({
 }
 
 // 개별 이메일 편집 다이얼로그
-interface EmailEditDialogProps {
+type EmailEditDialogProps = {
   sequenceId: string
   nodeId: string
   email: EmailData
@@ -434,7 +434,7 @@ function EmailEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>이메일 편집</DialogTitle>
@@ -442,27 +442,27 @@ function EmailEditDialog({
 
         <div className="space-y-4">
           {/* 고객 정보 */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="rounded-lg bg-gray-50 p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-700">회사명</div>
-                <div className="text-sm text-gray-900">{email.companyName}</div>
+                <div className="font-medium text-gray-700 text-sm">회사명</div>
+                <div className="text-gray-900 text-sm">{email.companyName}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700">담당자</div>
-                <div className="text-sm text-gray-900">
+                <div className="font-medium text-gray-700 text-sm">담당자</div>
+                <div className="text-gray-900 text-sm">
                   {email.contactName || "-"} ({email.contactEmail})
                 </div>
               </div>
               {email.industry && (
                 <div>
-                  <div className="text-sm font-medium text-gray-700">업종</div>
-                  <div className="text-sm text-gray-900">{email.industry}</div>
+                  <div className="font-medium text-gray-700 text-sm">업종</div>
+                  <div className="text-gray-900 text-sm">{email.industry}</div>
                 </div>
               )}
               <div>
-                <div className="text-sm font-medium text-gray-700">생성 방식</div>
-                <div className="text-sm text-gray-900">
+                <div className="font-medium text-gray-700 text-sm">생성 방식</div>
+                <div className="text-gray-900 text-sm">
                   {generationMode === "ai" ? "🤖 AI 생성" : "✍️ 수동 작성"}
                 </div>
               </div>
@@ -472,73 +472,73 @@ function EmailEditDialog({
           {/* 이메일 내용 편집 */}
           <div className="space-y-4">
             <div>
-              <label htmlFor={subjectId} className="text-sm font-medium">
+              <label className="font-medium text-sm" htmlFor={subjectId}>
                 제목
               </label>
               <input
+                className="mt-1 w-full rounded-md border px-3 py-2"
                 id={subjectId}
+                onChange={(e) => setSubject(e.target.value)}
                 type="text"
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="w-full mt-1 px-3 py-2 border rounded-md"
               />
             </div>
             <div>
-              <label htmlFor={bodyId} className="text-sm font-medium">
+              <label className="font-medium text-sm" htmlFor={bodyId}>
                 본문 (텍스트)
               </label>
               <textarea
+                className="mt-1 w-full rounded-md border px-3 py-2 font-mono text-sm"
                 id={bodyId}
-                value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
                 rows={8}
-                className="w-full mt-1 px-3 py-2 border rounded-md font-mono text-sm"
+                value={bodyText}
               />
             </div>
             <div>
-              <label htmlFor={bodyHtmlId} className="text-sm font-medium">
+              <label className="font-medium text-sm" htmlFor={bodyHtmlId}>
                 본문 (HTML)
               </label>
               <textarea
+                className="mt-1 w-full rounded-md border px-3 py-2 font-mono text-sm"
                 id={bodyHtmlId}
-                value={bodyHtml}
                 onChange={(e) => setBodyHtml(e.target.value)}
                 rows={8}
-                className="w-full mt-1 px-3 py-2 border rounded-md font-mono text-sm"
+                value={bodyHtml}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-gray-500 text-xs">
                 💡 HTML을 입력하면 텍스트 본문 대신 HTML 본문이 사용됩니다
               </p>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button onClick={() => onOpenChange(false)} variant="outline">
               취소
             </Button>
             {generationMode === "ai" && (
               <Button
-                variant="secondary"
-                onClick={handleRegenerate}
                 disabled={regenerateMutation.isPending}
+                onClick={handleRegenerate}
+                variant="secondary"
               >
                 {regenerateMutation.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     재생성 중...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className="mr-2 h-4 w-4" />
                     AI 재생성
                   </>
                 )}
               </Button>
             )}
-            <Button onClick={handleSave} disabled={updateEmailMutation.isPending}>
+            <Button disabled={updateEmailMutation.isPending} onClick={handleSave}>
               {updateEmailMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   저장 중...
                 </>
               ) : (

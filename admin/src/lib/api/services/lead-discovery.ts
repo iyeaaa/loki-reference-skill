@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "@/lib/api/client"
 
 // BigQuery 검색 결과 타입
-export interface LeadResult {
+export type LeadResult = {
   email?: string
   first_name?: string
   last_name?: string
@@ -17,7 +17,7 @@ export interface LeadResult {
 }
 
 // 추천 타입
-export interface BuyerRecommendation {
+export type BuyerRecommendation = {
   id: string
   country: string
   industry: string
@@ -28,7 +28,7 @@ export interface BuyerRecommendation {
 }
 
 // 웹사이트 분석 결과
-export interface WebsiteAnalysis {
+export type WebsiteAnalysis = {
   companyName?: string
   products?: string[]
   services?: string[]
@@ -38,7 +38,7 @@ export interface WebsiteAnalysis {
 }
 
 // BigQuery 검색 요청 타입
-export interface BigQuerySearchRequest {
+export type BigQuerySearchRequest = {
   query: string
   dataDictionary: {
     tableName: string
@@ -51,7 +51,7 @@ export interface BigQuerySearchRequest {
 }
 
 // BigQuery 검색 응답 타입
-export interface BigQuerySearchResponse {
+export type BigQuerySearchResponse = {
   success: boolean
   sql: string | null
   explanation: string
@@ -239,12 +239,12 @@ export const DATA_DICTIONARIES: Record<
 export const DEFAULT_DATA_DICTIONARY = DATA_DICTIONARIES.b2b_leads
 
 // API 응답 이벤트 타입들
-export interface LeadDiscoveryConnectedEvent {
+export type LeadDiscoveryConnectedEvent = {
   sessionId: string
   timestamp: number
 }
 
-export interface LeadDiscoveryInterruptEvent {
+export type LeadDiscoveryInterruptEvent = {
   type: string
   payload?: {
     recommendations?: BuyerRecommendation[]
@@ -252,7 +252,7 @@ export interface LeadDiscoveryInterruptEvent {
   sessionId: string
 }
 
-export interface LeadDiscoveryCompleteEvent {
+export type LeadDiscoveryCompleteEvent = {
   sessionId: string
   success: boolean
   resultCount: number
@@ -268,14 +268,14 @@ export interface LeadDiscoveryCompleteEvent {
   duration: number
 }
 
-export interface LeadDiscoveryErrorEvent {
+export type LeadDiscoveryErrorEvent = {
   sessionId: string
   error: string
   timestamp: number
 }
 
 // 콜백 타입
-export interface LeadDiscoveryCallbacks {
+export type LeadDiscoveryCallbacks = {
   onConnected?: (data: LeadDiscoveryConnectedEvent) => void
   onInterrupt?: (data: LeadDiscoveryInterruptEvent) => void
   onComplete?: (data: LeadDiscoveryCompleteEvent) => void
@@ -284,7 +284,7 @@ export interface LeadDiscoveryCallbacks {
 }
 
 // 두 DB 검색 결과를 합친 응답 타입
-export interface CombinedBigQuerySearchResponse {
+export type CombinedBigQuerySearchResponse = {
   success: boolean
   b2bLeads: {
     sql: string | null
@@ -456,9 +456,9 @@ export const leadDiscoveryApi = {
         combinedResults,
         totalCount: b2bResult.totalCount + crunchbaseResult.totalCount,
         error:
-          !b2bResult.success && !crunchbaseResult.success
-            ? "두 DB 모두 검색에 실패했습니다"
-            : undefined,
+          b2bResult.success || crunchbaseResult.success
+            ? undefined
+            : "두 DB 모두 검색에 실패했습니다",
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -523,7 +523,9 @@ export const leadDiscoveryApi = {
           buffer = events.pop() || ""
 
           for (const eventStr of events) {
-            if (!eventStr.trim() || eventStr.trim().startsWith(":")) continue
+            if (!eventStr.trim() || eventStr.trim().startsWith(":")) {
+              continue
+            }
 
             const lines = eventStr.split("\n")
             let eventType: string | undefined
@@ -635,7 +637,9 @@ export const leadDiscoveryApi = {
           buffer = events.pop() || ""
 
           for (const eventStr of events) {
-            if (!eventStr.trim() || eventStr.trim().startsWith(":")) continue
+            if (!eventStr.trim() || eventStr.trim().startsWith(":")) {
+              continue
+            }
 
             const lines = eventStr.split("\n")
             let eventType: string | undefined

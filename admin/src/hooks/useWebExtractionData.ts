@@ -63,7 +63,7 @@ export function useWebExtractionData(progress: ExtractionProgress | null, jobId:
 
   // Load completed progress from localStorage if needed
   useEffect(() => {
-    if (!completedProgress && !progress) {
+    if (!(completedProgress || progress)) {
       try {
         const saved = localStorage.getItem("webExtractionProgress")
         if (saved) {
@@ -81,8 +81,12 @@ export function useWebExtractionData(progress: ExtractionProgress | null, jobId:
 
   // Determine which progress to display
   const displayProgress = React.useMemo(() => {
-    if (progress) return progress
-    if (completedProgress) return completedProgress
+    if (progress) {
+      return progress
+    }
+    if (completedProgress) {
+      return completedProgress
+    }
 
     try {
       const saved = localStorage.getItem("webExtractionProgress")

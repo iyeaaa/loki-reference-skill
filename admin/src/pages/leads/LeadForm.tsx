@@ -31,7 +31,7 @@ interface LeadFormData extends Omit<Partial<Lead>, "leadScore" | "contacts" | "s
   customerGroupId?: string
 }
 
-interface LeadFormProps {
+type LeadFormProps = {
   lead?: Lead
   isEdit?: boolean
   workspaceId?: string
@@ -128,7 +128,7 @@ export function LeadForm({
             (contactData as { contactName?: string }).contactName?.trim() !== ""
               ? (contactData as { contactName?: string }).contactName
               : undefined,
-          isPrimary: index === 0 ? true : contactData.isPrimary || false,
+          isPrimary: index === 0 ? true : contactData.isPrimary,
         }
       }) as LeadContact[]
 
@@ -141,7 +141,7 @@ export function LeadForm({
 
     const submitData: LeadFormData = {
       ...formData,
-      leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
+      leadScore: formData.leadScore ? Number.parseInt(formData.leadScore, 10) : undefined,
       contacts: validContacts,
       socialMedia: socialMedia
         .filter((s) => s.url && s.url.trim() !== "" && s.platform !== undefined)
@@ -252,20 +252,20 @@ export function LeadForm({
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-4">
         {/* Company Name */}
         <div className="space-y-2">
-          <Label htmlFor={companyNameId} className="flex items-center gap-1">
+          <Label className="flex items-center gap-1" htmlFor={companyNameId}>
             {t("leads.form.companyName")}
             <span className="text-red-500">*</span>
           </Label>
           <Input
             id={companyNameId}
-            value={formData.companyName}
             onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
             placeholder={t("leads.form.companyNameRequired")}
             required
+            value={formData.companyName}
           />
         </div>
 
@@ -274,9 +274,9 @@ export function LeadForm({
           <Label htmlFor={foundCompanyNameId}>{t("leads.form.foundCompanyName")}</Label>
           <Input
             id={foundCompanyNameId}
-            value={formData.foundCompanyName}
             onChange={(e) => setFormData({ ...formData, foundCompanyName: e.target.value })}
             placeholder={t("leads.form.foundCompanyNamePlaceholder")}
+            value={formData.foundCompanyName}
           />
         </div>
       </div>
@@ -287,9 +287,9 @@ export function LeadForm({
           <Label htmlFor={contactNameId}>{t("leads.form.contactName")}</Label>
           <Input
             id={contactNameId}
-            value={formData.contactName}
             onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
             placeholder={t("leads.form.contactNamePlaceholder")}
+            value={formData.contactName}
           />
         </div>
       </div>
@@ -297,17 +297,17 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Website URL */}
         <div className="space-y-2">
-          <Label htmlFor={websiteUrlId} className="flex items-center gap-1">
+          <Label className="flex items-center gap-1" htmlFor={websiteUrlId}>
             {t("leads.form.websiteUrl")}
             <span className="text-red-500">*</span>
           </Label>
           <Input
             id={websiteUrlId}
-            type="url"
-            value={formData.websiteUrl}
             onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
             placeholder={t("leads.form.websiteUrlPlaceholder")}
             required
+            type="url"
+            value={formData.websiteUrl}
           />
         </div>
 
@@ -316,10 +316,10 @@ export function LeadForm({
           <Label htmlFor={finalUrlId}>{t("leads.form.finalUrl")}</Label>
           <Input
             id={finalUrlId}
-            type="url"
-            value={formData.finalUrl}
             onChange={(e) => setFormData({ ...formData, finalUrl: e.target.value })}
             placeholder={t("leads.form.finalUrlPlaceholder")}
+            type="url"
+            value={formData.finalUrl}
           />
         </div>
       </div>
@@ -330,9 +330,9 @@ export function LeadForm({
           <Label htmlFor={businessTypeId}>{t("leads.form.businessType")}</Label>
           <Input
             id={businessTypeId}
-            value={formData.businessType}
             onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
             placeholder={t("leads.form.businessTypePlaceholder")}
+            value={formData.businessType}
           />
         </div>
 
@@ -340,13 +340,13 @@ export function LeadForm({
         <div className="space-y-2">
           <Label htmlFor="leadStatus">{t("leads.form.leadStatus")}</Label>
           <Select
-            value={formData.leadStatus}
             onValueChange={(value) =>
               setFormData({
                 ...formData,
                 leadStatus: value as LeadStatus,
               })
             }
+            value={formData.leadStatus}
           >
             <SelectTrigger>
               <SelectValue />
@@ -368,9 +368,9 @@ export function LeadForm({
           <Label htmlFor={countryId}>{t("leads.form.country")}</Label>
           <Input
             id={countryId}
-            value={formData.country}
             onChange={(e) => setFormData({ ...formData, country: e.target.value })}
             placeholder={t("leads.form.countryPlaceholder")}
+            value={formData.country}
           />
         </div>
 
@@ -379,9 +379,9 @@ export function LeadForm({
           <Label htmlFor={cityId}>{t("leads.form.city")}</Label>
           <Input
             id={cityId}
-            value={formData.city}
             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             placeholder={t("leads.form.cityPlaceholder")}
+            value={formData.city}
           />
         </div>
       </div>
@@ -391,9 +391,9 @@ export function LeadForm({
         <Label htmlFor={addressId}>{t("leads.form.address")}</Label>
         <Input
           id={addressId}
-          value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           placeholder={t("leads.form.addressPlaceholder")}
+          value={formData.address}
         />
       </div>
 
@@ -403,12 +403,12 @@ export function LeadForm({
           <Label htmlFor={leadScoreId}>{t("leads.form.leadScore")}</Label>
           <Input
             id={leadScoreId}
-            type="number"
-            min="0"
             max="100"
-            value={formData.leadScore}
+            min="0"
             onChange={(e) => setFormData({ ...formData, leadScore: e.target.value })}
             placeholder={t("leads.form.leadScorePlaceholder")}
+            type="number"
+            value={formData.leadScore}
           />
         </div>
 
@@ -417,9 +417,9 @@ export function LeadForm({
           <Label htmlFor={leadSourceId}>{t("leads.form.leadSource")}</Label>
           <Input
             id={leadSourceId}
-            value={formData.leadSource}
             onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
             placeholder={t("leads.form.leadSourcePlaceholder")}
+            value={formData.leadSource}
           />
         </div>
       </div>
@@ -428,7 +428,7 @@ export function LeadForm({
       {!isEdit && customerGroups.length > 0 && (
         <div className="space-y-2">
           <Label htmlFor={customerGroupId}>{t("leads.form.customerGroup")}</Label>
-          <Select value={selectedGroup || undefined} onValueChange={onGroupChange}>
+          <Select onValueChange={onGroupChange} value={selectedGroup || undefined}>
             <SelectTrigger id={customerGroupId}>
               <SelectValue placeholder={t("leads.form.customerGroupPlaceholder")} />
             </SelectTrigger>
@@ -449,10 +449,10 @@ export function LeadForm({
         <Label htmlFor={descriptionId}>{t("leads.form.description")}</Label>
         <Textarea
           id={descriptionId}
-          value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder={t("leads.form.descriptionPlaceholder")}
           rows={3}
+          value={formData.description}
         />
       </div>
 
@@ -461,43 +461,43 @@ export function LeadForm({
         <Label htmlFor={notesId}>{t("leads.form.notes")}</Label>
         <Textarea
           id={notesId}
-          value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           placeholder={t("leads.form.notesPlaceholder")}
           rows={3}
+          value={formData.notes}
         />
       </div>
 
       {/* Contacts Section */}
-      <div className="space-y-3 pt-4 border-t">
+      <div className="space-y-3 border-t pt-4">
         <div className="flex items-center justify-between">
           <div>
-            <Label className="text-base font-semibold flex items-center gap-1">
+            <Label className="flex items-center gap-1 font-semibold text-base">
               {t("leads.form.contacts")}
             </Label>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-muted-foreground text-xs">
               최소 1개 이상의 이메일 주소가 필요합니다 <span className="text-red-500">*</span>
             </p>
           </div>
-          <Button type="button" size="sm" variant="outline" onClick={addContact}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Button onClick={addContact} size="sm" type="button" variant="outline">
+            <Plus className="mr-1 h-4 w-4" />
             {t("leads.form.addContact")}
           </Button>
         </div>
         {contacts.map((contact, index) => (
           <div
+            className="flex items-start gap-2 rounded-md border bg-gray-50 p-3"
             key={contact.tempId}
-            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
           >
             <div className="flex-1 space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs">{t("leads.form.contactTypeLabel")}</Label>
                   <Select
-                    value={contact.contactType || "email"}
                     onValueChange={(value) =>
                       updateContact(index, "contactType", value as ContactType)
                     }
+                    value={contact.contactType || "email"}
                   >
                     <SelectTrigger className="h-9">
                       <SelectValue />
@@ -511,7 +511,7 @@ export function LeadForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1">
+                  <Label className="flex items-center gap-1 text-xs">
                     {t("leads.form.contactValue")}
                     {index === 0 && contact.contactType === "email" && (
                       <span className="text-red-500">*</span>
@@ -519,7 +519,6 @@ export function LeadForm({
                   </Label>
                   <Input
                     className="h-9"
-                    value={contact.contactValue || ""}
                     onChange={(e) => updateContact(index, "contactValue", e.target.value)}
                     placeholder={
                       index === 0 && contact.contactType === "email"
@@ -527,15 +526,16 @@ export function LeadForm({
                         : t("leads.form.contactValuePlaceholder")
                     }
                     required={index === 0 && contact.contactType === "email"}
+                    value={contact.contactValue || ""}
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t("leads.form.contactLabel")}</Label>
                   <Input
                     className="h-9"
-                    value={contact.label || ""}
                     onChange={(e) => updateContact(index, "label", e.target.value)}
                     placeholder={t("leads.form.contactLabelPlaceholder")}
+                    value={contact.label || ""}
                   />
                 </div>
               </div>
@@ -548,20 +548,20 @@ export function LeadForm({
                 </Label>
                 <Input
                   className="h-9"
-                  value={(contact as { contactName?: string }).contactName || ""}
                   onChange={(e) =>
                     updateContact(index, "contactName" as keyof LeadContact, e.target.value)
                   }
                   placeholder={t("leads.form.contactNamePlaceholder")}
+                  value={(contact as { contactName?: string }).contactName || ""}
                 />
               </div>
             </div>
             <Button
-              type="button"
-              size="sm"
-              variant="ghost"
+              className="mt-6 text-red-600 hover:bg-red-50 hover:text-red-700"
               onClick={() => removeContact(index)}
-              className="mt-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+              size="sm"
+              type="button"
+              variant="ghost"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -570,27 +570,27 @@ export function LeadForm({
       </div>
 
       {/* Social Media Section */}
-      <div className="space-y-3 pt-4 border-t">
+      <div className="space-y-3 border-t pt-4">
         <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">{t("leads.form.socialMedia")}</Label>
-          <Button type="button" size="sm" variant="outline" onClick={addSocialMedia}>
-            <Plus className="h-4 w-4 mr-1" />
+          <Label className="font-semibold text-base">{t("leads.form.socialMedia")}</Label>
+          <Button onClick={addSocialMedia} size="sm" type="button" variant="outline">
+            <Plus className="mr-1 h-4 w-4" />
             {t("leads.form.addSocialMedia")}
           </Button>
         </div>
         {socialMedia.map((social, index) => (
           <div
+            className="flex items-start gap-2 rounded-md border bg-gray-50 p-3"
             key={social.tempId}
-            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
           >
-            <div className="flex-1 grid grid-cols-3 gap-2">
+            <div className="grid flex-1 grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">{t("leads.form.platform")}</Label>
                 <Select
-                  value={social.platform || "facebook"}
                   onValueChange={(value) =>
                     updateSocialMedia(index, "platform", value as SocialMediaPlatform)
                   }
+                  value={social.platform || "facebook"}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue />
@@ -615,27 +615,27 @@ export function LeadForm({
                 <Label className="text-xs">{t("leads.form.url")}</Label>
                 <Input
                   className="h-9"
-                  value={social.url || ""}
                   onChange={(e) => updateSocialMedia(index, "url", e.target.value)}
                   placeholder={t("leads.form.urlPlaceholder")}
+                  value={social.url || ""}
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">{t("leads.form.username")}</Label>
                 <Input
                   className="h-9"
-                  value={social.username || ""}
                   onChange={(e) => updateSocialMedia(index, "username", e.target.value)}
                   placeholder={t("leads.form.usernamePlaceholder")}
+                  value={social.username || ""}
                 />
               </div>
             </div>
             <Button
-              type="button"
-              size="sm"
-              variant="ghost"
+              className="mt-6 text-red-600 hover:bg-red-50 hover:text-red-700"
               onClick={() => removeSocialMedia(index)}
-              className="mt-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+              size="sm"
+              type="button"
+              variant="ghost"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -643,11 +643,11 @@ export function LeadForm({
         ))}
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button onClick={onCancel} type="button" variant="outline">
           {cancelButtonText || t("leads.form.cancel")}
         </Button>
-        <Button type="submit" className="min-w-[100px]">
+        <Button className="min-w-[100px]" type="submit">
           {submitButtonText || (isEdit ? t("leads.form.update") : t("leads.form.save"))}
         </Button>
       </div>

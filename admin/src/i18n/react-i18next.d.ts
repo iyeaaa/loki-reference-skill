@@ -7,7 +7,7 @@ import "react-i18next"
 import type translation from "./generated/ko.json"
 
 declare module "react-i18next" {
-  interface CustomTypeOptions {
+  type CustomTypeOptions = {
     defaultNS: "translation"
     resources: {
       translation: typeof translation

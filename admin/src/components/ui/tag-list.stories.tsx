@@ -208,31 +208,31 @@ export const MixedVariants: Story = {
   args: { children: "" },
   render: () => (
     <TagList>
-      <Tag variant="positive" size="small">
+      <Tag size="small" variant="positive">
         Positive
       </Tag>
-      <Tag variant="negative" size="small">
+      <Tag size="small" variant="negative">
         Negative
       </Tag>
-      <Tag variant="other" size="small">
+      <Tag size="small" variant="other">
         Other
       </Tag>
-      <Tag variant="high" size="small">
+      <Tag size="small" variant="high">
         High
       </Tag>
-      <Tag variant="medium" size="small">
+      <Tag size="small" variant="medium">
         Medium
       </Tag>
-      <Tag variant="low" size="small">
+      <Tag size="small" variant="low">
         Low
       </Tag>
-      <Tag variant="meeting-request" size="small">
+      <Tag size="small" variant="meeting-request">
         Meeting Request
       </Tag>
-      <Tag variant="question" size="small">
+      <Tag size="small" variant="question">
         Question
       </Tag>
-      <Tag variant="auto" size="small">
+      <Tag size="small" variant="auto">
         Auto
       </Tag>
     </TagList>
@@ -264,13 +264,13 @@ export const RemovableTags: Story = {
       <div className="space-y-4">
         <TagList>
           {tags.map((tag) => (
-            <Tag key={tag.id} variant={tag.variant} removable onRemove={() => removeTag(tag.id)}>
+            <Tag key={tag.id} onRemove={() => removeTag(tag.id)} removable variant={tag.variant}>
               {tag.label}
             </Tag>
           ))}
         </TagList>
         {tags.length === 0 && (
-          <p className="text-sm text-muted-foreground">All tags removed! Refresh to reset.</p>
+          <p className="text-muted-foreground text-sm">All tags removed! Refresh to reset.</p>
         )}
       </div>
     )
@@ -307,25 +307,25 @@ export const VerticalList: Story = {
 export const InCard: Story = {
   args: { children: "" },
   render: () => (
-    <div className="border rounded-lg p-4 bg-background shadow-sm max-w-md">
-      <h3 className="font-semibold mb-2">Email from John Doe</h3>
-      <p className="text-sm text-muted-foreground mb-3">
+    <div className="max-w-md rounded-lg border bg-background p-4 shadow-sm">
+      <h3 className="mb-2 font-semibold">Email from John Doe</h3>
+      <p className="mb-3 text-muted-foreground text-sm">
         Hello, I would like to schedule a meeting to discuss the quarterly results. When would be a
         good time for you?
       </p>
       <div className="flex items-center justify-between">
         <TagList gap="xs">
-          <Tag variant="positive" size="small">
+          <Tag size="small" variant="positive">
             Positive
           </Tag>
-          <Tag variant="high" size="small">
+          <Tag size="small" variant="high">
             High
           </Tag>
-          <Tag variant="meeting-request" size="small">
+          <Tag size="small" variant="meeting-request">
             Meeting
           </Tag>
         </TagList>
-        <span className="text-xs text-muted-foreground">2 hours ago</span>
+        <span className="text-muted-foreground text-xs">2 hours ago</span>
       </div>
     </div>
   ),
@@ -369,17 +369,17 @@ export const FilterableTagList: Story = {
     return (
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-medium mb-2">Selected Filters:</p>
+          <p className="mb-2 font-medium text-sm">Selected Filters:</p>
           <TagList gap="xs">
             {selectedTags.map((variant) => {
               const tag = availableTags.find((t) => t.variant === variant)
               return (
                 <Tag
                   key={variant}
-                  variant={tag?.variant || "other"}
+                  onRemove={() => toggleTag(variant)}
                   removable
                   size="small"
-                  onRemove={() => toggleTag(variant)}
+                  variant={tag?.variant || "other"}
                 >
                   {tag?.label}
                 </Tag>
@@ -388,17 +388,17 @@ export const FilterableTagList: Story = {
           </TagList>
         </div>
         <div>
-          <p className="text-sm font-medium mb-2">Available Tags (click to add):</p>
+          <p className="mb-2 font-medium text-sm">Available Tags (click to add):</p>
           <TagList gap="xs">
             {availableTags
               .filter((tag) => !selectedTags.includes(tag.variant))
               .map((tag) => (
                 <Tag
-                  key={tag.variant}
-                  variant={tag.variant}
-                  size="small"
                   className="cursor-pointer hover:opacity-80"
+                  key={tag.variant}
                   onClick={() => toggleTag(tag.variant)}
+                  size="small"
+                  variant={tag.variant}
                 >
                   {tag.label}
                 </Tag>
@@ -423,8 +423,8 @@ export const ResponsiveLayout: Story = {
   render: () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-medium mb-2">Desktop View (wrapping)</h3>
-        <div className="border rounded-lg p-4 bg-background">
+        <h3 className="mb-2 font-medium text-sm">Desktop View (wrapping)</h3>
+        <div className="rounded-lg border bg-background p-4">
           <TagList gap="sm">
             <Tag variant="positive">Positive</Tag>
             <Tag variant="negative">Negative</Tag>
@@ -440,25 +440,25 @@ export const ResponsiveLayout: Story = {
       </div>
 
       <div>
-        <h3 className="text-sm font-medium mb-2">Mobile View (scrollable)</h3>
-        <div className="border rounded-lg p-4 bg-background max-w-xs">
-          <TagList wrap={false} gap="xs">
-            <Tag variant="positive" size="small">
+        <h3 className="mb-2 font-medium text-sm">Mobile View (scrollable)</h3>
+        <div className="max-w-xs rounded-lg border bg-background p-4">
+          <TagList gap="xs" wrap={false}>
+            <Tag size="small" variant="positive">
               Positive
             </Tag>
-            <Tag variant="negative" size="small">
+            <Tag size="small" variant="negative">
               Negative
             </Tag>
-            <Tag variant="other" size="small">
+            <Tag size="small" variant="other">
               Other
             </Tag>
-            <Tag variant="high" size="small">
+            <Tag size="small" variant="high">
               High
             </Tag>
-            <Tag variant="medium" size="small">
+            <Tag size="small" variant="medium">
               Medium
             </Tag>
-            <Tag variant="low" size="small">
+            <Tag size="small" variant="low">
               Low
             </Tag>
           </TagList>

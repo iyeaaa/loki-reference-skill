@@ -8,7 +8,7 @@ function PageLoadingFallback() {
     <div className="flex h-screen items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-gray-500 text-sm">Loading...</p>
       </div>
     </div>
   )
@@ -23,11 +23,11 @@ export default function RootLayout() {
   return (
     <div className="antialiased">
       <Toaster
-        position="top-right"
-        reverseOrder={false}
-        gutter={8}
         containerClassName=""
         containerStyle={{}}
+        gutter={8}
+        position="top-right"
+        reverseOrder={false}
         toastOptions={{
           className: "",
           duration: 4000,

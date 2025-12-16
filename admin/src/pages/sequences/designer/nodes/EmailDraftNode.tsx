@@ -22,7 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
 
-interface EmailDraftNodeData {
+type EmailDraftNodeData = {
   subject?: string
   bodyText?: string
   bodyHtml?: string
@@ -39,7 +39,7 @@ interface EmailDraftNodeData {
   onManageEmails?: () => void
 }
 
-interface EmailDraftNodeProps {
+type EmailDraftNodeProps = {
   data: EmailDraftNodeData
 }
 
@@ -48,7 +48,9 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   const getInitialMode = (): "ai" | "manual" | "template" => {
-    if (data.generationMode === "ai") return "ai"
+    if (data.generationMode === "ai") {
+      return "ai"
+    }
     return "manual"
   }
 
@@ -124,50 +126,50 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500 w-[280px]">
+      <div className="w-[280px] rounded-lg border-2 border-blue-500 bg-white shadow-lg">
         <Handle
-          type="target"
+          className="h-3 w-3 border-2 border-white bg-blue-500"
           position={Position.Top}
-          className="w-3 h-3 bg-blue-500 border-2 border-white"
+          type="target"
         />
 
         <div className="p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="bg-blue-100 rounded-full p-2">
-                <Mail className="w-4 h-4 text-blue-600" />
+              <div className="rounded-full bg-blue-100 p-2">
+                <Mail className="h-4 w-4 text-blue-600" />
               </div>
-              <span className="text-gray-800 font-semibold">이메일 초안</span>
+              <span className="font-semibold text-gray-800">이메일 초안</span>
             </div>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => data.onDelete?.()}
               className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+              onClick={() => data.onDelete?.()}
+              size="sm"
+              variant="ghost"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="space-y-2">
-            <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
-              <p className="text-xs text-blue-700">📧 등록된 모든 연락처에게 개별 발송</p>
+            <div className="mb-2 rounded border border-blue-200 bg-blue-50 p-2">
+              <p className="text-blue-700 text-xs">📧 등록된 모든 연락처에게 개별 발송</p>
             </div>
 
             {/* 생성 모드 표시 */}
             {data.generationMode && (
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 {data.generationMode === "ai" ? (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                  <span className="rounded bg-purple-100 px-2 py-1 text-purple-700 text-xs">
                     🤖 AI 생성
                   </span>
                 ) : (
-                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  <span className="rounded bg-gray-100 px-2 py-1 text-gray-700 text-xs">
                     ✍️ 수동 작성
                   </span>
                 )}
                 {data.generatedCount !== undefined && data.totalCount !== undefined && (
-                  <span className="text-xs text-gray-600">
+                  <span className="text-gray-600 text-xs">
                     {data.generatedCount}/{data.totalCount} 작성됨
                   </span>
                 )}
@@ -176,11 +178,11 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
 
             {data.subject ? (
               <div className="text-sm">
-                <div className="text-gray-500 text-xs mb-1">
+                <div className="mb-1 text-gray-500 text-xs">
                   {data.generationMode === "ai" ? "AI 프롬프트" : "제목 템플릿"}
                 </div>
                 <div
-                  className="font-medium overflow-hidden text-ellipsis"
+                  className="overflow-hidden text-ellipsis font-medium"
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
@@ -194,23 +196,23 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-gray-400 italic">설정되지 않음</div>
+              <div className="text-gray-400 text-sm italic">설정되지 않음</div>
             )}
 
             <div className="flex gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditOpen(true)}
                 className="flex-1"
+                onClick={() => setIsEditOpen(true)}
+                size="sm"
+                variant="outline"
               >
                 설정
               </Button>
               <Button
-                variant="default"
-                size="sm"
-                onClick={() => data.onManageEmails?.()}
                 className="flex-1"
+                onClick={() => data.onManageEmails?.()}
+                size="sm"
+                variant="default"
               >
                 이메일 관리
               </Button>
@@ -218,11 +220,11 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 p-3 bg-gray-50">
-          <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <div className="border-gray-200 border-t bg-gray-50 p-3">
+          <DropdownMenu onOpenChange={setIsOpen} open={isOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button className="w-full" size="sm" variant="ghost">
+                <Plus className="mr-2 h-4 w-4" />
                 노드 추가
               </Button>
             </DropdownMenuTrigger>
@@ -235,21 +237,21 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
         </div>
 
         <Handle
-          type="source"
+          className="h-3 w-3 border-2 border-white bg-blue-500"
           position={Position.Bottom}
-          className="w-3 h-3 bg-blue-500 border-2 border-white"
+          type="source"
         />
       </div>
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog onOpenChange={setIsEditOpen} open={isEditOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>이메일 설정</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <div className="bg-blue-50 border border-blue-200 rounded p-3">
-              <p className="text-sm text-blue-800 font-medium mb-1">📧 일괄 발송 이메일</p>
-              <p className="text-xs text-blue-600">
+            <div className="rounded border border-blue-200 bg-blue-50 p-3">
+              <p className="mb-1 font-medium text-blue-800 text-sm">📧 일괄 발송 이메일</p>
+              <p className="text-blue-600 text-xs">
                 시퀀스에 등록된 모든 연락처에게 개별적으로 발송됩니다. 각 연락처마다 하나의 이메일이
                 생성됩니다.
               </p>
@@ -259,29 +261,29 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             <div>
               <Label>이메일 작성 방식</Label>
               <RadioGroup
-                value={generationMode}
-                onValueChange={(value) => setGenerationMode(value as "ai" | "manual")}
                 className="mt-2"
+                onValueChange={(value) => setGenerationMode(value as "ai" | "manual")}
+                value={generationMode}
               >
-                <div className="flex items-start space-x-2 border rounded p-3 hover:bg-gray-50">
-                  <RadioGroupItem value="ai" id={modeAiId} />
+                <div className="flex items-start space-x-2 rounded border p-3 hover:bg-gray-50">
+                  <RadioGroupItem id={modeAiId} value="ai" />
                   <div className="flex-1">
-                    <Label htmlFor={modeAiId} className="font-semibold cursor-pointer">
+                    <Label className="cursor-pointer font-semibold" htmlFor={modeAiId}>
                       🤖 AI 자동 생성
                     </Label>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="mt-1 text-gray-600 text-xs">
                       프롬프트를 입력하면 AI가 각 고객사에 맞춤형 이메일을 자동 생성합니다. 생성 후
                       개별 수정 가능합니다.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-2 border rounded p-3 hover:bg-gray-50">
-                  <RadioGroupItem value="manual" id={modeManualId} />
+                <div className="flex items-start space-x-2 rounded border p-3 hover:bg-gray-50">
+                  <RadioGroupItem id={modeManualId} value="manual" />
                   <div className="flex-1">
-                    <Label htmlFor={modeManualId} className="font-semibold cursor-pointer">
+                    <Label className="cursor-pointer font-semibold" htmlFor={modeManualId}>
                       ✍️ 수동 작성 또는 템플릿
                     </Label>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="mt-1 text-gray-600 text-xs">
                       템플릿을 작성하거나 각 고객사에 대해 직접 이메일을 작성합니다. 변수를 사용하여
                       자동 치환됩니다.
                     </p>
@@ -296,14 +298,16 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                 <Label htmlFor={aiPromptId}>AI 프롬프트</Label>
                 <Textarea
                   id={aiPromptId}
-                  value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder="예: {{회사명}}에게 우리 서비스를 소개하는 친근하고 전문적인 이메일을 작성해주세요. {{업종}} 업계의 특성을 고려해주세요."
                   rows={4}
+                  value={aiPrompt}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-gray-500 text-xs">
                   💡 사용 가능한 변수:{" "}
-                  {`{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등`}
+                  {
+                    "{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등"
+                  }
                 </p>
               </div>
             )}
@@ -313,7 +317,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
               <>
                 <div>
                   <Label>템플릿에서 불러오기</Label>
-                  <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                  <Select onValueChange={handleTemplateSelect} value={selectedTemplateId}>
                     <SelectTrigger>
                       <SelectValue placeholder="템플릿 선택 (선택사항)" />
                     </SelectTrigger>
@@ -325,7 +329,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="mt-1 text-gray-500 text-xs">
                     💡 기존 템플릿을 선택하면 내용이 자동으로 입력됩니다
                   </p>
                 </div>
@@ -333,32 +337,32 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                   <Label htmlFor={subjectId}>제목 템플릿</Label>
                   <Input
                     id={subjectId}
-                    value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="예: 안녕하세요, {{회사명}}님"
+                    value={subject}
                   />
                 </div>
                 <div>
                   <Label htmlFor={bodyId}>본문 템플릿 (텍스트)</Label>
                   <Textarea
                     id={bodyId}
-                    value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
                     placeholder="이메일 본문을 입력하세요&#10;&#10;변수 예시: {{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등"
                     rows={6}
+                    value={bodyText}
                   />
                 </div>
                 <div>
                   <Label htmlFor={bodyHtmlId}>본문 템플릿 (HTML)</Label>
                   <Textarea
+                    className="font-mono text-sm"
                     id={bodyHtmlId}
-                    value={bodyHtml}
                     onChange={(e) => setBodyHtml(e.target.value)}
                     placeholder="<p>HTML 형식의 이메일 본문을 입력하세요</p>&#10;&#10;변수 예시: {{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등"
                     rows={6}
-                    className="font-mono text-sm"
+                    value={bodyHtml}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="mt-1 text-gray-500 text-xs">
                     💡 HTML을 입력하면 텍스트 본문 대신 HTML 본문이 사용됩니다
                   </p>
                 </div>
@@ -366,7 +370,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button onClick={() => setIsEditOpen(false)} variant="outline">
                 취소
               </Button>
               <Button onClick={handleSave}>저장</Button>

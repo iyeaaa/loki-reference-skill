@@ -1,10 +1,10 @@
 import { apiFetch } from "../client"
 
-export interface NylasAuthUrlResponse {
+export type NylasAuthUrlResponse = {
   url: string
 }
 
-export interface NylasGrantResponse {
+export type NylasGrantResponse = {
   grantId: string
   email: string
   provider: string
@@ -27,8 +27,12 @@ export async function exchangeCodeForGrant(
   state?: string,
 ): Promise<NylasGrantResponse> {
   const params = new URLSearchParams({ code })
-  if (workspaceId) params.append("workspaceId", workspaceId)
-  if (state) params.append("state", state)
+  if (workspaceId) {
+    params.append("workspaceId", workspaceId)
+  }
+  if (state) {
+    params.append("state", state)
+  }
   return apiFetch<NylasGrantResponse>(`/api/v1/nylas/callback?${params.toString()}`)
 }
 

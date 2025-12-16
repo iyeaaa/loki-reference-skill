@@ -17,7 +17,7 @@ import { useEmailReplies } from "@/lib/api/hooks/email-replies"
 import type { EmailReplyWithDetails } from "@/lib/api/types/email-reply"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface RepliesTableWithPaginationProps {
+type RepliesTableWithPaginationProps = {
   searchQuery: string
   workspaceId: string | undefined
   selectedReadStatus: boolean | undefined
@@ -68,7 +68,9 @@ export function RepliesTableWithPagination({
   const totalPages = Math.ceil(total / limit) || 1
 
   const getSentimentBadge = (sentiment: string | null) => {
-    if (!sentiment) return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+    if (!sentiment) {
+      return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+    }
 
     switch (sentiment) {
       case "positive":
@@ -102,7 +104,7 @@ export function RepliesTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -112,7 +114,7 @@ export function RepliesTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (Number.isNaN(page) || page < 1 || page > totalPages) {
       setPageInputValue(currentPage.toString())
     }
@@ -122,13 +124,13 @@ export function RepliesTableWithPagination({
     <div className="space-y-4">
       {/* Loading overlay */}
       {isFetching && (
-        <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-          <div className="text-sm text-muted-foreground">{t("table.loading")}</div>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+          <div className="text-muted-foreground text-sm">{t("table.loading")}</div>
         </div>
       )}
 
       {/* Table */}
-      <div className="border rounded-md overflow-hidden">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -154,7 +156,7 @@ export function RepliesTableWithPagination({
           <TableBody>
             {replies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell className="py-8 text-center text-muted-foreground" colSpan={8}>
                   답장이 없습니다.
                 </TableCell>
               </TableRow>
@@ -176,7 +178,7 @@ export function RepliesTableWithPagination({
                   </TableCell>
                   <TableCell>
                     <div className="max-w-[200px]">
-                      <div className="font-medium truncate">
+                      <div className="truncate font-medium">
                         {reply.replyEmail?.companyName ||
                           reply.replyEmail?.contactName ||
                           reply.replyEmail?.leadName ||
@@ -190,7 +192,7 @@ export function RepliesTableWithPagination({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm truncate max-w-[150px]">
+                    <div className="max-w-[150px] truncate text-sm">
                       {reply.emailAccount?.emailAddress || "-"}
                     </div>
                   </TableCell>
@@ -198,19 +200,19 @@ export function RepliesTableWithPagination({
                     {(() => {
                       const badge = getSentimentBadge(reply.sentiment)
                       return (
-                        <Badge variant="outline" className={badge.color}>
+                        <Badge className={badge.color} variant="outline">
                           {badge.label}
                         </Badge>
                       )
                     })()}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-sm">
                     {reply.replyEmail?.sentAt
                       ? formatRelativeTime(new Date(reply.replyEmail.sentAt))
                       : "-"}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => onViewReply(reply)}>
+                    <Button onClick={() => onViewReply(reply)} size="sm" variant="ghost">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -223,38 +225,38 @@ export function RepliesTableWithPagination({
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           총 {total}개 중 {offset + 1}-{Math.min(offset + limit, total)}개 표시
         </div>
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(currentPage - 1)}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
           <div className="flex items-center gap-2">
             <Input
-              type="text"
-              value={pageInputValue}
-              onChange={(e) => handlePageInputChange(e.target.value)}
-              onKeyDown={handlePageInputKeyDown}
-              onBlur={handlePageInputBlur}
               className="w-16 text-center"
               disabled={isFetching}
+              onBlur={handlePageInputBlur}
+              onChange={(e) => handlePageInputChange(e.target.value)}
+              onKeyDown={handlePageInputKeyDown}
+              type="text"
+              value={pageInputValue}
             />
-            <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+            <span className="text-muted-foreground text-sm">/ {totalPages}</span>
           </div>
 
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages || isFetching}
+            onClick={() => handlePageChange(currentPage + 1)}
+            size="sm"
+            variant="outline"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

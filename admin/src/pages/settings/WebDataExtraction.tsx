@@ -100,10 +100,8 @@ export function WebDataExtraction() {
       return
     }
 
-    if (displayProgress && !isPanelVisible) {
-      if (displayProgress.status === "processing") {
-        setIsPanelVisible(true)
-      }
+    if (displayProgress && !isPanelVisible && displayProgress.status === "processing") {
+      setIsPanelVisible(true)
     }
   }, [displayProgress, isPanelVisible])
 
@@ -183,7 +181,7 @@ export function WebDataExtraction() {
       }
 
       const fileName = file.name.toLowerCase()
-      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv"))) {
         setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
         setSelectedFile(null)
         return
@@ -234,7 +232,7 @@ export function WebDataExtraction() {
       }
 
       const fileName = file.name.toLowerCase()
-      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv"))) {
         setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
         setSelectedFile(null)
         return
@@ -259,7 +257,7 @@ export function WebDataExtraction() {
   }
 
   const handleUpload = () => {
-    if (!selectedFile || !workspaceId) {
+    if (!(selectedFile && workspaceId)) {
       setError("파일을 선택하고 워크스페이스를 확인해주세요")
       return
     }
@@ -286,7 +284,7 @@ export function WebDataExtraction() {
     })
   }
 
-  const handleDownload = (splitEmails: boolean = false) => {
+  const handleDownload = (splitEmails = false) => {
     if (!Array.isArray(data) || data.length === 0) {
       setError("다운로드할 데이터가 없습니다")
       return
@@ -295,7 +293,7 @@ export function WebDataExtraction() {
     try {
       let excelData: unknown[]
 
-      const createRowData = (item: ExtractionResult, emailValue: string = "") => {
+      const createRowData = (item: ExtractionResult, emailValue = "") => {
         const baseData: Record<string, string> = {
           "Website URL": item.website_url || "",
           "Found Company": item.found_company_name || "",
@@ -401,7 +399,7 @@ export function WebDataExtraction() {
   const handleAddApiKey = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!workspaceId || !apiKeyFormData.name.trim() || !apiKeyFormData.apiKey.trim()) {
+    if (!(workspaceId && apiKeyFormData.name.trim() && apiKeyFormData.apiKey.trim())) {
       return
     }
 
@@ -428,7 +426,9 @@ export function WebDataExtraction() {
   }
 
   const handleDeleteApiKey = async (id: string) => {
-    if (!confirm("이 API 키를 삭제하시겠습니까?")) return
+    if (!confirm("이 API 키를 삭제하시겠습니까?")) {
+      return
+    }
     await deleteApiKeyMutation.mutateAsync({ id, workspaceId })
   }
 
@@ -445,7 +445,9 @@ export function WebDataExtraction() {
   // Handle panel resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return
+      if (!isResizing) {
+        return
+      }
 
       const newWidth = window.innerWidth - e.clientX
       const minWidth = 200
@@ -478,12 +480,12 @@ export function WebDataExtraction() {
   const hasData = Array.isArray(data) && data.length > 0
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left: Main Content */}
         {hasData ? (
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+          <div className="flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
             {/* Error Alert */}
             {error && (
               <Alert variant="destructive">
@@ -497,23 +499,23 @@ export function WebDataExtraction() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <motion.img
-                  src="/images/web-extraction-logo.webp"
                   alt="웹데추"
-                  className="h-10 w-10 object-contain rounded-lg border border-border cursor-pointer"
-                  whileHover={{ scale: 1.1, rotate: 6 }}
-                  whileTap={{ scale: 1.8 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                  style={{ boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" }}
+                  className="h-10 w-10 cursor-pointer rounded-lg border border-border object-contain"
                   onClick={() => {
                     toast.success("웹데추! 🎉")
                   }}
+                  src="/images/web-extraction-logo.webp"
+                  style={{ boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  whileHover={{ scale: 1.1, rotate: 6 }}
+                  whileTap={{ scale: 1.8 }}
                 />
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold">웹데추</h2>
-                    <span className="text-xs text-muted-foreground">v1.0.0.20251108</span>
+                    <h2 className="font-semibold text-xl">웹데추</h2>
+                    <span className="text-muted-foreground text-xs">v1.0.0.20251108</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {progress?.status === "processing"
                       ? "지금 추출 중이에요"
                       : "웹사이트에서 추출한 데이터를 확인해보세요"}
@@ -524,14 +526,14 @@ export function WebDataExtraction() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant="outline"
-                  onClick={() => setIsApiKeyManagementModalOpen(true)}
                   disabled={isProcessing}
+                  onClick={() => setIsApiKeyManagementModalOpen(true)}
+                  variant="outline"
                 >
                   <Key className="mr-2 h-4 w-4" />
                   API 키 관리
                   {apiKeys.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
+                    <Badge className="ml-2" variant="secondary">
                       {apiKeys.length}
                     </Badge>
                   )}
@@ -550,26 +552,26 @@ export function WebDataExtraction() {
                   파일 업로드
                 </Button>
                 <Button
+                  disabled={!Array.isArray(data) || data.length === 0}
                   onClick={() => setIsDownloadConfirmDialogOpen(true)}
                   variant="outline"
-                  disabled={!Array.isArray(data) || data.length === 0}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   웹데추 결과 다운로드 ({data.length}개)
                 </Button>
                 {progress?.status === "completed" && jobId && (
                   <Button
+                    disabled={cleanupMutation.isPending}
                     onClick={handleCleanup}
                     variant="outline"
-                    disabled={cleanupMutation.isPending}
                   >
                     초기화
                   </Button>
                 )}
                 <Button
+                  className="text-destructive hover:text-destructive"
                   onClick={() => setIsClearDataDialogOpen(true)}
                   variant="outline"
-                  className="text-destructive hover:text-destructive"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   웹데추 데이터 초기화
@@ -582,90 +584,90 @@ export function WebDataExtraction() {
           </div>
         ) : (
           <EmptyState
-            selectedFile={selectedFile}
-            urlCount={urlCount}
-            isValidatingFile={isValidatingFile}
-            isProcessing={isProcessing}
-            isDragOver={isDragOver}
             activeApiKeysCount={activeApiKeysCount}
             fileInputRef={fileInputRef}
-            onFileChange={handleFileChange}
-            onDragOver={handleDragOver}
+            isDragOver={isDragOver}
+            isProcessing={isProcessing}
+            isValidatingFile={isValidatingFile}
+            onAddApiKey={() => setIsApiKeyManagementModalOpen(true)}
+            onDownloadTemplate={handleDownloadTemplate}
             onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
             onDrop={handleDrop}
+            onFileChange={handleFileChange}
             onRemoveFile={() => {
               setSelectedFile(null)
               setUrlCount(null)
               setError(null)
             }}
-            onUpload={handleUpload}
-            onDownloadTemplate={handleDownloadTemplate}
-            onAddApiKey={() => setIsApiKeyManagementModalOpen(true)}
-            searchCriteria={searchCriteria}
             onSearchCriteriaChange={setSearchCriteria}
+            onUpload={handleUpload}
+            searchCriteria={searchCriteria}
+            selectedFile={selectedFile}
+            urlCount={urlCount}
           />
         )}
 
         {/* Right: Progress Panel */}
         <ProgressPanel
-          progress={displayProgress}
-          isPanelVisible={isPanelVisible}
-          panelWidth={panelWidth}
-          isResizing={isResizing}
           activeApiKeysCount={activeApiKeysCount}
-          totalTimeSaved={totalTimeSaved}
-          onTogglePanel={setIsPanelVisible}
+          isPanelVisible={isPanelVisible}
+          isResizing={isResizing}
           onStartResize={() => setIsResizing(true)}
+          onTogglePanel={setIsPanelVisible}
+          panelWidth={panelWidth}
+          progress={displayProgress}
           resizeRef={resizeRef}
+          totalTimeSaved={totalTimeSaved}
         />
       </div>
 
       {/* Modals */}
       <ApiKeyManagementModal
-        isOpen={isApiKeyManagementModalOpen}
-        onOpenChange={setIsApiKeyManagementModalOpen}
-        apiKeys={apiKeys}
         activeApiKeysCount={activeApiKeysCount}
-        isProcessing={isProcessing}
-        onToggleActive={handleToggleActive}
-        onDeleteApiKey={handleDeleteApiKey}
-        onAddApiKey={() => setIsApiKeyDialogOpen(true)}
-        isUpdating={updateApiKeyMutation.isPending}
+        apiKeys={apiKeys}
         isDeleting={deleteApiKeyMutation.isPending}
+        isOpen={isApiKeyManagementModalOpen}
+        isProcessing={isProcessing}
+        isUpdating={updateApiKeyMutation.isPending}
+        onAddApiKey={() => setIsApiKeyDialogOpen(true)}
+        onDeleteApiKey={handleDeleteApiKey}
+        onOpenChange={setIsApiKeyManagementModalOpen}
+        onToggleActive={handleToggleActive}
       />
 
       <FileUploadModal
-        isOpen={isFileUploadModalOpen}
-        onOpenChange={setIsFileUploadModalOpen}
-        selectedFile={selectedFile}
-        urlCount={urlCount}
-        isValidatingFile={isValidatingFile}
-        isProcessing={isProcessing}
-        isDragOver={isDragOver}
         fileInputRef={fileInputRef}
-        onFileChange={handleFileChange}
-        onDragOver={handleDragOver}
+        isDragOver={isDragOver}
+        isOpen={isFileUploadModalOpen}
+        isProcessing={isProcessing}
+        isValidatingFile={isValidatingFile}
+        onDownloadTemplate={handleDownloadTemplate}
         onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onFileChange={handleFileChange}
+        onOpenChange={setIsFileUploadModalOpen}
         onRemoveFile={() => {
           setSelectedFile(null)
           setUrlCount(null)
           setError(null)
         }}
-        onUpload={handleUpload}
-        onDownloadTemplate={handleDownloadTemplate}
-        searchCriteria={searchCriteria}
         onSearchCriteriaChange={setSearchCriteria}
+        onUpload={handleUpload}
+        searchCriteria={searchCriteria}
+        selectedFile={selectedFile}
+        urlCount={urlCount}
       />
 
       {/* API Key Add Dialog */}
       <Dialog
-        open={isApiKeyDialogOpen}
         onOpenChange={(open) => {
           if (!isProcessing) {
             setIsApiKeyDialogOpen(open)
           }
         }}
+        open={isApiKeyDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
@@ -678,35 +680,35 @@ export function WebDataExtraction() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddApiKey} className="space-y-4">
+          <form className="space-y-4" onSubmit={handleAddApiKey}>
             <div className="space-y-2">
               <Label htmlFor={keyNameId}>키 이름</Label>
               <Input
                 id={keyNameId}
-                value={apiKeyFormData.name}
                 onChange={(e) => setApiKeyFormData({ ...apiKeyFormData, name: e.target.value })}
                 placeholder="예: Main Account, Backup Account 1"
                 required
+                value={apiKeyFormData.name}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={apiKeyId}>API 키</Label>
               <Input
+                className="font-mono text-xs"
                 id={apiKeyId}
-                type="text"
-                value={apiKeyFormData.apiKey}
                 onChange={(e) => setApiKeyFormData({ ...apiKeyFormData, apiKey: e.target.value })}
                 placeholder="sk-..."
                 required
-                className="font-mono text-xs"
+                type="text"
+                value={apiKeyFormData.apiKey}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="underline"
+                  href="https://platform.openai.com/api-keys"
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   OpenAI 플랫폼
                 </a>
@@ -715,11 +717,11 @@ export function WebDataExtraction() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsApiKeyDialogOpen(false)}>
+              <Button onClick={() => setIsApiKeyDialogOpen(false)} type="button" variant="outline">
                 <X className="mr-2 h-4 w-4" />
                 취소
               </Button>
-              <Button type="submit" disabled={createApiKeyMutation.isPending}>
+              <Button disabled={createApiKeyMutation.isPending} type="submit">
                 <Save className="mr-2 h-4 w-4" />
                 추가
               </Button>
@@ -729,7 +731,7 @@ export function WebDataExtraction() {
       </Dialog>
 
       {/* Clear Data Confirmation Dialog */}
-      <AlertDialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+      <AlertDialog onOpenChange={setIsClearDataDialogOpen} open={isClearDataDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>웹데추 데이터 초기화 확인</AlertDialogTitle>
@@ -742,8 +744,8 @@ export function WebDataExtraction() {
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleClearLocalStorage}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleClearLocalStorage}
             >
               초기화
             </AlertDialogAction>
@@ -752,13 +754,13 @@ export function WebDataExtraction() {
       </AlertDialog>
 
       {/* Close Panel Confirmation Dialog */}
-      <AlertDialog open={isClosePanelDialogOpen} onOpenChange={setIsClosePanelDialogOpen}>
+      <AlertDialog onOpenChange={setIsClosePanelDialogOpen} open={isClosePanelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>추출이 끝났어요</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">결과 패널을 닫을까요?</span>
-              <span className="block text-xs text-muted-foreground">
+              <span className="block text-muted-foreground text-xs">
                 닫아도 언제든지 다시 열 수 있어요
               </span>
             </AlertDialogDescription>
@@ -792,7 +794,7 @@ export function WebDataExtraction() {
       </AlertDialog>
 
       {/* Download Confirmation Dialog */}
-      <AlertDialog open={isDownloadConfirmDialogOpen} onOpenChange={setIsDownloadConfirmDialogOpen}>
+      <AlertDialog onOpenChange={setIsDownloadConfirmDialogOpen} open={isDownloadConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>다운로드 옵션 선택</AlertDialogTitle>
@@ -804,37 +806,37 @@ export function WebDataExtraction() {
           </AlertDialogHeader>
           <div className="space-y-3 py-4">
             <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-3 px-4"
+              className="h-auto w-full justify-start px-4 py-3"
               onClick={() => {
                 handleDownload(false)
                 setIsDownloadConfirmDialogOpen(false)
               }}
+              variant="outline"
             >
               <div className="flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   <span className="font-semibold">기존 형태로 다운로드</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   이메일이 여러 개 있어도 하나의 행으로 유지됩니다
                 </span>
               </div>
             </Button>
             <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-3 px-4"
+              className="h-auto w-full justify-start px-4 py-3"
               onClick={() => {
                 handleDownload(true)
                 setIsDownloadConfirmDialogOpen(false)
               }}
+              variant="outline"
             >
               <div className="flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   <span className="font-semibold">이메일 분리하여 다운로드</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   이메일이 여러 개인 경우 각 이메일마다 별도의 행으로 생성됩니다
                   <br />
                   예: cs@example.com,sales@example.com → 2개 행 생성

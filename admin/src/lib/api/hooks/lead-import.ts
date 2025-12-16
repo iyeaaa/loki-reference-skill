@@ -9,7 +9,7 @@ import { fetchSheetNames, type ImportProgress, uploadLeadsFile } from "../servic
 /**
  * 시트 이름 목록 조회 훅
  */
-export function useFetchSheetNames(file: File | null, enabled: boolean = true) {
+export function useFetchSheetNames(file: File | null, enabled = true) {
   return useQuery({
     queryKey: ["sheet-names", file?.name, file?.size],
     queryFn: () => {

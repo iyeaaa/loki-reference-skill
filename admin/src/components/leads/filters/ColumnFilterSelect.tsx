@@ -14,13 +14,13 @@ import {
 import type { ColumnFilter, FilterOperator } from "@/lib/api/types/lead-filters"
 import { OPERATOR_LABELS } from "@/lib/api/types/lead-filters"
 
-interface FilterOption {
+type FilterOption = {
   value: string
   label: string
   count?: number
 }
 
-interface ColumnFilterSelectProps {
+type ColumnFilterSelectProps = {
   field: string
   onFilterChange: (filter: ColumnFilter | null) => void
   initialFilter?: ColumnFilter
@@ -151,7 +151,7 @@ export function ColumnFilterSelect({
       {/* Operator Selection */}
       <div className="space-y-2">
         <Label htmlFor={operatorId}>Operator</Label>
-        <Select value={operator} onValueChange={(val) => setOperator(val as FilterOperator)}>
+        <Select onValueChange={(val) => setOperator(val as FilterOperator)} value={operator}>
           <SelectTrigger id={operatorId}>
             <SelectValue />
           </SelectTrigger>
@@ -169,32 +169,32 @@ export function ColumnFilterSelect({
       <div className="space-y-2">
         <Label htmlFor={searchId}>Search</Label>
         <Input
+          autoFocus
           id={searchId}
-          type="text"
-          value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter options..."
-          autoFocus
+          type="text"
+          value={searchQuery}
         />
       </div>
 
       {/* Select/Deselect All Buttons */}
       <div className="flex gap-2">
         <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSelectAll}
-          disabled={isLoading || filteredOptions.length === 0}
           className="flex-1"
+          disabled={isLoading || filteredOptions.length === 0}
+          onClick={handleSelectAll}
+          size="sm"
+          variant="outline"
         >
           Select All
         </Button>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDeselectAll}
-          disabled={isLoading || selectedValues.length === 0}
           className="flex-1"
+          disabled={isLoading || selectedValues.length === 0}
+          onClick={handleDeselectAll}
+          size="sm"
+          variant="outline"
         >
           Deselect All
         </Button>
@@ -203,31 +203,31 @@ export function ColumnFilterSelect({
       {/* Options List */}
       <div className="space-y-2">
         {isLoading && (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading options...</div>
+          <div className="py-8 text-center text-muted-foreground text-sm">Loading options...</div>
         )}
 
-        {error && <div className="py-4 text-center text-sm text-destructive">{error}</div>}
+        {error && <div className="py-4 text-center text-destructive text-sm">{error}</div>}
 
-        {!isLoading && !error && filteredOptions.length === 0 && (
-          <div className="py-8 text-center text-sm text-muted-foreground">No options found</div>
+        {!(isLoading || error) && filteredOptions.length === 0 && (
+          <div className="py-8 text-center text-muted-foreground text-sm">No options found</div>
         )}
 
-        {!isLoading && !error && filteredOptions.length > 0 && (
+        {!(isLoading || error) && filteredOptions.length > 0 && (
           <ScrollArea className="h-[200px] rounded-md border p-2">
             <div className="space-y-2">
               {filteredOptions.map((option) => (
                 <div
-                  key={option.value}
                   className="flex items-center space-x-2 rounded-sm px-2 py-1.5 hover:bg-accent"
+                  key={option.value}
                 >
                   <Checkbox
-                    id={`option-${option.value}`}
                     checked={selectedValues.includes(option.value)}
+                    id={`option-${option.value}`}
                     onCheckedChange={() => handleToggle(option.value)}
                   />
                   <label
+                    className="flex flex-1 cursor-pointer items-center justify-between font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     htmlFor={`option-${option.value}`}
-                    className="flex flex-1 cursor-pointer items-center justify-between text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     <span>{option.label}</span>
                     {option.count !== undefined && (
@@ -242,13 +242,13 @@ export function ColumnFilterSelect({
       </div>
 
       {/* Selected Count and Action Buttons */}
-      <div className="flex items-center justify-between pt-2 border-t">
-        <span className="text-sm text-muted-foreground">{selectedValues.length} selected</span>
+      <div className="flex items-center justify-between border-t pt-2">
+        <span className="text-muted-foreground text-sm">{selectedValues.length} selected</span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleClear}>
+          <Button onClick={handleClear} size="sm" variant="outline">
             Clear
           </Button>
-          <Button size="sm" onClick={handleApply}>
+          <Button onClick={handleApply} size="sm">
             Apply
           </Button>
         </div>

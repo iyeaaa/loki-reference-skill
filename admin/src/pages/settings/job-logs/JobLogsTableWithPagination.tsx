@@ -26,7 +26,7 @@ import { useJobLogs } from "@/lib/api/hooks/job-logs"
 import type { JobLog, JobLogStatus, JobLogsSearchParams } from "@/lib/api/types/job-log"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface JobLogsTableWithPaginationProps {
+type JobLogsTableWithPaginationProps = {
   searchQuery: string
   selectedStatuses: JobLogStatus[]
   selectedQueues: string[]
@@ -87,7 +87,7 @@ export function JobLogsTableWithPagination({
   // Build params for API call
   const params: JobLogsSearchParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     search: searchQuery || undefined,
     status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
     queueName: selectedQueues.length === 1 ? selectedQueues[0] : undefined,
@@ -113,7 +113,7 @@ export function JobLogsTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -123,7 +123,7 @@ export function JobLogsTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -148,10 +148,16 @@ export function JobLogsTableWithPagination({
   }
 
   const formatDuration = (ms: number | null) => {
-    if (ms === null) return "-"
-    if (ms < 1000) return `${ms}ms`
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-    return `${(ms / 60000).toFixed(1)}m`
+    if (ms === null) {
+      return "-"
+    }
+    if (ms < 1000) {
+      return `${ms}ms`
+    }
+    if (ms < 60_000) {
+      return `${(ms / 1000).toFixed(1)}s`
+    }
+    return `${(ms / 60_000).toFixed(1)}m`
   }
 
   return (
@@ -168,42 +174,42 @@ export function JobLogsTableWithPagination({
           <table className="w-full" style={{ tableLayout: "auto" }}>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   Job ID
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   Queue
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   Job 이름
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   상태
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   우선순위
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   시도
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   소요시간
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   에러
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   추가일시
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">
                   상세
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                  <td className="p-8 text-center text-muted-foreground" colSpan={10}>
                     {isFetching ? "로딩 중..." : "Job 로그가 없습니다"}
                   </td>
                 </tr>
@@ -212,45 +218,45 @@ export function JobLogsTableWithPagination({
                   const statusConfig = STATUS_CONFIG[log.status]
                   return (
                     <tr
+                      className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                       key={log.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <td
-                        className="p-2 text-sm font-mono text-gray-900 dark:text-gray-100"
-                        title={log.jobId}
+                        className="p-2 font-mono text-gray-900 text-sm dark:text-gray-100"
                         style={{
                           maxWidth: "120px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
+                        title={log.jobId}
                       >
                         {log.jobId}
                       </td>
-                      <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Badge variant="outline" className="text-xs font-mono">
+                      <td className="p-2 text-gray-600 text-sm dark:text-gray-400">
+                        <Badge className="font-mono text-xs" variant="outline">
                           {log.queueName}
                         </Badge>
                       </td>
                       <td
-                        className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                        title={log.jobName || "-"}
+                        className="p-2 text-gray-900 text-sm dark:text-gray-100"
                         style={{
                           maxWidth: "150px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
+                        title={log.jobName || "-"}
                       >
                         {log.jobName || "-"}
                       </td>
-                      <td className="p-2 whitespace-nowrap text-sm">
-                        <Badge variant={statusConfig.variant} className="text-xs gap-1">
+                      <td className="whitespace-nowrap p-2 text-sm">
+                        <Badge className="gap-1 text-xs" variant={statusConfig.variant}>
                           {statusConfig.icon}
                           {statusConfig.label}
                         </Badge>
                       </td>
-                      <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
+                      <td className="p-2 text-gray-600 text-sm dark:text-gray-400">
                         {log.priority !== null && log.priority !== 0 ? (
                           <span className="flex items-center gap-1">
                             <ArrowUp className="h-3 w-3 text-orange-500" />
@@ -260,21 +266,20 @@ export function JobLogsTableWithPagination({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
+                      <td className="p-2 text-gray-600 text-sm dark:text-gray-400">
                         {log.attemptsMade}/{log.maxAttempts}
                       </td>
-                      <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
+                      <td className="p-2 text-gray-600 text-sm dark:text-gray-400">
                         {formatDuration(log.durationMs)}
                       </td>
                       <td className="p-2 text-sm">
                         {log.errorCode ? (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge className="text-xs" variant="destructive">
                             {log.errorCode}
                           </Badge>
                         ) : log.errorMessage ? (
                           <span
                             className="text-red-600 dark:text-red-400"
-                            title={log.errorMessage}
                             style={{
                               maxWidth: "150px",
                               overflow: "hidden",
@@ -282,23 +287,24 @@ export function JobLogsTableWithPagination({
                               whiteSpace: "nowrap",
                               display: "inline-block",
                             }}
+                            title={log.errorMessage}
                           >
-                            <AlertCircle className="h-3 w-3 inline mr-1" />
+                            <AlertCircle className="mr-1 inline h-3 w-3" />
                             오류
                           </span>
                         ) : (
                           "-"
                         )}
                       </td>
-                      <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                         {formatRelativeTime(log.addedAt)}
                       </td>
-                      <td className="p-2 whitespace-nowrap text-sm">
+                      <td className="whitespace-nowrap p-2 text-sm">
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          className="h-8 px-2 text-xs"
                           onClick={() => setSelectedLog(log)}
-                          className="text-xs h-8 px-2"
+                          size="sm"
+                          variant="ghost"
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
@@ -316,7 +322,7 @@ export function JobLogsTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -332,22 +338,22 @@ export function JobLogsTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             처음
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             이전
@@ -356,12 +362,12 @@ export function JobLogsTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -369,11 +375,11 @@ export function JobLogsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             다음
             <ChevronRight className="h-4 w-4" />
@@ -381,11 +387,11 @@ export function JobLogsTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             마지막
           </Button>
@@ -393,30 +399,30 @@ export function JobLogsTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-muted-foreground text-sm">페이지:</span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
 
       {/* Detail Modal */}
-      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <Dialog onOpenChange={() => setSelectedLog(null)} open={!!selectedLog}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Job 상세 정보
               {selectedLog && (
-                <Badge variant={STATUS_CONFIG[selectedLog.status].variant} className="text-xs">
+                <Badge className="text-xs" variant={STATUS_CONFIG[selectedLog.status].variant}>
                   {STATUS_CONFIG[selectedLog.status].icon}
                   {STATUS_CONFIG[selectedLog.status].label}
                 </Badge>
@@ -480,7 +486,7 @@ export function JobLogsTableWithPagination({
               {/* Timestamps */}
               <div className="space-y-2">
                 <h4 className="font-medium text-sm">타임스탬프</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
                   <div>
                     <span className="text-muted-foreground">추가:</span>
                     <span className="ml-2">
@@ -518,7 +524,7 @@ export function JobLogsTableWithPagination({
               {selectedLog.inputData && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">입력 데이터</h4>
-                  <pre className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-xs overflow-x-auto max-h-40">
+                  <pre className="max-h-40 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs dark:bg-gray-800">
                     {JSON.stringify(selectedLog.inputData, null, 2)}
                   </pre>
                 </div>
@@ -528,7 +534,7 @@ export function JobLogsTableWithPagination({
               {selectedLog.outputData && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">출력 데이터</h4>
-                  <pre className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-xs overflow-x-auto max-h-40">
+                  <pre className="max-h-40 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs dark:bg-gray-800">
                     {JSON.stringify(selectedLog.outputData, null, 2)}
                   </pre>
                 </div>
@@ -537,17 +543,17 @@ export function JobLogsTableWithPagination({
               {/* Error Info */}
               {(selectedLog.errorMessage || selectedLog.stackTrace) && (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-red-600">에러 정보</h4>
+                  <h4 className="font-medium text-red-600 text-sm">에러 정보</h4>
                   {selectedLog.errorCode && (
                     <Badge variant="destructive">{selectedLog.errorCode}</Badge>
                   )}
                   {selectedLog.errorMessage && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-red-600 text-sm dark:text-red-400">
                       {selectedLog.errorMessage}
                     </p>
                   )}
                   {selectedLog.stackTrace && (
-                    <pre className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-xs overflow-x-auto max-h-60 text-red-700 dark:text-red-300">
+                    <pre className="max-h-60 overflow-x-auto rounded-lg bg-red-50 p-3 text-red-700 text-xs dark:bg-red-900/20 dark:text-red-300">
                       {selectedLog.stackTrace}
                     </pre>
                   )}
@@ -558,7 +564,7 @@ export function JobLogsTableWithPagination({
               {selectedLog.jobOptions && (
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Job 옵션</h4>
-                  <pre className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-xs overflow-x-auto max-h-32">
+                  <pre className="max-h-32 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs dark:bg-gray-800">
                     {JSON.stringify(selectedLog.jobOptions, null, 2)}
                   </pre>
                 </div>

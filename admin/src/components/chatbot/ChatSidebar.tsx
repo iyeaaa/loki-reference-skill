@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import type { ChatConversation } from "@/lib/api/hooks/chatbot"
 import { cn } from "@/lib/utils"
 
-interface ChatSidebarProps {
+type ChatSidebarProps = {
   collapsed: boolean
   onToggle: () => void
   conversations: ChatConversation[]
@@ -32,7 +32,7 @@ interface ChatSidebarProps {
   isLoading?: boolean
 }
 
-interface DateGroup {
+type DateGroup = {
   label: string
   conversations: ChatConversation[]
 }
@@ -124,19 +124,19 @@ export function ChatSidebar({
   return (
     <div
       className={cn(
-        "relative flex flex-col  bg-muted/30 transition-all duration-300",
-        collapsed ? "" : "w-64 border-r border-border",
+        "relative flex flex-col bg-muted/30 transition-all duration-300",
+        collapsed ? "" : "w-64 border-border border-r",
       )}
     >
       {/* Toggle button - always visible */}
       <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggle}
         className={cn(
           "absolute top-3 z-10 h-7 w-7 rounded-full border border-border bg-background shadow-sm hover:bg-accent",
           // collapsed ? "left-2" : "right-2",
         )}
+        onClick={onToggle}
+        size="icon"
+        variant="ghost"
       >
         {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </Button>
@@ -146,7 +146,7 @@ export function ChatSidebar({
         <>
           {/* New Chat button */}
           <div className="p-3 pt-12">
-            <Button onClick={onNew} className="w-full justify-start gap-2" variant="outline">
+            <Button className="w-full justify-start gap-2" onClick={onNew} variant="outline">
               <MessageSquarePlus className="h-4 w-4" />
               {t("chatbot.sidebar.newChat")}
             </Button>
@@ -156,35 +156,35 @@ export function ChatSidebar({
           <ScrollArea className="flex-1">
             <div className="px-2 pb-4">
               {isLoading ? (
-                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
                   {t("chatbot.sidebar.loading")}
                 </div>
               ) : groupedConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground text-sm">
                   <MessageSquarePlus className="mb-2 h-8 w-8 opacity-50" />
                   {t("chatbot.sidebar.empty")}
                 </div>
               ) : (
                 groupedConversations.map((group) => (
-                  <div key={group.label} className="mt-4 first:mt-0">
-                    <div className="mb-2 px-2 text-xs font-medium text-muted-foreground">
+                  <div className="mt-4 first:mt-0" key={group.label}>
+                    <div className="mb-2 px-2 font-medium text-muted-foreground text-xs">
                       {group.label}
                     </div>
                     <div className="space-y-0.5">
                       {group.conversations.map((conv) => (
                         <ConversationItem
-                          key={conv.id}
                           conversation={conv}
+                          editTitle={editTitle}
                           isActive={activeId === conv.id}
                           isEditing={editingId === conv.id}
-                          editTitle={editTitle}
-                          onSelect={() => onSelect(conv.id)}
-                          onStartEdit={() => handleStartEdit(conv)}
-                          onSaveEdit={() => handleSaveEdit(conv.id)}
+                          key={conv.id}
                           onCancelEdit={handleCancelEdit}
+                          onDelete={() => onDelete(conv.id)}
                           onEditTitleChange={setEditTitle}
                           onKeyDown={(e) => handleKeyDown(e, conv.id)}
-                          onDelete={() => onDelete(conv.id)}
+                          onSaveEdit={() => handleSaveEdit(conv.id)}
+                          onSelect={() => onSelect(conv.id)}
+                          onStartEdit={() => handleStartEdit(conv)}
                           t={t}
                         />
                       ))}
@@ -200,7 +200,7 @@ export function ChatSidebar({
   )
 }
 
-interface ConversationItemProps {
+type ConversationItemProps = {
   conversation: ChatConversation
   isActive: boolean
   isEditing: boolean
@@ -236,12 +236,12 @@ function ConversationItem({
     return (
       <div className="flex items-center gap-1 rounded-lg bg-accent p-1">
         <Input
-          value={editTitle}
-          onChange={(e) => onEditTitleChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          onBlur={onSaveEdit}
           autoFocus
           className="h-7 text-sm"
+          onBlur={onSaveEdit}
+          onChange={(e) => onEditTitleChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          value={editTitle}
         />
       </div>
     )
@@ -259,16 +259,16 @@ function ConversationItem({
       <span className="flex-1 truncate">{conversation.title}</span>
 
       {/* Action menu - visible on hover or when open */}
-      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+      <DropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="ghost"
-            size="icon"
             className={cn(
               "h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100",
               isMenuOpen && "opacity-100",
             )}
             onClick={(e) => e.stopPropagation()}
+            size="icon"
+            variant="ghost"
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -285,12 +285,12 @@ function ConversationItem({
             {t("chatbot.sidebar.rename")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
             onClick={(e) => {
               e.stopPropagation()
               setIsMenuOpen(false)
               onDelete()
             }}
-            className="text-destructive focus:text-destructive"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             {t("chatbot.sidebar.delete")}

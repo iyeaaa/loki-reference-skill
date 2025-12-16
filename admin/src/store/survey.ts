@@ -17,7 +17,7 @@ import { atomWithStorage, createJSONStorage } from "jotai/utils"
 // TYPES
 // ====================================
 
-export interface SurveyData {
+export type SurveyData = {
   industry: string | null
   target: string | null
   country: string | null
@@ -26,7 +26,7 @@ export interface SurveyData {
 }
 
 /** 유효성 검증을 통과한 설문 데이터 (모든 필수 필드가 non-null) */
-export interface ValidSurveyData {
+export type ValidSurveyData = {
   industry: string
   target: string
   country: string
@@ -56,11 +56,15 @@ const EMPTY_SURVEY: SurveyData = {
  * Jotai atom이 hydration되기 전에도 안전하게 사용 가능
  */
 export function getSurveyFromStorage(): SurveyData | null {
-  if (typeof window === "undefined") return null
+  if (typeof window === "undefined") {
+    return null
+  }
 
   try {
     const stored = localStorage.getItem(SURVEY_STORAGE_KEY)
-    if (!stored) return null
+    if (!stored) {
+      return null
+    }
     return JSON.parse(stored) as SurveyData
   } catch {
     return null
@@ -71,7 +75,9 @@ export function getSurveyFromStorage(): SurveyData | null {
  * localStorage에 survey 데이터 저장 (동기적)
  */
 export function saveSurveyToStorage(data: SurveyData | null): void {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") {
+    return
+  }
 
   try {
     if (data === null) {
@@ -160,7 +166,9 @@ export function isValidSurveyData(data: SurveyData | null): data is ValidSurveyD
  * 특정 스텝까지 완료되었는지 검사
  */
 export function isSurveyStepComplete(data: SurveyData | null, step: number): boolean {
-  if (!data) return false
+  if (!data) {
+    return false
+  }
 
   switch (step) {
     case 1:
@@ -180,11 +188,21 @@ export function isSurveyStepComplete(data: SurveyData | null, step: number): boo
  * 완료된 마지막 스텝 번호 반환
  */
 export function getLastCompletedStep(data: SurveyData | null): number {
-  if (!data) return 0
-  if (data.experience) return 4
-  if (data.country) return 3
-  if (data.target) return 2
-  if (data.industry) return 1
+  if (!data) {
+    return 0
+  }
+  if (data.experience) {
+    return 4
+  }
+  if (data.country) {
+    return 3
+  }
+  if (data.target) {
+    return 2
+  }
+  if (data.industry) {
+    return 1
+  }
   return 0
 }
 
@@ -193,7 +211,9 @@ export function getLastCompletedStep(data: SurveyData | null): number {
  * - NewTrialPage에서 사용하던 sessionStorage 데이터를 Jotai로 이전
  */
 export function migrateFromSessionStorage(): SurveyData | null {
-  if (typeof window === "undefined") return null
+  if (typeof window === "undefined") {
+    return null
+  }
 
   const OLD_KEY = "onboarding_params"
   const stored = sessionStorage.getItem(OLD_KEY)

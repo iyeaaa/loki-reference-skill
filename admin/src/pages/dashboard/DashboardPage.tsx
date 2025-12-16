@@ -57,17 +57,17 @@ function createFollowupDayButton(followupsByDate: Map<string, { totalCount: numb
     return (
       <button
         {...props}
-        type="button"
         className={cn(
-          "relative w-full h-full p-0 text-center flex flex-col items-center justify-center aspect-square select-none",
-          "hover:bg-accent rounded-md transition-colors",
+          "relative flex aspect-square h-full w-full select-none flex-col items-center justify-center p-0 text-center",
+          "rounded-md transition-colors hover:bg-accent",
           modifiers.selected && "bg-primary text-primary-foreground",
           modifiers.today && "bg-accent",
           modifiers.outside && "text-muted-foreground opacity-50",
         )}
+        type="button"
       >
         <span className="text-sm">{day.date.getDate()}</span>
-        {<span className="text-[10px] font-bold">{followup?.totalCount ?? 0}</span>}
+        {<span className="font-bold text-[10px]">{followup?.totalCount ?? 0}</span>}
       </button>
     )
   }
@@ -211,15 +211,15 @@ export default function DashboardPage() {
   return (
     <div className="p-6">
       <motion.div
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-        variants={reducedMotion ? undefined : staggerContainerFastVariants}
-        initial="hidden"
         animate="visible"
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        initial="hidden"
+        variants={reducedMotion ? undefined : staggerContainerFastVariants}
       >
         <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
-          <Card hoverable animated>
+          <Card animated hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {selectedWorkspace?.id === "all"
                   ? t("dashboard.stats.customers.all")
                   : t("dashboard.stats.customers.workspace")}
@@ -227,14 +227,14 @@ export default function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-bold text-2xl">
                 {leadsLoading ? (
                   <Skeleton className="h-8 w-16" />
                 ) : (
                   <AnimatedNumber value={totalCustomers} />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {selectedWorkspace?.name || t("dashboard.stats.defaultWorkspace")}
               </p>
             </CardContent>
@@ -242,22 +242,22 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
-          <Card hoverable animated>
+          <Card animated hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {t("dashboard.stats.todaySent")}
               </CardTitle>
               <Mail className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-bold text-2xl">
                 {todaySentLoading ? (
                   <Skeleton className="h-8 w-12" />
                 ) : (
                   <AnimatedNumber value={todaySentCount} />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {t("dashboard.stats.description.overseasContact")}
               </p>
             </CardContent>
@@ -265,24 +265,24 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
-          <Card hoverable animated>
+          <Card animated hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {t("dashboard.stats.avgOpenRate")}
               </CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-bold text-2xl">
                 {avgOpenRateLoading ? (
                   <Skeleton className="h-8 w-16" />
                 ) : (
                   <>
-                    <AnimatedNumber value={avgOpenRate} decimals={1} />%
+                    <AnimatedNumber decimals={1} value={avgOpenRate} />%
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {t("dashboard.stats.description.overseasOpen")}
               </p>
             </CardContent>
@@ -290,24 +290,24 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
-          <Card hoverable animated>
+          <Card animated hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {t("dashboard.stats.buyerResponseRate")}
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-bold text-2xl">
                 {buyerResponseRateLoading ? (
                   <Skeleton className="h-8 w-16" />
                 ) : (
                   <>
-                    <AnimatedNumber value={buyerResponseRate} decimals={1} />%
+                    <AnimatedNumber decimals={1} value={buyerResponseRate} />%
                   </>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {t("dashboard.stats.description.meetingRequest")}
               </p>
             </CardContent>
@@ -315,7 +315,7 @@ export default function DashboardPage() {
         </motion.div>
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-2 mt-6">
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>{t("dashboard.sequences.recent.title")}</CardTitle>
@@ -327,18 +327,18 @@ export default function DashboardPage() {
                 // Loading skeleton
                 Array.from({ length: 4 }, (_, i) => i).map((skeletonId) => (
                   <div
+                    className="flex items-center justify-between rounded-lg border p-4"
                     key={`skeleton-${skeletonId}`}
-                    className="flex items-center justify-between p-4 border rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
                       <Skeleton className="h-8 w-8 rounded" />
                       <div>
-                        <Skeleton className="h-4 w-32 mb-2" />
+                        <Skeleton className="mb-2 h-4 w-32" />
                         <Skeleton className="h-3 w-20" />
                       </div>
                     </div>
                     <div className="text-right">
-                      <Skeleton className="h-4 w-16 mb-1" />
+                      <Skeleton className="mb-1 h-4 w-16" />
                       <Skeleton className="h-3 w-12" />
                     </div>
                   </div>
@@ -350,16 +350,16 @@ export default function DashboardPage() {
 
                   return (
                     <div
+                      className="flex items-center justify-between rounded-lg border p-3"
                       key={sequence.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
+                        <div className="rounded-lg bg-primary/10 p-2">
                           <Icon className="h-4 w-4 text-primary" />
                         </div>
                         <div>
                           <h4 className="font-medium text-sm">{sequence.name}</h4>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {sequence.status === "active"
                               ? t("dashboard.sequences.status.active")
                               : sequence.status === "paused"
@@ -371,10 +371,10 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium">
+                        <div className="font-medium text-sm">
                           {sequence.sent} {t("dashboard.sequences.sent")}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           {sequence.opened} {t("dashboard.sequences.opened")} • {sequence.clicked}{" "}
                           {t("dashboard.sequences.clicked")}
                         </div>
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                   )
                 })
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="py-8 text-center text-muted-foreground">
                   <p>{t("dashboard.sequences.noRecent")}</p>
                 </div>
               )}
@@ -409,12 +409,13 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 max-w-[400px]">
+              <div className="max-w-[400px] space-y-4">
                 <Calendar
+                  className="w-full rounded-md border [--cell-size:1rem]"
+                  components={{
+                    DayButton: DayButtonComponent,
+                  }}
                   mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border w-full [--cell-size:1rem]"
                   modifiers={{
                     scheduled: Array.from(followupsByDate.keys()).map(
                       (dateStr) => new Date(dateStr),
@@ -423,13 +424,12 @@ export default function DashboardPage() {
                   modifiersClassNames={{
                     scheduled: "bg-primary/10 font-bold",
                   }}
-                  components={{
-                    DayButton: DayButtonComponent,
-                  }}
+                  onSelect={setSelectedDate}
+                  selected={selectedDate}
                 />
 
                 {selectedDateInfo ? (
-                  <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                  <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-sm">
                         {selectedDate?.toLocaleDateString("ko-KR", {
@@ -438,11 +438,11 @@ export default function DashboardPage() {
                           day: "numeric",
                         })}
                       </h4>
-                      <span className="text-sm font-bold text-primary">
+                      <span className="font-bold text-primary text-sm">
                         {selectedDateInfo.totalCount} {t("dashboard.unit.count")}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       {t("dashboard.followup.delayDays", {
                         days: selectedDateInfo.delayDays,
                       })}
@@ -450,26 +450,26 @@ export default function DashboardPage() {
                     <div className="space-y-2">
                       {selectedDateInfo.sequences.map((seq) => (
                         <div
+                          className="rounded border bg-background p-2"
                           key={`${seq.sequenceName}-${seq.subject}`}
-                          className="p-2 bg-background rounded border"
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium">{seq.sequenceName}</span>
-                            <span className="text-xs text-muted-foreground">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="font-medium text-xs">{seq.sequenceName}</span>
+                            <span className="text-muted-foreground text-xs">
                               {seq.count} {t("dashboard.unit.count")}
                             </span>
                           </div>
-                          <div className="text-xs text-muted-foreground">{seq.subject}</div>
+                          <div className="text-muted-foreground text-xs">{seq.subject}</div>
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : scheduledFollowups.length === 0 ? (
-                  <div className="text-center py-4 text-sm text-muted-foreground">
+                  <div className="py-4 text-center text-muted-foreground text-sm">
                     {t("dashboard.followup.noScheduled")}
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-sm text-muted-foreground">
+                  <div className="py-4 text-center text-muted-foreground text-sm">
                     {t("dashboard.followup.selectDate")}
                   </div>
                 )}
@@ -489,8 +489,8 @@ export default function DashboardPage() {
             <CardDescription>{t("dashboard.inbox.description")}</CardDescription>
           </div>
           <Link
+            className="flex items-center gap-1 text-primary text-sm hover:underline"
             to="/replied-emails"
-            className="text-sm text-primary hover:underline flex items-center gap-1"
           >
             {t("dashboard.inbox.viewAll")} →
           </Link>
@@ -500,12 +500,12 @@ export default function DashboardPage() {
             // Loading skeleton
             <div className="space-y-3">
               {Array.from({ length: 3 }, (_, i) => i).map((skeletonId) => (
-                <div key={`inbox-skeleton-${skeletonId}`} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
+                <div className="rounded-lg border p-4" key={`inbox-skeleton-${skeletonId}`}>
+                  <div className="mb-2 flex items-start justify-between">
                     <Skeleton className="h-4 w-48" />
                     <Skeleton className="h-4 w-24" />
                   </div>
-                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="mb-2 h-3 w-full" />
                   <Skeleton className="h-3 w-3/4" />
                 </div>
               ))}
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                 const createdDate = new Date(reply.createdAt)
                 const now = new Date()
                 const diffMs = now.getTime() - createdDate.getTime()
-                const diffMins = Math.floor(diffMs / 60000)
+                const diffMins = Math.floor(diffMs / 60_000)
                 const diffHours = Math.floor(diffMins / 60)
                 const diffDays = Math.floor(diffHours / 24)
 
@@ -537,27 +537,27 @@ export default function DashboardPage() {
 
                 return (
                   <Link
+                    className="block rounded-lg border p-4 transition-colors hover:bg-accent/50"
                     key={reply.id}
                     to={`/replied-emails/${reply.id}`}
-                    className="block p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="font-medium text-sm truncate">{reply.fromEmail}</span>
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="truncate font-medium text-sm">{reply.fromEmail}</span>
                         {reply.leadName && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge className="text-xs" variant="secondary">
                             {reply.leadName}
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                      <span className="ml-2 whitespace-nowrap text-muted-foreground text-xs">
                         {timeAgo}
                       </span>
                     </div>
-                    <div className="text-sm font-medium mb-1 truncate">
+                    <div className="mb-1 truncate font-medium text-sm">
                       {reply.subject || t("dashboard.inbox.noSubject")}
                     </div>
-                    <div className="text-xs text-muted-foreground line-clamp-2">
+                    <div className="line-clamp-2 text-muted-foreground text-xs">
                       {reply.bodyText?.slice(0, 150) || t("dashboard.inbox.noContent")}
                     </div>
                   </Link>
@@ -565,8 +565,8 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Inbox className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <div className="py-8 text-center text-muted-foreground">
+              <Inbox className="mx-auto mb-2 h-12 w-12 opacity-50" />
               <p>{t("dashboard.inbox.noReplies")}</p>
             </div>
           )}
@@ -575,11 +575,11 @@ export default function DashboardPage() {
       {/* 투두리스트 섹션 */}
       <div className="mt-6">
         <TodoList
+          onAddTodo={handleAddTodo}
+          onDeleteTodo={handleDeleteTodo}
+          onUpdateTodo={handleUpdateTodo}
           todos={filteredTodos}
           workspaceId={selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id}
-          onAddTodo={handleAddTodo}
-          onUpdateTodo={handleUpdateTodo}
-          onDeleteTodo={handleDeleteTodo}
         />
       </div>
     </div>

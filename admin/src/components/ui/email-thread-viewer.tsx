@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FloatingReplyPopup } from "./floating-reply-popup"
 
-export interface EmailMessage {
+export type EmailMessage = {
   id: string
   from: string
   fromName?: string
@@ -16,7 +16,7 @@ export interface EmailMessage {
   isInbound: boolean
 }
 
-interface EmailThreadViewerProps {
+type EmailThreadViewerProps = {
   messages: EmailMessage[]
   onSendReply?: (replyText: string, subject: string) => void | Promise<void>
   loading?: boolean
@@ -37,7 +37,9 @@ export function EmailThreadViewer({
   const [isSending, setIsSending] = useState(false)
 
   const handleSendReply = async (replyText: string, subject: string) => {
-    if (!replyText.trim() || !onSendReply) return
+    if (!(replyText.trim() && onSendReply)) {
+      return
+    }
 
     setIsSending(true)
     try {
@@ -60,10 +62,10 @@ export function EmailThreadViewer({
 
   if (loading) {
     return (
-      <Card className={`h-full flex items-center justify-center ${className}`}>
+      <Card className={`flex h-full items-center justify-center ${className}`}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <div className="text-sm text-muted-foreground">Loading messages...</div>
+          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
+          <div className="text-muted-foreground text-sm">Loading messages...</div>
         </div>
       </Card>
     )
@@ -71,7 +73,7 @@ export function EmailThreadViewer({
 
   if (messages.length === 0) {
     return (
-      <Card className={`h-full flex items-center justify-center ${className}`}>
+      <Card className={`flex h-full items-center justify-center ${className}`}>
         <div className="text-center text-muted-foreground">
           <div className="text-sm">No messages to display</div>
         </div>
@@ -80,11 +82,11 @@ export function EmailThreadViewer({
   }
 
   return (
-    <Card className={`h-full flex flex-col ${className}`}>
+    <Card className={`flex h-full flex-col ${className}`}>
       {/* Header */}
-      <div className="px-4 py-3 border-b">
+      <div className="border-b px-4 py-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-base truncate flex-1">
+          <h3 className="flex-1 truncate font-medium text-base">
             {messages[0]?.subject || "No Subject"}
           </h3>
         </div>
@@ -95,34 +97,34 @@ export function EmailThreadViewer({
         <div className="pb-4">
           {messages.map((message) => (
             <div
-              key={message.id}
-              className={`w-full rounded-lg border-t pt-4 pb-2 px-2 ${
+              className={`w-full rounded-lg border-t px-2 pt-4 pb-2 ${
                 message.isInbound ? "bg-blue-50/30 dark:bg-blue-950/10" : ""
               }`}
+              key={message.id}
             >
-              <div className="flex items-start gap-3 mb-2">
+              <div className="mb-2 flex items-start gap-3">
                 {/* Profile Circle */}
-                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+                  <span className="font-medium text-gray-600 text-xs dark:text-gray-300">
                     {getInitials(message.from)}
                   </span>
                 </div>
 
                 {/* Message info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center justify-between">
                     <div className="font-medium text-sm">
                       {message.fromName || message.from}{" "}
-                      <span className="text-gray-500 font-normal text-xs">
+                      <span className="font-normal text-gray-500 text-xs">
                         &lt;{message.from}&gt;
                       </span>
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap ml-2">
+                    <div className="ml-2 whitespace-nowrap text-gray-600 text-xs dark:text-gray-400">
                       {message.timestamp}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mb-2">to {message.to}</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-3 whitespace-pre-wrap">
+                  <div className="mb-2 text-muted-foreground text-xs">to {message.to}</div>
+                  <div className="mt-3 whitespace-pre-wrap text-gray-700 text-sm dark:text-gray-300">
                     {message.body}
                   </div>
                 </div>
@@ -133,20 +135,20 @@ export function EmailThreadViewer({
       </ScrollArea>
 
       {/* Reply button */}
-      <div className="px-4 py-3 border-t">
+      <div className="border-t px-4 py-3">
         <Button onClick={() => setShowReply(true)} size="sm" variant="default">
-          <Reply className="h-4 w-4 mr-2" />
+          <Reply className="mr-2 h-4 w-4" />
           Reply
         </Button>
       </div>
 
       <FloatingReplyPopup
         isOpen={showReply}
+        isSending={isSending}
         onClose={() => setShowReply(false)}
         onSend={handleSendReply}
-        to={messages[messages.length - 1]?.from || ""}
         subject={`Re: ${messages[0]?.subject || ""}`}
-        isSending={isSending}
+        to={messages.at(-1)?.from || ""}
       />
     </Card>
   )

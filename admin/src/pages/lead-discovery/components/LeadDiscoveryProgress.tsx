@@ -43,26 +43,32 @@ function getNodeStatus(
   currentStatus: LeadDiscoveryStatus,
 ): "pending" | "in_progress" | "completed" {
   const currentNode = NODE_CONFIG[currentStatus]
-  if (!currentNode) return "pending"
+  if (!currentNode) {
+    return "pending"
+  }
 
   const currentOrder = currentNode.order
 
-  if (nodeOrder < currentOrder) return "completed"
-  if (nodeOrder === currentOrder) return "in_progress"
+  if (nodeOrder < currentOrder) {
+    return "completed"
+  }
+  if (nodeOrder === currentOrder) {
+    return "in_progress"
+  }
   return "pending"
 }
 
 // 단계 아이콘
 function StepIcon({ status }: { status: "pending" | "in_progress" | "completed" }) {
   if (status === "completed") {
-    return <Check className="w-2.5 h-2.5" strokeWidth={3} />
+    return <Check className="h-2.5 w-2.5" strokeWidth={3} />
   }
 
   if (status === "in_progress") {
-    return <Loader2 className="w-2.5 h-2.5 animate-spin" />
+    return <Loader2 className="h-2.5 w-2.5 animate-spin" />
   }
 
-  return <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />
+  return <div className="h-1.5 w-1.5 rounded-full bg-current opacity-40" />
 }
 
 // iframe 웹사이트 프리뷰 컴포넌트
@@ -116,73 +122,73 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
       className="group relative"
+      exit={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
     >
-      <div className="rounded-lg overflow-hidden border border-border/50 bg-muted/30 shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border/50 bg-muted/30 shadow-sm">
         {/* 브라우저 스타일 헤더 */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border-b border-border/30">
+        <div className="flex items-center gap-2 border-border/30 border-b bg-muted/60 px-3 py-2">
           {/* 트래픽 라이트 */}
           <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
           </div>
 
           {/* URL 바 */}
-          <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded bg-background/80 text-xs text-muted-foreground truncate">
+          <div className="flex flex-1 items-center gap-2 truncate rounded bg-background/80 px-3 py-1.5 text-muted-foreground text-xs">
             {page.favicon ? (
               <img
-                src={page.favicon}
                 alt=""
-                className="w-4 h-4 object-contain flex-shrink-0"
+                className="h-4 w-4 flex-shrink-0 object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = "none"
                 }}
+                src={page.favicon}
               />
             ) : (
-              <Globe className="w-4 h-4 flex-shrink-0" />
+              <Globe className="h-4 w-4 flex-shrink-0" />
             )}
             <span className="truncate">{page.url}</span>
           </div>
 
           {/* 외부 링크 */}
           <a
+            className="rounded p-1.5 transition-colors hover:bg-background/80"
             href={page.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 hover:bg-background/80 rounded transition-colors"
             onClick={(e) => e.stopPropagation()}
+            rel="noopener noreferrer"
+            target="_blank"
           >
-            <ExternalLink className="w-4 h-4 text-muted-foreground" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
           </a>
         </div>
 
         {/* iframe 컨테이너 */}
-        <div className="relative w-full h-[320px] bg-white">
+        <div className="relative h-[320px] w-full bg-white">
           {/* 로딩 상태 */}
           {isLoading && !hasError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 z-10">
-              <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
-              <span className="text-sm text-muted-foreground">페이지 로딩 중...</span>
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-muted/20">
+              <Loader2 className="mb-3 h-8 w-8 animate-spin text-primary" />
+              <span className="text-muted-foreground text-sm">페이지 로딩 중...</span>
             </div>
           )}
 
           {/* 에러 상태 (X-Frame-Options 차단 등) */}
           {hasError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/30 z-10">
-              <AlertTriangle className="w-8 h-8 text-amber-500 mb-3" />
-              <span className="text-sm text-muted-foreground text-center px-4">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-muted/30">
+              <AlertTriangle className="mb-3 h-8 w-8 text-amber-500" />
+              <span className="px-4 text-center text-muted-foreground text-sm">
                 미리보기를 표시할 수 없습니다
               </span>
               <a
+                className="mt-3 text-primary text-sm hover:underline"
                 href={page.url}
-                target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 text-sm text-primary hover:underline"
+                target="_blank"
               >
                 새 탭에서 열기
               </a>
@@ -192,24 +198,24 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
           {/* iframe */}
           {!hasError && (
             <iframe
-              ref={iframeRef}
-              src={page.url}
-              title={page.title || hostname}
               className={cn(
-                "w-full h-full border-0 transition-opacity duration-300 pointer-events-none",
+                "pointer-events-none h-full w-full border-0 transition-opacity duration-300",
                 isLoading ? "opacity-0" : "opacity-100",
               )}
-              sandbox="allow-scripts allow-same-origin"
               loading="lazy"
-              onLoad={handleLoad}
               onError={handleError}
+              onLoad={handleLoad}
+              ref={iframeRef}
+              sandbox="allow-scripts allow-same-origin"
+              src={page.url}
+              title={page.title || hostname}
             />
           )}
         </div>
 
         {/* 페이지 제목 */}
-        <div className="px-3 py-2.5 bg-muted/40 border-t border-border/30">
-          <p className="text-sm font-medium text-foreground truncate">{page.title || hostname}</p>
+        <div className="border-border/30 border-t bg-muted/40 px-3 py-2.5">
+          <p className="truncate font-medium text-foreground text-sm">{page.title || hostname}</p>
         </div>
       </div>
     </motion.div>
@@ -227,36 +233,36 @@ function AnalyzedPageCard({ page }: { page: AnalyzedPage }) {
   }, [page.url])
 
   return (
-    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="group">
+    <motion.div animate={{ opacity: 1, x: 0 }} className="group" initial={{ opacity: 0, x: -10 }}>
       <a
+        className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/40 p-2 transition-colors hover:bg-muted/60"
         href={page.url}
-        target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2.5 p-2 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors border border-border/30"
+        target="_blank"
       >
         {/* Favicon */}
-        <div className="w-5 h-5 rounded flex items-center justify-center bg-background/80 flex-shrink-0 overflow-hidden">
+        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-background/80">
           {page.favicon ? (
             <img
-              src={page.favicon}
               alt=""
-              className="w-4 h-4 object-contain"
+              className="h-4 w-4 object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = "none"
                 e.currentTarget.nextElementSibling?.classList.remove("hidden")
               }}
+              src={page.favicon}
             />
           ) : null}
-          <Globe className={cn("w-3.5 h-3.5 text-muted-foreground", page.favicon && "hidden")} />
+          <Globe className={cn("h-3.5 w-3.5 text-muted-foreground", page.favicon && "hidden")} />
         </div>
 
         {/* Title */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{page.title || hostname}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-foreground text-sm">{page.title || hostname}</p>
         </div>
 
         {/* Check icon */}
-        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+        <Check className="h-4 w-4 flex-shrink-0 text-emerald-500" />
       </a>
     </motion.div>
   )
@@ -270,9 +276,15 @@ function CurrentPagePreview({
   pages: AnalyzedPage[]
   isAnalyzing: boolean
 }) {
-  if (!isAnalyzing || pages.length === 0) return null
+  if (!isAnalyzing || pages.length === 0) {
+    return null
+  }
 
-  const currentPage = pages[pages.length - 1]
+  const currentPage = pages.at(-1)
+
+  if (!currentPage) {
+    return null
+  }
 
   return (
     <div className="mt-4">
@@ -292,13 +304,15 @@ function AnalyzedPagesSummary({
   isAnalyzing: boolean
 }) {
   // analyzing 중이거나 페이지가 없으면 표시 안함
-  if (isAnalyzing || pages.length === 0) return null
+  if (isAnalyzing || pages.length === 0) {
+    return null
+  }
 
   return (
-    <div className="space-y-3 mt-4">
-      <div className="flex items-center gap-2 ml-1">
-        <FileText className="w-4 h-4 text-emerald-500" />
-        <span className="text-sm text-muted-foreground">{pages.length}개 페이지를 분석했어요</span>
+    <div className="mt-4 space-y-3">
+      <div className="ml-1 flex items-center gap-2">
+        <FileText className="h-4 w-4 text-emerald-500" />
+        <span className="text-muted-foreground text-sm">{pages.length}개 페이지를 분석했어요</span>
       </div>
       <div className="space-y-2">
         {pages.map((page) => (
@@ -315,16 +329,16 @@ const markdownComponents = {
     <p className="mb-4 leading-relaxed last:mb-0">{children}</p>
   ),
   h1: ({ children }: { children?: React.ReactNode }) => (
-    <h1 className="mb-4 mt-6 text-2xl font-bold first:mt-0">{children}</h1>
+    <h1 className="mt-6 mb-4 font-bold text-2xl first:mt-0">{children}</h1>
   ),
   h2: ({ children }: { children?: React.ReactNode }) => (
-    <h2 className="mb-3 mt-5 text-xl font-bold first:mt-0">{children}</h2>
+    <h2 className="mt-5 mb-3 font-bold text-xl first:mt-0">{children}</h2>
   ),
   h3: ({ children }: { children?: React.ReactNode }) => (
-    <h3 className="mb-2 mt-4 text-lg font-semibold first:mt-0">{children}</h3>
+    <h3 className="mt-4 mb-2 font-semibold text-lg first:mt-0">{children}</h3>
   ),
   h4: ({ children }: { children?: React.ReactNode }) => (
-    <h4 className="mb-2 mt-3 text-base font-semibold first:mt-0">{children}</h4>
+    <h4 className="mt-3 mb-2 font-semibold text-base first:mt-0">{children}</h4>
   ),
   ul: ({ children }: { children?: React.ReactNode }) => (
     <ul className="mb-4 ml-6 list-disc space-y-1">{children}</ul>
@@ -340,14 +354,14 @@ const markdownComponents = {
   ),
   em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
   blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="mb-4 border-l-4 border-border pl-4 italic text-muted-foreground">
+    <blockquote className="mb-4 border-border border-l-4 pl-4 text-muted-foreground italic">
       {children}
     </blockquote>
   ),
   code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
     const isInline = !className
     return isInline ? (
-      <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">{children}</code>
+      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{children}</code>
     ) : (
       <code className="font-mono text-sm">{children}</code>
     )
@@ -358,9 +372,9 @@ const markdownComponents = {
   a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode }) => (
     <a
       {...props}
-      target="_blank"
-      rel="noopener noreferrer"
       className="text-primary underline hover:text-primary/80"
+      rel="noopener noreferrer"
+      target="_blank"
     >
       {props.children}
     </a>
@@ -407,34 +421,36 @@ function StreamingAnalysisSummary({
   // 코드 펜스 제거 처리
   const cleanText = useMemo(() => stripCodeFences(text), [text])
 
-  if (!cleanText) return null
+  if (!cleanText) {
+    return null
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
       className="mt-4"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="p-5 rounded-xl bg-muted/30 border border-border/50">
+      <div className="rounded-xl border border-border/50 bg-muted/30 p-5">
         {title && (
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">{title}</span>
+          <div className="mb-4 flex items-center gap-2 border-border/50 border-b pb-3">
+            <FileText className="h-4 w-4 text-primary" />
+            <span className="font-medium text-foreground text-sm">{title}</span>
             {isStreaming && (
-              <span className="ml-auto text-xs text-muted-foreground animate-pulse">
+              <span className="ml-auto animate-pulse text-muted-foreground text-xs">
                 분석 중...
               </span>
             )}
           </div>
         )}
         {/* @ts-ignore - Complex markdown component types */}
-        <div className="prose prose-sm max-w-none dark:prose-invert will-change-auto [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+        <div className="prose prose-sm dark:prose-invert max-w-none will-change-auto [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
           {isStreaming ? (
             // 스트리밍 중: Streamdown으로 실시간 렌더링
             <Suspense
               fallback={
-                <div className="animate-pulse text-muted-foreground whitespace-pre-wrap">
+                <div className="animate-pulse whitespace-pre-wrap text-muted-foreground">
                   {cleanText}
                 </div>
               }
@@ -451,7 +467,7 @@ function StreamingAnalysisSummary({
   )
 }
 
-interface LeadDiscoveryProgressProps {
+type LeadDiscoveryProgressProps = {
   status: LeadDiscoveryStatus
   message: string
   mode?: "basic" | "advanced"
@@ -494,7 +510,9 @@ export function LeadDiscoveryProgress({
     })
   }, [allNodes, currentOrder])
 
-  if (status === "idle" || status === "error") return null
+  if (status === "idle" || status === "error") {
+    return null
+  }
 
   const isAnalyzing = status === "analyzing"
 
@@ -503,33 +521,35 @@ export function LeadDiscoveryProgress({
       {/* 현재 진행 메시지 */}
       <div className="flex items-center gap-2.5">
         <StarSpinner size={20} />
-        <span className="text-sm font-medium text-foreground">{message || "처리 중..."}</span>
+        <span className="font-medium text-foreground text-sm">{message || "처리 중..."}</span>
       </div>
 
       {/* 단계 표시 - 세로 배치 (애니메이션 적용) */}
-      <div className="flex flex-col gap-0 ml-1">
+      <div className="ml-1 flex flex-col gap-0">
         <AnimatePresence mode="popLayout">
           {visibleNodes.map((nodeKey, index) => {
             const config = NODE_CONFIG[nodeKey]
-            if (!config) return null
+            if (!config) {
+              return null
+            }
 
             const nodeStatus = getNodeStatus(config.order, status)
             const isLast = index === visibleNodes.length - 1
 
             return (
               <motion.div
-                key={nodeKey}
-                initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
                 className="flex items-stretch"
+                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                key={nodeKey}
+                transition={{ duration: 0.2 }}
               >
                 {/* 왼쪽: 아이콘 + 연결선 */}
-                <div className="flex flex-col items-center mr-2">
+                <div className="mr-2 flex flex-col items-center">
                   <div
                     className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all",
+                      "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-all",
                       nodeStatus === "completed" &&
                         "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
                       nodeStatus === "in_progress" &&
@@ -543,7 +563,7 @@ export function LeadDiscoveryProgress({
                   {!isLast && (
                     <div
                       className={cn(
-                        "w-px flex-1 min-h-[12px]",
+                        "min-h-[12px] w-px flex-1",
                         nodeStatus === "completed"
                           ? "bg-emerald-300 dark:bg-emerald-700"
                           : "bg-muted-foreground/20",
@@ -556,7 +576,7 @@ export function LeadDiscoveryProgress({
                 <div className={cn("pb-3", isLast && "pb-0")}>
                   <span
                     className={cn(
-                      "text-sm font-medium transition-all",
+                      "font-medium text-sm transition-all",
                       nodeStatus === "completed" && "text-emerald-600 dark:text-emerald-400",
                       nodeStatus === "in_progress" && "text-blue-600 dark:text-blue-400",
                       nodeStatus === "pending" && "text-muted-foreground/50",
@@ -572,16 +592,16 @@ export function LeadDiscoveryProgress({
       </div>
 
       {/* iframe 프리뷰 - analyzing 상태에서만 현재 페이지 하나만 표시 */}
-      <CurrentPagePreview pages={analyzedPages} isAnalyzing={isAnalyzing} />
+      <CurrentPagePreview isAnalyzing={isAnalyzing} pages={analyzedPages} />
 
       {/* 분석 완료된 페이지 목록 - analyzing 이후에 표시 */}
-      <AnalyzedPagesSummary pages={analyzedPages} isAnalyzing={isAnalyzing} />
+      <AnalyzedPagesSummary isAnalyzing={isAnalyzing} pages={analyzedPages} />
 
       {/* 고객군 분석 스트리밍 텍스트 - searching 상태에서 표시 */}
       {customerAnalysisSummary && (
         <StreamingAnalysisSummary
-          text={customerAnalysisSummary}
           isStreaming={status === "searching"}
+          text={customerAnalysisSummary}
           title="잠재 바이어 분석 리포트"
         />
       )}

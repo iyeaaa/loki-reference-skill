@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { JobStatus } from "@/lib/api/types/bullmq-test"
 
-interface JobFiltersProps {
+type JobFiltersProps = {
   selectedStatuses: JobStatus[]
   onStatusChange: (statuses: JobStatus[]) => void
   onClearFilters: () => void
@@ -55,18 +55,18 @@ export function JobFilters({ selectedStatuses, onStatusChange, onClearFilters }:
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16">상태</span>
+            <span className="w-16 font-medium text-gray-700 text-sm dark:text-gray-300">상태</span>
             <div className="flex flex-wrap gap-3">
               {statuses.map((status) => (
-                <div key={status.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={status.value}>
                   <Checkbox
-                    id={`status-${status.value}`}
                     checked={selectedStatuses.includes(status.value)}
+                    id={`status-${status.value}`}
                     onCheckedChange={() => toggleStatus(status.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`status-${status.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {status.label}
                   </label>
@@ -78,22 +78,22 @@ export function JobFilters({ selectedStatuses, onStatusChange, onClearFilters }:
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedStatuses.map((status) => {
                 const statusInfo = statuses.find((s) => s.value === status)
                 return (
                   <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${statusInfo?.color}`}
                     key={status}
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${statusInfo?.color}`}
                   >
                     {statusInfo?.label}
                     <button
-                      type="button"
-                      onClick={() => toggleStatus(status)}
                       className="ml-1 hover:opacity-70"
+                      onClick={() => toggleStatus(status)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
@@ -104,9 +104,9 @@ export function JobFilters({ selectedStatuses, onStatusChange, onClearFilters }:
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               필터 초기화
             </Button>
           </div>

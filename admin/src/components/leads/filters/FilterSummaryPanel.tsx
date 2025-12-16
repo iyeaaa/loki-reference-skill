@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import type { ColumnFilter } from "@/lib/api/types/lead-filters"
 import { OPERATOR_LABELS } from "@/lib/api/types/lead-filters"
 
-interface FilterSummaryPanelProps {
+type FilterSummaryPanelProps = {
   filters: ColumnFilter[]
   onRemoveFilter: (index: number) => void
   onClearAll: () => void
@@ -59,24 +59,24 @@ export function FilterSummaryPanel({
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b">
+      <div className="flex items-center justify-between border-b p-3">
         <div className="flex items-center gap-2">
           <FilterIcon className="h-4 w-4 text-primary" />
           <span className="font-medium text-sm">Active Filters</span>
-          <Badge variant="secondary" className="ml-1">
+          <Badge className="ml-1" variant="secondary">
             {filters.length}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClearAll} className="h-8 text-xs">
+          <Button className="h-8 text-xs" onClick={onClearAll} size="sm" variant="ghost">
             Clear All
           </Button>
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 p-0"
             aria-label={isCollapsed ? "Expand filters" : "Collapse filters"}
+            className="h-8 w-8 p-0"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            size="sm"
+            variant="ghost"
           >
             {isCollapsed ? (
               <ChevronDownIcon className="h-4 w-4" />
@@ -93,8 +93,8 @@ export function FilterSummaryPanel({
           <div className="flex flex-wrap gap-2">
             {filters.map((filter, index) => (
               <div
-                key={`${filter.field}-${index}`}
                 className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm"
+                key={`${filter.field}-${index}`}
               >
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-foreground">
@@ -108,11 +108,11 @@ export function FilterSummaryPanel({
                   )}
                 </div>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRemoveFilter(index)}
-                  className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
                   aria-label={`Remove filter for ${filter.field}`}
+                  className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => onRemoveFilter(index)}
+                  size="sm"
+                  variant="ghost"
                 >
                   <XIcon className="h-3 w-3" />
                 </Button>

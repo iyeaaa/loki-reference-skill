@@ -9,7 +9,9 @@ export function getInitials(email: string): string {
  * Get display name from email and optional lead name
  */
 export function getName(email: string, leadName?: string | null): string {
-  if (leadName) return leadName
+  if (leadName) {
+    return leadName
+  }
   return email.split("@")[0]
 }
 

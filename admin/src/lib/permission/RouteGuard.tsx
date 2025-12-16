@@ -27,7 +27,7 @@ import {
  * - "admin-only": Admin만 접근 가능
  * - { resource, action }: 해당 IAM 권한 보유자만 접근 가능
  */
-interface RouteGuardProps {
+type RouteGuardProps = {
   children: React.ReactNode
   /** 권한을 직접 지정 (ROUTE_PERMISSIONS보다 우선) */
   permission?: RoutePermission
@@ -55,15 +55,15 @@ export function RouteGuard({
   // Combined loading state
   if (authLoading || permLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-indigo-600 border-b-2" />
       </div>
     )
   }
 
   // Not logged in
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />
+    return <Navigate replace state={{ from: location }} to="/auth" />
   }
 
   // Admin always has access
@@ -79,13 +79,13 @@ export function RouteGuard({
   // "admin-only" - Admin만 접근 가능
   if (isAdminOnlyPermission(permission)) {
     console.warn(`Permission denied (admin-only): ${location.pathname}`)
-    return <Navigate to={fallbackPath} replace />
+    return <Navigate replace to={fallbackPath} />
   }
 
   // IAM 권한 체크
   if (!hasIamPermission) {
     console.warn(`Permission denied: ${iamPermission.resource}:${iamPermission.action}`)
-    return <Navigate to={fallbackPath} replace />
+    return <Navigate replace to={fallbackPath} />
   }
 
   return <>{children}</>

@@ -1,7 +1,7 @@
 import React from "react"
 import { useTypingEffect } from "@/hooks/useTypingEffect"
 
-interface ThinkingIndicatorProps {
+type ThinkingIndicatorProps = {
   thinking: string
 }
 
@@ -28,7 +28,7 @@ export const ThinkingIndicator = React.memo(function ThinkingIndicator({
 
         {/* Progress message with typing effect */}
         <div className="flex-1 space-y-1">
-          <p className="text-sm font-medium text-foreground">
+          <p className="font-medium text-foreground text-sm">
             {displayedText}
             <span className="animate-pulse">|</span>
           </p>

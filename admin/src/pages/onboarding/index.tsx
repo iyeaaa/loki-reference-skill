@@ -115,13 +115,13 @@ export default function OnboardingPage() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <Step1 selected={data.industry} onSelect={handleSelectIndustry} />
+        return <Step1 onSelect={handleSelectIndustry} selected={data.industry} />
       case 2:
-        return <Step2 selected={data.target} onSelect={handleSelectTarget} />
+        return <Step2 onSelect={handleSelectTarget} selected={data.target} />
       case 3:
-        return <Step3 selected={data.country} onSelect={handleSelectCountry} />
+        return <Step3 onSelect={handleSelectCountry} selected={data.country} />
       case 4:
-        return <Step4 selected={data.experience} onSelect={handleSelectExperience} />
+        return <Step4 onSelect={handleSelectExperience} selected={data.experience} />
       default:
         return null
     }
@@ -131,50 +131,50 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-white">
       {/* Language Switcher - Fixed top right */}
       <div className="absolute top-4 right-4 z-10">
-        <LanguageSwitcher className="bg-white/80 backdrop-blur-sm shadow-sm border border-gray-200/50 rounded-lg" />
+        <LanguageSwitcher className="rounded-lg border border-gray-200/50 bg-white/80 shadow-sm backdrop-blur-sm" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full mb-4">
+        <div className="mb-8 text-center">
+          <span className="mb-4 inline-block rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700 text-sm">
             {t("onboarding.header.badge")}
           </span>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("onboarding.header.title")}</h1>
+          <h1 className="mb-2 font-bold text-2xl text-gray-900">{t("onboarding.header.title")}</h1>
           <p className="text-gray-600">{t("onboarding.header.subtitle")}</p>
         </div>
 
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <button
-            type="button"
-            onClick={handleBack}
+            className="flex items-center gap-1 text-gray-500 text-sm hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30"
             disabled={currentStep === 1}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={handleBack}
+            type="button"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
             {t("onboarding.nav.back")}
           </button>
 
-          <div className="flex items-center gap-3 flex-1 max-w-xs mx-4">
-            <Progress value={progress} className="h-2" />
+          <div className="mx-4 flex max-w-xs flex-1 items-center gap-3">
+            <Progress className="h-2" value={progress} />
           </div>
 
-          <span className="text-sm text-gray-500">
+          <span className="text-gray-500 text-sm">
             {currentStep} / {TOTAL_STEPS}
           </span>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
           {/* Question Card - Left side */}
           <div className="lg:col-span-2">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: -20 }}
+                key={currentStep}
                 transition={{ duration: 0.2 }}
               >
                 {renderStep()}
@@ -183,17 +183,17 @@ export default function OnboardingPage() {
           </div>
 
           {/* Value Props Panel - Right side */}
-          <div className="hidden lg:flex lg:flex-col lg:justify-between h-full">
+          <div className="hidden h-full lg:flex lg:flex-col lg:justify-between">
             <ValuePropsPanel currentStep={currentStep} data={data} />
 
-            <div className="flex flex-col gap-3 mt-auto">
+            <div className="mt-auto flex flex-col gap-3">
               {/* CTA */}
-              <p className="text-center text-sm text-blue-600 font-medium">
+              <p className="text-center font-medium text-blue-600 text-sm">
                 {t(`onboarding.step${currentStep}.cta`)}
               </p>
 
               {/* Footer */}
-              <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center justify-center gap-4 text-gray-500 text-xs">
                 <span className="flex items-center gap-1">
                   <span className="text-green-500">✓</span>
                   {t("onboarding.footer.freeTrial")}
@@ -226,21 +226,21 @@ function Step1({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("onboarding.step1.question")}</h2>
-      <p className="text-gray-500 mb-6">{t("onboarding.step1.subtitle")}</p>
+    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <h2 className="mb-2 font-semibold text-gray-900 text-xl">{t("onboarding.step1.question")}</h2>
+      <p className="mb-6 text-gray-500">{t("onboarding.step1.subtitle")}</p>
 
       <div className="grid grid-cols-2 gap-3">
         {INDUSTRIES.map((industry) => (
           <button
-            type="button"
-            key={industry}
-            onClick={() => onSelect(industry)}
-            className={`p-4 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
+            className={`rounded-xl border-2 p-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
               selected === industry ? "border-blue-500 bg-blue-50" : "border-gray-200"
             }`}
+            key={industry}
+            onClick={() => onSelect(industry)}
+            type="button"
           >
-            <span className="text-sm font-medium text-gray-900">
+            <span className="font-medium text-gray-900 text-sm">
               {t(`onboarding.step1.${industry}`)}
             </span>
           </button>
@@ -261,22 +261,22 @@ function Step2({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("onboarding.step2.question")}</h2>
-      <p className="text-gray-500 mb-6">{t("onboarding.step2.subtitle")}</p>
+    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <h2 className="mb-2 font-semibold text-gray-900 text-xl">{t("onboarding.step2.question")}</h2>
+      <p className="mb-6 text-gray-500">{t("onboarding.step2.subtitle")}</p>
 
       <div className="space-y-3">
         {TARGET_CUSTOMERS.map((target) => (
           <button
-            type="button"
-            key={target}
-            onClick={() => onSelect(target)}
-            className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
+            className={`w-full rounded-xl border-2 p-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
               selected === target ? "border-blue-500 bg-blue-50" : "border-gray-200"
             }`}
+            key={target}
+            onClick={() => onSelect(target)}
+            type="button"
           >
             <span className="font-medium text-gray-900">{t(`onboarding.step2.${target}`)}</span>
-            <p className="text-sm text-gray-500 mt-1">{t(`onboarding.step2.${target}Desc`)}</p>
+            <p className="mt-1 text-gray-500 text-sm">{t(`onboarding.step2.${target}Desc`)}</p>
           </button>
         ))}
       </div>
@@ -295,19 +295,19 @@ function Step3({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("onboarding.step3.question")}</h2>
-      <p className="text-gray-500 mb-6">{t("onboarding.step3.subtitle")}</p>
+    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <h2 className="mb-2 font-semibold text-gray-900 text-xl">{t("onboarding.step3.question")}</h2>
+      <p className="mb-6 text-gray-500">{t("onboarding.step3.subtitle")}</p>
 
       <div className="grid grid-cols-2 gap-3">
         {TARGET_COUNTRIES.map((country) => (
           <button
-            type="button"
-            key={country}
-            onClick={() => onSelect(country)}
-            className={`p-4 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
+            className={`rounded-xl border-2 p-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
               selected === country ? "border-blue-500 bg-blue-50" : "border-gray-200"
             }`}
+            key={country}
+            onClick={() => onSelect(country)}
+            type="button"
           >
             <span className="font-medium text-gray-900">{t(`onboarding.step3.${country}`)}</span>
           </button>
@@ -328,22 +328,22 @@ function Step4({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("onboarding.step4.question")}</h2>
-      <p className="text-gray-500 mb-6">{t("onboarding.step4.subtitle")}</p>
+    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <h2 className="mb-2 font-semibold text-gray-900 text-xl">{t("onboarding.step4.question")}</h2>
+      <p className="mb-6 text-gray-500">{t("onboarding.step4.subtitle")}</p>
 
       <div className="space-y-3">
         {EXPORT_EXPERIENCES.map((experience) => (
           <button
-            type="button"
-            key={experience}
-            onClick={() => onSelect(experience)}
-            className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
+            className={`w-full rounded-xl border-2 p-4 text-left transition-all hover:border-blue-400 hover:bg-blue-50 ${
               selected === experience ? "border-blue-500 bg-blue-50" : "border-gray-200"
             }`}
+            key={experience}
+            onClick={() => onSelect(experience)}
+            type="button"
           >
             <span className="font-medium text-gray-900">{t(`onboarding.step4.${experience}`)}</span>
-            <p className="text-sm text-gray-500 mt-1">{t(`onboarding.step4.${experience}Desc`)}</p>
+            <p className="mt-1 text-gray-500 text-sm">{t(`onboarding.step4.${experience}Desc`)}</p>
           </button>
         ))}
       </div>

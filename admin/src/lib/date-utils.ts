@@ -1,5 +1,7 @@
 export function formatRelativeTime(date: Date | string | null): string {
-  if (!date) return "-"
+  if (!date) {
+    return "-"
+  }
 
   const now = new Date()
   const targetDate = typeof date === "string" ? new Date(date) : date
@@ -40,7 +42,9 @@ export function formatRelativeTime(date: Date | string | null): string {
 
 // 한국 시간대로 날짜/시간 표시: "10월 6일 (월) 오후 9:56 (2시간 전)"
 export function formatKoreanDateTime(date: Date | string | null): string {
-  if (!date) return "-"
+  if (!date) {
+    return "-"
+  }
 
   const targetDate = typeof date === "string" ? new Date(date) : date
 
@@ -124,7 +128,9 @@ export function formatDate(date: Date | string): string {
 // - Same day: "2:30 PM"
 // - More than 1 day: "Nov 4, 2025 3:45 PM"
 export function formatAbsoluteDateTime(date: Date | string | null): string {
-  if (!date) return "-"
+  if (!date) {
+    return "-"
+  }
 
   const targetDate = typeof date === "string" ? new Date(date) : date
   const now = new Date()
@@ -142,8 +148,12 @@ export function formatAbsoluteDateTime(date: Date | string | null): string {
 
   // Within same hour: show relative minutes
   if (diffInHours < 1 && isSameDay) {
-    if (diffInMinutes < 1) return "Just now"
-    if (diffInMinutes === 1) return "1 min ago"
+    if (diffInMinutes < 1) {
+      return "Just now"
+    }
+    if (diffInMinutes === 1) {
+      return "1 min ago"
+    }
     return `${diffInMinutes} mins ago`
   }
 

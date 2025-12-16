@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-export interface SelectedWorkspace {
+export type SelectedWorkspace = {
   id: string
   name: string
 }

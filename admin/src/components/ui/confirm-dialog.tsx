@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-interface ConfirmDialogProps {
+type ConfirmDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
@@ -36,7 +36,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -45,10 +45,10 @@ export function ConfirmDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
             className={
-              variant === "destructive" ? "bg-red-600 hover:bg-red-700 text-white" : undefined
+              variant === "destructive" ? "bg-red-600 text-white hover:bg-red-700" : undefined
             }
+            onClick={handleConfirm}
           >
             {confirmText}
           </AlertDialogAction>

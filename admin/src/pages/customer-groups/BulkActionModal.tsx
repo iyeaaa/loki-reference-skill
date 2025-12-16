@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface BulkActionModalProps {
+type BulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string) => void
@@ -49,7 +49,7 @@ export function BulkActionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
@@ -57,7 +57,7 @@ export function BulkActionModal({
         </DialogHeader>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             취소
           </Button>
           <Button onClick={handleConfirm} variant="destructive">

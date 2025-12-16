@@ -1,4 +1,4 @@
-export interface EmailReply {
+export type EmailReply = {
   id: string
   workspaceId: string
   originalEmailId: string
@@ -37,14 +37,14 @@ export interface EmailReplyWithDetails extends EmailReply {
   } | null
 }
 
-export interface EmailReplyListResponse {
+export type EmailReplyListResponse = {
   data: EmailReplyWithDetails[]
   total: number
   limit: number
   offset: number
 }
 
-export interface EmailReplyFilters {
+export type EmailReplyFilters = {
   workspaceId?: string
   isRead?: boolean
   sentiment?: string

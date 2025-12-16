@@ -20,7 +20,7 @@ import { StepEmailLink } from "./components/StepEmailLink"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
-interface WelcomeStep {
+type WelcomeStep = {
   title: string
   description: string
 }
@@ -67,26 +67,26 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
     <Dialog open={open}>
       <DialogPortal>
         <DialogOverlay />
-        <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-md translate-x-[-50%] translate-y-[-50%] rounded-xl shadow-2xl overflow-hidden outline-none">
+        <DialogPrimitive.Content className="fixed top-[50%] left-[50%] z-50 w-full max-w-md translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-xl shadow-2xl outline-none">
           {/* Blue Header */}
-          <div className="bg-blue-500 px-8 py-10 flex flex-col items-center">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
-              <Bot className="w-10 h-10 text-white" />
+          <div className="flex flex-col items-center bg-blue-500 px-8 py-10">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20">
+              <Bot className="h-10 w-10 text-white" />
             </div>
-            <span className="text-white font-semibold text-lg">RINDA Agent</span>
+            <span className="font-semibold text-lg text-white">RINDA Agent</span>
           </div>
 
           {/* White Content */}
           <div className="bg-white p-8">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: 20 }}
+                key={currentStep}
                 transition={{ duration: 0.2 }}
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-3">{steps[currentStep].title}</h2>
+                <h2 className="mb-3 font-bold text-gray-900 text-xl">{steps[currentStep].title}</h2>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   {steps[currentStep].description}
                 </p>
@@ -94,29 +94,29 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
             </AnimatePresence>
 
             {/* Footer with dots and button */}
-            <div className="flex items-center justify-between mt-8">
+            <div className="mt-8 flex items-center justify-between">
               {/* Pagination Dots */}
               <div className="flex gap-2">
                 {steps.map((_, index) => (
                   <button
-                    key={index}
-                    type="button"
-                    onClick={() => setCurrentStep(index)}
                     className={cn(
-                      "w-2 h-2 rounded-full transition-colors",
+                      "h-2 w-2 rounded-full transition-colors",
                       index === currentStep ? "bg-blue-500" : "bg-gray-300",
                     )}
+                    key={index}
+                    onClick={() => setCurrentStep(index)}
+                    type="button"
                   />
                 ))}
               </div>
 
               {/* Next/Finish Button */}
               <Button
+                className="bg-blue-500 px-6 text-white hover:bg-blue-600"
                 onClick={handleNext}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6"
               >
                 {isLastStep ? t("app.welcome.finish", "Finish") : t("app.welcome.next", "Next")}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -328,19 +328,19 @@ export default function CompanyInformation() {
   }
 
   return (
-    <div className="py-8 px-4">
-      <WelcomePopup open={showWelcome} onComplete={handleWelcomeComplete} />
+    <div className="px-4 py-8">
+      <WelcomePopup onComplete={handleWelcomeComplete} open={showWelcome} />
 
       {/* Stepper */}
-      <OnboardingStepper currentStep={currentStep} completedSteps={completedSteps} />
+      <OnboardingStepper completedSteps={completedSteps} currentStep={currentStep} />
 
       {/* Step Content */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 10 }}
+          key={currentStep}
           transition={{ duration: 0.2 }}
         >
           {renderStep()}

@@ -4,7 +4,7 @@ import type { ImportProgress } from "@/lib/api/services/lead-import"
 import { LeadImportProgress } from "./LeadImportProgress"
 import { SectionHeader } from "./SectionHeader"
 
-interface LeadProgressSectionProps {
+type LeadProgressSectionProps = {
   progress: ImportProgress
 }
 

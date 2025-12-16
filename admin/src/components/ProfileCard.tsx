@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
-interface ProfileCardProps {
+type ProfileCardProps = {
   isOpen: boolean
   onClose: () => void
   user?: {
@@ -29,7 +29,9 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
     setMounted(true)
   }, [])
 
-  if (!isOpen || !mounted) return null
+  if (!(isOpen && mounted)) {
+    return null
+  }
 
   const displayName = user?.username || "김하나"
   const displayEmail = user?.email || "hana@hana.com"
@@ -55,8 +57,8 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
     <>
       {/* Backdrop */}
       <button
-        type="button"
-        className="fixed inset-0 bg-transparent border-0 p-0 m-0"
+        aria-label="프로필 카드 닫기"
+        className="fixed inset-0 m-0 border-0 bg-transparent p-0"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
@@ -64,44 +66,44 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
             onClose()
           }
         }}
-        aria-label="프로필 카드 닫기"
+        type="button"
       />
       {/* Card */}
       <div className="fixed top-16 right-8 z-60">
-        <Card className="rounded-xl shadow-xl overflow-hidden w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <Card className="w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
           <div className="flex justify-end px-3 pb-0">
             <button
-              type="button"
+              className="rounded-full p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              type="button"
             >
-              <X className="w-4 h-4 text-gray-500" />
+              <X className="h-4 w-4 text-gray-500" />
             </button>
           </div>
 
-          <div className="text-center px-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{displayEmail}</p>
+          <div className="px-4 text-center">
+            <p className="mb-3 text-gray-600 text-sm dark:text-gray-400">{displayEmail}</p>
 
-            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mx-auto mb-3">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
               {user?.image ? (
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={user.image} alt={displayName} />
-                  <AvatarFallback className="bg-gray-200 text-gray-600 text-xl font-bold">
+                <Avatar className="h-full w-full">
+                  <AvatarImage alt={displayName} src={user.image} />
+                  <AvatarFallback className="bg-gray-200 font-bold text-gray-600 text-xl">
                     {userInitial}
                   </AvatarFallback>
                 </Avatar>
               ) : (
-                <span className="text-gray-600 dark:text-gray-300 text-xl font-bold">
+                <span className="font-bold text-gray-600 text-xl dark:text-gray-300">
                   {userInitial}
                 </span>
               )}
             </div>
 
-            <p className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <p className="mb-2 font-semibold text-base text-gray-900 dark:text-gray-100">
               안녕하세요, {displayName}님
             </p>
 
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+            <span className="inline-flex items-center rounded-full border border-gray-300 px-2.5 py-0.5 font-medium text-gray-700 text-xs dark:border-gray-600 dark:text-gray-300">
               {roleLabel}
             </span>
 
@@ -119,28 +121,28 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
 
           <div className="px-4 pt-4">
             <Button
-              onClick={onLogout}
-              variant="outline"
-              size="sm"
               className="w-full justify-center gap-2"
+              onClick={onLogout}
+              size="sm"
+              variant="outline"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-4 w-4" />
               <span>로그아웃</span>
             </Button>
           </div>
 
-          <div className="px-4 pb-4 pt-3">
-            <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="px-4 pt-3 pb-4">
+            <div className="flex justify-center gap-4 text-gray-500 text-xs dark:text-gray-400">
               <button
+                className="transition-colors hover:text-gray-700 dark:hover:text-gray-300"
                 type="button"
-                className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 개인정보처리방침
               </button>
               <span className="text-gray-300">·</span>
               <button
+                className="transition-colors hover:text-gray-700 dark:hover:text-gray-300"
                 type="button"
-                className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 이용약관
               </button>

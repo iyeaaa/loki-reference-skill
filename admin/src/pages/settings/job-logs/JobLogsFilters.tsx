@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
 import type { JobLogStatus } from "@/lib/api/types/job-log"
 
-interface JobLogsFiltersProps {
+type JobLogsFiltersProps = {
   selectedStatuses: JobLogStatus[]
   selectedQueues: string[]
   dateRange: { start?: string; end?: string }
@@ -58,18 +58,18 @@ export function JobLogsFilters({
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16">상태</span>
+            <span className="w-16 font-medium text-gray-700 text-sm dark:text-gray-300">상태</span>
             <div className="flex flex-wrap gap-3">
               {JOB_STATUSES.map((status) => (
-                <div key={status.value} className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" key={status.value}>
                   <Checkbox
-                    id={`status-${status.value}`}
                     checked={selectedStatuses.includes(status.value)}
+                    id={`status-${status.value}`}
                     onCheckedChange={() => toggleStatus(status.value)}
                   />
                   <label
+                    className="cursor-pointer select-none text-sm"
                     htmlFor={`status-${status.value}`}
-                    className="text-sm select-none cursor-pointer"
                   >
                     {status.label}
                   </label>
@@ -80,51 +80,51 @@ export function JobLogsFilters({
 
           {/* Queue Filter */}
           <div className="flex items-start gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16 pt-2">
+            <span className="w-16 pt-2 font-medium text-gray-700 text-sm dark:text-gray-300">
               Queue
             </span>
-            <div className="flex-1 max-w-md">
+            <div className="max-w-md flex-1">
               <MultiSelectCombobox
+                emptyText="검색 결과가 없습니다."
+                onValueChange={onQueueChange}
                 options={queues.map((queue) => ({
                   value: queue,
                   label: queue,
                 }))}
-                value={selectedQueues}
-                onValueChange={onQueueChange}
                 placeholder="Queue를 선택하세요..."
                 searchPlaceholder="Queue 이름으로 검색..."
-                emptyText="검색 결과가 없습니다."
+                value={selectedQueues}
               />
             </div>
           </div>
 
           {/* Date Range Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16">기간</span>
+            <span className="w-16 font-medium text-gray-700 text-sm dark:text-gray-300">기간</span>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <Label htmlFor={startDateId} className="sr-only">
+                <Label className="sr-only" htmlFor={startDateId}>
                   시작일
                 </Label>
                 <Input
+                  className="w-48"
                   id={startDateId}
+                  onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
                   type="datetime-local"
                   value={dateRange.start || ""}
-                  onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-                  className="w-48"
                 />
               </div>
-              <span className="text-sm text-muted-foreground">~</span>
+              <span className="text-muted-foreground text-sm">~</span>
               <div className="flex items-center gap-2">
-                <Label htmlFor={endDateId} className="sr-only">
+                <Label className="sr-only" htmlFor={endDateId}>
                   종료일
                 </Label>
                 <Input
+                  className="w-48"
                   id={endDateId}
+                  onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
                   type="datetime-local"
                   value={dateRange.end || ""}
-                  onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-                  className="w-48"
                 />
               </div>
             </div>
@@ -133,62 +133,62 @@ export function JobLogsFilters({
 
         {/* Active Filters Display */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
               {selectedStatuses.map((status) => {
                 const statusInfo = JOB_STATUSES.find((s) => s.value === status)
                 return (
                   <span
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-blue-800 text-xs dark:bg-blue-900/30 dark:text-blue-300"
                     key={status}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
                     상태: {statusInfo?.label || status}
                     <button
-                      type="button"
-                      onClick={() => toggleStatus(status)}
                       className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      onClick={() => toggleStatus(status)}
+                      type="button"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 )
               })}
               {selectedQueues.map((queue) => (
                 <span
+                  className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-purple-800 text-xs dark:bg-purple-900/30 dark:text-purple-300"
                   key={queue}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full"
                 >
                   Queue: {queue}
                   <button
-                    type="button"
-                    onClick={() => onQueueChange(selectedQueues.filter((q) => q !== queue))}
                     className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+                    onClick={() => onQueueChange(selectedQueues.filter((q) => q !== queue))}
+                    type="button"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3 w-3" />
                   </button>
                 </span>
               ))}
               {dateRange.start && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
                   시작: {new Date(dateRange.start).toLocaleString("ko-KR")}
                   <button
-                    type="button"
-                    onClick={() => onDateRangeChange({ ...dateRange, start: undefined })}
                     className="ml-1 hover:text-green-600 dark:hover:text-green-200"
+                    onClick={() => onDateRangeChange({ ...dateRange, start: undefined })}
+                    type="button"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3 w-3" />
                   </button>
                 </span>
               )}
               {dateRange.end && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
                   종료: {new Date(dateRange.end).toLocaleString("ko-KR")}
                   <button
-                    type="button"
-                    onClick={() => onDateRangeChange({ ...dateRange, end: undefined })}
                     className="ml-1 hover:text-green-600 dark:hover:text-green-200"
+                    onClick={() => onDateRangeChange({ ...dateRange, end: undefined })}
+                    type="button"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3 w-3" />
                   </button>
                 </span>
               )}
@@ -198,9 +198,9 @@ export function JobLogsFilters({
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
-              <X className="w-3 h-3 mr-1" />
+          <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
+            <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
+              <X className="mr-1 h-3 w-3" />
               필터 초기화
             </Button>
           </div>

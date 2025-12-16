@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 export type { ProgressLog }
 
-interface ProgressLoggerProps {
+type ProgressLoggerProps = {
   logs: ProgressLog[]
   startTime: number
   currentProgress: number
@@ -45,7 +45,9 @@ function formatETA(ms: number): string {
 }
 
 function calculateSpeed(processed: number, elapsedMs: number): number {
-  if (elapsedMs === 0) return 0
+  if (elapsedMs === 0) {
+    return 0
+  }
   const elapsedSeconds = elapsedMs / 1000
   return processed / elapsedSeconds
 }
@@ -61,11 +63,11 @@ function LogEntry({ log }: { log: ProgressLog }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-2 py-1.5 px-2 rounded text-xs font-mono",
-        "hover:bg-muted/50 transition-colors",
+        "flex items-start gap-2 rounded px-2 py-1.5 font-mono text-xs",
+        "transition-colors hover:bg-muted/50",
       )}
     >
-      <span className="text-muted-foreground/60 select-none min-w-[60px]">{time}</span>
+      <span className="min-w-[60px] select-none text-muted-foreground/60">{time}</span>
       <span
         className={cn(
           "flex-1",
@@ -78,7 +80,7 @@ function LogEntry({ log }: { log: ProgressLog }) {
         {log.message}
       </span>
       {log.processed !== undefined && log.total !== undefined && (
-        <span className="text-muted-foreground/60 select-none">
+        <span className="select-none text-muted-foreground/60">
           [{log.processed}/{log.total}]
         </span>
       )}
@@ -123,7 +125,7 @@ export function ProgressLogger({
   return (
     <div className={cn("space-y-3", className)}>
       {/* Stats Bar - Hugging Face Style */}
-      <div className="flex items-center gap-4 text-xs font-mono bg-muted/30 rounded-lg px-4 py-2.5 border">
+      <div className="flex items-center gap-4 rounded-lg border bg-muted/30 px-4 py-2.5 font-mono text-xs">
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Elapsed:</span>
           <span className="font-semibold text-foreground">{formatElapsedTime(elapsedTime)}</span>
@@ -153,8 +155,8 @@ export function ProgressLogger({
         <div className="rounded-lg border bg-muted/20">
           <div className="border-b bg-muted/50 px-3 py-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Processing Log</span>
-              <span className="text-xs text-muted-foreground/60">({logs.length} entries)</span>
+              <span className="font-medium text-muted-foreground text-xs">Processing Log</span>
+              <span className="text-muted-foreground/60 text-xs">({logs.length} entries)</span>
             </div>
           </div>
           <div className="max-h-64 overflow-y-auto px-2 py-1">

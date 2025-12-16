@@ -8,7 +8,7 @@ import { useToggleImportant } from "@/lib/api/hooks/email-replies"
 import { type RepliedEmailsParams, useRepliedEmails } from "@/lib/api/hooks/emails"
 import { RepliedEmailsListItem } from "./RepliedEmailsListItem"
 
-interface RepliedEmailsListProps {
+type RepliedEmailsListProps = {
   workspaceId: string
   searchQuery: string
   selectedStatuses: string[]
@@ -55,7 +55,7 @@ export function RepliedEmailsList({
     () => ({
       workspaceId,
       page: currentPage,
-      limit: limit,
+      limit,
       status:
         selectedStatuses.length === 1
           ? selectedStatuses[0]
@@ -106,7 +106,7 @@ export function RepliedEmailsList({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -116,7 +116,7 @@ export function RepliedEmailsList({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -149,7 +149,9 @@ export function RepliedEmailsList({
 
   const handleToggleImportant = (email: (typeof repliedEmails)[0], e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!email.threadId) return
+    if (!email.threadId) {
+      return
+    }
     toggleImportant.mutate({
       threadId: email.threadId,
       isImportant: !email.isImportant,
@@ -161,14 +163,14 @@ export function RepliedEmailsList({
       {/* List container */}
       <div className="rounded-md border bg-white dark:bg-gray-800">
         {/* Header with select all */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+        <div className="flex items-center gap-3 border-gray-200 border-b bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-700/50">
           <Checkbox
             checked={allSelected}
             onCheckedChange={() =>
               onToggleAll(repliedEmails.map((e) => e.threadId).filter((id): id is string => !!id))
             }
           />
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+          <span className="text-gray-600 text-sm dark:text-gray-400">
             {selectedThreads.length > 0
               ? `${selectedThreads.length} selected`
               : `${total} conversations`}
@@ -177,25 +179,27 @@ export function RepliedEmailsList({
 
         {/* List items */}
         {isFetching ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
+          <div className="px-4 py-12 text-center text-gray-500 text-sm">
             {t("email-replies.table.empty.loading")}
           </div>
         ) : repliedEmails.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
+          <div className="px-4 py-12 text-center text-gray-500 text-sm">
             {t("email-replies.table.empty.noReplies")}
           </div>
         ) : (
           <div>
             {repliedEmails.map((email) => (
               <RepliedEmailsListItem
-                key={email.id}
                 email={email}
-                isSelected={email.threadId ? selectedThreads.includes(email.threadId) : false}
                 isActive={selectedThreadId === email.threadId}
+                isSelected={email.threadId ? selectedThreads.includes(email.threadId) : false}
+                key={email.id}
                 onSelect={() => email.threadId && onThreadSelect(email.threadId)}
                 onToggleCheckbox={(e) => {
                   e.stopPropagation()
-                  if (email.threadId) onToggleThread(email.threadId)
+                  if (email.threadId) {
+                    onToggleThread(email.threadId)
+                  }
                 }}
                 onToggleImportant={(e) => handleToggleImportant(email, e)}
                 searchQuery={searchQuery}
@@ -207,8 +211,8 @@ export function RepliedEmailsList({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-2">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-4 flex items-center justify-between px-2">
+          <div className="text-gray-600 text-sm dark:text-gray-400">
             {t("email-replies.pagination.showing", {
               start: (currentPage - 1) * limit + 1,
               end: Math.min(currentPage * limit, total),
@@ -219,10 +223,10 @@ export function RepliedEmailsList({
           <div className="flex items-center gap-2">
             {/* Previous button */}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+              size="sm"
+              variant="outline"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -230,11 +234,11 @@ export function RepliedEmailsList({
             {/* Page numbers */}
             {getPageNumbers().map((page) => (
               <Button
-                key={page}
-                variant={page === currentPage ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePageChange(page)}
                 className="min-w-[36px]"
+                key={page}
+                onClick={() => handlePageChange(page)}
+                size="sm"
+                variant={page === currentPage ? "default" : "outline"}
               >
                 {page}
               </Button>
@@ -243,26 +247,26 @@ export function RepliedEmailsList({
             {/* Page input for jumping */}
             {totalPages > 10 && (
               <div className="flex items-center gap-1">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Go to</span>
+                <span className="text-gray-600 text-sm dark:text-gray-400">Go to</span>
                 <Input
-                  type="number"
-                  min={1}
+                  className="h-8 w-16 text-center"
                   max={totalPages}
-                  value={pageInputValue}
+                  min={1}
+                  onBlur={handlePageInputBlur}
                   onChange={(e) => handlePageInputChange(e.target.value)}
                   onKeyDown={handlePageInputKeyDown}
-                  onBlur={handlePageInputBlur}
-                  className="w-16 h-8 text-center"
+                  type="number"
+                  value={pageInputValue}
                 />
               </div>
             )}
 
             {/* Next button */}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+              size="sm"
+              variant="outline"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

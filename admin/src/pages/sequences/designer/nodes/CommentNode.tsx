@@ -4,13 +4,13 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
-interface CommentNodeData {
+type CommentNodeData = {
   comment?: string
   onDelete?: () => void
   onUpdate?: (data: { comment: string }) => void
 }
 
-interface CommentNodeProps {
+type CommentNodeProps = {
   data: CommentNodeData
 }
 
@@ -36,69 +36,69 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
   }
 
   return (
-    <div className="bg-yellow-50 rounded border-2 border-yellow-400 shadow-md min-w-[200px] max-w-[350px] group">
+    <div className="group min-w-[200px] max-w-[350px] rounded border-2 border-yellow-400 bg-yellow-50 shadow-md">
       {isEditing ? (
-        <div className="p-3 space-y-2">
+        <div className="space-y-2 p-3">
           <Textarea
+            autoFocus
+            className="resize-none border-yellow-300 bg-white text-sm focus:border-yellow-500"
             id={commentId}
-            value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={t("sequences.designer.commentNode.placeholder")}
             rows={4}
-            className="text-sm bg-white border-yellow-300 focus:border-yellow-500 resize-none"
-            autoFocus
+            value={comment}
           />
           <div className="flex gap-2">
             <Button
-              variant="outline"
-              size="sm"
+              className="h-7 flex-1 text-xs"
               onClick={handleCancel}
-              className="flex-1 h-7 text-xs"
+              size="sm"
+              variant="outline"
             >
               {t("sequences.designer.commentNode.cancel")}
             </Button>
-            <Button size="sm" onClick={handleSave} className="flex-1 h-7 text-xs">
+            <Button className="h-7 flex-1 text-xs" onClick={handleSave} size="sm">
               {t("sequences.designer.commentNode.save")}
             </Button>
           </div>
         </div>
       ) : (
-        <div className="p-2 flex items-start gap-2">
+        <div className="flex items-start gap-2 p-2">
           {comment ? (
             <button
-              type="button"
-              className="flex-1 text-xs text-gray-700 whitespace-pre-wrap bg-white p-2 rounded border border-yellow-200 hover:bg-yellow-50 text-left min-h-[60px]"
+              className="min-h-[60px] flex-1 whitespace-pre-wrap rounded border border-yellow-200 bg-white p-2 text-left text-gray-700 text-xs hover:bg-yellow-50"
               onClick={() => setIsEditing(true)}
+              type="button"
             >
               {comment}
             </button>
           ) : (
             <button
-              type="button"
-              className="flex-1 text-xs text-gray-400 italic bg-white p-2 rounded border border-dashed border-yellow-300 hover:bg-yellow-50 text-left min-h-[60px]"
+              className="min-h-[60px] flex-1 rounded border border-yellow-300 border-dashed bg-white p-2 text-left text-gray-400 text-xs italic hover:bg-yellow-50"
               onClick={() => setIsEditing(true)}
+              type="button"
             >
               {t("sequences.designer.commentNode.writeMemo")}
             </button>
           )}
 
           {/* 버튼들 - hover 시에만 표시 */}
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsEditing(true)}
               className="h-6 w-6 p-0 hover:bg-yellow-200"
+              onClick={() => setIsEditing(true)}
+              size="sm"
               title={t("sequences.designer.commentNode.edit")}
+              variant="ghost"
             >
               <Edit className="h-3 w-3 text-yellow-700" />
             </Button>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => data.onDelete?.()}
               className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+              onClick={() => data.onDelete?.()}
+              size="sm"
               title={t("sequences.designer.commentNode.delete")}
+              variant="ghost"
             >
               <Trash2 className="h-3 w-3" />
             </Button>

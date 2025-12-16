@@ -35,9 +35,9 @@ export default function EmailTemplatesPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedSharedStatuses, setSelectedSharedStatuses] = useState<string[]>([])
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([])
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
-    return localStorage.getItem("selectedWorkspace") || "all"
-  })
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(
+    () => localStorage.getItem("selectedWorkspace") || "all",
+  )
 
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
   const [creatingTemplate, setCreatingTemplate] = useState(false)
@@ -136,7 +136,9 @@ export default function EmailTemplatesPage() {
   }
 
   const handleUpdateTemplate = async (templateData: unknown) => {
-    if (!editingTemplate) return
+    if (!editingTemplate) {
+      return
+    }
     const data = templateData as Partial<EmailTemplate>
     updateTemplate.mutate(
       {
@@ -163,10 +165,15 @@ export default function EmailTemplatesPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (selectedTemplates.length === 0) return
-
-    if (!confirm(t("emailTemplates.confirm.deleteTemplates", { count: selectedTemplates.length })))
+    if (selectedTemplates.length === 0) {
       return
+    }
+
+    if (
+      !confirm(t("emailTemplates.confirm.deleteTemplates", { count: selectedTemplates.length }))
+    ) {
+      return
+    }
 
     bulkDelete.mutate(selectedTemplates, {
       onSuccess: () => {
@@ -237,17 +244,17 @@ export default function EmailTemplatesPage() {
   }, [])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <EmailTemplateFilters
+        onCategoryChange={setSelectedCategories}
+        onClearFilters={clearFilters}
+        onSharedStatusChange={setSelectedSharedStatuses}
+        onWorkspaceChange={setSelectedWorkspaces}
         selectedCategories={selectedCategories}
         selectedSharedStatuses={selectedSharedStatuses}
         selectedWorkspaces={selectedWorkspaces}
         workspaces={workspaces}
-        onCategoryChange={setSelectedCategories}
-        onSharedStatusChange={setSelectedSharedStatuses}
-        onWorkspaceChange={setSelectedWorkspaces}
-        onClearFilters={clearFilters}
       />
 
       {/* Email Templates Table */}
@@ -258,7 +265,7 @@ export default function EmailTemplatesPage() {
               {t("emailTemplates.title.templateManagement")}
             </CardTitle>
             <Button onClick={() => setCreatingTemplate(true)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               템플릿 추가
             </Button>
           </div>
@@ -267,24 +274,24 @@ export default function EmailTemplatesPage() {
           {/* Search input - positioned below title */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("emailTemplates.search.placeholder")}
-                value={searchInput}
+                className="w-full pr-10 pl-10"
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
+                placeholder={t("emailTemplates.search.placeholder")}
+                value={searchInput}
               />
               {searchInput && (
                 <button
-                  type="button"
+                  className="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
                   onClick={() => {
                     setSearchInput("")
                     setSearchQuery("")
                   }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -292,29 +299,29 @@ export default function EmailTemplatesPage() {
 
           {/* Bulk Actions */}
           {selectedTemplates.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="text-muted-foreground text-sm">
                 <span className="font-medium">
                   {selectedTemplates.length}
                   {t("emailTemplates.status.selectedCount")}
                 </span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("category")}>
-                  <Tag className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("category")} size="sm" variant="outline">
+                  <Tag className="mr-1 h-4 w-4" />
                   {t("emailTemplates.button.changeCategory")}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("shared")}>
-                  <Share2 className="h-4 w-4 mr-1" />
+                <Button onClick={() => openBulkActionModal("shared")} size="sm" variant="outline">
+                  <Share2 className="mr-1 h-4 w-4" />
                   {t("emailTemplates.button.changeSharedStatus")}
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  size="sm"
+                  variant="outline"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   {t("emailTemplates.button.deleteSelected")}
                 </Button>
               </div>
@@ -323,50 +330,50 @@ export default function EmailTemplatesPage() {
 
           {/* Email Templates Table with Pagination */}
           <EmailTemplatesTableWithPagination
+            onEditTemplate={setEditingTemplate}
+            onToggleAll={toggleAllTemplates}
+            onToggleTemplate={toggleTemplateSelection}
             searchQuery={searchQuery}
             selectedCategories={selectedCategories}
             selectedSharedStatuses={selectedSharedStatuses}
-            selectedWorkspaces={selectedWorkspaceId !== "all" ? [selectedWorkspaceId] : []}
             selectedTemplates={selectedTemplates}
-            onToggleTemplate={toggleTemplateSelection}
-            onToggleAll={toggleAllTemplates}
-            onEditTemplate={setEditingTemplate}
+            selectedWorkspaces={selectedWorkspaceId !== "all" ? [selectedWorkspaceId] : []}
           />
         </CardContent>
       </Card>
 
       {/* Create Template Dialog */}
-      <Dialog open={creatingTemplate} onOpenChange={setCreatingTemplate}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">템플릿 추가</DialogTitle>
+      <Dialog onOpenChange={setCreatingTemplate} open={creatingTemplate}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">템플릿 추가</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <EmailTemplateForm
-              workspaces={workspaces}
-              onSave={handleCreateTemplate}
               onCancel={() => setCreatingTemplate(false)}
+              onSave={handleCreateTemplate}
+              workspaces={workspaces}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Template Dialog */}
-      <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
+      <Dialog onOpenChange={() => setEditingTemplate(null)} open={!!editingTemplate}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">
               {t("emailTemplates.dialog.editTemplate")}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {editingTemplate && (
               <EmailTemplateForm
-                template={editingTemplate}
                 isEdit={true}
-                workspaces={workspaces}
-                onSave={handleUpdateTemplate}
                 onCancel={() => setEditingTemplate(null)}
+                onSave={handleUpdateTemplate}
+                template={editingTemplate}
+                workspaces={workspaces}
               />
             )}
           </div>
@@ -375,6 +382,7 @@ export default function EmailTemplatesPage() {
 
       {/* Bulk Action Modal */}
       <BulkActionModal
+        actionType={bulkActionType}
         isOpen={showBulkActionModal}
         onClose={() => {
           setShowBulkActionModal(false)
@@ -382,7 +390,6 @@ export default function EmailTemplatesPage() {
         }}
         onConfirm={handleBulkAction}
         templateCount={selectedTemplates.length}
-        actionType={bulkActionType}
         workspaces={workspaces}
       />
     </div>

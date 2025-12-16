@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface BulkActionModalProps {
+type BulkActionModalProps = {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string, value: string | string[]) => void
@@ -107,18 +107,18 @@ export function BulkActionModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="space-y-4 py-4">
           {actionType === "status" && (
             <div className="space-y-2">
               <Label>변경할 상태</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger>
                   <SelectValue placeholder="상태 선택" />
                 </SelectTrigger>
@@ -133,7 +133,7 @@ export function BulkActionModal({
           {actionType === "role" && (
             <div className="space-y-2">
               <Label>변경할 역할</Label>
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
+              <Select onValueChange={setSelectedValue} value={selectedValue}>
                 <SelectTrigger>
                   <SelectValue placeholder="역할 선택" />
                 </SelectTrigger>
@@ -148,13 +148,13 @@ export function BulkActionModal({
           {actionType === "department" && (
             <div className="space-y-2">
               <Label>변경할 부서</Label>
-              <Popover open={departmentOpen} onOpenChange={setDepartmentOpen}>
+              <Popover onOpenChange={setDepartmentOpen} open={departmentOpen}>
                 <PopoverTrigger asChild>
                   <Button
-                    variant="outline"
-                    role="combobox"
                     aria-expanded={departmentOpen}
                     className="w-full justify-between"
+                    role="combobox"
+                    variant="outline"
                   >
                     {selectedValue
                       ? departments.find((dept) => dept.id === selectedValue)?.name
@@ -165,9 +165,9 @@ export function BulkActionModal({
                 <PopoverContent className="w-full p-0">
                   <Command>
                     <CommandInput
+                      onValueChange={setDepartmentSearch}
                       placeholder="부서 검색..."
                       value={departmentSearch}
-                      onValueChange={setDepartmentSearch}
                     />
                     <CommandList>
                       <CommandEmpty>부서를 찾을 수 없습니다.</CommandEmpty>
@@ -175,12 +175,12 @@ export function BulkActionModal({
                         {filteredDepartments.map((dept) => (
                           <CommandItem
                             key={dept.id}
-                            value={dept.id}
                             onSelect={(currentValue) => {
                               setSelectedValue(currentValue === selectedValue ? "" : currentValue)
                               setDepartmentOpen(false)
                               setDepartmentSearch("")
                             }}
+                            value={dept.id}
                           >
                             <Check
                               className={`mr-2 h-4 w-4 ${
@@ -202,6 +202,8 @@ export function BulkActionModal({
             <div className="space-y-2">
               <Label>편집 권한 언어</Label>
               <MultiSelectCombobox
+                emptyText="언어를 찾을 수 없습니다."
+                onValueChange={setSelectedLanguages}
                 options={languages
                   .filter((lang) => lang.is_active)
                   .map((lang) => ({
@@ -209,11 +211,9 @@ export function BulkActionModal({
                     label: lang.name,
                     sublabel: lang.code,
                   }))}
-                value={selectedLanguages}
-                onValueChange={setSelectedLanguages}
                 placeholder="언어 선택..."
                 searchPlaceholder="언어 검색..."
-                emptyText="언어를 찾을 수 없습니다."
+                value={selectedLanguages}
               />
             </div>
           )}
@@ -222,6 +222,8 @@ export function BulkActionModal({
             <div className="space-y-2">
               <Label>검수 권한 언어</Label>
               <MultiSelectCombobox
+                emptyText="언어를 찾을 수 없습니다."
+                onValueChange={setSelectedLanguages}
                 options={languages
                   .filter((lang) => lang.is_active)
                   .map((lang) => ({
@@ -229,27 +231,25 @@ export function BulkActionModal({
                     label: lang.name,
                     sublabel: lang.code,
                   }))}
-                value={selectedLanguages}
-                onValueChange={setSelectedLanguages}
                 placeholder="언어 선택..."
                 searchPlaceholder="언어 검색..."
-                emptyText="언어를 찾을 수 없습니다."
+                value={selectedLanguages}
               />
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button onClick={onClose} variant="outline">
             취소
           </Button>
           <Button
-            onClick={handleConfirm}
             disabled={
               actionType === "edit_languages" || actionType === "review_languages"
                 ? selectedLanguages.length === 0
                 : !selectedValue
             }
+            onClick={handleConfirm}
           >
             변경
           </Button>

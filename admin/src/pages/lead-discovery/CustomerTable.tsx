@@ -81,7 +81,7 @@ function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boole
   // 로딩 중
   if (isLoading || score === undefined) {
     return (
-      <div className="inline-flex items-center justify-center w-8 h-6">
+      <div className="inline-flex h-6 w-8 items-center justify-center">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
     )
@@ -104,7 +104,7 @@ function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boole
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center w-8 h-6 rounded-full text-xs font-medium tabular-nums",
+        "inline-flex h-6 w-8 items-center justify-center rounded-full font-medium text-xs tabular-nums",
         bgColor,
         textColor,
       )}
@@ -125,11 +125,11 @@ function RowIndexCell({
   onToggle: (value: boolean) => void
 }) {
   return (
-    <div className="group/row flex items-center justify-center w-full h-full relative">
+    <div className="group/row relative flex h-full w-full items-center justify-center">
       {/* 행 번호 - 선택 안됨 & hover 아닐 때 표시 */}
       <span
         className={cn(
-          "text-xs text-muted-foreground tabular-nums",
+          "text-muted-foreground text-xs tabular-nums",
           "group-hover/row:hidden",
           isSelected && "hidden",
         )}
@@ -139,16 +139,16 @@ function RowIndexCell({
       {/* 체크박스 - hover 또는 선택 시 표시 */}
       <div className={cn("hidden group-hover/row:block", isSelected && "!block")}>
         <Checkbox
+          aria-label={`Select row ${rowIndex}`}
           checked={isSelected}
           onCheckedChange={onToggle}
-          aria-label={`Select row ${rowIndex}`}
         />
       </div>
     </div>
   )
 }
 
-interface CustomerTableProps {
+type CustomerTableProps = {
   isFullscreen: boolean
   onToggleFullscreen: () => void
 }
@@ -194,7 +194,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 더 가져오기 핸들러
   const handleLoadMore = useCallback(async () => {
-    if (!streamingState.sessionId || isLoadingMore) return
+    if (!streamingState.sessionId || isLoadingMore) {
+      return
+    }
 
     setIsLoadingMore(true)
     try {
@@ -518,8 +520,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
     // 모든 고객의 점수가 계산 완료되고, 아직 정렬하지 않았으면 정렬
     if (
-      !hasSortedRef.current &&
-      !fitScoreState.isLoading &&
+      !(hasSortedRef.current || fitScoreState.isLoading) &&
       scoresCount > 0 &&
       scoresCount >= customersCount
     ) {
@@ -539,12 +540,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         id: "select",
         header: ({ table }) => (
           <Checkbox
+            aria-label="Select all"
             checked={
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
           />
         ),
         cell: ({ row, table }) => {
@@ -552,9 +553,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           const sortedIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id) + 1
           return (
             <RowIndexCell
-              rowIndex={sortedIndex}
               isSelected={row.getIsSelected()}
               onToggle={(value) => row.toggleSelected(!!value)}
+              rowIndex={sortedIndex}
             />
           )
         },
@@ -566,9 +567,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         accessorKey: "company_name",
         header: ({ column }) => (
           <Button
-            variant="ghost"
+            className="-ml-2 h-8 px-2"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
+            variant="ghost"
           >
             Company
             {column.getIsSorted() === "asc" ? (
@@ -583,25 +584,25 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         cell: ({ row }) => {
           const isVerified = row.original.verified
           return (
-            <div className="flex items-center gap-1.5 max-w-[200px]">
-              <span className="font-medium truncate">{row.getValue("company_name") || "-"}</span>
+            <div className="flex max-w-[200px] items-center gap-1.5">
+              <span className="truncate font-medium">{row.getValue("company_name") || "-"}</span>
               {isVerified && (
                 <div
-                  className="flex-shrink-0 w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm"
+                  className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm"
                   title="Enrichment 완료"
                 >
                   <svg
-                    className="w-2.5 h-2.5 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
                     aria-label="Verified"
+                    className="h-2.5 w-2.5 text-white"
+                    fill="currentColor"
                     role="img"
+                    viewBox="0 0 20 20"
                   >
                     <title>Verified</title>
                     <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                       clipRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      fillRule="evenodd"
                     />
                   </svg>
                 </div>
@@ -615,16 +616,18 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         header: "Website",
         cell: ({ row }) => {
           const webAddress = row.getValue("web_address") as string | undefined
-          if (!webAddress) return <span className="text-xs text-muted-foreground">-</span>
+          if (!webAddress) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
           return (
             <a
+              className="inline-flex items-center gap-1 text-blue-600 text-xs hover:text-blue-800 hover:underline"
               href={webAddress.startsWith("http") ? webAddress : `https://${webAddress}`}
-              target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              target="_blank"
               title={webAddress}
             >
-              <span className="truncate max-w-[140px]">
+              <span className="max-w-[140px] truncate">
                 {webAddress.replace(/^https?:\/\//, "")}
               </span>
               <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -644,7 +647,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             return (
               <div className="flex items-center gap-1.5">
                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">분석 중...</span>
+                <span className="text-muted-foreground text-xs">분석 중...</span>
               </div>
             )
           }
@@ -657,16 +660,16 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             <Popover>
               <PopoverTrigger asChild>
                 <button
+                  className="line-clamp-2 max-w-[200px] cursor-pointer text-left text-xs transition-colors hover:text-primary"
                   type="button"
-                  className="text-xs line-clamp-2 max-w-[200px] text-left hover:text-primary cursor-pointer transition-colors"
                 >
                   {description}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] max-h-[300px] overflow-y-auto" align="start">
+              <PopoverContent align="start" className="max-h-[300px] w-[400px] overflow-y-auto">
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Company Description</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
                 </div>
               </PopoverContent>
             </Popover>
@@ -680,9 +683,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         accessorFn: (row) => fitScoreState.scores[row.id] ?? row.fit_score ?? -1,
         header: ({ column }) => (
           <Button
-            variant="ghost"
+            className="-ml-2 h-8 px-2"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
+            variant="ghost"
           >
             Fit Score
             {column.getIsSorted() === "asc" ? (
@@ -697,7 +700,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         cell: ({ row }) => {
           const score = fitScoreState.scores[row.original.id] ?? row.original.fit_score
           const isLoading = fitScoreState.isLoading && score === undefined
-          return <FitScoreBadge score={score} isLoading={isLoading} />
+          return <FitScoreBadge isLoading={isLoading} score={score} />
         },
         size: 70,
       },
@@ -719,7 +722,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         header: "Business Type",
         cell: ({ row }) => {
           const companyType = row.getValue("companyType") as string | undefined
-          if (!companyType) return <span className="text-xs text-muted-foreground">-</span>
+          if (!companyType) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
 
           // 업체 유형별 배지 색상
           const typeColors: Record<string, string> = {
@@ -737,7 +742,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           const colorClass = typeColors[companyType] || "bg-gray-100 text-gray-800"
 
           return (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
+            <span className={`rounded-full px-2 py-0.5 font-medium text-xs ${colorClass}`}>
               {companyType}
             </span>
           )
@@ -748,9 +753,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         accessorKey: "industry",
         header: ({ column }) => (
           <Button
-            variant="ghost"
+            className="-ml-2 h-8 px-2"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
+            variant="ghost"
           >
             Main Industry
             {column.getIsSorted() === "asc" ? (
@@ -767,12 +772,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           return (
             <Popover>
               <PopoverTrigger asChild>
-                <span className="text-xs truncate max-w-[150px] block cursor-pointer hover:text-primary">
+                <span className="block max-w-[150px] cursor-pointer truncate text-xs hover:text-primary">
                   {industry || "-"}
                 </span>
               </PopoverTrigger>
               {industry && (
-                <PopoverContent className="w-[300px] max-h-[200px] overflow-y-auto" align="start">
+                <PopoverContent align="start" className="max-h-[200px] w-[300px] overflow-y-auto">
                   <p className="text-sm">{industry}</p>
                 </PopoverContent>
               )}
@@ -789,12 +794,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           return (
             <Popover>
               <PopoverTrigger asChild>
-                <span className="text-xs text-muted-foreground truncate max-w-[150px] block cursor-pointer hover:text-primary">
+                <span className="block max-w-[150px] cursor-pointer truncate text-muted-foreground text-xs hover:text-primary">
                   {subIndustry || "-"}
                 </span>
               </PopoverTrigger>
               {subIndustry && (
-                <PopoverContent className="w-[300px] max-h-[200px] overflow-y-auto" align="start">
+                <PopoverContent align="start" className="max-h-[200px] w-[300px] overflow-y-auto">
                   <p className="text-sm">{subIndustry}</p>
                 </PopoverContent>
               )}
@@ -807,9 +812,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         accessorKey: "email",
         header: ({ column }) => (
           <Button
-            variant="ghost"
+            className="-ml-2 h-8 px-2"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
+            variant="ghost"
           >
             Company Email
             {column.getIsSorted() === "asc" ? (
@@ -822,7 +827,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           </Button>
         ),
         cell: ({ row }) => (
-          <span className="max-w-[200px] truncate font-mono text-xs block">
+          <span className="block max-w-[200px] truncate font-mono text-xs">
             {row.getValue("email") || "-"}
           </span>
         ),
@@ -836,7 +841,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button className="h-8 w-8 p-0" variant="ghost">
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -869,8 +874,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   const sortedCustomers = useMemo(() => {
     return [...customers].sort((a, b) => {
       // 1순위: verified (체크 표시된 것이 위로)
-      if (a.verified && !b.verified) return -1
-      if (!a.verified && b.verified) return 1
+      if (a.verified && !b.verified) {
+        return -1
+      }
+      if (!a.verified && b.verified) {
+        return 1
+      }
 
       // 2순위: fit_score (높은 것이 위로) - fitScoreState.scores에서 가져옴
       const scoreA = fitScoreState.scores[a.id] ?? a.fit_score ?? 0
@@ -913,13 +922,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   const handleDrop = useCallback(
     (targetColumnId: string) => {
-      if (!draggedColumn || draggedColumn === targetColumnId) return
+      if (!draggedColumn || draggedColumn === targetColumnId) {
+        return
+      }
 
       const currentOrder = columnOrder.length > 0 ? columnOrder : columns.map((c) => c.id as string)
       const draggedIndex = currentOrder.indexOf(draggedColumn)
       const targetIndex = currentOrder.indexOf(targetColumnId)
 
-      if (draggedIndex === -1 || targetIndex === -1) return
+      if (draggedIndex === -1 || targetIndex === -1) {
+        return
+      }
 
       const newOrder = [...currentOrder]
       newOrder.splice(draggedIndex, 1)
@@ -932,17 +945,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   )
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* 툴바 */}
-      <div className="flex items-center justify-between px-2 py-2 border-b gap-2">
-        <div className="flex items-center gap-1 flex-1">
+      <div className="flex items-center justify-between gap-2 border-b px-2 py-2">
+        <div className="flex flex-1 items-center gap-1">
           {/* 전체화면 토글 버튼 */}
           <Button
-            variant="ghost"
-            size="icon"
+            className="h-8 w-8 shrink-0"
             onClick={onToggleFullscreen}
+            size="icon"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            className="shrink-0 h-8 w-8"
+            variant="ghost"
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
@@ -952,10 +965,10 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           {/* 고객그룹 선택 및 추가 - 리드 선택 시 표시 */}
           {Object.keys(rowSelection).length > 0 && (
             <>
-              <span className="text-sm font-medium text-primary">
+              <span className="font-medium text-primary text-sm">
                 {Object.keys(rowSelection).length}개 선택
               </span>
-              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+              <Select onValueChange={setSelectedGroupId} value={selectedGroupId}>
                 <SelectTrigger className="h-8 w-[160px] text-sm">
                   <SelectValue placeholder="고객그룹 선택" />
                 </SelectTrigger>
@@ -967,17 +980,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                       </SelectItem>
                     ))
                   ) : (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    <div className="px-2 py-1.5 text-muted-foreground text-sm">
                       고객그룹이 없습니다
                     </div>
                   )}
                 </SelectContent>
               </Select>
               <Button
-                size="sm"
                 className="h-8 gap-1"
-                onClick={handleAddToGroup}
                 disabled={isAddingToGroup || !selectedGroupId || customerGroups.length === 0}
+                onClick={handleAddToGroup}
+                size="sm"
               >
                 {isAddingToGroup ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -987,11 +1000,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                 추가
               </Button>
               <Button
+                className="h-8 gap-1"
+                disabled={isEnriching}
+                onClick={handleEnrichment}
                 size="sm"
                 variant="outline"
-                className="h-8 gap-1"
-                onClick={handleEnrichment}
-                disabled={isEnriching}
               >
                 {isEnriching ? (
                   <>
@@ -1010,38 +1023,38 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </>
           )}
 
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {table.getFilteredRowModel().rows.length} results
           </span>
         </div>
       </div>
 
       {/* 테이블 */}
-      <div className="flex-1 min-h-0 overflow-scroll border rounded-md [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted/30">
+      <div className="min-h-0 flex-1 overflow-scroll rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3">
         <Table className="border-collapse">
           <TableHeader className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
+                className="border-border/50 border-b hover:bg-transparent"
                 key={headerGroup.id}
-                className="border-b border-border/50 hover:bg-transparent"
               >
                 {headerGroup.headers.map((header, index) => {
                   const canDrag = header.column.id !== "select" && header.column.id !== "actions"
                   const isFirstColumn = index === 0
                   return (
                     <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      draggable={canDrag}
-                      onDragStart={() => canDrag && handleDragStart(header.column.id)}
-                      onDragOver={handleDragOver}
-                      onDrop={() => canDrag && handleDrop(header.column.id)}
                       className={cn(
-                        "border-r border-border/30 bg-zinc-50 dark:bg-zinc-900",
+                        "border-border/30 border-r bg-zinc-50 dark:bg-zinc-900",
                         isFirstColumn && "sticky left-0 z-20",
                         canDrag && "cursor-grab",
                         draggedColumn === header.column.id && "opacity-50",
                       )}
+                      draggable={canDrag}
+                      key={header.id}
+                      onDragOver={handleDragOver}
+                      onDragStart={() => canDrag && handleDragStart(header.column.id)}
+                      onDrop={() => canDrag && handleDrop(header.column.id)}
+                      style={{ width: header.getSize() }}
                     >
                       <div className="flex items-center gap-1">
                         {canDrag && <GripVertical className="h-3 w-3 text-muted-foreground/50" />}
@@ -1060,27 +1073,27 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <motion.tr
+                    animate={{ opacity: 1, y: 0 }}
+                    className="border-border/30 border-b hover:bg-muted/40 data-[state=selected]:bg-muted"
+                    data-state={row.getIsSelected() && "selected"}
+                    exit={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, y: 20 }}
                     key={row.original.id}
                     layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
                     transition={{
                       layout: { type: "spring", stiffness: 350, damping: 30 },
                       opacity: { duration: 0.2 },
                     }}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="border-b border-border/30 hover:bg-muted/40 data-[state=selected]:bg-muted"
                   >
                     {row.getVisibleCells().map((cell, index) => {
                       const isFirstColumn = index === 0
                       return (
                         <TableCell
-                          key={cell.id}
                           className={cn(
-                            "border-r border-border/20",
-                            isFirstColumn && "bg-zinc-50 dark:bg-zinc-900 sticky left-0 z-10",
+                            "border-border/20 border-r",
+                            isFirstColumn && "sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-900",
                           )}
+                          key={cell.id}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
@@ -1091,12 +1104,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
               ) : (
                 <TableRow className="hover:bg-transparent">
                   <TableCell
-                    colSpan={columns.length}
                     className="h-[400px] text-center align-middle"
+                    colSpan={columns.length}
                   >
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <p className="text-base font-medium">아직 발견된 고객이 없습니다</p>
-                      <p className="text-sm mt-2">채팅으로 새로운 잠재 고객을 찾아보세요</p>
+                      <p className="font-medium text-base">아직 발견된 고객이 없습니다</p>
+                      <p className="mt-2 text-sm">채팅으로 새로운 잠재 고객을 찾아보세요</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1108,13 +1121,13 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
       {/* 더 가져오기 버튼 */}
       {streamingState.hasMore && streamingState.sessionId && (
-        <div className="flex items-center justify-center p-4 border-t bg-muted/30">
+        <div className="flex items-center justify-center border-t bg-muted/30 p-4">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLoadMore}
-            disabled={isLoadingMore}
             className="gap-2"
+            disabled={isLoadingMore}
+            onClick={handleLoadMore}
+            size="sm"
+            variant="outline"
           >
             {isLoadingMore ? (
               <>
@@ -1135,12 +1148,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
       {/* 푸터 - 선택 정보 */}
       {Object.keys(rowSelection).length > 0 && (
-        <div className="flex items-center justify-between p-4 border-t bg-muted/50">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between border-t bg-muted/50 p-4">
+          <span className="text-muted-foreground text-sm">
             {Object.keys(rowSelection).length} of {table.getFilteredRowModel().rows.length} row(s)
             selected.
           </span>
-          <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
+          <Button onClick={() => setRowSelection({})} size="sm" variant="outline">
             Clear selection
           </Button>
         </div>

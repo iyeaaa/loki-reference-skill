@@ -44,7 +44,7 @@ import { useAuth } from "@/lib/auth-provider"
 import { cn } from "@/lib/utils"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 
-interface EmailStep {
+type EmailStep = {
   id?: string // Step ID if it exists in DB
   stepOrder: number
   delayDays: number
@@ -58,7 +58,7 @@ interface EmailStep {
   emailSignature?: string // 서명을 별도로 저장
 }
 
-interface CreateCampaignStep2Props {
+type CreateCampaignStep2Props = {
   sequenceId?: string | null
   data: {
     workspaceId: string
@@ -148,7 +148,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
 
   // Update steps when data.steps changes (e.g., when loading existing campaign)
   useEffect(() => {
-    if (data.steps.length === 0) return
+    if (data.steps.length === 0) {
+      return
+    }
 
     const prevStepsStr = JSON.stringify(
       prevDataStepsRef.current.map((s) => ({ id: s.id, subject: s.emailSubject })),
@@ -249,7 +251,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
-    if (!confirm("이 스텝을 삭제하시겠습니까?")) return
+    if (!confirm("이 스텝을 삭제하시겠습니까?")) {
+      return
+    }
 
     const stepToDelete = steps[index]
 
@@ -355,9 +359,8 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     }
   }
 
-  const isStepComplete = (step: EmailStep) => {
-    return !step.isDraft && step.emailSubject.trim() && step.emailBodyText.trim()
-  }
+  const isStepComplete = (step: EmailStep) =>
+    !step.isDraft && step.emailSubject.trim() && step.emailBodyText.trim()
 
   const insertVariable = (variable: string) => {
     // Insert at cursor position using editor ref
@@ -412,18 +415,18 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const hasDraftSteps = steps.some((step) => step.isDraft)
 
   return (
-    <div className="h-full flex gap-6">
+    <div className="flex h-full gap-6">
       {/* Left Panel - Steps List (30%) */}
-      <div className="w-[30%] flex flex-col gap-4 border-r pr-6">
+      <div className="flex w-[30%] flex-col gap-4 border-r pr-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold">이메일 스텝</h3>
+            <h3 className="font-semibold text-lg">이메일 스텝</h3>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
+                    className="text-muted-foreground transition-colors hover:text-foreground"
                     type="button"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Info className="h-4 w-4" />
                   </button>
@@ -441,12 +444,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  size="sm"
-                  onClick={handleAddStep}
-                  disabled={steps.length >= MAX_STEPS}
                   className="h-8"
+                  disabled={steps.length >= MAX_STEPS}
+                  onClick={handleAddStep}
+                  size="sm"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="mr-1 h-4 w-4" />
                   추가
                 </Button>
               </TooltipTrigger>
@@ -458,9 +461,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
         </div>
 
         {hasDraftSteps && (
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/20">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <p className="text-amber-900 text-xs dark:text-amber-200">
               작성 중인 스텝이 있습니다. 모든 스텝을 저장한 후 다음 단계로 진행하세요
             </p>
           </div>
@@ -470,23 +473,23 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           <div className="space-y-2 pr-2">
             {steps.map((step, index) => (
               <button
-                key={`step-${step.stepOrder}-${index}`}
-                type="button"
                 className={cn(
-                  "w-full rounded-lg border p-3 cursor-pointer transition-all text-left",
+                  "w-full cursor-pointer rounded-lg border p-3 text-left transition-all",
                   selectedStepIndex === index
                     ? "border-primary bg-primary/5 shadow-sm"
                     : "hover:bg-muted/50",
                 )}
+                key={`step-${step.stepOrder}-${index}`}
                 onClick={() => setSelectedStepIndex(index)}
+                type="button"
               >
                 {/* Schedule info above step - Inline editable */}
-                <div className="mb-2 pb-2 border-b">
+                <div className="mb-2 border-b pb-2">
                   {editingScheduleIndex === index ? (
                     // 인라인 편집 모드
                     // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation is needed to prevent parent click
                     <div
-                      className="space-y-2 p-2 bg-muted/50 rounded"
+                      className="space-y-2 rounded bg-muted/50 p-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {index === 0 ? (
@@ -497,11 +500,11 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
-                                  variant="outline"
                                   className={cn(
-                                    "w-full justify-start text-left font-normal h-7 text-xs",
+                                    "h-7 w-full justify-start text-left font-normal text-xs",
                                     !step.delayDays && "text-muted-foreground",
                                   )}
+                                  variant="outline"
                                 >
                                   <CalendarIcon className="mr-2 h-3 w-3" />
                                   {step.delayDays === 0
@@ -513,12 +516,13 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                                       )}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent align="start" className="w-auto p-0">
                                 <Calendar
-                                  mode="single"
-                                  selected={
-                                    new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000)
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0, 0, 0, 0))
                                   }
+                                  initialFocus
+                                  mode="single"
                                   onSelect={(date) => {
                                     if (date) {
                                       const now = new Date()
@@ -529,10 +533,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                                       setSteps(updatedSteps)
                                     }
                                   }}
-                                  disabled={(date) =>
-                                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                                  selected={
+                                    new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000)
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>
@@ -540,15 +543,15 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                           <div className="space-y-2">
                             <Label className="text-xs">발송 시간</Label>
                             <TimePicker
-                              value={{
-                                hour: step.scheduledHour ?? 9,
-                                minute: step.scheduledMinute ?? 0,
-                              }}
                               onChange={(time) => {
                                 const updatedSteps = [...steps]
                                 updatedSteps[index].scheduledHour = time.hour
                                 updatedSteps[index].scheduledMinute = time.minute
                                 setSteps(updatedSteps)
+                              }}
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
                               }}
                             />
                           </div>
@@ -557,32 +560,33 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                         // 나머지 스텝: 상대적 날짜 (며칠 후)
                         <>
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs w-16">대기일</Label>
+                            <Label className="w-16 text-xs">대기일</Label>
                             <Input
-                              type="number"
+                              className="h-7 w-16 text-xs"
                               min="1"
-                              value={step.delayDays}
                               onChange={(e) => {
                                 const updatedSteps = [...steps]
-                                updatedSteps[index].delayDays = parseInt(e.target.value, 10) || 1
+                                updatedSteps[index].delayDays =
+                                  Number.parseInt(e.target.value, 10) || 1
                                 setSteps(updatedSteps)
                               }}
-                              className="h-7 w-16 text-xs"
+                              type="number"
+                              value={step.delayDays}
                             />
                             <span className="text-xs">일 후</span>
                           </div>
                           <div className="space-y-2">
                             <Label className="text-xs">발송 시간</Label>
                             <TimePicker
-                              value={{
-                                hour: step.scheduledHour ?? 9,
-                                minute: step.scheduledMinute ?? 0,
-                              }}
                               onChange={(time) => {
                                 const updatedSteps = [...steps]
                                 updatedSteps[index].scheduledHour = time.hour
                                 updatedSteps[index].scheduledMinute = time.minute
                                 setSteps(updatedSteps)
+                              }}
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
                               }}
                             />
                           </div>
@@ -590,26 +594,26 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                       )}
                       <div className="flex justify-end gap-1">
                         <Button
-                          variant="default"
-                          size="sm"
-                          className="h-6 text-xs px-2"
+                          className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
                             setEditingScheduleIndex(null)
                             toast.success("스케줄이 저장되었습니다")
                           }}
+                          size="sm"
+                          variant="default"
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           저장
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs px-2"
+                          className="h-6 px-2 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
                             setEditingScheduleIndex(null)
                           }}
+                          size="sm"
+                          variant="ghost"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -618,12 +622,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                   ) : (
                     // 보기 모드
                     <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-2 h-auto p-1 text-xs text-muted-foreground hover:text-foreground group"
+                      className="group h-auto w-full justify-start gap-2 p-1 text-muted-foreground text-xs hover:text-foreground"
                       onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation()
                         setEditingScheduleIndex(index)
                       }}
+                      variant="ghost"
                     >
                       <CalendarIcon className="h-3 w-3" />
                       {index === 0 ? (
@@ -641,12 +645,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                         // 나머지 스텝: 상대적 날짜 표시
                         <span>{step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}</span>
                       )}
-                      <Clock className="h-3 w-3 ml-1" />
+                      <Clock className="ml-1 h-3 w-3" />
                       <span>
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
                       </span>
-                      <span className="text-xs text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="ml-auto text-muted-foreground text-xs opacity-0 transition-opacity group-hover:opacity-100">
                         수정
                       </span>
                     </Button>
@@ -655,30 +659,30 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
 
                 {/* Step content */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold">스텝 {step.stepOrder}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="font-semibold text-sm">스텝 {step.stepOrder}</span>
                       {isStepComplete(step) ? (
                         <Badge
+                          className="bg-green-100 px-2 py-0 text-green-700 text-xs dark:bg-green-900/30 dark:text-green-300"
                           variant="default"
-                          className="text-xs px-2 py-0 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           완료
                         </Badge>
                       ) : (
                         <Badge
+                          className="bg-amber-100 px-2 py-0 text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-300"
                           variant="secondary"
-                          className="text-xs px-2 py-0 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
                         >
                           작성중
                         </Badge>
                       )}
                     </div>
                     {step.emailSubject ? (
-                      <p className="text-sm font-medium truncate">{step.emailSubject}</p>
+                      <p className="truncate font-medium text-sm">{step.emailSubject}</p>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">제목 없음</p>
+                      <p className="text-muted-foreground text-sm italic">제목 없음</p>
                     )}
                   </div>
 
@@ -687,13 +691,13 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                            className="h-7 w-7 flex-shrink-0 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleDeleteStep(index)
                             }}
+                            size="sm"
+                            variant="ghost"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -712,24 +716,24 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       </div>
 
       {/* Right Panel - Email Editor (70%) */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">스텝 {currentStep?.stepOrder} 편집</h3>
-            <p className="text-sm text-muted-foreground">이메일 내용을 작성하세요</p>
+            <h3 className="font-semibold text-lg">스텝 {currentStep?.stepOrder} 편집</h3>
+            <p className="text-muted-foreground text-sm">이메일 내용을 작성하세요</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAISheet(true)}
               className="h-9"
+              onClick={() => setShowAISheet(true)}
+              size="sm"
+              variant="outline"
             >
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Sparkles className="mr-2 h-4 w-4" />
               AI 생성
             </Button>
-            <Button onClick={handleSaveCurrentStep} size="sm" className="h-9">
-              <Check className="h-4 w-4 mr-2" />
+            <Button className="h-9" onClick={handleSaveCurrentStep} size="sm">
+              <Check className="mr-2 h-4 w-4" />
               저장
             </Button>
           </div>
@@ -743,41 +747,41 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                 <Label>이메일 제목 *</Label>
                 <div className="flex items-center gap-2">
                   <Checkbox
+                    checked={currentStep?.isAdvertisement}
                     id={`advertisement-${selectedStepIndex}`}
-                    checked={currentStep?.isAdvertisement || false}
                     onCheckedChange={(checked) => handleAdvertisementToggle(checked as boolean)}
                   />
                   <Label
+                    className="cursor-pointer font-normal text-sm"
                     htmlFor={`advertisement-${selectedStepIndex}`}
-                    className="text-sm font-normal cursor-pointer"
                   >
                     (광고) 표시
                   </Label>
                 </div>
               </div>
               <Input
-                value={currentStep?.emailSubject || ""}
                 onChange={(e) => updateCurrentStep({ emailSubject: e.target.value })}
                 placeholder="예: 안녕하세요, {{회사명}} 담당자님"
+                value={currentStep?.emailSubject || ""}
               />
             </div>
 
             {/* Variables */}
             <div className="space-y-2">
               <Label>변수 삽입</Label>
-              <div className="flex flex-wrap gap-2 p-3 rounded-lg border bg-muted/30">
+              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
                 {VARIABLES.map((variable) => (
                   <Button
-                    key={variable.value}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => insertVariable(variable.value)}
                     className="h-7 text-xs"
+                    key={variable.value}
+                    onClick={() => insertVariable(variable.value)}
+                    size="sm"
+                    variant="outline"
                   >
                     {variable.label}
                   </Button>
                 ))}
-                <p className="w-full text-xs text-muted-foreground mt-2">
+                <p className="mt-2 w-full text-muted-foreground text-xs">
                   클릭하면 본문에 변수가 추가됩니다
                 </p>
               </div>
@@ -788,47 +792,47 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
               <div className="flex items-center justify-between">
                 <Label>이메일 본문 *</Label>
                 <Button
+                  className="h-7"
+                  onClick={() => setIsSignatureModalOpen(true)}
+                  size="sm"
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={() => setIsSignatureModalOpen(true)}
-                  className="h-7"
                 >
-                  <Mail className="h-3 w-3 mr-1" />
+                  <Mail className="mr-1 h-3 w-3" />
                   서명 편집
                 </Button>
               </div>
               <RichTextEditor
-                ref={editorRef}
-                value={currentStep?.emailBodyText || ""}
+                height="300px"
                 onChange={(value) => updateCurrentStep({ emailBodyText: value })}
                 placeholder="이메일 내용을 입력하세요..."
-                height="300px"
+                ref={editorRef}
+                value={currentStep?.emailBodyText || ""}
               />
 
               {/* 서명 프리뷰 */}
               {currentStep?.emailSignature && (
-                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium text-muted-foreground">
+                    <Label className="font-medium text-muted-foreground text-xs">
                       서명 미리보기
                     </Label>
                     <Button
+                      className="h-6 text-xs"
+                      onClick={() => setIsSignatureModalOpen(true)}
+                      size="sm"
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      onClick={() => setIsSignatureModalOpen(true)}
-                      className="h-6 text-xs"
                     >
                       편집
                     </Button>
                   </div>
                   <div
-                    className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                    className="prose prose-sm dark:prose-invert max-w-none text-xs"
                     // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
                     dangerouslySetInnerHTML={{ __html: currentStep.emailSignature }}
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
                   </p>
                 </div>
@@ -840,18 +844,18 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
               <Label>첨부 파일</Label>
               <div className="rounded-lg border-2 border-dashed p-4 text-center">
                 <input
-                  type="file"
-                  multiple
                   className="hidden"
                   id={`file-input-${selectedStepIndex}`}
+                  multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || [])
                     updateCurrentStep({ files })
                   }}
+                  type="file"
                 />
                 <label
+                  className="cursor-pointer text-muted-foreground text-sm hover:text-foreground"
                   htmlFor={`file-input-${selectedStepIndex}`}
-                  className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
                 >
                   클릭하여 파일 선택
                 </label>
@@ -859,18 +863,18 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                   <div className="mt-2 space-y-1">
                     {currentStep.files.map((file, idx) => (
                       <div
+                        className="flex items-center justify-between rounded bg-muted p-2 text-xs"
                         key={`file-${file.name}-${idx}`}
-                        className="flex items-center justify-between text-xs bg-muted p-2 rounded"
                       >
                         <span>{file.name}</span>
                         <Button
-                          variant="ghost"
-                          size="sm"
                           className="h-5 w-5 p-0"
                           onClick={() => {
                             const newFiles = currentStep.files?.filter((_, i) => i !== idx)
                             updateCurrentStep({ files: newFiles })
                           }}
+                          size="sm"
+                          variant="ghost"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -885,8 +889,8 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       </div>
 
       {/* AI Generation Sheet */}
-      <Sheet open={showAISheet} onOpenChange={setShowAISheet}>
-        <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+      <Sheet onOpenChange={setShowAISheet} open={showAISheet}>
+        <SheetContent className="w-[600px] sm:max-w-[600px]" side="right">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -901,16 +905,16 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             <div className="space-y-2">
               <Label>AI 프롬프트</Label>
               <Textarea
-                value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="예: 신규 고객을 위한 제품 소개 이메일을 작성해주세요. 친근하고 전문적인 톤으로..."
                 rows={6}
+                value={aiPrompt}
               />
             </div>
 
-            <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="space-y-2 rounded-lg bg-muted p-4">
               <h4 className="font-medium text-sm">프롬프트 작성 팁</h4>
-              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+              <ul className="list-inside list-disc space-y-1 text-muted-foreground text-xs">
                 <li>이메일의 목적을 명확히 작성하세요</li>
                 <li>원하는 톤과 스타일을 지정하세요 (예: 친근한, 공식적인)</li>
                 <li>포함하고 싶은 핵심 내용을 나열하세요</li>
@@ -919,17 +923,17 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleGenerateAI} disabled={isGeneratingAI} className="flex-1">
+              <Button className="flex-1" disabled={isGeneratingAI} onClick={handleGenerateAI}>
                 {isGeneratingAI ? (
                   "생성 중..."
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4 mr-2" />
+                    <Sparkles className="mr-2 h-4 w-4" />
                     생성하기
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setShowAISheet(false)}>
+              <Button onClick={() => setShowAISheet(false)} variant="outline">
                 취소
               </Button>
             </div>
@@ -939,12 +943,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
 
       {/* Signature Editor Modal */}
       <SignatureEditorModal
+        defaultSignature={currentStep?.emailSignature || getUserSignature()}
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
-        defaultSignature={currentStep?.emailSignature || getUserSignature()}
         onSave={handleSaveSignature}
-        workspaceId={data.workspaceId}
         userId={user?.id}
+        workspaceId={data.workspaceId}
       />
     </div>
   )

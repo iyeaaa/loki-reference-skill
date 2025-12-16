@@ -30,7 +30,7 @@ export const openAIApiKeysApi = {
       body: JSON.stringify(data),
     })
 
-    if (!response.success || !response.data) {
+    if (!(response.success && response.data)) {
       throw new Error(response.error || "API 키 추가에 실패했습니다")
     }
 
@@ -46,7 +46,7 @@ export const openAIApiKeysApi = {
       body: JSON.stringify(data),
     })
 
-    if (!response.success || !response.data) {
+    if (!(response.success && response.data)) {
       throw new Error(response.error || "API 키 수정에 실패했습니다")
     }
 

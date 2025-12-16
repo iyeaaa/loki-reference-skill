@@ -15,14 +15,14 @@ import { Textarea } from "@/components/ui/textarea"
 import type { CreateIamPolicyRequest, IamPolicy, PolicyEffect } from "@/lib/api/types/iam"
 import { COMMON_ACTIONS, COMMON_RESOURCES, POLICY_EFFECT_LABELS } from "@/lib/api/types/iam"
 
-interface PolicyFormProps {
+type PolicyFormProps = {
   policy?: IamPolicy
   onSave: (data: CreateIamPolicyRequest) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-interface StatementFormData {
+type StatementFormData = {
   sid: string
   effect: PolicyEffect
   resources: string[]
@@ -91,16 +91,16 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+    <form className="space-y-6 py-4" onSubmit={handleSubmit}>
       {/* Name */}
       <div className="space-y-2">
         <Label htmlFor={`${formId}-name`}>정책명 *</Label>
         <Input
           id={`${formId}-name`}
-          value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="예: LeadFullAccess"
           required
+          value={name}
         />
       </div>
 
@@ -109,55 +109,55 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
         <Label htmlFor={`${formId}-description`}>설명</Label>
         <Textarea
           id={`${formId}-description`}
-          value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="정책에 대한 설명을 입력하세요..."
           rows={2}
+          value={description}
         />
       </div>
 
       {/* Is Active */}
       <div className="flex items-center space-x-2">
         <Checkbox
-          id={`${formId}-isActive`}
           checked={isActive}
+          id={`${formId}-isActive`}
           onCheckedChange={(checked) => setIsActive(checked as boolean)}
         />
-        <Label htmlFor={`${formId}-isActive`} className="cursor-pointer">
+        <Label className="cursor-pointer" htmlFor={`${formId}-isActive`}>
           활성 상태
         </Label>
       </div>
 
       {/* Statements */}
       {!policy && (
-        <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-4 border-t pt-4">
           <div className="flex items-center justify-between">
             <Label>정책 명세</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addStatement}>
-              <Plus className="h-4 w-4 mr-1" />
+            <Button onClick={addStatement} size="sm" type="button" variant="outline">
+              <Plus className="mr-1 h-4 w-4" />
               명세 추가
             </Button>
           </div>
 
           {statements.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-gray-500 text-sm">
               정책 명세를 추가하여 허용/거부 규칙을 정의하세요.
             </p>
           ) : (
             <div className="space-y-4">
               {statements.map((stmt, index) => (
                 <div
+                  className="space-y-4 rounded-lg border bg-gray-50 p-4 dark:bg-gray-800"
                   key={index}
-                  className="p-4 border rounded-lg space-y-4 bg-gray-50 dark:bg-gray-800"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm">명세 #{index + 1}</span>
                     <Button
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => removeStatement(index)}
+                      size="sm"
                       type="button"
                       variant="ghost"
-                      size="sm"
-                      onClick={() => removeStatement(index)}
-                      className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -168,9 +168,9 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
                     <div className="space-y-2">
                       <Label>식별자 (SID)</Label>
                       <Input
-                        value={stmt.sid}
                         onChange={(e) => updateStatement(index, { sid: e.target.value })}
                         placeholder="예: AllowLeadRead"
+                        value={stmt.sid}
                       />
                     </div>
 
@@ -178,10 +178,10 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
                     <div className="space-y-2">
                       <Label>효과 *</Label>
                       <Select
-                        value={stmt.effect}
                         onValueChange={(value) =>
                           updateStatement(index, { effect: value as PolicyEffect })
                         }
+                        value={stmt.effect}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -203,18 +203,18 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
                     <div className="flex flex-wrap gap-2">
                       {COMMON_RESOURCES.map((resource) => (
                         <label
-                          key={resource.value}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs cursor-pointer border ${
+                          className={`inline-flex cursor-pointer items-center rounded border px-2 py-1 text-xs ${
                             stmt.resources.includes(resource.value)
-                              ? "bg-blue-100 border-blue-300 text-blue-800"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "border-blue-300 bg-blue-100 text-blue-800"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                           }`}
+                          key={resource.value}
                         >
                           <input
-                            type="checkbox"
-                            className="sr-only"
                             checked={stmt.resources.includes(resource.value)}
+                            className="sr-only"
                             onChange={() => toggleResource(index, resource.value)}
+                            type="checkbox"
                           />
                           {resource.label}
                         </label>
@@ -228,18 +228,18 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
                     <div className="flex flex-wrap gap-2">
                       {COMMON_ACTIONS.map((action) => (
                         <label
-                          key={action.value}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs cursor-pointer border ${
+                          className={`inline-flex cursor-pointer items-center rounded border px-2 py-1 text-xs ${
                             stmt.actions.includes(action.value)
-                              ? "bg-green-100 border-green-300 text-green-800"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "border-green-300 bg-green-100 text-green-800"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                           }`}
+                          key={action.value}
                         >
                           <input
-                            type="checkbox"
-                            className="sr-only"
                             checked={stmt.actions.includes(action.value)}
+                            className="sr-only"
                             onChange={() => toggleAction(index, action.value)}
+                            type="checkbox"
                           />
                           {action.label}
                         </label>
@@ -251,15 +251,17 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
                   <div className="space-y-2">
                     <Label>우선순위</Label>
                     <Input
+                      className="w-24"
+                      min={0}
+                      onChange={(e) =>
+                        updateStatement(index, {
+                          priority: Number.parseInt(e.target.value, 10) || 0,
+                        })
+                      }
                       type="number"
                       value={stmt.priority}
-                      onChange={(e) =>
-                        updateStatement(index, { priority: parseInt(e.target.value, 10) || 0 })
-                      }
-                      min={0}
-                      className="w-24"
                     />
-                    <p className="text-xs text-gray-500">높을수록 먼저 평가됩니다.</p>
+                    <p className="text-gray-500 text-xs">높을수록 먼저 평가됩니다.</p>
                   </div>
                 </div>
               ))}
@@ -269,11 +271,11 @@ export function PolicyForm({ policy, onSave, onCancel, isLoading }: PolicyFormPr
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button disabled={isLoading} onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" disabled={isLoading || !name.trim()}>
+        <Button disabled={isLoading || !name.trim()} type="submit">
           {isLoading ? "저장 중..." : policy ? "수정" : "생성"}
         </Button>
       </div>

@@ -19,7 +19,7 @@ import type {
 } from "@/lib/api/types/billing"
 import { SUBSCRIPTION_TIER_LABELS } from "@/lib/api/types/billing"
 
-interface ProductFormProps {
+type ProductFormProps = {
   product?: BillingProduct
   onSave: (data: CreateBillingProductRequest) => Promise<void>
   onCancel: () => void
@@ -60,16 +60,16 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+    <form className="space-y-6 py-4" onSubmit={handleSubmit}>
       {/* Name */}
       <div className="space-y-2">
         <Label htmlFor={`${formId}-name`}>상품명 *</Label>
         <Input
           id={`${formId}-name`}
-          value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="예: Pro Plan"
           required
+          value={name}
         />
       </div>
 
@@ -78,17 +78,17 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
         <Label htmlFor={`${formId}-description`}>설명</Label>
         <Textarea
           id={`${formId}-description`}
-          value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="상품에 대한 설명을 입력하세요..."
           rows={3}
+          value={description}
         />
       </div>
 
       {/* Tier */}
       <div className="space-y-2">
         <Label htmlFor={`${formId}-tier`}>구독 등급 *</Label>
-        <Select value={tier} onValueChange={(value) => setTier(value as SubscriptionTier)}>
+        <Select onValueChange={(value) => setTier(value as SubscriptionTier)} value={tier}>
           <SelectTrigger>
             <SelectValue placeholder="등급 선택" />
           </SelectTrigger>
@@ -107,12 +107,12 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
         <Label htmlFor={`${formId}-displayOrder`}>표시 순서</Label>
         <Input
           id={`${formId}-displayOrder`}
+          min={0}
+          onChange={(e) => setDisplayOrder(Number.parseInt(e.target.value, 10) || 0)}
           type="number"
           value={displayOrder}
-          onChange={(e) => setDisplayOrder(parseInt(e.target.value, 10) || 0)}
-          min={0}
         />
-        <p className="text-xs text-gray-500">낮은 숫자가 먼저 표시됩니다.</p>
+        <p className="text-gray-500 text-xs">낮은 숫자가 먼저 표시됩니다.</p>
       </div>
 
       {/* Features */}
@@ -120,32 +120,32 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
         <Label>기능 목록</Label>
         <div className="flex gap-2">
           <Input
-            value={newFeature}
             onChange={(e) => setNewFeature(e.target.value)}
-            placeholder="기능 추가..."
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
                 addFeature()
               }
             }}
+            placeholder="기능 추가..."
+            value={newFeature}
           />
-          <Button type="button" variant="outline" onClick={addFeature}>
+          <Button onClick={addFeature} type="button" variant="outline">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
         {features.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {features.map((feature, index) => (
               <span
+                className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-sm dark:bg-gray-700"
                 key={index}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm"
               >
                 {feature}
                 <button
-                  type="button"
-                  onClick={() => removeFeature(index)}
                   className="text-gray-500 hover:text-gray-700"
+                  onClick={() => removeFeature(index)}
+                  type="button"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -158,21 +158,21 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
       {/* Is Active */}
       <div className="flex items-center space-x-2">
         <Checkbox
-          id={`${formId}-isActive`}
           checked={isActive}
+          id={`${formId}-isActive`}
           onCheckedChange={(checked) => setIsActive(checked as boolean)}
         />
-        <Label htmlFor={`${formId}-isActive`} className="cursor-pointer">
+        <Label className="cursor-pointer" htmlFor={`${formId}-isActive`}>
           활성 상태 (비활성 시 신규 구매 불가)
         </Label>
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button disabled={isLoading} onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" disabled={isLoading || !name.trim()}>
+        <Button disabled={isLoading || !name.trim()} type="submit">
           {isLoading ? "저장 중..." : product ? "수정" : "생성"}
         </Button>
       </div>

@@ -50,15 +50,15 @@ export default function FilterComponentsTest() {
   }
 
   const handleAddToFilters = (filter: ColumnFilter | null, filterType: string) => {
-    if (!filter) {
-      // Remove filter of this type
-      setAllFilters((prev) => prev.filter((f) => f.field !== filterType))
-    } else {
+    if (filter) {
       // Add or update filter
       setAllFilters((prev) => {
         const filtered = prev.filter((f) => f.field !== filter.field)
         return [...filtered, filter]
       })
+    } else {
+      // Remove filter of this type
+      setAllFilters((prev) => prev.filter((f) => f.field !== filterType))
     }
   }
 
@@ -97,10 +97,10 @@ export default function FilterComponentsTest() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto space-y-8 py-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Filter Components Test Page</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="font-bold text-3xl tracking-tight">Filter Components Test Page</h1>
+        <p className="mt-2 text-muted-foreground">
           Manually test all filter components and their interactions
         </p>
       </div>
@@ -108,25 +108,25 @@ export default function FilterComponentsTest() {
       {/* Filter Summary and Preset Manager */}
       <div className="flex gap-4">
         <FilterPresetManager
-          presets={presets}
           currentFilters={allFilters}
-          onLoadPreset={handleLoadPreset}
-          onSavePreset={handleSavePreset}
           onDeletePreset={handleDeletePreset}
+          onLoadPreset={handleLoadPreset}
           onRenamePreset={handleRenamePreset}
+          onSavePreset={handleSavePreset}
+          presets={presets}
         />
       </div>
 
       {allFilters.length > 0 && (
         <FilterSummaryPanel
           filters={allFilters}
-          onRemoveFilter={handleRemoveFilter}
           onClearAll={handleClearAll}
+          onRemoveFilter={handleRemoveFilter}
         />
       )}
 
       {/* Individual Component Tests */}
-      <Tabs defaultValue="text" className="w-full">
+      <Tabs className="w-full" defaultValue="text">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="text">Text Filter</TabsTrigger>
           <TabsTrigger value="select">Select Filter</TabsTrigger>
@@ -145,20 +145,20 @@ export default function FilterComponentsTest() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 bg-muted/50">
+              <div className="rounded-lg border bg-muted/50 p-4">
                 <ColumnFilterText
                   field="companyName"
+                  initialFilter={textFilter || undefined}
                   onFilterChange={(filter) => {
                     setTextFilter(filter)
                     handleAddToFilters(filter, "companyName")
                   }}
-                  initialFilter={textFilter || undefined}
                 />
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Current Filter State:</h3>
-                <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-sm overflow-auto">
+                <h3 className="mb-2 font-semibold">Current Filter State:</h3>
+                <pre className="overflow-auto rounded-md bg-slate-950 p-4 text-slate-50 text-sm">
                   {JSON.stringify(textFilter, null, 2) || "null"}
                 </pre>
               </div>
@@ -176,21 +176,21 @@ export default function FilterComponentsTest() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 bg-muted/50">
+              <div className="rounded-lg border bg-muted/50 p-4">
                 <ColumnFilterSelect
                   field="leadStatus"
+                  initialFilter={selectFilter || undefined}
+                  loadOptions={mockLoadOptions}
                   onFilterChange={(filter) => {
                     setSelectFilter(filter)
                     handleAddToFilters(filter, "leadStatus")
                   }}
-                  initialFilter={selectFilter || undefined}
-                  loadOptions={mockLoadOptions}
                 />
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Current Filter State:</h3>
-                <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-sm overflow-auto">
+                <h3 className="mb-2 font-semibold">Current Filter State:</h3>
+                <pre className="overflow-auto rounded-md bg-slate-950 p-4 text-slate-50 text-sm">
                   {JSON.stringify(selectFilter, null, 2) || "null"}
                 </pre>
               </div>
@@ -208,20 +208,20 @@ export default function FilterComponentsTest() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 bg-muted/50">
+              <div className="rounded-lg border bg-muted/50 p-4">
                 <ColumnFilterNumber
                   field="leadScore"
+                  initialFilter={numberFilter || undefined}
                   onFilterChange={(filter) => {
                     setNumberFilter(filter)
                     handleAddToFilters(filter, "leadScore")
                   }}
-                  initialFilter={numberFilter || undefined}
                 />
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Current Filter State:</h3>
-                <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-sm overflow-auto">
+                <h3 className="mb-2 font-semibold">Current Filter State:</h3>
+                <pre className="overflow-auto rounded-md bg-slate-950 p-4 text-slate-50 text-sm">
                   {JSON.stringify(numberFilter, null, 2) || "null"}
                 </pre>
               </div>
@@ -239,20 +239,20 @@ export default function FilterComponentsTest() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 bg-muted/50">
+              <div className="rounded-lg border bg-muted/50 p-4">
                 <ColumnFilterDate
                   field="createdAt"
+                  initialFilter={dateFilter || undefined}
                   onFilterChange={(filter) => {
                     setDateFilter(filter)
                     handleAddToFilters(filter, "createdAt")
                   }}
-                  initialFilter={dateFilter || undefined}
                 />
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Current Filter State:</h3>
-                <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-sm overflow-auto">
+                <h3 className="mb-2 font-semibold">Current Filter State:</h3>
+                <pre className="overflow-auto rounded-md bg-slate-950 p-4 text-slate-50 text-sm">
                   {JSON.stringify(dateFilter, null, 2) || "null"}
                 </pre>
               </div>
@@ -271,15 +271,15 @@ export default function FilterComponentsTest() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                  <span className="font-medium w-32">Text Field:</span>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <span className="w-32 font-medium">Text Field:</span>
                   <ColumnFilterButton
+                    currentFilter={allFilters.find((f) => f.field === "companyName")}
                     field="companyName"
                     filterConfig={{
                       type: "text",
                       operators: ["contains", "equals", "startsWith"],
                     }}
-                    currentFilter={allFilters.find((f) => f.field === "companyName")}
                     onFilterChange={(filter) => handleAddToFilters(filter, "companyName")}
                   />
                   <Badge variant="outline">
@@ -287,16 +287,16 @@ export default function FilterComponentsTest() {
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                  <span className="font-medium w-32">Select Field:</span>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <span className="w-32 font-medium">Select Field:</span>
                   <ColumnFilterButton
+                    currentFilter={allFilters.find((f) => f.field === "leadStatus")}
                     field="leadStatus"
                     filterConfig={{
                       type: "select",
                       operators: ["in", "notIn"],
                       loadOptions: mockLoadOptions,
                     }}
-                    currentFilter={allFilters.find((f) => f.field === "leadStatus")}
                     onFilterChange={(filter) => handleAddToFilters(filter, "leadStatus")}
                   />
                   <Badge variant="outline">
@@ -304,15 +304,15 @@ export default function FilterComponentsTest() {
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                  <span className="font-medium w-32">Number Field:</span>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <span className="w-32 font-medium">Number Field:</span>
                   <ColumnFilterButton
+                    currentFilter={allFilters.find((f) => f.field === "leadScore")}
                     field="leadScore"
                     filterConfig={{
                       type: "number",
                       operators: ["equals", "gt", "lt", "between"],
                     }}
-                    currentFilter={allFilters.find((f) => f.field === "leadScore")}
                     onFilterChange={(filter) => handleAddToFilters(filter, "leadScore")}
                   />
                   <Badge variant="outline">
@@ -320,15 +320,15 @@ export default function FilterComponentsTest() {
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                  <span className="font-medium w-32">Date Field:</span>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <span className="w-32 font-medium">Date Field:</span>
                   <ColumnFilterButton
+                    currentFilter={allFilters.find((f) => f.field === "createdAt")}
                     field="createdAt"
                     filterConfig={{
                       type: "date",
                       operators: ["between", "gt", "lt"],
                     }}
-                    currentFilter={allFilters.find((f) => f.field === "createdAt")}
                     onFilterChange={(filter) => handleAddToFilters(filter, "createdAt")}
                   />
                   <Badge variant="outline">
@@ -350,7 +350,7 @@ export default function FilterComponentsTest() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-sm overflow-auto max-h-[400px]">
+          <pre className="max-h-[400px] overflow-auto rounded-md bg-slate-950 p-4 text-slate-50 text-sm">
             {JSON.stringify(allFilters, null, 2) || "[]"}
           </pre>
         </CardContent>

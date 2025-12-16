@@ -38,11 +38,11 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="h-screen w-full flex">
+      <div className="flex h-screen w-full">
         <Story />
-        <div className="flex-1 p-8 bg-muted/20">
+        <div className="flex-1 bg-muted/20 p-8">
           <div className="max-w-2xl">
-            <h1 className="text-2xl font-bold mb-4">Content Area</h1>
+            <h1 className="mb-4 font-bold text-2xl">Content Area</h1>
             <p className="text-muted-foreground">
               Click on the sidebar items to see the active state change. The content for each
               section would be displayed here.
@@ -292,9 +292,9 @@ export const WithStateManagement: Story = {
 
     return (
       <SettingsSidebar
+        activeItemId="profile"
         items={items}
         onItemClick={(id) => console.log(`Item clicked: ${id}`)}
-        activeItemId="profile"
       />
     )
   },

@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useBullMQTestQueue, useRemoveJob, useRetryJob } from "@/lib/api/hooks/bullmq-test"
 import type { JobStatus, TestQueueParams } from "@/lib/api/types/bullmq-test"
 
-interface JobsTableWithPaginationProps {
+type JobsTableWithPaginationProps = {
   searchQuery: string
   selectedStatuses: JobStatus[]
   selectedJobs: string[]
@@ -32,13 +32,13 @@ function TruncatedCell({ content, maxLines = 3 }: { content: string; maxLines?: 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div style={style} className="cursor-help">
+        <div className="cursor-help" style={style}>
           {content}
         </div>
       </TooltipTrigger>
       <TooltipContent
+        className="max-h-64 max-w-md overflow-auto whitespace-pre-wrap break-words"
         side="top"
-        className="max-w-md max-h-64 overflow-auto whitespace-pre-wrap break-words"
       >
         {content}
       </TooltipContent>
@@ -64,7 +64,7 @@ export function JobsTableWithPagination({
   // Build params for API call
   const params: TestQueueParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     status:
       selectedStatuses.length === 1
         ? selectedStatuses[0]
@@ -105,13 +105,13 @@ export function JobsTableWithPagination({
   }
 
   const formatTimestamp = (timestamp?: number | null) => {
-    if (!timestamp) return "-"
+    if (!timestamp) {
+      return "-"
+    }
     return new Date(timestamp).toLocaleString("ko-KR")
   }
 
-  const formatData = (data: Record<string, unknown>) => {
-    return JSON.stringify(data, null, 2)
-  }
+  const formatData = (data: Record<string, unknown>) => JSON.stringify(data, null, 2)
 
   const handleToggleAll = useCallback(() => {
     onToggleAll(filteredJobs.map((j) => j.id))
@@ -129,7 +129,7 @@ export function JobsTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -139,7 +139,7 @@ export function JobsTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -186,7 +186,7 @@ export function JobsTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
@@ -195,83 +195,83 @@ export function JobsTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "80px" }}
                 >
                   ID
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "100px" }}
                 >
                   이름
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   상태
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   데이터
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "150px" }}
                 >
                   결과/에러
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   시도
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   생성일시
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   액션
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {filteredJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-4 text-center text-gray-500 dark:text-gray-400">
+                  <td className="p-4 text-center text-gray-500 dark:text-gray-400" colSpan={9}>
                     {isFetching ? "로딩 중..." : "작업이 없습니다"}
                   </td>
                 </tr>
               ) : (
                 filteredJobs.map((job) => (
                   <tr
+                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                     key={job.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                    <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                       <Checkbox
                         checked={selectedJobs.includes(job.id)}
                         onCheckedChange={() => onToggleJob(job.id)}
                       />
                     </td>
-                    <td className="p-2 text-sm font-mono text-gray-900 dark:text-gray-100">
+                    <td className="p-2 font-mono text-gray-900 text-sm dark:text-gray-100">
                       {job.id}
                     </td>
-                    <td className="p-2 text-sm text-gray-900 dark:text-gray-100">{job.name}</td>
-                    <td className="p-2 whitespace-nowrap text-sm">{getStatusBadge(job.status)}</td>
-                    <td className="p-2 text-xs font-mono text-gray-700 dark:text-gray-300">
+                    <td className="p-2 text-gray-900 text-sm dark:text-gray-100">{job.name}</td>
+                    <td className="whitespace-nowrap p-2 text-sm">{getStatusBadge(job.status)}</td>
+                    <td className="p-2 font-mono text-gray-700 text-xs dark:text-gray-300">
                       <TruncatedCell content={formatData(job.data)} />
                     </td>
-                    <td className="p-2 text-xs text-gray-700 dark:text-gray-300">
+                    <td className="p-2 text-gray-700 text-xs dark:text-gray-300">
                       {job.failedReason ? (
                         <TruncatedCell content={job.failedReason} />
                       ) : job.returnvalue ? (
@@ -280,23 +280,23 @@ export function JobsTableWithPagination({
                         "-"
                       )}
                     </td>
-                    <td className="p-2 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-400">
+                    <td className="whitespace-nowrap p-2 text-center text-gray-500 text-sm dark:text-gray-400">
                       {job.attemptsMade}
                     </td>
-                    <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                       {formatTimestamp(job.timestamp)}
                     </td>
-                    <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                    <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                       <div className="flex gap-1">
                         {job.status === "failed" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRetry(job.id)}
-                                disabled={retryJob.isPending}
                                 className="h-7 w-7 p-0"
+                                disabled={retryJob.isPending}
+                                onClick={() => handleRetry(job.id)}
+                                size="sm"
+                                variant="outline"
                               >
                                 <RotateCcw className="h-3 w-3" />
                               </Button>
@@ -307,11 +307,11 @@ export function JobsTableWithPagination({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRemove(job.id)}
-                              disabled={removeJob.isPending}
                               className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                              disabled={removeJob.isPending}
+                              onClick={() => handleRemove(job.id)}
+                              size="sm"
+                              variant="outline"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -332,7 +332,7 @@ export function JobsTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -348,22 +348,22 @@ export function JobsTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             처음
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             이전
@@ -372,12 +372,12 @@ export function JobsTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -385,11 +385,11 @@ export function JobsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             다음
             <ChevronRight className="h-4 w-4" />
@@ -397,11 +397,11 @@ export function JobsTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             마지막
           </Button>
@@ -409,19 +409,19 @@ export function JobsTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-muted-foreground text-sm">페이지:</span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </>

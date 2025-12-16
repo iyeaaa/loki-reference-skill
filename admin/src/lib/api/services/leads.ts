@@ -20,14 +20,24 @@ export const leadsApi = {
     searchParams.append("limit", limit.toString())
     searchParams.append("offset", offset.toString())
 
-    if (params?.search) searchParams.append("search", params.search)
-    if (params?.searchType) searchParams.append("searchType", params.searchType)
+    if (params?.search) {
+      searchParams.append("search", params.search)
+    }
+    if (params?.searchType) {
+      searchParams.append("searchType", params.searchType)
+    }
     if (params?.leadStatus && params.leadStatus !== "all") {
       searchParams.append("leadStatus", params.leadStatus)
     }
-    if (params?.businessType) searchParams.append("businessType", params.businessType)
-    if (params?.country) searchParams.append("country", params.country)
-    if (params?.city) searchParams.append("city", params.city)
+    if (params?.businessType) {
+      searchParams.append("businessType", params.businessType)
+    }
+    if (params?.country) {
+      searchParams.append("country", params.country)
+    }
+    if (params?.city) {
+      searchParams.append("city", params.city)
+    }
     if (params?.workspaceIds && params.workspaceIds.length > 0) {
       searchParams.append("workspaceIds", params.workspaceIds.join(","))
     }
@@ -37,9 +47,15 @@ export const leadsApi = {
     if (params?.customerGroupId) {
       searchParams.append("customerGroupId", params.customerGroupId)
     }
-    if (params?.sortField) searchParams.append("sortField", params.sortField)
-    if (params?.sortOrder) searchParams.append("sortOrder", params.sortOrder)
-    if (params?.filters) searchParams.append("filters", params.filters)
+    if (params?.sortField) {
+      searchParams.append("sortField", params.sortField)
+    }
+    if (params?.sortOrder) {
+      searchParams.append("sortOrder", params.sortOrder)
+    }
+    if (params?.filters) {
+      searchParams.append("filters", params.filters)
+    }
 
     const query = searchParams.toString()
     return apiFetch<{
@@ -56,50 +72,42 @@ export const leadsApi = {
     }))
   },
 
-  get: (leadId: string) => {
-    return apiFetch<Lead>(`/api/v1/leads/${leadId}`)
-  },
+  get: (leadId: string) => apiFetch<Lead>(`/api/v1/leads/${leadId}`),
 
-  create: (data: CreateLeadRequest) => {
-    return apiFetch<Lead>("/api/v1/leads", {
+  create: (data: CreateLeadRequest) =>
+    apiFetch<Lead>("/api/v1/leads", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  update: (leadId: string, data: UpdateLeadRequest) => {
-    return apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
+  update: (leadId: string, data: UpdateLeadRequest) =>
+    apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  delete: (leadId: string) => {
-    return apiFetch(`/api/v1/leads/${leadId}`, {
+  delete: (leadId: string) =>
+    apiFetch(`/api/v1/leads/${leadId}`, {
       method: "DELETE",
-    })
-  },
+    }),
 
-  bulkUpdateStatus: (data: BulkUpdateLeadStatusRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/leads/bulk/status", {
+  bulkUpdateStatus: (data: BulkUpdateLeadStatusRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/leads/bulk/status", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkUpdateBusinessType: (data: BulkUpdateBusinessTypeRequest) => {
-    return apiFetch<{ updatedCount: number }>("/api/v1/admin/leads/bulk/business-type", {
+  bulkUpdateBusinessType: (data: BulkUpdateBusinessTypeRequest) =>
+    apiFetch<{ updatedCount: number }>("/api/v1/admin/leads/bulk/business-type", {
       method: "PUT",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
-  bulkDelete: (leadIds: string[]) => {
-    return apiFetch<{ deletedCount: number }>("/api/v1/admin/leads/bulk", {
+  bulkDelete: (leadIds: string[]) =>
+    apiFetch<{ deletedCount: number }>("/api/v1/admin/leads/bulk", {
       method: "DELETE",
       body: JSON.stringify({ leadIds }),
-    })
-  },
+    }),
 
   getByWorkspace: (workspaceId: string, page = 1, limit = 10) => {
     const offset = (page - 1) * limit
@@ -149,8 +157,8 @@ export const leadsApi = {
     }>
     customerGroupId?: string
     createdBy?: string
-  }) => {
-    return apiFetch<{
+  }) =>
+    apiFetch<{
       leads: Lead[]
       stats: {
         total: number
@@ -168,8 +176,7 @@ export const leadsApi = {
     }>("/api/v1/leads/bulk", {
       method: "POST",
       body: JSON.stringify(data),
-    })
-  },
+    }),
 
   // 필터 옵션 조회
   getFilterOptions: async (

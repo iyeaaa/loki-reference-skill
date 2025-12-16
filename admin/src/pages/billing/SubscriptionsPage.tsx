@@ -158,7 +158,9 @@ export default function SubscriptionsPage() {
 
   const handleCancelSubscription = async (subscription: Subscription) => {
     const reason = prompt("취소 사유를 입력하세요 (선택사항):")
-    if (reason === null) return // User clicked cancel
+    if (reason === null) {
+      return // User clicked cancel
+    }
 
     await cancelSubscription.mutateAsync({
       subscriptionId: subscription.id,
@@ -167,7 +169,9 @@ export default function SubscriptionsPage() {
   }
 
   const handleReactivateSubscription = async (subscription: Subscription) => {
-    if (!confirm("이 구독을 다시 활성화하시겠습니까?")) return
+    if (!confirm("이 구독을 다시 활성화하시겠습니까?")) {
+      return
+    }
     await updateSubscription.mutateAsync({
       subscriptionId: subscription.id,
       data: { cancelAtPeriodEnd: false },
@@ -184,7 +188,7 @@ export default function SubscriptionsPage() {
       default: "outline",
     }
     return (
-      <Badge variant={variantMap[variant] || "outline"} className="text-xs">
+      <Badge className="text-xs" variant={variantMap[variant] || "outline"}>
         {SUBSCRIPTION_STATUS_LABELS[status]}
       </Badge>
     )
@@ -198,12 +202,12 @@ export default function SubscriptionsPage() {
       render: (item) => (
         <div className="max-w-[140px]">
           <div
-            className="font-medium text-gray-900 dark:text-gray-100 truncate"
+            className="truncate font-medium text-gray-900 dark:text-gray-100"
             title={item.workspace?.name}
           >
             {item.workspace?.name || "-"}
           </div>
-          <div className="text-xs text-gray-400 font-mono">{item.id.slice(0, 8)}</div>
+          <div className="font-mono text-gray-400 text-xs">{item.id.slice(0, 8)}</div>
         </div>
       ),
     },
@@ -213,7 +217,7 @@ export default function SubscriptionsPage() {
       minWidth: "120px",
       render: (item) => (
         <div className="max-w-[120px]">
-          <div className="font-medium truncate" title={item.plan?.name}>
+          <div className="truncate font-medium" title={item.plan?.name}>
             {item.plan?.name || "-"}
           </div>
         </div>
@@ -225,7 +229,7 @@ export default function SubscriptionsPage() {
       width: "80px",
       render: (item) =>
         item.plan?.product ? (
-          <span className="text-xs text-gray-600">
+          <span className="text-gray-600 text-xs">
             {SUBSCRIPTION_TIER_LABELS[item.plan.product.tier as SubscriptionTier]}
           </span>
         ) : (
@@ -243,7 +247,7 @@ export default function SubscriptionsPage() {
       header: "유형",
       width: "70px",
       render: (item) => (
-        <Badge variant={item.isPrimary ? "default" : "outline"} className="text-xs">
+        <Badge className="text-xs" variant={item.isPrimary ? "default" : "outline"}>
           {item.isPrimary ? "메인" : "애드온"}
         </Badge>
       ),
@@ -259,7 +263,7 @@ export default function SubscriptionsPage() {
       header: "기간 종료",
       width: "90px",
       render: (item) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
+        <span className="whitespace-nowrap text-gray-500 text-xs">
           {item.currentPeriodEnd ? formatRelativeTime(item.currentPeriodEnd) : "-"}
         </span>
       ),
@@ -270,7 +274,7 @@ export default function SubscriptionsPage() {
       width: "70px",
       render: (item) =>
         item.cancelAtPeriodEnd ? (
-          <Badge variant="destructive" className="text-xs">
+          <Badge className="text-xs" variant="destructive">
             예정
           </Badge>
         ) : (
@@ -285,50 +289,50 @@ export default function SubscriptionsPage() {
       render: (item) => (
         <div className="flex gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => handleViewDetails(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="상세 보기"
+            variant="outline"
           >
             <Eye className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => handleViewHistory(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="변경 이력"
+            variant="outline"
           >
             <History className="h-3 w-3" />
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            className="h-7 w-7 p-0 text-xs"
             onClick={() => handleEditSubscription(item)}
-            className="text-xs h-7 w-7 p-0"
+            size="sm"
             title="수정"
+            variant="outline"
           >
             <Edit className="h-3 w-3" />
           </Button>
           {item.status === "active" && !item.cancelAtPeriodEnd && (
             <Button
-              variant="outline"
-              size="sm"
+              className="h-7 w-7 p-0 text-red-600 text-xs hover:text-red-700"
               onClick={() => handleCancelSubscription(item)}
-              className="text-xs h-7 w-7 p-0 text-red-600 hover:text-red-700"
+              size="sm"
               title="구독 취소"
+              variant="outline"
             >
               <Ban className="h-3 w-3" />
             </Button>
           )}
           {item.cancelAtPeriodEnd && (
             <Button
-              variant="outline"
-              size="sm"
+              className="h-7 w-7 p-0 text-green-600 text-xs hover:text-green-700"
               onClick={() => handleReactivateSubscription(item)}
-              className="text-xs h-7 w-7 p-0 text-green-600 hover:text-green-700"
+              size="sm"
               title="재활성화"
+              variant="outline"
             >
               <RefreshCw className="h-3 w-3" />
             </Button>
@@ -339,13 +343,13 @@ export default function SubscriptionsPage() {
   ]
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
+    <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
       <DataFilters
         filters={filterConfigs}
-        values={filterValues}
         onChange={updateFilter}
         onClear={clearFilters}
+        values={filterValues}
       />
 
       {/* Subscriptions Table */}
@@ -354,7 +358,7 @@ export default function SubscriptionsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">구독</CardTitle>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" />새 구독
+              <Plus className="mr-1 h-4 w-4" />새 구독
             </Button>
           </div>
         </CardHeader>
@@ -362,53 +366,53 @@ export default function SubscriptionsPage() {
           {/* Search */}
           <div className="mb-4">
             <SearchInput
-              value={searchQuery}
               onChange={handleSearch}
               placeholder="워크스페이스명으로 검색..."
+              value={searchQuery}
             />
           </div>
 
           {/* Table */}
           <DataTable
-            data={subscriptions}
             columns={columns}
-            pagination={pagination}
-            isLoading={isFetching}
-            getItemId={(item) => item.id}
-            onPageChange={handlePageChange}
+            data={subscriptions}
             emptyMessage="아직 구독이 없어요"
+            getItemId={(item) => item.id}
+            isLoading={isFetching}
+            onPageChange={handlePageChange}
+            pagination={pagination}
           />
         </CardContent>
       </Card>
 
       {/* Detail Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">구독 상세</DialogTitle>
+      <Dialog onOpenChange={setIsDetailDialogOpen} open={isDetailDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">구독 상세</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {selectedSubscription && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-500">워크스페이스</span>
+                    <span className="font-medium text-gray-500 text-sm">워크스페이스</span>
                     <p className="mt-1">{selectedSubscription.workspace?.name || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">상태</span>
+                    <span className="font-medium text-gray-500 text-sm">상태</span>
                     <p className="mt-1">{getStatusBadge(selectedSubscription.status)}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">요금제</span>
+                    <span className="font-medium text-gray-500 text-sm">요금제</span>
                     <p className="mt-1">{selectedSubscription.plan?.name || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">수량</span>
+                    <span className="font-medium text-gray-500 text-sm">수량</span>
                     <p className="mt-1">{selectedSubscription.quantity}</p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">현재 기간 시작</span>
+                    <span className="font-medium text-gray-500 text-sm">현재 기간 시작</span>
                     <p className="mt-1">
                       {selectedSubscription.currentPeriodStart
                         ? new Date(selectedSubscription.currentPeriodStart).toLocaleDateString()
@@ -416,7 +420,7 @@ export default function SubscriptionsPage() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500">현재 기간 종료</span>
+                    <span className="font-medium text-gray-500 text-sm">현재 기간 종료</span>
                     <p className="mt-1">
                       {selectedSubscription.currentPeriodEnd
                         ? new Date(selectedSubscription.currentPeriodEnd).toLocaleDateString()
@@ -426,13 +430,13 @@ export default function SubscriptionsPage() {
                   {selectedSubscription.trialStart && (
                     <>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">체험 시작</span>
+                        <span className="font-medium text-gray-500 text-sm">체험 시작</span>
                         <p className="mt-1">
                           {new Date(selectedSubscription.trialStart).toLocaleDateString()}
                         </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">체험 종료</span>
+                        <span className="font-medium text-gray-500 text-sm">체험 종료</span>
                         <p className="mt-1">
                           {selectedSubscription.trialEnd
                             ? new Date(selectedSubscription.trialEnd).toLocaleDateString()
@@ -444,13 +448,13 @@ export default function SubscriptionsPage() {
                   {selectedSubscription.canceledAt && (
                     <>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">취소 일시</span>
+                        <span className="font-medium text-gray-500 text-sm">취소 일시</span>
                         <p className="mt-1">
                           {new Date(selectedSubscription.canceledAt).toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">취소 사유</span>
+                        <span className="font-medium text-gray-500 text-sm">취소 사유</span>
                         <p className="mt-1">{selectedSubscription.cancelReason || "-"}</p>
                       </div>
                     </>
@@ -459,15 +463,15 @@ export default function SubscriptionsPage() {
 
                 {/* Customer Info */}
                 {selectedSubscription.customer && (
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">고객 정보</h4>
+                  <div className="border-t pt-4">
+                    <h4 className="mb-3 font-medium text-gray-700 text-sm">고객 정보</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="text-sm font-medium text-gray-500">이메일</span>
+                        <span className="font-medium text-gray-500 text-sm">이메일</span>
                         <p className="mt-1">{selectedSubscription.customer.email || "-"}</p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-gray-500">이름</span>
+                        <span className="font-medium text-gray-500 text-sm">이름</span>
                         <p className="mt-1">{selectedSubscription.customer.name || "-"}</p>
                       </div>
                     </div>
@@ -480,38 +484,41 @@ export default function SubscriptionsPage() {
       </Dialog>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">새 구독</DialogTitle>
+      <Dialog onOpenChange={setIsCreateDialogOpen} open={isCreateDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">새 구독</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             <SubscriptionForm
-              workspaces={workspaces}
               customers={customers}
-              plans={plans}
+              isLoading={createSubscription.isPending}
+              onCancel={() => setIsCreateDialogOpen(false)}
               onSave={async (data) => {
                 await createSubscription.mutateAsync(data)
                 setIsCreateDialogOpen(false)
               }}
-              onCancel={() => setIsCreateDialogOpen(false)}
-              isLoading={createSubscription.isPending}
+              plans={plans}
+              workspaces={workspaces}
             />
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">구독 편집</DialogTitle>
+      <Dialog onOpenChange={setIsEditDialogOpen} open={isEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">구독 편집</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1">
             {selectedSubscription && (
               <SubscriptionEditForm
-                subscription={selectedSubscription}
-                plans={plans}
+                isLoading={updateSubscription.isPending}
+                onCancel={() => {
+                  setIsEditDialogOpen(false)
+                  setSelectedSubscription(null)
+                }}
                 onSave={async (data) => {
                   await updateSubscription.mutateAsync({
                     subscriptionId: selectedSubscription.id,
@@ -520,11 +527,8 @@ export default function SubscriptionsPage() {
                   setIsEditDialogOpen(false)
                   setSelectedSubscription(null)
                 }}
-                onCancel={() => {
-                  setIsEditDialogOpen(false)
-                  setSelectedSubscription(null)
-                }}
-                isLoading={updateSubscription.isPending}
+                plans={plans}
+                subscription={selectedSubscription}
               />
             )}
           </div>
@@ -532,14 +536,14 @@ export default function SubscriptionsPage() {
       </Dialog>
 
       {/* History Dialog */}
-      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
+      <Dialog onOpenChange={setIsHistoryDialogOpen} open={isHistoryDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="font-semibold text-xl">
               구독 변경 이력 - {selectedSubscription?.workspace?.name || ""}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1 py-4">
+          <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-1 py-4">
             {selectedSubscription && (
               <SubscriptionHistoryView subscriptionId={selectedSubscription.id} />
             )}
@@ -554,7 +558,7 @@ export default function SubscriptionsPage() {
 // Subscription Create Form Component
 // ============================================================================
 
-interface SubscriptionFormProps {
+type SubscriptionFormProps = {
   workspaces: Array<{ id: string; name: string }>
   customers: Array<{ id: string; email: string | null; name: string | null }>
   plans: Array<{ id: string; name: string; product?: { name: string; tier?: string } | null }>
@@ -580,7 +584,7 @@ function SubscriptionForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!workspaceId || !customerId || !planId) {
+    if (!(workspaceId && customerId && planId)) {
       alert("필수 항목을 모두 선택해주세요.")
       return
     }
@@ -594,10 +598,10 @@ function SubscriptionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+    <form className="space-y-6 py-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor={`${formId}-workspace`}>워크스페이스 *</Label>
-        <Select value={workspaceId} onValueChange={setWorkspaceId}>
+        <Select onValueChange={setWorkspaceId} value={workspaceId}>
           <SelectTrigger>
             <SelectValue placeholder="워크스페이스 선택" />
           </SelectTrigger>
@@ -613,7 +617,7 @@ function SubscriptionForm({
 
       <div className="space-y-2">
         <Label htmlFor={`${formId}-customer`}>결제 고객 *</Label>
-        <Select value={customerId} onValueChange={setCustomerId}>
+        <Select onValueChange={setCustomerId} value={customerId}>
           <SelectTrigger>
             <SelectValue placeholder="결제 고객 선택" />
           </SelectTrigger>
@@ -629,7 +633,7 @@ function SubscriptionForm({
 
       <div className="space-y-2">
         <Label htmlFor={`${formId}-plan`}>요금제 *</Label>
-        <Select value={planId} onValueChange={setPlanId}>
+        <Select onValueChange={setPlanId} value={planId}>
           <SelectTrigger>
             <SelectValue placeholder="요금제 선택" />
           </SelectTrigger>
@@ -647,31 +651,31 @@ function SubscriptionForm({
       <div className="space-y-2">
         <Label htmlFor={`${formId}-quantity`}>수량</Label>
         <Input
+          className="w-32"
           id={`${formId}-quantity`}
+          min={1}
+          onChange={(e) => setQuantity(Number.parseInt(e.target.value, 10) || 1)}
           type="number"
           value={quantity}
-          onChange={(e) => setQuantity(Number.parseInt(e.target.value, 10) || 1)}
-          min={1}
-          className="w-32"
         />
       </div>
 
       <div className="flex items-center space-x-2">
         <Checkbox
-          id={`${formId}-isPrimary`}
           checked={isPrimary}
+          id={`${formId}-isPrimary`}
           onCheckedChange={(checked) => setIsPrimary(checked as boolean)}
         />
-        <Label htmlFor={`${formId}-isPrimary`} className="cursor-pointer">
+        <Label className="cursor-pointer" htmlFor={`${formId}-isPrimary`}>
           메인 구독 (워크스페이스당 하나의 메인 구독만 가능)
         </Label>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button disabled={isLoading} onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" disabled={isLoading || !workspaceId || !customerId || !planId}>
+        <Button disabled={isLoading || !workspaceId || !customerId || !planId} type="submit">
           {isLoading ? "생성 중..." : "확인"}
         </Button>
       </div>
@@ -683,7 +687,7 @@ function SubscriptionForm({
 // Subscription Edit Form Component
 // ============================================================================
 
-interface SubscriptionEditFormProps {
+type SubscriptionEditFormProps = {
   subscription: Subscription
   plans: Array<{ id: string; name: string; product?: { name: string; tier?: string } | null }>
   onSave: (data: UpdateSubscriptionRequest) => Promise<void>
@@ -720,15 +724,15 @@ function SubscriptionEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
-      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="text-sm text-gray-500">워크스페이스</div>
+    <form className="space-y-6 py-4" onSubmit={handleSubmit}>
+      <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+        <div className="text-gray-500 text-sm">워크스페이스</div>
         <div className="font-medium">{subscription.workspace?.name || "-"}</div>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor={`${formId}-plan`}>요금제</Label>
-        <Select value={planId} onValueChange={setPlanId}>
+        <Select onValueChange={setPlanId} value={planId}>
           <SelectTrigger>
             <SelectValue placeholder="요금제 선택" />
           </SelectTrigger>
@@ -745,7 +749,7 @@ function SubscriptionEditForm({
 
       <div className="space-y-2">
         <Label htmlFor={`${formId}-status`}>상태</Label>
-        <Select value={status} onValueChange={(v) => setStatus(v as SubscriptionStatus)}>
+        <Select onValueChange={(v) => setStatus(v as SubscriptionStatus)} value={status}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -762,20 +766,20 @@ function SubscriptionEditForm({
       <div className="space-y-2">
         <Label htmlFor={`${formId}-quantity`}>수량</Label>
         <Input
+          className="w-32"
           id={`${formId}-quantity`}
+          min={1}
+          onChange={(e) => setQuantity(Number.parseInt(e.target.value, 10) || 1)}
           type="number"
           value={quantity}
-          onChange={(e) => setQuantity(Number.parseInt(e.target.value, 10) || 1)}
-          min={1}
-          className="w-32"
         />
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button disabled={isLoading} onClick={onCancel} type="button" variant="outline">
           취소
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button disabled={isLoading} type="submit">
           {isLoading ? "저장 중..." : "저장"}
         </Button>
       </div>
@@ -801,7 +805,7 @@ function SubscriptionHistoryView({ subscriptionId }: { subscriptionId: string })
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-32">
+      <div className="flex h-32 items-center justify-center">
         <div className="text-gray-500">로딩 중...</div>
       </div>
     )
@@ -809,7 +813,7 @@ function SubscriptionHistoryView({ subscriptionId }: { subscriptionId: string })
 
   if (!history || history.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32">
+      <div className="flex h-32 items-center justify-center">
         <div className="text-gray-500">변경 이력이 없습니다.</div>
       </div>
     )
@@ -819,18 +823,18 @@ function SubscriptionHistoryView({ subscriptionId }: { subscriptionId: string })
     <div className="space-y-4">
       {history.map((item) => (
         <div
+          className="relative border-gray-200 border-l-2 pb-4 pl-6 last:border-l-0 dark:border-gray-700"
           key={item.id}
-          className="relative pl-6 pb-4 border-l-2 border-gray-200 dark:border-gray-700 last:border-l-0"
         >
           {/* Timeline dot */}
-          <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-900" />
+          <div className="-left-[9px] absolute top-0 h-4 w-4 rounded-full border-2 border-white bg-gray-200 dark:border-gray-900 dark:bg-gray-700" />
 
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Badge variant="outline" className="text-xs">
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <div className="mb-2 flex items-center justify-between">
+              <Badge className="text-xs" variant="outline">
                 {CHANGE_TYPE_LABELS[item.changeType] || item.changeType}
               </Badge>
-              <span className="text-xs text-gray-500">
+              <span className="text-gray-500 text-xs">
                 {new Date(item.createdAt).toLocaleString("ko-KR")}
               </span>
             </div>
@@ -840,13 +844,13 @@ function SubscriptionHistoryView({ subscriptionId }: { subscriptionId: string })
                 <>
                   <div>
                     <span className="text-gray-500">이전 상태:</span>{" "}
-                    <Badge variant="secondary" className="text-xs ml-1">
+                    <Badge className="ml-1 text-xs" variant="secondary">
                       {SUBSCRIPTION_STATUS_LABELS[item.previousStatus] || item.previousStatus}
                     </Badge>
                   </div>
                   <div>
                     <span className="text-gray-500">변경 상태:</span>{" "}
-                    <Badge variant="default" className="text-xs ml-1">
+                    <Badge className="ml-1 text-xs" variant="default">
                       {SUBSCRIPTION_STATUS_LABELS[item.newStatus] || item.newStatus}
                     </Badge>
                   </div>
@@ -867,14 +871,14 @@ function SubscriptionHistoryView({ subscriptionId }: { subscriptionId: string })
             </div>
 
             {item.changeReason && (
-              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-xs text-gray-500">변경 사유: </span>
+              <div className="mt-2 border-gray-200 border-t pt-2 dark:border-gray-700">
+                <span className="text-gray-500 text-xs">변경 사유: </span>
                 <span className="text-sm">{item.changeReason}</span>
               </div>
             )}
 
             {item.changedByUser && (
-              <div className="mt-2 text-xs text-gray-400">
+              <div className="mt-2 text-gray-400 text-xs">
                 변경자: {item.changedByUser.username}
               </div>
             )}

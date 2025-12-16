@@ -52,7 +52,7 @@ import {
 } from "@/lib/utils/smart-csv-parser"
 import { LeadForm } from "@/pages/leads/LeadForm"
 
-export interface AddLeadSheetProps {
+export type AddLeadSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspaceId: string
@@ -159,7 +159,9 @@ export function AddLeadSheet({
 
   // Auto-generate group name from CSV data
   const generateGroupNameFromCSV = useCallback(async () => {
-    if (!csvData || csvData.length === 0) return
+    if (!csvData || csvData.length === 0) {
+      return
+    }
 
     setIsGeneratingGroupName(true)
     try {
@@ -188,7 +190,7 @@ export function AddLeadSheet({
       const isCSV = fileName.endsWith(".csv")
       const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
 
-      if (!isCSV && !isXLSX) {
+      if (!(isCSV || isXLSX)) {
         toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
         return
       }
@@ -279,7 +281,9 @@ export function AddLeadSheet({
   // File upload handler (CSV, XLSX support)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
     await processFile(file)
   }
 
@@ -318,7 +322,9 @@ export function AddLeadSheet({
   // Smart parsing column mapping confirm handler
   const handleColumnMappingConfirm = useCallback(
     (mappings: Record<string, keyof LeadCSVData | null>, hasHeaders: boolean) => {
-      if (!csvText) return
+      if (!csvText) {
+        return
+      }
 
       const { leads, errors } = parseCSVWithMappings(csvText, mappings, hasHeaders)
 
@@ -342,7 +348,9 @@ export function AddLeadSheet({
   // Header toggle reanalyze handler
   const handleToggleHeaders = useCallback(
     (hasHeaders: boolean) => {
-      if (!csvText) return
+      if (!csvText) {
+        return
+      }
 
       const result = smartAnalyzeCSV(csvText, hasHeaders)
       setSmartParseResult(result)
@@ -380,8 +388,12 @@ export function AddLeadSheet({
   }
 
   const handleCSVUpload = async () => {
-    if (!csvData || csvData.length === 0) return
-    if (!isNewGroup && !groupName) return
+    if (!csvData || csvData.length === 0) {
+      return
+    }
+    if (!(isNewGroup || groupName)) {
+      return
+    }
 
     setIsUploadingLeads(true)
     toast.success(`${csvData.length}개의 리드를 처리 중입니다. 잠시만 기다려주세요...`)
@@ -506,9 +518,9 @@ export function AddLeadSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto">
-          <SheetHeader className="animate-in fade-in slide-in-from-top-2 duration-300">
+      <Sheet onOpenChange={onOpenChange} open={open}>
+        <SheetContent className="overflow-y-auto sm:max-w-2xl">
+          <SheetHeader className="fade-in slide-in-from-top-2 animate-in duration-300">
             <SheetTitle>{t("leads.addLead.title")}</SheetTitle>
             <SheetDescription>
               {step === 1 && t("leads.addLead.selectMethod")}
@@ -521,10 +533,10 @@ export function AddLeadSheet({
           <div className="mt-6 space-y-6">
             {/* Step 1: Method Selection */}
             {step === 1 && !uploadOnly && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="fade-in slide-in-from-bottom-4 animate-in space-y-4 duration-300">
                 <div className="grid gap-4">
                   <Card
-                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    className="fade-in slide-in-from-bottom-2 animate-in cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-md"
                     onClick={() => {
                       setMode("upload")
                       setStep(2)
@@ -532,12 +544,12 @@ export function AddLeadSheet({
                   >
                     <CardHeader>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
+                        <div className="rounded-lg bg-blue-100 p-2">
                           <Upload className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="font-semibold">{t("leads.addLead.uploadFile")}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {t("leads.addLead.uploadFileDescription")}
                           </p>
                         </div>
@@ -546,7 +558,7 @@ export function AddLeadSheet({
                   </Card>
 
                   <Card
-                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75"
+                    className="fade-in slide-in-from-bottom-2 animate-in cursor-pointer transition-all delay-75 duration-500 hover:scale-[1.02] hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-md"
                     onClick={() => {
                       setMode("manual")
                       setStep(2)
@@ -554,12 +566,12 @@ export function AddLeadSheet({
                   >
                     <CardHeader>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
+                        <div className="rounded-lg bg-blue-100 p-2">
                           <Plus className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="font-semibold">{t("leads.addLead.manualCreate")}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {t("leads.addLead.manualCreateDescription")}
                           </p>
                         </div>
@@ -572,52 +584,52 @@ export function AddLeadSheet({
 
             {/* Step 2: CSV Upload */}
             {step === 2 && mode === "upload" && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="fade-in slide-in-from-right-4 animate-in space-y-6 duration-300">
                 {/* File Upload Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
+                    <h3 className="font-medium text-lg">{t("leads.file.upload")} (CSV/XLSX)</h3>
                     <div className="flex gap-2">
                       <Button
+                        onClick={() => handleDownloadTemplate("csv")}
+                        size="sm"
                         type="button"
                         variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadTemplate("csv")}
                       >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         {t("leads.button.csvTemplate")}
                       </Button>
                       <Button
+                        onClick={() => handleDownloadTemplate("xlsx")}
+                        size="sm"
                         type="button"
                         variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadTemplate("xlsx")}
                       >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         {t("leads.button.xlsxTemplate")}
                       </Button>
                     </div>
                   </div>
 
                   {/* Required Fields Info */}
-                  <Card className="bg-blue-50 border-blue-200">
+                  <Card className="border-blue-200 bg-blue-50">
                     <CardContent className="pt-4">
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500 font-bold text-sm text-white">
                           !
                         </div>
                         <div className="space-y-2">
                           <h4 className="font-medium text-blue-900">
                             {t("leads.file.requiredFields")}
                           </h4>
-                          <div className="text-sm text-blue-800">
+                          <div className="text-blue-800 text-sm">
                             <p className="mb-2">
                               <strong>{t("leads.file.requiredFieldsDescription")}</strong>
                             </p>
                             <p className="mb-2">
                               <strong>{t("leads.file.optionalFields")}</strong>
                             </p>
-                            <p className="text-xs text-blue-600">
+                            <p className="text-blue-600 text-xs">
                               💡 {t("leads.file.templateTip")}
                             </p>
                           </div>
@@ -626,54 +638,7 @@ export function AddLeadSheet({
                     </CardContent>
                   </Card>
 
-                  {!csvData ? (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <button
-                          type="button"
-                          className={`w-full border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                            isDragging
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-300 hover:border-gray-400"
-                          }`}
-                          onDragEnter={handleDragEnter}
-                          onDragLeave={handleDragLeave}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isProcessingCSV}
-                        >
-                          <Upload
-                            className={`h-12 w-12 mx-auto mb-4 ${isDragging ? "text-blue-500" : "text-gray-400"}`}
-                          />
-                          <div className="space-y-2">
-                            <h4 className="text-lg font-medium">
-                              {isDragging ? "여기에 파일을 놓으세요" : t("leads.file.upload")}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {isDragging
-                                ? "CSV 또는 XLSX 파일을 드롭하세요"
-                                : "CSV 또는 XLSX 파일을 드래그하거나 클릭하여 업로드하세요"}
-                            </p>
-                            <div className="pt-4">
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv,.xlsx,.xls"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                              />
-                              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                                {isProcessingCSV
-                                  ? t("leads.button.processing")
-                                  : t("leads.button.selectFile")}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      </CardContent>
-                    </Card>
-                  ) : (
+                  {csvData ? (
                     <Card>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
@@ -681,20 +646,20 @@ export function AddLeadSheet({
                             <FileText className="h-5 w-5 text-blue-500" />
                             <div>
                               <p className="font-medium">{csvFileName}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 {(csvFileSize / 1024).toFixed(1)} KB
                               </p>
                             </div>
                           </div>
                           <Button
-                            variant="outline"
-                            size="sm"
                             onClick={() => {
                               setCsvData(null)
                               setCsvFileName("")
                               setCsvFileSize(0)
                               setCsvErrors([])
                             }}
+                            size="sm"
+                            variant="outline"
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -707,7 +672,7 @@ export function AddLeadSheet({
                               {csvData.length}
                               {t("leads.file.leadsCount")}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               {t("leads.file.parsingComplete")}
                             </span>
                           </div>
@@ -717,9 +682,9 @@ export function AddLeadSheet({
                               <AlertDescription>
                                 <div className="space-y-1">
                                   <p className="font-medium">{t("leads.error.fixErrors")}</p>
-                                  <ul className="list-disc list-inside space-y-1">
+                                  <ul className="list-inside list-disc space-y-1">
                                     {csvErrors.map((error) => (
-                                      <li key={error} className="text-sm">
+                                      <li className="text-sm" key={error}>
                                         {error}
                                       </li>
                                     ))}
@@ -731,39 +696,86 @@ export function AddLeadSheet({
                         </div>
                       </CardContent>
                     </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <button
+                          className={`w-full rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                            isDragging
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300 hover:border-gray-400"
+                          }`}
+                          disabled={isProcessingCSV}
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragEnter={handleDragEnter}
+                          onDragLeave={handleDragLeave}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          type="button"
+                        >
+                          <Upload
+                            className={`mx-auto mb-4 h-12 w-12 ${isDragging ? "text-blue-500" : "text-gray-400"}`}
+                          />
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-lg">
+                              {isDragging ? "여기에 파일을 놓으세요" : t("leads.file.upload")}
+                            </h4>
+                            <p className="text-muted-foreground text-sm">
+                              {isDragging
+                                ? "CSV 또는 XLSX 파일을 드롭하세요"
+                                : "CSV 또는 XLSX 파일을 드래그하거나 클릭하여 업로드하세요"}
+                            </p>
+                            <div className="pt-4">
+                              <input
+                                accept=".csv,.xlsx,.xls"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                                ref={fileInputRef}
+                                type="file"
+                              />
+                              <span className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                                {isProcessingCSV
+                                  ? t("leads.button.processing")
+                                  : t("leads.button.selectFile")}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
 
                 {/* Group Info */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">{t("leads.group.groupInfo")}</h3>
+                  <h3 className="font-medium text-lg">{t("leads.group.groupInfo")}</h3>
 
                   {/* Group Type Selection */}
                   <div className="space-y-3">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <input
-                          type="radio"
+                          checked={!isNewGroup}
+                          className="h-4 w-4 text-blue-600"
                           id={existingGroupId}
                           name="groupType"
-                          checked={!isNewGroup}
                           onChange={() => setIsNewGroup(false)}
-                          className="h-4 w-4 text-blue-600"
+                          type="radio"
                         />
-                        <Label htmlFor={existingGroupId} className="text-sm font-medium">
+                        <Label className="font-medium text-sm" htmlFor={existingGroupId}>
                           {t("leads.group.addToExisting")}
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <input
-                          type="radio"
+                          checked={isNewGroup}
+                          className="h-4 w-4 text-blue-600"
                           id={newGroupId}
                           name="groupType"
-                          checked={isNewGroup}
                           onChange={() => setIsNewGroup(true)}
-                          className="h-4 w-4 text-blue-600"
+                          type="radio"
                         />
-                        <Label htmlFor={newGroupId} className="text-sm font-medium">
+                        <Label className="font-medium text-sm" htmlFor={newGroupId}>
                           {t("leads.group.createNew")}
                         </Label>
                       </div>
@@ -771,10 +783,57 @@ export function AddLeadSheet({
                   </div>
 
                   <div className="grid grid-cols-1 gap-4">
-                    {!isNewGroup ? (
+                    {isNewGroup ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={newGroupNameId}>{t("leads.group.newGroupName")}</Label>
+                          {csvData && csvData.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              {isAutoGeneratedGroupName && (
+                                <Badge className="text-xs" variant="secondary">
+                                  {t("leads.addLead.autoGenerated")}
+                                </Badge>
+                              )}
+                              <Button
+                                className="h-6 px-2"
+                                disabled={isGeneratingGroupName}
+                                onClick={generateGroupNameFromCSV}
+                                size="sm"
+                                title={t("leads.addLead.regenerateGroupName")}
+                                type="button"
+                                variant="ghost"
+                              >
+                                <RefreshCw
+                                  className={`h-3 w-3 ${isGeneratingGroupName ? "animate-spin" : ""}`}
+                                />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <Input
+                          disabled={isGeneratingGroupName}
+                          id={newGroupNameId}
+                          onChange={(e) => {
+                            setNewGroupName(e.target.value)
+                            setIsAutoGeneratedGroupName(false)
+                          }}
+                          placeholder={
+                            isGeneratingGroupName
+                              ? "그룹명 생성 중..."
+                              : t("leads.group.newGroupNamePlaceholder")
+                          }
+                          value={newGroupName}
+                        />
+                        {isAutoGeneratedGroupName && (
+                          <p className="text-muted-foreground text-xs">
+                            {t("leads.addLead.autoGeneratedDescription")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
                       <div className="space-y-2">
                         <Label htmlFor={groupSelectId}>{t("leads.group.selectGroup")}</Label>
-                        <Select value={groupName} onValueChange={setGroupName}>
+                        <Select onValueChange={setGroupName} value={groupName}>
                           <SelectTrigger id={groupSelectId}>
                             <SelectValue placeholder={t("leads.group.selectGroupPlaceholder")} />
                           </SelectTrigger>
@@ -787,53 +846,6 @@ export function AddLeadSheet({
                           </SelectContent>
                         </Select>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor={newGroupNameId}>{t("leads.group.newGroupName")}</Label>
-                          {csvData && csvData.length > 0 && (
-                            <div className="flex items-center gap-2">
-                              {isAutoGeneratedGroupName && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {t("leads.addLead.autoGenerated")}
-                                </Badge>
-                              )}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={generateGroupNameFromCSV}
-                                disabled={isGeneratingGroupName}
-                                className="h-6 px-2"
-                                title={t("leads.addLead.regenerateGroupName")}
-                              >
-                                <RefreshCw
-                                  className={`h-3 w-3 ${isGeneratingGroupName ? "animate-spin" : ""}`}
-                                />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        <Input
-                          id={newGroupNameId}
-                          value={newGroupName}
-                          onChange={(e) => {
-                            setNewGroupName(e.target.value)
-                            setIsAutoGeneratedGroupName(false)
-                          }}
-                          disabled={isGeneratingGroupName}
-                          placeholder={
-                            isGeneratingGroupName
-                              ? "그룹명 생성 중..."
-                              : t("leads.group.newGroupNamePlaceholder")
-                          }
-                        />
-                        {isAutoGeneratedGroupName && (
-                          <p className="text-xs text-muted-foreground">
-                            {t("leads.addLead.autoGeneratedDescription")}
-                          </p>
-                        )}
-                      </div>
                     )}
 
                     <div className="space-y-2">
@@ -842,9 +854,9 @@ export function AddLeadSheet({
                       </Label>
                       <Input
                         id={groupDescriptionId}
-                        value={groupDescription}
                         onChange={(e) => setGroupDescription(e.target.value)}
                         placeholder={t("leads.group.groupDescriptionPlaceholder")}
+                        value={groupDescription}
                       />
                     </div>
                   </div>
@@ -854,12 +866,15 @@ export function AddLeadSheet({
 
             {/* Step 2: Manual Creation */}
             {step === 2 && mode === "manual" && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="fade-in slide-in-from-right-4 animate-in space-y-4 duration-300">
                 <LeadForm
-                  isEdit={false}
-                  workspaceId={workspaceId}
+                  cancelButtonText="이전"
                   customerGroups={customerGroups}
-                  selectedGroup={selectedGroupForNewLead}
+                  isEdit={false}
+                  onCancel={() => {
+                    setStep(1)
+                    setMode(null)
+                  }}
                   onGroupChange={(value) =>
                     setSelectedGroupForNewLead(value === "none" ? "" : value)
                   }
@@ -867,22 +882,19 @@ export function AddLeadSheet({
                     setPreviewLeadData(leadData as Lead)
                     setStep(3)
                   }}
-                  onCancel={() => {
-                    setStep(1)
-                    setMode(null)
-                  }}
+                  selectedGroup={selectedGroupForNewLead}
                   submitButtonText="다음"
-                  cancelButtonText="이전"
+                  workspaceId={workspaceId}
                 />
               </div>
             )}
 
             {/* Step 3: Preview */}
             {step === 3 && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="fade-in slide-in-from-right-4 animate-in space-y-4 duration-300">
                 {mode === "upload" && csvData ? (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-medium">{t("leads.addLead.preview")}</h3>
+                    <h3 className="font-medium text-lg">{t("leads.addLead.preview")}</h3>
                     <Card>
                       <CardContent className="pt-4">
                         <div className="space-y-4">
@@ -891,7 +903,7 @@ export function AddLeadSheet({
                               <p className="font-medium">
                                 {t("leads.addLead.totalLeads", { count: csvData.length })}
                               </p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 {isNewGroup
                                   ? t("leads.addLead.addToNewGroup", {
                                       name: newGroupName || t("leads.addLead.autoGenerated"),
@@ -901,11 +913,11 @@ export function AddLeadSheet({
                             </div>
                           </div>
 
-                          <div className="max-h-96 overflow-y-auto space-y-2">
+                          <div className="max-h-96 space-y-2 overflow-y-auto">
                             {csvData.slice(0, 10).map((lead, index) => (
                               <div
+                                className="fade-in slide-in-from-left-2 animate-in rounded-lg bg-gray-50 p-3 text-sm duration-300"
                                 key={`${lead.companyName}-${lead.primaryEmail}-${index}`}
-                                className="p-3 bg-gray-50 rounded-lg text-sm animate-in fade-in slide-in-from-left-2 duration-300"
                                 style={{ animationDelay: `${index * 50}ms` }}
                               >
                                 <div className="font-medium">{lead.companyName}</div>
@@ -916,7 +928,7 @@ export function AddLeadSheet({
                               </div>
                             ))}
                             {csvData.length > 10 && (
-                              <p className="text-sm text-muted-foreground text-center py-2 animate-in fade-in duration-300 delay-500">
+                              <p className="fade-in animate-in py-2 text-center text-muted-foreground text-sm delay-500 duration-300">
                                 ... 외 {csvData.length - 10}개
                               </p>
                             )}
@@ -928,14 +940,14 @@ export function AddLeadSheet({
                 ) : (
                   previewLeadData && (
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium animate-in fade-in duration-300">
+                      <h3 className="fade-in animate-in font-medium text-lg duration-300">
                         추가할 리드 정보
                       </h3>
-                      <Card className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <CardContent className="pt-4 space-y-4">
+                      <Card className="fade-in slide-in-from-bottom-2 animate-in duration-500">
+                        <CardContent className="space-y-4 pt-4">
                           {/* Basic Info */}
                           <div>
-                            <h4 className="text-sm font-semibold mb-2 text-blue-600">기본 정보</h4>
+                            <h4 className="mb-2 font-semibold text-blue-600 text-sm">기본 정보</h4>
                             <div className="grid grid-cols-2 gap-3 text-sm">
                               <div className="space-y-1">
                                 <span className="text-muted-foreground">회사명</span>
@@ -947,7 +959,7 @@ export function AddLeadSheet({
                               </div>
                               <div className="space-y-1">
                                 <span className="text-muted-foreground">웹사이트</span>
-                                <p className="font-medium break-all">
+                                <p className="break-all font-medium">
                                   {previewLeadData.websiteUrl || "-"}
                                 </p>
                               </div>
@@ -963,7 +975,7 @@ export function AddLeadSheet({
                             previewLeadData.city ||
                             previewLeadData.address) && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                              <h4 className="mb-2 font-semibold text-blue-600 text-sm">
                                 위치 정보
                               </h4>
                               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -980,7 +992,7 @@ export function AddLeadSheet({
                                   </div>
                                 )}
                                 {previewLeadData.address && (
-                                  <div className="space-y-1 col-span-2">
+                                  <div className="col-span-2 space-y-1">
                                     <span className="text-muted-foreground">주소</span>
                                     <p className="font-medium">{previewLeadData.address}</p>
                                   </div>
@@ -992,16 +1004,16 @@ export function AddLeadSheet({
                           {/* Contacts */}
                           {previewLeadData.contacts && previewLeadData.contacts.length > 0 && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                              <h4 className="mb-2 font-semibold text-blue-600 text-sm">
                                 연락처 정보
                               </h4>
                               <div className="space-y-2">
                                 {previewLeadData.contacts.map((contact, index) => (
                                   <div
+                                    className="flex items-center gap-2 rounded bg-gray-50 p-2 text-sm"
                                     key={`${contact.contactType}-${contact.contactValue}-${index}`}
-                                    className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded"
                                   >
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge className="text-xs" variant="outline">
                                       {contact.contactType}
                                     </Badge>
                                     <span className="font-medium">{contact.contactValue}</span>
@@ -1011,7 +1023,7 @@ export function AddLeadSheet({
                                       </span>
                                     )}
                                     {contact.isPrimary && (
-                                      <Badge variant="secondary" className="text-xs">
+                                      <Badge className="text-xs" variant="secondary">
                                         주 연락처
                                       </Badge>
                                     )}
@@ -1025,19 +1037,19 @@ export function AddLeadSheet({
                           {previewLeadData.socialMedia &&
                             previewLeadData.socialMedia.length > 0 && (
                               <div className="border-t pt-4">
-                                <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                                <h4 className="mb-2 font-semibold text-blue-600 text-sm">
                                   소셜 미디어
                                 </h4>
                                 <div className="space-y-2">
                                   {previewLeadData.socialMedia.map((social, index) => (
                                     <div
+                                      className="flex items-center gap-2 rounded bg-gray-50 p-2 text-sm"
                                       key={`${social.platform}-${social.url}-${index}`}
-                                      className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded"
                                     >
-                                      <Badge variant="outline" className="text-xs">
+                                      <Badge className="text-xs" variant="outline">
                                         {social.platform}
                                       </Badge>
-                                      <span className="font-medium break-all">{social.url}</span>
+                                      <span className="break-all font-medium">{social.url}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -1047,21 +1059,21 @@ export function AddLeadSheet({
                           {/* Additional Info */}
                           {(previewLeadData.description || previewLeadData.notes) && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                              <h4 className="mb-2 font-semibold text-blue-600 text-sm">
                                 추가 정보
                               </h4>
                               {previewLeadData.description && (
-                                <div className="space-y-1 mb-3">
-                                  <span className="text-sm text-muted-foreground">설명</span>
-                                  <p className="text-sm bg-gray-50 p-2 rounded">
+                                <div className="mb-3 space-y-1">
+                                  <span className="text-muted-foreground text-sm">설명</span>
+                                  <p className="rounded bg-gray-50 p-2 text-sm">
                                     {previewLeadData.description}
                                   </p>
                                 </div>
                               )}
                               {previewLeadData.notes && (
                                 <div className="space-y-1">
-                                  <span className="text-sm text-muted-foreground">메모</span>
-                                  <p className="text-sm bg-gray-50 p-2 rounded">
+                                  <span className="text-muted-foreground text-sm">메모</span>
+                                  <p className="rounded bg-gray-50 p-2 text-sm">
                                     {previewLeadData.notes}
                                   </p>
                                 </div>
@@ -1077,12 +1089,12 @@ export function AddLeadSheet({
             )}
           </div>
 
-          <SheetFooter className="mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
+          <SheetFooter className="fade-in slide-in-from-bottom-2 mt-6 animate-in delay-150 duration-300">
             {step === 1 && !uploadOnly && (
               <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
                 className="transition-all duration-200 hover:scale-105 active:scale-95"
+                onClick={() => onOpenChange(false)}
+                variant="outline"
               >
                 취소
               </Button>
@@ -1091,7 +1103,7 @@ export function AddLeadSheet({
             {step === 2 && (
               <>
                 <Button
-                  variant="outline"
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
                   onClick={() => {
                     if (uploadOnly) {
                       onOpenChange(false)
@@ -1101,24 +1113,24 @@ export function AddLeadSheet({
                       setCsvData(null)
                     }
                   }}
-                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                  variant="outline"
                 >
                   {uploadOnly ? "취소" : "이전"}
                 </Button>
                 {mode === "upload" && (
                   <Button
+                    className="transition-all duration-200 hover:scale-105 active:scale-95"
+                    disabled={
+                      !csvData ||
+                      csvErrors.length > 0 ||
+                      !(isNewGroup || groupName) ||
+                      (isNewGroup && !newGroupName.trim())
+                    }
                     onClick={() => {
                       if (csvData && csvData.length > 0) {
                         setStep(3)
                       }
                     }}
-                    disabled={
-                      !csvData ||
-                      csvErrors.length > 0 ||
-                      (!isNewGroup && !groupName) ||
-                      (isNewGroup && !newGroupName.trim())
-                    }
-                    className="transition-all duration-200 hover:scale-105 active:scale-95"
                   >
                     다음
                   </Button>
@@ -1129,16 +1141,18 @@ export function AddLeadSheet({
             {step === 3 && (
               <>
                 <Button
-                  variant="outline"
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
                   onClick={() => {
                     setStep(2)
                     setPreviewLeadData(null)
                   }}
-                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                  variant="outline"
                 >
                   이전
                 </Button>
                 <Button
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                  disabled={isUploadingLeads || createLead.isPending}
                   onClick={async () => {
                     if (mode === "upload") {
                       await handleCSVUpload()
@@ -1146,8 +1160,6 @@ export function AddLeadSheet({
                       await handleCreateLead(previewLeadData)
                     }
                   }}
-                  disabled={isUploadingLeads || createLead.isPending}
-                  className="transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   {isUploadingLeads || createLead.isPending ? "처리 중..." : "리드 추가"}
                 </Button>
@@ -1166,8 +1178,8 @@ export function AddLeadSheet({
           setCsvText(null)
         }}
         onConfirm={handleColumnMappingConfirm}
-        parseResult={smartParseResult}
         onToggleHeaders={handleToggleHeaders}
+        parseResult={smartParseResult}
       />
     </>
   )

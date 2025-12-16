@@ -13,7 +13,7 @@ import {
 import type { ColumnFilter, FilterOperator } from "@/lib/api/types/lead-filters"
 import { OPERATOR_LABELS } from "@/lib/api/types/lead-filters"
 
-interface ColumnFilterTextProps {
+type ColumnFilterTextProps = {
   field: string
   onFilterChange: (filter: ColumnFilter | null) => void
   initialFilter?: ColumnFilter
@@ -82,7 +82,7 @@ export function ColumnFilterText({
     <div className="w-[300px] space-y-4 p-4">
       <div className="space-y-2">
         <Label htmlFor={operatorId}>Operator</Label>
-        <Select value={operator} onValueChange={(val) => setOperator(val as FilterOperator)}>
+        <Select onValueChange={(val) => setOperator(val as FilterOperator)} value={operator}>
           <SelectTrigger id={operatorId}>
             <SelectValue />
           </SelectTrigger>
@@ -100,22 +100,22 @@ export function ColumnFilterText({
         <div className="space-y-2">
           <Label htmlFor={valueId}>Value</Label>
           <Input
+            autoFocus
             id={valueId}
-            type="text"
-            value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter value..."
-            autoFocus
+            type="text"
+            value={value}
           />
         </div>
       )}
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" size="sm" onClick={handleClear}>
+        <Button onClick={handleClear} size="sm" variant="outline">
           Clear
         </Button>
-        <Button size="sm" onClick={handleApply}>
+        <Button onClick={handleApply} size="sm">
           Apply
         </Button>
       </div>

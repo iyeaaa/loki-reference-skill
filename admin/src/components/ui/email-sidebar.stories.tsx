@@ -45,22 +45,22 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="h-screen w-full flex">
+      <div className="flex h-screen w-full">
         <Story />
-        <div className="flex-1 p-8 bg-muted/20">
+        <div className="flex-1 bg-muted/20 p-8">
           <div className="max-w-4xl">
-            <h1 className="text-2xl font-bold mb-4">Email Content Area</h1>
-            <p className="text-muted-foreground mb-6">
+            <h1 className="mb-4 font-bold text-2xl">Email Content Area</h1>
+            <p className="mb-6 text-muted-foreground">
               Click on the sidebar items to see the active state change. Email messages and content
               would be displayed here.
             </p>
             <div className="space-y-4">
-              <div className="p-4 border rounded-lg bg-background">
-                <div className="flex items-center gap-3 mb-2">
+              <div className="rounded-lg border bg-background p-4">
+                <div className="mb-2 flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10" />
                   <div>
                     <p className="font-medium">John Doe</p>
-                    <p className="text-sm text-muted-foreground">john@example.com</p>
+                    <p className="text-muted-foreground text-sm">john@example.com</p>
                   </div>
                 </div>
                 <p className="text-sm">Sample email content would appear here...</p>
@@ -438,16 +438,16 @@ export const WithStateManagement: Story = {
     return (
       <div className="flex h-screen">
         <EmailSidebar
-          sections={sections}
           activeItemId={activeItem}
           onItemClick={(id) => {
             setActiveItem(id)
             console.log(`Navigated to: ${id}`)
           }}
+          sections={sections}
         />
-        <div className="flex-1 p-8 bg-muted/20">
+        <div className="flex-1 bg-muted/20 p-8">
           <div className="max-w-4xl">
-            <h1 className="text-2xl font-bold mb-4">
+            <h1 className="mb-4 font-bold text-2xl">
               Current View: {activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
             </h1>
             <p className="text-muted-foreground">

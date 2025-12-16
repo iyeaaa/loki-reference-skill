@@ -94,7 +94,9 @@ export default function CreateCampaignPage() {
 
   // Load existing draft if editing
   useEffect(() => {
-    if (!editingSequenceId || !existingSequence) return
+    if (!(editingSequenceId && existingSequence)) {
+      return
+    }
 
     console.log("📂 Loading existing sequence:", existingSequence)
     console.log("📂 Customer Group ID from sequence:", existingSequence.customerGroupId)
@@ -153,11 +155,19 @@ export default function CreateCampaignPage() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: navigate, t are stable functions
   useEffect(() => {
     // Skip if editing existing or already initialized
-    if (editingSequenceId) return
-    if (isInitialized) return
+    if (editingSequenceId) {
+      return
+    }
+    if (isInitialized) {
+      return
+    }
     // ref를 사용하여 최신 sequenceId 확인 (클로저 문제 방지)
-    if (sequenceIdRef.current) return // sequenceId가 이미 있으면 절대 새로 생성하지 않음
-    if (isCreatingRef.current) return
+    if (sequenceIdRef.current) {
+      return // sequenceId가 이미 있으면 절대 새로 생성하지 않음
+    }
+    if (isCreatingRef.current) {
+      return
+    }
 
     const workspaceId =
       selectedWorkspace && selectedWorkspace.id !== "all" ? selectedWorkspace.id : ""
@@ -214,10 +224,14 @@ export default function CreateCampaignPage() {
 
   // Auto-save to DB with debounce (only when changes detected)
   useEffect(() => {
-    if (!sequenceId) return
+    if (!sequenceId) {
+      return
+    }
 
     const timer = setTimeout(() => {
-      if (!sequenceId || isSaving) return
+      if (!sequenceId || isSaving) {
+        return
+      }
 
       // Skip auto-save if campaign name is empty or default
       const trimmedName = campaignData.name.trim()
@@ -410,29 +424,29 @@ export default function CreateCampaignPage() {
   // Show loading state while fetching existing sequence
   if (editingSequenceId && isLoadingSequence) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">{t("sequences.createPage.loading")}</p>
+      <div className="flex h-full items-center justify-center">
+        <div className="space-y-2 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-primary border-b-2" />
+          <p className="text-muted-foreground text-sm">{t("sequences.createPage.loading")}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="flex h-full flex-col bg-background">
       {/* Header with Campaign Info */}
-      <div className="border-b bg-background px-6 py-4 space-y-4">
+      <div className="space-y-4 border-b bg-background px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button onClick={handleBack} size="sm" variant="ghost">
+              <ArrowLeft className="mr-2 h-4 w-4" />
               {t("sequences.createPage.back")}
             </Button>
           </div>
           <div className="flex items-center gap-3">
             {lastSaved && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
                 <Save className="h-3 w-3" />
                 <span>
                   {isSaving
@@ -442,13 +456,13 @@ export default function CreateCampaignPage() {
               </div>
             )}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualSave}
-              disabled={isSaving || !sequenceId}
               className="h-8"
+              disabled={isSaving || !sequenceId}
+              onClick={handleManualSave}
+              size="sm"
+              variant="outline"
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="mr-2 h-4 w-4" />
               {isSaving ? t("sequences.createPage.savingStatus") : t("sequences.createPage.save")}
             </Button>
           </div>
@@ -459,11 +473,11 @@ export default function CreateCampaignPage() {
           <div className="space-y-2">
             <Label htmlFor={campaignNameId}>{t("sequences.createPage.campaignNameLabel")}</Label>
             <Input
+              className="h-9"
               id={campaignNameId}
-              value={campaignData.name}
               onChange={(e) => setCampaignData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder={t("sequences.createPage.campaignNamePlaceholder")}
-              className="h-9"
+              value={campaignData.name}
             />
           </div>
           <div className="space-y-2">
@@ -471,14 +485,14 @@ export default function CreateCampaignPage() {
               {t("sequences.createPage.campaignDescLabel")}
             </Label>
             <Textarea
+              className="h-9 resize-none"
               id={campaignDescriptionId}
-              value={campaignData.description}
               onChange={(e) =>
                 setCampaignData((prev) => ({ ...prev, description: e.target.value }))
               }
               placeholder={t("sequences.createPage.campaignDescPlaceholder")}
-              className="h-9 resize-none"
               rows={1}
+              value={campaignData.description}
             />
           </div>
         </div>
@@ -488,11 +502,11 @@ export default function CreateCampaignPage() {
       <div className="border-b bg-muted/30 px-6 py-3">
         <div className="flex items-center justify-center gap-4">
           {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center">
+            <div className="flex items-center" key={step.number}>
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border-2 font-semibold transition-colors text-sm",
+                    "flex h-8 w-8 items-center justify-center rounded-full border-2 font-semibold text-sm transition-colors",
                     currentStep === step.number
                       ? "border-primary bg-primary text-primary-foreground"
                       : currentStep > step.number
@@ -505,13 +519,13 @@ export default function CreateCampaignPage() {
                 <div className="text-left">
                   <div
                     className={cn(
-                      "text-sm font-medium",
+                      "font-medium text-sm",
                       currentStep === step.number ? "text-primary" : "text-muted-foreground",
                     )}
                   >
                     {step.title}
                   </div>
-                  <div className="text-xs text-muted-foreground">{step.description}</div>
+                  <div className="text-muted-foreground text-xs">{step.description}</div>
                 </div>
               </div>
               {index < steps.length - 1 && (
@@ -544,7 +558,6 @@ export default function CreateCampaignPage() {
         {currentStep === 2 && (
           <div className="h-full p-6">
             <CreateCampaignStep2
-              sequenceId={sequenceId}
               data={{
                 workspaceId: campaignData.workspaceId,
                 customerGroupId: campaignData.customerGroupId,
@@ -554,15 +567,16 @@ export default function CreateCampaignPage() {
               }}
               onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
               onGenerationComplete={() => setCurrentStep(3)}
+              sequenceId={sequenceId}
             />
           </div>
         )}
         {currentStep === 3 && (
-          <div className="h-full p-6 overflow-auto">
+          <div className="h-full overflow-auto p-6">
             <CreateCampaignStep3
-              sequenceId={sequenceId}
               data={campaignData}
               onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
+              sequenceId={sequenceId}
             />
           </div>
         )}
@@ -572,13 +586,11 @@ export default function CreateCampaignPage() {
       {currentStep < 3 && (
         <div className="border-t bg-background px-6 py-4">
           <div className="flex justify-between">
-            <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1}>
+            <Button disabled={currentStep === 1} onClick={handlePrevStep} variant="outline">
               {t("sequences.createPage.previous")}
             </Button>
-            <Button onClick={handleNextStep} disabled={!sequenceId}>
-              {!sequenceId
-                ? t("sequences.createPage.initializing")
-                : t("sequences.createPage.next")}
+            <Button disabled={!sequenceId} onClick={handleNextStep}>
+              {sequenceId ? t("sequences.createPage.next") : t("sequences.createPage.initializing")}
             </Button>
           </div>
         </div>

@@ -34,7 +34,9 @@ import { markdownToHtml } from "@/lib/utils/markdown"
 
 // HTML을 Markdown으로 변환하는 유틸리티 함수
 const htmlToMarkdown = (html: string): string => {
-  if (!html) return ""
+  if (!html) {
+    return ""
+  }
 
   const markdown = html
     // 코드 블록 마커 제거 (```html, ``` 등)
@@ -115,7 +117,7 @@ const htmlToMarkdown = (html: string): string => {
   return cleanedLines.join("\n").trim()
 }
 
-interface SequenceStepFormProps {
+type SequenceStepFormProps = {
   step?: SequenceStep
   stepOrder: number
   workspaceId?: string
@@ -362,33 +364,33 @@ export function SequenceStepForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form className="space-y-6" onSubmit={handleSubmit}>
       {/* 스텝 순서 표시 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="font-medium text-muted-foreground text-sm">
           {t("sequences.stepForm.stepOrder")}
         </span>
-        <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+        <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary text-sm">
           {formData.stepOrder}
         </span>
       </div>
 
       {formData.stepOrder > 1 && (
-        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-          <h3 className="text-sm font-semibold">{t("sequence.step.sendCondition")}</h3>
+        <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+          <h3 className="font-semibold text-sm">{t("sequence.step.sendCondition")}</h3>
 
           <div className="space-y-2">
             <Label htmlFor="conditionType">
               {t("sequence.step.sendConditionLabel")} <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={formData.conditionType}
               onValueChange={(value: StepConditionType) =>
                 setFormData({
                   ...formData,
                   conditionType: value,
                 })
               }
+              value={formData.conditionType}
             >
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder={t("sequence.step.sendConditionPlaceholder")} />
@@ -412,13 +414,13 @@ export function SequenceStepForm({
       )}
 
       {/* 발송 스케줄 섹션 */}
-      <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-        <h3 className="text-sm font-semibold">{t("sequences.stepForm.scheduleTitle")}</h3>
+      <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+        <h3 className="font-semibold text-sm">{t("sequences.stepForm.scheduleTitle")}</h3>
 
         {/* 날짜 입력 방식 선택 탭 */}
         <Tabs
-          value={scheduleMode}
           onValueChange={(v) => setScheduleMode(v as "relative" | "absolute")}
+          value={scheduleMode}
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="relative">
@@ -430,28 +432,28 @@ export function SequenceStepForm({
           </TabsList>
 
           {/* 상대적 날짜 입력 (기존 방식) */}
-          <TabsContent value="relative" className="space-y-4 mt-4">
+          <TabsContent className="mt-4 space-y-4" value="relative">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor={delayDaysId}>
                   {t("sequences.stepForm.delayDaysLabel")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
+                  className="bg-background"
                   id={delayDaysId}
-                  type="number"
                   min="0"
-                  value={formData.delayDays}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      delayDays: parseInt(e.target.value, 10) || 0,
+                      delayDays: Number.parseInt(e.target.value, 10) || 0,
                     })
                   }
-                  required
                   placeholder="0"
-                  className="bg-background"
+                  required
+                  type="number"
+                  value={formData.delayDays}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {t("sequences.stepForm.delayDaysHelper")}
                 </p>
               </div>
@@ -461,12 +463,6 @@ export function SequenceStepForm({
                   {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
                 </Label>
                 <TimePicker
-                  value={{
-                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
-                    minute: Number.isInteger(formData.scheduledMinute)
-                      ? formData.scheduledMinute
-                      : 0,
-                  }}
                   onChange={(time) => {
                     console.log("TimePicker onChange:", time)
                     setFormData({
@@ -475,13 +471,19 @@ export function SequenceStepForm({
                       scheduledMinute: time.minute,
                     })
                   }}
+                  value={{
+                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
+                    minute: Number.isInteger(formData.scheduledMinute)
+                      ? formData.scheduledMinute
+                      : 0,
+                  }}
                 />
               </div>
             </div>
 
             {/* 발송 예정 미리보기 */}
-            <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
-              <p className="text-sm font-medium text-primary">
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+              <p className="font-medium text-primary text-sm">
                 {t("sequences.stepForm.schedulePreview", {
                   days: formData.delayDays,
                   time: `${formData.scheduledHour.toString().padStart(2, "0")}:${formData.scheduledMinute.toString().padStart(2, "0")}`,
@@ -491,7 +493,7 @@ export function SequenceStepForm({
           </TabsContent>
 
           {/* 절대적 날짜/시간 입력 (새로운 방식) */}
-          <TabsContent value="absolute" className="space-y-4 mt-4">
+          <TabsContent className="mt-4 space-y-4" value="absolute">
             <div className="space-y-4">
               {/* 날짜 선택 */}
               <div className="space-y-2">
@@ -502,11 +504,11 @@ export function SequenceStepForm({
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
-                      variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
                         !selectedDate && "text-muted-foreground",
                       )}
+                      variant="outline"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {selectedDate
@@ -514,10 +516,11 @@ export function SequenceStepForm({
                         : t("sequences.stepForm.selectDatePlaceholder", "날짜를 선택하세요")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent align="start" className="w-auto p-0">
                     <Calendar
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
                       mode="single"
-                      selected={selectedDate}
                       onSelect={(date) => {
                         setSelectedDate(date)
                         // 선택한 날짜를 기준으로 delayDays 계산
@@ -531,12 +534,11 @@ export function SequenceStepForm({
                           })
                         }
                       }}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      initialFocus
+                      selected={selectedDate}
                     />
                   </PopoverContent>
                 </Popover>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {t(
                     "sequences.stepForm.absoluteDateHelper",
                     "이메일이 발송될 구체적인 날짜를 선택하세요",
@@ -550,12 +552,6 @@ export function SequenceStepForm({
                   {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
                 </Label>
                 <TimePicker
-                  value={{
-                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
-                    minute: Number.isInteger(formData.scheduledMinute)
-                      ? formData.scheduledMinute
-                      : 0,
-                  }}
                   onChange={(time) => {
                     setFormData({
                       ...formData,
@@ -563,13 +559,19 @@ export function SequenceStepForm({
                       scheduledMinute: time.minute,
                     })
                   }}
+                  value={{
+                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
+                    minute: Number.isInteger(formData.scheduledMinute)
+                      ? formData.scheduledMinute
+                      : 0,
+                  }}
                 />
               </div>
 
               {/* 선택한 날짜/시간 미리보기 */}
               {selectedDate && (
-                <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
-                  <p className="text-sm font-medium text-primary">
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <p className="font-medium text-primary text-sm">
                     {t(
                       "sequences.stepForm.absoluteSchedulePreview",
                       "📅 발송 예정: {{date}} {{time}}",
@@ -579,7 +581,7 @@ export function SequenceStepForm({
                       },
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="mt-1 text-muted-foreground text-xs">
                     {t(
                       "sequences.stepForm.absoluteDateNote",
                       "내부적으로 {{days}}일 후로 저장됩니다",
@@ -597,17 +599,17 @@ export function SequenceStepForm({
 
       {/* AI 생성 섹션 */}
       {workspaceId && customerGroupId && (
-        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+        <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
+            <h3 className="flex items-center gap-2 font-semibold text-sm">
               <Sparkles className="h-4 w-4 text-primary" />
               {t("sequences.stepForm.aiGeneratorTitle")}
             </h3>
             <Button
+              onClick={() => setShowAIGenerator(!showAIGenerator)}
+              size="sm"
               type="button"
               variant="outline"
-              size="sm"
-              onClick={() => setShowAIGenerator(!showAIGenerator)}
             >
               {showAIGenerator
                 ? t("sequences.stepForm.aiGeneratorClose")
@@ -616,7 +618,7 @@ export function SequenceStepForm({
           </div>
 
           {showAIGenerator && (
-            <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-3 border-t pt-2">
               {/* 타겟 국가 입력 */}
               <div className="space-y-2">
                 <Label htmlFor={targetCountryId}>
@@ -624,14 +626,14 @@ export function SequenceStepForm({
                   <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  id={targetCountryId}
-                  value={targetCountry}
-                  onChange={(e) => setTargetCountry(e.target.value)}
-                  placeholder={t("sequences.stepForm.targetCountryPlaceholder")}
                   className="bg-background"
                   disabled={isLoadingCountry}
+                  id={targetCountryId}
+                  onChange={(e) => setTargetCountry(e.target.value)}
+                  placeholder={t("sequences.stepForm.targetCountryPlaceholder")}
+                  value={targetCountry}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {isLoadingCountry
                     ? t("sequences.stepForm.countryAutoDetecting")
                     : targetCountry
@@ -646,26 +648,26 @@ export function SequenceStepForm({
                   <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
+                  className="min-h-[100px] bg-background"
                   id={promptId}
-                  value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder={t("sequences.stepForm.emailContentRequestPlaceholder")}
-                  className="bg-background min-h-[100px]"
+                  value={aiPrompt}
                 />
               </div>
 
               <Button
-                type="button"
-                onClick={handleGenerateWithAI}
+                className="w-full"
                 disabled={
                   isGenerating ||
                   !aiPrompt.trim() ||
                   aiPrompt.trim().length < 10 ||
                   !targetCountry?.trim()
                 }
-                className="w-full"
+                onClick={handleGenerateWithAI}
+                type="button"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="mr-2 h-4 w-4" />
                 {isGenerating
                   ? t("sequences.stepForm.generating")
                   : t("sequences.stepForm.generateButton")}
@@ -676,8 +678,8 @@ export function SequenceStepForm({
       )}
 
       {workspaceId && !customerGroupId && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:bg-amber-950/20">
+          <p className="text-amber-800 text-sm dark:text-amber-200">
             {t("sequences.stepForm.aiRequiresCustomerGroup")}
           </p>
         </div>
@@ -689,11 +691,11 @@ export function SequenceStepForm({
         </Label>
         <Input
           id={subjectId}
-          value={formData.emailSubject}
-          onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
-          required
           maxLength={500}
+          onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
           placeholder={t("sequences.stepForm.emailSubjectPlaceholder")}
+          required
+          value={formData.emailSubject}
         />
       </div>
 
@@ -701,46 +703,46 @@ export function SequenceStepForm({
         <div className="flex items-center justify-between">
           <Label htmlFor={bodyTextId}>{t("sequences.stepForm.emailBodyLabel")}</Label>
           <Button
+            className="h-7"
+            onClick={() => setIsSignatureModalOpen(true)}
+            size="sm"
             type="button"
             variant="outline"
-            size="sm"
-            onClick={() => setIsSignatureModalOpen(true)}
-            className="h-7"
           >
-            <Mail className="h-3 w-3 mr-1" />
+            <Mail className="mr-1 h-3 w-3" />
             {t("sequences.stepForm.editSignatureButton")}
           </Button>
         </div>
         <RichTextEditor
-          value={formData.emailBodyText || ""}
+          height="300px"
           onChange={(value) => setFormData({ ...formData, emailBodyText: value })}
           placeholder={t("sequences.stepForm.emailBodyPlaceholder", "이메일 본문을 입력하세요...")}
-          height="300px"
+          value={formData.emailBodyText || ""}
         />
 
         {/* 서명 프리뷰 */}
         {emailSignature && (
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-muted-foreground">
+              <Label className="font-medium text-muted-foreground text-xs">
                 {t("sequences.stepForm.signaturePreview", "서명 미리보기")}
               </Label>
               <Button
+                className="h-6 text-xs"
+                onClick={() => setIsSignatureModalOpen(true)}
+                size="sm"
                 type="button"
                 variant="ghost"
-                size="sm"
-                onClick={() => setIsSignatureModalOpen(true)}
-                className="h-6 text-xs"
               >
                 {t("sequences.stepForm.editSignature", "편집")}
               </Button>
             </div>
             <div
-              className="text-xs prose prose-sm max-w-none dark:prose-invert"
+              className="prose prose-sm dark:prose-invert max-w-none text-xs"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
               dangerouslySetInnerHTML={{ __html: emailSignature }}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {t(
                 "sequences.stepForm.signatureNote",
                 "이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.",
@@ -753,23 +755,23 @@ export function SequenceStepForm({
       {/* 파일 첨부 */}
       <div className="space-y-2">
         <Label>{t("sequences.stepForm.attachmentsLabel", "첨부 파일")}</Label>
-        <FileAttachment files={files} onFilesChange={setFiles} maxSize={30 * 1024 * 1024} />
+        <FileAttachment files={files} maxSize={30 * 1024 * 1024} onFilesChange={setFiles} />
       </div>
 
       <div className="space-y-2">
         <Collapsible className="mt-2">
-          <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <CollapsibleTrigger className="flex items-center gap-2 font-medium text-muted-foreground text-xs transition-colors hover:text-foreground">
             <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
             {t("sequences.stepForm.viewVariablesButton")}
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
-            <div className="text-xs text-muted-foreground rounded-md border bg-muted/30 p-3">
+            <div className="rounded-md border bg-muted/30 p-3 text-muted-foreground text-xs">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="space-y-1">
                   <p className="font-medium text-foreground">
                     {t("sequences.stepForm.variablesCompanyInfo")}
                   </p>
-                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                  <ul className="ml-2 space-y-0.5 text-[11px]">
                     <li>{"{{회사명}}"}</li>
                     <li>{"{{웹사이트}}"}</li>
                     <li>{"{{업종}}"}</li>
@@ -782,7 +784,7 @@ export function SequenceStepForm({
                   <p className="font-medium text-foreground">
                     {t("sequences.stepForm.variablesLocationInfo")}
                   </p>
-                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                  <ul className="ml-2 space-y-0.5 text-[11px]">
                     <li>{"{{국가}}"}</li>
                     <li>{"{{도시}}"}</li>
                     <li>{"{{주/도}}"}</li>
@@ -793,7 +795,7 @@ export function SequenceStepForm({
                   <p className="font-medium text-foreground">
                     {t("sequences.stepForm.variablesContactInfo")}
                   </p>
-                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                  <ul className="ml-2 space-y-0.5 text-[11px]">
                     <li>{"{{담당자명}}"}</li>
                     <li>{"{{이메일}}"}</li>
                   </ul>
@@ -802,7 +804,7 @@ export function SequenceStepForm({
                   <p className="font-medium text-foreground">
                     {t("sequences.stepForm.variablesLeadManagement")}
                   </p>
-                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                  <ul className="ml-2 space-y-0.5 text-[11px]">
                     <li>{"{{리드소스}}"}</li>
                     <li>{"{{리드상태}}"}</li>
                     <li>{"{{리드점수}}"}</li>
@@ -814,23 +816,23 @@ export function SequenceStepForm({
         </Collapsible>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <div className="flex justify-end gap-3 border-t pt-4">
+        <Button onClick={onCancel} type="button" variant="outline">
           {t("sequences.stepForm.cancelButton")}
         </Button>
-        <Button type="submit" className="min-w-[100px]">
+        <Button className="min-w-[100px]" type="submit">
           {step ? t("sequences.stepForm.updateButton") : t("sequences.stepForm.submitButton")}
         </Button>
       </div>
 
       {/* 서명 편집 모달 */}
       <SignatureEditorModal
+        defaultSignature={emailSignature || getUserSignature()}
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
-        defaultSignature={emailSignature || getUserSignature()}
         onSave={handleSaveSignature}
-        workspaceId={workspaceId}
         userId={user?.id}
+        workspaceId={workspaceId}
       />
     </form>
   )

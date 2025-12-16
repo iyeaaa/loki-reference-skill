@@ -2,7 +2,7 @@
 
 export type JobStatus = "waiting" | "active" | "completed" | "failed" | "delayed"
 
-export interface QueueStatus {
+export type QueueStatus = {
   name: string
   waiting: number
   active: number
@@ -12,7 +12,7 @@ export interface QueueStatus {
   paused: boolean
 }
 
-export interface JobDetail {
+export type JobDetail = {
   id: string
   name: string
   data: Record<string, unknown>
@@ -26,17 +26,17 @@ export interface JobDetail {
   finishedOn?: number
 }
 
-export interface WorkerStatus {
+export type WorkerStatus = {
   running: boolean
   concurrency: number
 }
 
-export interface HealthStatus {
+export type HealthStatus = {
   redis: "connected" | "disconnected"
   timestamp: string
 }
 
-export interface JobCounts {
+export type JobCounts = {
   waiting: number
   active: number
   completed: number
@@ -44,14 +44,14 @@ export interface JobCounts {
   delayed: number
 }
 
-export interface Pagination {
+export type Pagination = {
   page: number
   limit: number
   total: number
   totalPages: number
 }
 
-export interface TestQueueParams {
+export type TestQueueParams = {
   page?: number
   limit?: number
   status?: JobStatus | "all"
@@ -60,13 +60,13 @@ export interface TestQueueParams {
   sortOrder?: "asc" | "desc"
 }
 
-export interface TestQueueResponse {
+export type TestQueueResponse = {
   jobs: JobDetail[]
   counts: JobCounts
   pagination: Pagination
 }
 
-export interface AddJobRequest {
+export type AddJobRequest = {
   message: string
   jobName?: string
   scheduleDelay?: number
@@ -77,7 +77,7 @@ export interface AddJobRequest {
   customData?: Record<string, unknown>
 }
 
-export interface AddJobResponse {
+export type AddJobResponse = {
   jobId: string
   name: string
   data: unknown
@@ -88,7 +88,7 @@ export interface AddJobResponse {
   }
 }
 
-export interface BulkJobRequest {
+export type BulkJobRequest = {
   message: string
   jobName?: string
   scheduleDelay?: number
@@ -97,27 +97,27 @@ export interface BulkJobRequest {
   priority?: number
 }
 
-export interface BulkJobsResponse {
+export type BulkJobsResponse = {
   count: number
   jobs: Array<{ jobId: string; name: string }>
 }
 
-export interface CleanQueueRequest {
+export type CleanQueueRequest = {
   grace?: number
   limit?: number
 }
 
-export interface CleanQueueResponse {
+export type CleanQueueResponse = {
   cleanedCompleted: number
   cleanedFailed: number
 }
 
-export interface JobActionResponse {
+export type JobActionResponse = {
   jobId: string
   message: string
 }
 
-export interface QueueActionResponse {
+export type QueueActionResponse = {
   paused?: boolean
   message?: string
 }

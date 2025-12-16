@@ -2,7 +2,7 @@
  * Shared types for campaign creation
  */
 
-export interface EmailStep {
+export type EmailStep = {
   id?: string // Step ID if it exists in DB
   stepOrder: number
   delayDays: number

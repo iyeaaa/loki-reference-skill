@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api/client"
 // TYPES
 // ====================================
 
-export interface OnboardingSurveyData {
+export type OnboardingSurveyData = {
   industry?: string
   target?: string
   country?: string
@@ -18,7 +18,7 @@ export interface OnboardingSurveyData {
   lang?: string
 }
 
-export interface OnboardingProgressData {
+export type OnboardingProgressData = {
   id: string
   workspaceId: string
   status:
@@ -43,7 +43,7 @@ export interface OnboardingProgressData {
   updatedAt: string
 }
 
-export interface OnboardingStats {
+export type OnboardingStats = {
   total: number
   completed: number
   inProgress: number
@@ -102,15 +102,14 @@ export const onboardingApi = {
   /**
    * Step 1 완료: 회사 정보 확인
    */
-  completeStep1: (workspaceId: string, userId?: string) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
+  completeStep1: (workspaceId: string, userId?: string) =>
+    apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/step1/complete`,
       {
         method: "POST",
         body: JSON.stringify({ userId }),
       },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 
   /**
    * Step 2 완료: 리드 검색 및 저장
@@ -120,67 +119,59 @@ export const onboardingApi = {
     selectedLeadIds: string[],
     customerGroupId?: string,
     userId?: string,
-  ) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
+  ) =>
+    apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/step2/complete`,
       {
         method: "POST",
         body: JSON.stringify({ selectedLeadIds, customerGroupId, userId }),
       },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 
   /**
    * Step 3 완료: 이메일 시퀀스 생성
    */
-  completeStep3: (workspaceId: string, sequenceId: string, userId?: string) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
+  completeStep3: (workspaceId: string, sequenceId: string, userId?: string) =>
+    apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/step3/complete`,
       {
         method: "POST",
         body: JSON.stringify({ sequenceId, userId }),
       },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 
   /**
    * Step 4 완료: 이메일 연동
    */
-  completeStep4: (workspaceId: string, userId?: string) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
+  completeStep4: (workspaceId: string, userId?: string) =>
+    apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/step4/complete`,
       {
         method: "POST",
         body: JSON.stringify({ userId }),
       },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 
   /**
    * 온보딩 완료 처리
    */
-  complete: (workspaceId: string, userId?: string) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
+  complete: (workspaceId: string, userId?: string) =>
+    apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/complete`,
       {
         method: "POST",
         body: JSON.stringify({ userId }),
       },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 
   /**
    * 현재 스텝 업데이트 (자유 이동)
    */
-  updateStep: (workspaceId: string, step: number) => {
-    return apiFetch<{ data: OnboardingProgressData }>(
-      `/api/v1/onboarding/workspace/${workspaceId}/step`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({ step }),
-      },
-    ).then((res) => res.data)
-  },
+  updateStep: (workspaceId: string, step: number) =>
+    apiFetch<{ data: OnboardingProgressData }>(`/api/v1/onboarding/workspace/${workspaceId}/step`, {
+      method: "PATCH",
+      body: JSON.stringify({ step }),
+    }).then((res) => res.data),
 
   /**
    * 미완료 온보딩 목록 (관리자용)
@@ -204,17 +195,15 @@ export const onboardingApi = {
   /**
    * 온보딩 통계 (관리자용)
    */
-  getStats: () => {
-    return apiFetch<{ data: OnboardingStats }>("/api/v1/onboarding/stats").then((res) => res.data)
-  },
+  getStats: () =>
+    apiFetch<{ data: OnboardingStats }>("/api/v1/onboarding/stats").then((res) => res.data),
 
   /**
    * 온보딩 리셋 (개발/테스트용)
    */
-  reset: (workspaceId: string) => {
-    return apiFetch<{ data: OnboardingProgressData; message: string }>(
+  reset: (workspaceId: string) =>
+    apiFetch<{ data: OnboardingProgressData; message: string }>(
       `/api/v1/onboarding/workspace/${workspaceId}/reset`,
       { method: "POST" },
-    ).then((res) => res.data)
-  },
+    ).then((res) => res.data),
 }

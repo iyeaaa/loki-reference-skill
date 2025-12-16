@@ -5,7 +5,7 @@ import { LeadImportArtifact } from "./LeadImportArtifact"
 import type { ProgressLog } from "./ProgressLogger"
 import { SectionHeader } from "./SectionHeader"
 
-interface LeadResultSectionProps {
+type LeadResultSectionProps = {
   result: ImportResult
   progressLogs?: ProgressLog[]
   startTime?: number
@@ -27,13 +27,13 @@ export function LeadResultSection({
         title={t("chatbot.leadProgress.complete")}
       />
       <LeadImportArtifact
-        result={result}
-        progressLogs={progressLogs}
-        startTime={startTime}
         customerGroupId={result.groupAssignment?.groupId}
         customerGroupName={result.groupAssignment?.groupName}
         membersAdded={result.groupAssignment?.membersAdded}
         onGenerateSequence={onGenerateSequence}
+        progressLogs={progressLogs}
+        result={result}
+        startTime={startTime}
       />
     </div>
   )

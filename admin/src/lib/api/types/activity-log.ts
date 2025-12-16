@@ -1,6 +1,6 @@
 // Activity Log Management API Types (aligned with backend database schema)
 
-export interface ActivityLog {
+export type ActivityLog = {
   id: string
   workspaceId: string
   userId?: string | null
@@ -41,7 +41,7 @@ export const ACTION_TYPES = [
   { value: "deactivated", label: "비활성화" },
 ] as const
 
-export interface CreateActivityLogRequest {
+export type CreateActivityLogRequest = {
   workspaceId: string
   userId?: string | null
   entityType: string
@@ -52,14 +52,14 @@ export interface CreateActivityLogRequest {
   userAgent?: string | null
 }
 
-export interface ActivityLogsResponse {
+export type ActivityLogsResponse = {
   data: ActivityLog[]
   total: number
   limit: number
   offset: number
 }
 
-export interface ActivityLogsParams {
+export type ActivityLogsParams = {
   page?: number
   limit?: number
   entityType?: string

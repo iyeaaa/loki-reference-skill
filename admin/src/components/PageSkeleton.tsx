@@ -18,17 +18,17 @@ export function PageSkeleton() {
 
   return (
     <motion.div
-      className="space-y-6"
-      variants={reducedMotion ? undefined : fadeVariants}
-      initial="hidden"
       animate="visible"
+      className="space-y-6"
+      initial="hidden"
+      variants={reducedMotion ? undefined : fadeVariants}
     >
       {/* 통계 카드 그리드 */}
       <motion.div
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
         variants={reducedMotion ? undefined : staggerContainerFastVariants}
       >
-        {[...Array(4)].map((_, i) => (
+        {[...new Array(4)].map((_, i) => (
           <motion.div key={i} variants={reducedMotion ? undefined : staggerItemVariants}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -36,7 +36,7 @@ export function PageSkeleton() {
                 <Skeleton className="h-4 w-4 rounded" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-8 w-20 mb-2" />
+                <Skeleton className="mb-2 h-8 w-20" />
                 <Skeleton className="h-3 w-32" />
               </CardContent>
             </Card>
@@ -48,12 +48,12 @@ export function PageSkeleton() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-40 mb-2" />
+            <Skeleton className="mb-2 h-6 w-40" />
             <Skeleton className="h-4 w-56" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
+            {[...new Array(3)].map((_, i) => (
+              <div className="flex items-center gap-3" key={i}>
                 <Skeleton className="h-12 w-12 rounded" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -66,12 +66,12 @@ export function PageSkeleton() {
 
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-40 mb-2" />
+            <Skeleton className="mb-2 h-6 w-40" />
             <Skeleton className="h-4 w-56" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
+            {[...new Array(3)].map((_, i) => (
+              <div className="flex items-center gap-3" key={i}>
                 <Skeleton className="h-12 w-12 rounded" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -94,10 +94,10 @@ export function TableSkeleton() {
 
   return (
     <motion.div
-      className="space-y-4"
-      variants={reducedMotion ? undefined : fadeVariants}
-      initial="hidden"
       animate="visible"
+      className="space-y-4"
+      initial="hidden"
+      variants={reducedMotion ? undefined : fadeVariants}
     >
       {/* 헤더 & 액션 */}
       <div className="flex items-center justify-between">
@@ -111,12 +111,12 @@ export function TableSkeleton() {
       {/* 테이블 */}
       <Card>
         <CardContent className="p-0">
-          <div className="p-4 border-b">
+          <div className="border-b p-4">
             <Skeleton className="h-10 w-full max-w-sm" />
           </div>
           <div className="divide-y">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="p-4 flex items-center gap-4">
+            {[...new Array(8)].map((_, i) => (
+              <div className="flex items-center gap-4 p-4" key={i}>
                 <Skeleton className="h-4 w-4 rounded" />
                 <Skeleton className="h-10 w-10 rounded-full" />
                 <div className="flex-1 space-y-2">
@@ -142,19 +142,19 @@ export function FormSkeleton() {
 
   return (
     <motion.div
-      className="space-y-6"
-      variants={reducedMotion ? undefined : fadeVariants}
-      initial="hidden"
       animate="visible"
+      className="space-y-6"
+      initial="hidden"
+      variants={reducedMotion ? undefined : fadeVariants}
     >
       <Card>
         <CardHeader>
-          <Skeleton className="h-7 w-56 mb-2" />
+          <Skeleton className="mb-2 h-7 w-56" />
           <Skeleton className="h-4 w-80" />
         </CardHeader>
         <CardContent className="space-y-6">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="space-y-2">
+          {[...new Array(5)].map((_, i) => (
+            <div className="space-y-2" key={i}>
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-10 w-full" />
             </div>

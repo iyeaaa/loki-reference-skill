@@ -79,25 +79,19 @@ export const jobLogsApi = {
   /**
    * 사용 가능한 Queue 이름 목록 조회
    */
-  getQueues: (): Promise<string[]> => {
-    return apiFetch<{ data: string[] }>("/api/v1/admin/job-logs/queues").then(
-      (response) => response.data,
-    )
-  },
+  getQueues: (): Promise<string[]> =>
+    apiFetch<{ data: string[] }>("/api/v1/admin/job-logs/queues").then((response) => response.data),
 
   /**
    * 사용 가능한 에러 코드 목록 조회
    */
-  getErrorCodes: (): Promise<string[]> => {
-    return apiFetch<{ data: string[] }>("/api/v1/admin/job-logs/error-codes").then(
+  getErrorCodes: (): Promise<string[]> =>
+    apiFetch<{ data: string[] }>("/api/v1/admin/job-logs/error-codes").then(
       (response) => response.data,
-    )
-  },
+    ),
 
   /**
    * Job 로그 상세 조회
    */
-  get: (id: string): Promise<JobLog> => {
-    return apiFetch<JobLog>(`/api/v1/admin/job-logs/${id}`)
-  },
+  get: (id: string): Promise<JobLog> => apiFetch<JobLog>(`/api/v1/admin/job-logs/${id}`),
 }

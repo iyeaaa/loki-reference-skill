@@ -21,7 +21,7 @@ export type PlanInterval = "day" | "week" | "month" | "year"
 // Entities
 // ============================================================================
 
-export interface BillingCustomer {
+export type BillingCustomer = {
   id: string
   userId: string
   externalCustomerId: string
@@ -40,7 +40,7 @@ export interface BillingCustomer {
   activeSubscriptionsCount?: number
 }
 
-export interface BillingProduct {
+export type BillingProduct = {
   id: string
   externalProductId: string | null
   name: string
@@ -58,7 +58,7 @@ export interface BillingProduct {
   subscriptionsCount?: number
 }
 
-export interface BillingPlan {
+export type BillingPlan = {
   id: string
   productId: string
   externalPlanId: string | null
@@ -81,7 +81,7 @@ export interface BillingPlan {
   subscriptionsCount?: number
 }
 
-export interface Subscription {
+export type Subscription = {
   id: string
   workspaceId: string
   customerId: string
@@ -110,7 +110,7 @@ export interface Subscription {
   plan?: BillingPlan
 }
 
-export interface SubscriptionHistory {
+export type SubscriptionHistory = {
   id: string
   subscriptionId: string
   previousPlanId: string | null
@@ -132,7 +132,7 @@ export interface SubscriptionHistory {
 // API Params
 // ============================================================================
 
-export interface BillingProductsParams {
+export type BillingProductsParams = {
   page?: number
   limit?: number
   tier?: SubscriptionTier | "all"
@@ -140,7 +140,7 @@ export interface BillingProductsParams {
   search?: string
 }
 
-export interface BillingPlansParams {
+export type BillingPlansParams = {
   page?: number
   limit?: number
   productId?: string
@@ -149,7 +149,7 @@ export interface BillingPlansParams {
   search?: string
 }
 
-export interface SubscriptionsParams {
+export type SubscriptionsParams = {
   page?: number
   limit?: number
   workspaceId?: string
@@ -160,7 +160,7 @@ export interface SubscriptionsParams {
   search?: string
 }
 
-export interface BillingCustomersParams {
+export type BillingCustomersParams = {
   page?: number
   limit?: number
   search?: string
@@ -170,7 +170,7 @@ export interface BillingCustomersParams {
 // API Requests
 // ============================================================================
 
-export interface CreateBillingProductRequest {
+export type CreateBillingProductRequest = {
   name: string
   description?: string
   tier: SubscriptionTier
@@ -180,7 +180,7 @@ export interface CreateBillingProductRequest {
   externalProductId?: string
 }
 
-export interface UpdateBillingProductRequest {
+export type UpdateBillingProductRequest = {
   name?: string
   description?: string
   tier?: SubscriptionTier
@@ -190,7 +190,7 @@ export interface UpdateBillingProductRequest {
   externalProductId?: string
 }
 
-export interface CreateBillingPlanRequest {
+export type CreateBillingPlanRequest = {
   productId: string
   name: string
   description?: string
@@ -206,7 +206,7 @@ export interface CreateBillingPlanRequest {
   externalPlanId?: string
 }
 
-export interface UpdateBillingPlanRequest {
+export type UpdateBillingPlanRequest = {
   name?: string
   description?: string
   currency?: string
@@ -221,7 +221,7 @@ export interface UpdateBillingPlanRequest {
   externalPlanId?: string
 }
 
-export interface CreateSubscriptionRequest {
+export type CreateSubscriptionRequest = {
   workspaceId: string
   customerId: string
   planId: string
@@ -230,7 +230,7 @@ export interface CreateSubscriptionRequest {
   trialDays?: number
 }
 
-export interface UpdateSubscriptionRequest {
+export type UpdateSubscriptionRequest = {
   planId?: string
   status?: SubscriptionStatus
   cancelAtPeriodEnd?: boolean
@@ -242,7 +242,7 @@ export interface UpdateSubscriptionRequest {
 // API Responses
 // ============================================================================
 
-export interface PaginatedResponse<T> {
+export type PaginatedResponse<T> = {
   data: T[]
   total: number
   page: number

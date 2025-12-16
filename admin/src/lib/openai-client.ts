@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@/lib/api/client"
 
-export interface Lead {
+export type Lead = {
   id: string
   company: string
   description?: string
@@ -93,7 +93,9 @@ export async function generateEmailDraftsForLeads(
     const lead = leads[i]
     const res = await generateEmailDraftForLead(lead)
     results.push(res)
-    if (onProgress) onProgress({ index: i + 1, total: leads.length, leadId: lead.id })
+    if (onProgress) {
+      onProgress({ index: i + 1, total: leads.length, leadId: lead.id })
+    }
     // small delay to avoid hammering the API
     await new Promise((r) => setTimeout(r, 150))
   }

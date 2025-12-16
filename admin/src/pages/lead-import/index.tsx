@@ -124,7 +124,7 @@ export default function LeadImportPage() {
           const workbook = XLSX.read(arrayBuffer, {
             type: "buffer",
             raw: false, // 문자열로 변환
-            codepage: 65001, // UTF-8 코드페이지
+            codepage: 65_001, // UTF-8 코드페이지
           })
           const firstSheetName = workbook.SheetNames[0]
           const sheet = workbook.Sheets[firstSheetName]
@@ -186,16 +186,16 @@ export default function LeadImportPage() {
     async (file: File, sheetName: string) => {
       const validation = await validateExcelData(file, sheetName)
 
-      if (!validation.valid) {
-        setValidationError(validation.error || "유효성 검증 실패")
-        toast.error(validation.error || "유효성 검증 실패")
-      } else {
+      if (validation.valid) {
         setValidationError(null)
         if (validation.warning) {
           toast.error(validation.warning, { duration: 5000, icon: "⚠️" })
         } else {
           toast.success("유효성 검증 완료")
         }
+      } else {
+        setValidationError(validation.error || "유효성 검증 실패")
+        toast.error(validation.error || "유효성 검증 실패")
       }
     },
     [validateExcelData],
@@ -226,7 +226,9 @@ export default function LeadImportPage() {
   // 파일 선택 핸들러
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
 
     // 파일 크기 체크 (50MB)
     if (file.size > 50 * 1024 * 1024) {
@@ -236,7 +238,7 @@ export default function LeadImportPage() {
 
     // 파일 확장자 체크
     const fileName = file.name.toLowerCase()
-    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+    if (!(fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv"))) {
       toast.error("Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다")
       return
     }
@@ -250,16 +252,16 @@ export default function LeadImportPage() {
     // CSV 파일인 경우 자동으로 유효성 검증 수행
     if (fileName.endsWith(".csv")) {
       const validation = await validateExcelData(file, "")
-      if (!validation.valid) {
-        setValidationError(validation.error || "유효성 검증 실패")
-        toast.error(validation.error || "유효성 검증 실패")
-      } else {
+      if (validation.valid) {
         setValidationError(null)
         if (validation.warning) {
           toast.error(validation.warning, { duration: 5000, icon: "⚠️" })
         } else {
           toast.success("유효성 검증 완료")
         }
+      } else {
+        setValidationError(validation.error || "유효성 검증 실패")
+        toast.error(validation.error || "유효성 검증 실패")
       }
     }
   }
@@ -275,7 +277,9 @@ export default function LeadImportPage() {
     setSelectedSheet(sheetName)
     setValidationError(null)
 
-    if (!selectedFile) return
+    if (!selectedFile) {
+      return
+    }
 
     // 유효성 검증 수행
     await validateAndSetSheet(selectedFile, sheetName)
@@ -339,7 +343,7 @@ export default function LeadImportPage() {
 
     // CSV 파일이 아닌 경우에만 시트 선택 확인
     const isCSV = selectedFile.name.toLowerCase().endsWith(".csv")
-    if (!isCSV && !selectedSheet) {
+    if (!(isCSV || selectedSheet)) {
       toast.error("시트를 선택해주세요")
       return
     }
@@ -383,7 +387,9 @@ export default function LeadImportPage() {
     setValidationError(null)
     // 파일 input 초기화
     const fileInput = document.getElementById(fileUploadId) as HTMLInputElement
-    if (fileInput) fileInput.value = ""
+    if (fileInput) {
+      fileInput.value = ""
+    }
   }
 
   // 진행률 계산
@@ -395,10 +401,10 @@ export default function LeadImportPage() {
   const isImporting = uploadLeadsMutation.isPending
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">리드 데이터 임포트</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="font-bold text-3xl tracking-tight">리드 데이터 임포트</h1>
+        <p className="mt-2 text-muted-foreground">
           Excel 또는 CSV 파일을 업로드하여 리드 데이터를 일괄 임포트합니다. 중복된 website_url은
           자동으로 스킵됩니다.
         </p>
@@ -415,9 +421,9 @@ export default function LeadImportPage() {
           <div className="space-y-2">
             <Label htmlFor={workspaceSelectId}>워크스페이스 *</Label>
             <Select
-              value={selectedWorkspace}
-              onValueChange={handleWorkspaceChange}
               disabled={isImporting}
+              onValueChange={handleWorkspaceChange}
+              value={selectedWorkspace}
             >
               <SelectTrigger id={workspaceSelectId}>
                 <SelectValue placeholder="워크스페이스 선택" />
@@ -438,19 +444,19 @@ export default function LeadImportPage() {
               <div className="flex items-center justify-between">
                 <Label htmlFor={customerGroupSelectId}>고객 그룹 (선택사항)</Label>
                 <Button
+                  disabled={isImporting}
+                  onClick={() => setIsCreateGroupDialogOpen(true)}
+                  size="sm"
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={() => setIsCreateGroupDialogOpen(true)}
-                  disabled={isImporting}
                 >
-                  <Plus className="h-4 w-4 mr-1" />새 그룹 생성
+                  <Plus className="mr-1 h-4 w-4" />새 그룹 생성
                 </Button>
               </div>
               <Select
-                value={selectedCustomerGroup}
-                onValueChange={setSelectedCustomerGroup}
                 disabled={isImporting}
+                onValueChange={setSelectedCustomerGroup}
+                value={selectedCustomerGroup}
               >
                 <SelectTrigger id={customerGroupSelectId}>
                   <SelectValue placeholder="고객 그룹 선택 (선택하지 않으면 그룹에 추가되지 않음)" />
@@ -466,7 +472,7 @@ export default function LeadImportPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 선택한 고객 그룹에 임포트된 모든 리드가 자동으로 추가됩니다
               </p>
             </div>
@@ -476,14 +482,14 @@ export default function LeadImportPage() {
           <div className="space-y-2">
             <Label htmlFor={fileUploadId}>Excel 또는 CSV 파일 *</Label>
             <Input
-              id={fileUploadId}
-              type="file"
               accept=".xlsx,.xls,.csv"
-              onChange={handleFileSelect}
               disabled={isImporting}
+              id={fileUploadId}
+              onChange={handleFileSelect}
+              type="file"
             />
             {selectedFile && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <FileUp className="h-4 w-4" />
                 <span>
                   {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
@@ -500,9 +506,9 @@ export default function LeadImportPage() {
               <div className="space-y-2">
                 <Label htmlFor={sheetSelectId}>시트 선택 *</Label>
                 <Select
-                  value={selectedSheet}
-                  onValueChange={handleSheetChange}
                   disabled={isImporting || isLoadingSheets}
+                  onValueChange={handleSheetChange}
+                  value={selectedSheet}
                 >
                   <SelectTrigger id={sheetSelectId}>
                     <SelectValue placeholder="시트 선택" />
@@ -515,7 +521,7 @@ export default function LeadImportPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   시트 선택 시 자동으로 유효성 검증이 수행됩니다
                 </p>
               </div>
@@ -531,7 +537,7 @@ export default function LeadImportPage() {
           )}
 
           {isLoadingSheets && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>시트 정보를 불러오는 중...</span>
             </div>
@@ -540,15 +546,17 @@ export default function LeadImportPage() {
           {/* 버튼 */}
           <div className="flex gap-2 pt-4">
             <Button
-              onClick={handleImport}
+              className="flex-1"
               disabled={
-                !selectedWorkspace ||
-                !selectedFile ||
-                (!selectedFile?.name.toLowerCase().endsWith(".csv") && !selectedSheet) ||
+                !(
+                  selectedWorkspace &&
+                  selectedFile &&
+                  (selectedFile?.name.toLowerCase().endsWith(".csv") || selectedSheet)
+                ) ||
                 isImporting ||
                 !!validationError
               }
-              className="flex-1"
+              onClick={handleImport}
             >
               {isImporting ? (
                 <>
@@ -562,12 +570,12 @@ export default function LeadImportPage() {
                 </>
               )}
             </Button>
-            <Button variant="outline" onClick={handleReset} disabled={isImporting}>
+            <Button disabled={isImporting} onClick={handleReset} variant="outline">
               초기화
             </Button>
           </div>
           {validationError && (
-            <p className="text-xs text-destructive">유효성 검증을 통과해야 임포트할 수 있습니다</p>
+            <p className="text-destructive text-xs">유효성 검증을 통과해야 임포트할 수 있습니다</p>
           )}
         </CardContent>
       </Card>
@@ -591,12 +599,12 @@ export default function LeadImportPage() {
                   {progressPercentage}%)
                 </span>
               </div>
-              <Progress value={progressPercentage} className="h-2" />
+              <Progress className="h-2" value={progressPercentage} />
             </div>
 
             {/* 현재 처리 중인 항목 */}
             {importProgress.type === "progress" && importProgress.currentCompanyName && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>
                   처리 중: {importProgress.currentCompanyName} (Row {importProgress.currentRow})
@@ -609,23 +617,23 @@ export default function LeadImportPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">성공</span>
+                  <span className="font-medium text-sm">성공</span>
                 </div>
-                <div className="text-2xl font-bold">{importProgress.success || 0}</div>
+                <div className="font-bold text-2xl">{importProgress.success || 0}</div>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm font-medium">스킵</span>
+                  <span className="font-medium text-sm">스킵</span>
                 </div>
-                <div className="text-2xl font-bold">{importProgress.skipped || 0}</div>
+                <div className="font-bold text-2xl">{importProgress.skipped || 0}</div>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <XCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium">실패</span>
+                  <span className="font-medium text-sm">실패</span>
                 </div>
-                <div className="text-2xl font-bold">{importProgress.failed || 0}</div>
+                <div className="font-bold text-2xl">{importProgress.failed || 0}</div>
               </div>
             </div>
           </CardContent>
@@ -641,17 +649,17 @@ export default function LeadImportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 요약 */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="default" className="text-base px-3 py-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="px-3 py-1 text-base" variant="default">
                 <CheckCircle2 className="mr-1 h-4 w-4" />
                 성공: {importResult.success}건
               </Badge>
-              <Badge variant="secondary" className="text-base px-3 py-1">
+              <Badge className="px-3 py-1 text-base" variant="secondary">
                 <AlertCircle className="mr-1 h-4 w-4" />
                 스킵: {importResult.skipped}건
               </Badge>
               {importResult.failed > 0 && (
-                <Badge variant="destructive" className="text-base px-3 py-1">
+                <Badge className="px-3 py-1 text-base" variant="destructive">
                   <XCircle className="mr-1 h-4 w-4" />
                   실패: {importResult.failed}건
                 </Badge>
@@ -664,9 +672,9 @@ export default function LeadImportPage() {
                 <AlertCircle className="h-4 w-4 text-yellow-600" />
                 <AlertTitle>스킵된 항목 ({importResult.skippedLeads.length}건)</AlertTitle>
                 <AlertDescription>
-                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                  <div className="mt-2 max-h-64 space-y-2 overflow-y-auto">
                     {importResult.skippedLeads.map((skipped, index) => (
-                      <div key={index} className="text-sm border-l-2 border-yellow-400 pl-2">
+                      <div className="border-yellow-400 border-l-2 pl-2 text-sm" key={index}>
                         <div className="font-medium">
                           Row {skipped.rowNumber}: {skipped.companyName || "N/A"}
                         </div>
@@ -685,9 +693,9 @@ export default function LeadImportPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>실패한 항목 ({importResult.errors.length}건)</AlertTitle>
                 <AlertDescription>
-                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                  <div className="mt-2 max-h-64 space-y-2 overflow-y-auto">
                     {importResult.errors.map((error, index) => (
-                      <div key={index} className="text-sm border-l-2 border-red-400 pl-2">
+                      <div className="border-red-400 border-l-2 pl-2 text-sm" key={index}>
                         <div className="font-medium">
                           Row {error.row}: {error.companyName || "N/A"}
                         </div>
@@ -703,7 +711,7 @@ export default function LeadImportPage() {
       )}
 
       {/* 고객 그룹 생성 다이얼로그 */}
-      <Dialog open={isCreateGroupDialogOpen} onOpenChange={setIsCreateGroupDialogOpen}>
+      <Dialog onOpenChange={setIsCreateGroupDialogOpen} open={isCreateGroupDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>새 고객 그룹 생성</DialogTitle>
@@ -717,8 +725,6 @@ export default function LeadImportPage() {
               <Label htmlFor={groupNameId}>그룹명 *</Label>
               <Input
                 id={groupNameId}
-                placeholder="고객 그룹명을 입력하세요"
-                value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -726,6 +732,8 @@ export default function LeadImportPage() {
                     handleCreateGroup()
                   }
                 }}
+                placeholder="고객 그룹명을 입력하세요"
+                value={newGroupName}
               />
             </div>
 
@@ -733,27 +741,27 @@ export default function LeadImportPage() {
               <Label htmlFor={groupDescriptionId}>설명 (선택사항)</Label>
               <Textarea
                 id={groupDescriptionId}
-                placeholder="그룹 설명을 입력하세요"
-                value={newGroupDescription}
                 onChange={(e) => setNewGroupDescription(e.target.value)}
+                placeholder="그룹 설명을 입력하세요"
                 rows={3}
+                value={newGroupDescription}
               />
             </div>
           </div>
 
           <DialogFooter>
             <Button
+              disabled={createCustomerGroupMutation.isPending}
+              onClick={handleCancelCreateGroup}
               type="button"
               variant="outline"
-              onClick={handleCancelCreateGroup}
-              disabled={createCustomerGroupMutation.isPending}
             >
               취소
             </Button>
             <Button
-              type="button"
-              onClick={handleCreateGroup}
               disabled={createCustomerGroupMutation.isPending || !newGroupName.trim()}
+              onClick={handleCreateGroup}
+              type="button"
             >
               {createCustomerGroupMutation.isPending ? (
                 <>

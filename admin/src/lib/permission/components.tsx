@@ -12,7 +12,7 @@ import { useHasPermission, useIsAdmin } from "./hooks"
  * 권한 기반 컴포넌트 표시
  * 해당 권한이 있을 때만 children을 렌더링
  */
-interface PermissionGateProps {
+type PermissionGateProps = {
   resource: IamResource
   action: IamAction
   children: ReactNode
@@ -38,7 +38,7 @@ export function PermissionGate({
  * Admin 전용 컴포넌트
  * Admin 사용자에게만 children을 렌더링
  */
-interface AdminOnlyProps {
+type AdminOnlyProps = {
   children: ReactNode
   fallback?: ReactNode
 }
@@ -58,17 +58,17 @@ export function AdminOnly({ children, fallback = null }: AdminOnlyProps) {
  */
 export function NoPermissionPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">접근 권한 없음</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="mb-4 font-bold text-4xl text-gray-900">접근 권한 없음</h1>
+        <p className="mb-8 text-gray-600">
           이 페이지에 접근할 권한이 없습니다.
           <br />
           관리자에게 문의하세요.
         </p>
         <a
+          className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 font-medium text-sm text-white shadow-sm hover:bg-indigo-700"
           href="/dashboard"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
         >
           대시보드로 돌아가기
         </a>

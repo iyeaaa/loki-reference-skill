@@ -292,8 +292,12 @@ export function ChatRoom() {
 
   // 새 고객그룹으로 추가하기 핸들러
   const handleCreateGroup = useCallback(async () => {
-    if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
-    if (customers.length === 0) return
+    if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+      return
+    }
+    if (customers.length === 0) {
+      return
+    }
 
     // 그룹 이름 생성: 리드탐색_YYYYMMDDHHMMSS
     const now = new Date()
@@ -311,7 +315,7 @@ export function ChatRoom() {
         country: c.country || "",
         businessType: c.companyType || c.category || "",
         employeeCount: c.employee || "",
-        foundedYear: c.foundedYear ? parseInt(c.foundedYear, 10) : undefined,
+        foundedYear: c.foundedYear ? Number.parseInt(c.foundedYear, 10) : undefined,
         city: c.city || "",
         state: c.state || "",
         address: c.address || "",
@@ -342,7 +346,9 @@ export function ChatRoom() {
   const cleanupIncompleteMessagesRef = useRef(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
   useEffect(() => {
-    if (cleanupIncompleteMessagesRef.current) return
+    if (cleanupIncompleteMessagesRef.current) {
+      return
+    }
     cleanupIncompleteMessagesRef.current = true
 
     // 스트리밍이 진행 중이 아닌데 빈 assistant 메시지가 있으면 제거
@@ -657,13 +663,13 @@ export function ChatRoom() {
         <p className="mb-4 leading-relaxed last:mb-0">{children}</p>
       ),
       h1: ({ children }: { children?: React.ReactNode }) => (
-        <h1 className="mb-4 mt-6 text-2xl font-bold first:mt-0">{children}</h1>
+        <h1 className="mt-6 mb-4 font-bold text-2xl first:mt-0">{children}</h1>
       ),
       h2: ({ children }: { children?: React.ReactNode }) => (
-        <h2 className="mb-3 mt-5 text-xl font-bold first:mt-0">{children}</h2>
+        <h2 className="mt-5 mb-3 font-bold text-xl first:mt-0">{children}</h2>
       ),
       h3: ({ children }: { children?: React.ReactNode }) => (
-        <h3 className="mb-2 mt-4 text-lg font-semibold first:mt-0">{children}</h3>
+        <h3 className="mt-4 mb-2 font-semibold text-lg first:mt-0">{children}</h3>
       ),
       ul: ({ children }: { children?: React.ReactNode }) => (
         <ul className="mb-4 ml-6 list-disc space-y-1">{children}</ul>
@@ -677,7 +683,7 @@ export function ChatRoom() {
       code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
         const isInline = !className
         return isInline ? (
-          <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">{children}</code>
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">{children}</code>
         ) : (
           <code className="font-mono text-sm">{children}</code>
         )
@@ -686,7 +692,7 @@ export function ChatRoom() {
         <pre className="mb-4 overflow-x-auto rounded-lg bg-muted p-3">{children}</pre>
       ),
       blockquote: ({ children }: { children?: React.ReactNode }) => (
-        <blockquote className="mb-4 border-l-4 border-border pl-4 italic text-muted-foreground">
+        <blockquote className="mb-4 border-border border-l-4 pl-4 text-muted-foreground italic">
           {children}
         </blockquote>
       ),
@@ -695,9 +701,9 @@ export function ChatRoom() {
       ) => (
         <a
           {...props}
-          target="_blank"
-          rel="noopener noreferrer"
           className="text-primary underline hover:text-primary/80"
+          rel="noopener noreferrer"
+          target="_blank"
         >
           {props.children}
         </a>
@@ -735,7 +741,9 @@ export function ChatRoom() {
   // 입력값 유효성 검사
   const isInputValid = useCallback((): boolean => {
     const trimmed = input.trim()
-    if (!trimmed) return false
+    if (!trimmed) {
+      return false
+    }
     if (searchMode === "website") {
       return isValidWebsiteUrl(trimmed)
     }
@@ -757,7 +765,9 @@ export function ChatRoom() {
   // 바이어 추천 선택 핸들러
   const handleRecommendationSelect = useCallback(
     async (rec: BuyerRecommendation) => {
-      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+        return
+      }
       if (!streamingState.sessionId) {
         console.error("[ChatRoom] No session ID for selection")
         return
@@ -822,7 +832,9 @@ export function ChatRoom() {
   // 확인 질문 답변 핸들러
   const handleClarificationSubmit = useCallback(
     (answers: Record<string, string>) => {
-      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+        return
+      }
       if (!streamingState.sessionId) {
         console.error("[ChatRoom] No session ID for clarification")
         return
@@ -874,7 +886,9 @@ export function ChatRoom() {
   // 필터 검색 핸들러 (드롭다운 폼에서 호출)
   const handleFilterSearch = useCallback(
     (query: string) => {
-      if (!query || isSearching) return
+      if (!query || isSearching) {
+        return
+      }
 
       const now = Date.now()
       const userMessage: ChatMessage = {
@@ -1057,25 +1071,25 @@ export function ChatRoom() {
           }
         `}
       </style>
-      <div className="flex flex-col h-full min-h-0 bg-background border-r border-border">
+      <div className="flex h-full min-h-0 flex-col border-border border-r bg-background">
         {/* 메시지 영역 - flex-1 + min-h-0으로 스크롤 영역 확보 */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {/* 메시지가 없고 검색 중이 아닐 때 → 템플릿 카드 표시 */}
           {messages.length === 0 && !isSearching ? (
-            <div className="min-h-full flex items-center justify-center px-4 py-8">
+            <div className="flex min-h-full items-center justify-center px-4 py-8">
               {/* 전체 콘텐츠를 하나로 묶어서 중앙 정렬 */}
               <div className="w-full space-y-6" style={{ maxWidth: "670px" }}>
                 {/* 로고 */}
-                <div className="flex justify-center items-center gap-2">
-                  <img src={TextRinda} alt="RINDA" className="h-10 w-auto" />
-                  <img src={TextPlus} alt="Plus" className="h-10 w-auto" />
+                <div className="flex items-center justify-center gap-2">
+                  <img alt="RINDA" className="h-10 w-auto" src={TextRinda} />
+                  <img alt="Plus" className="h-10 w-auto" src={TextPlus} />
                 </div>
 
                 {/* 카피라이팅 - 모드에 따라 다른 문구 */}
-                <div className="text-center space-y-2">
+                <div className="space-y-2 text-center">
                   {searchMode === "website" ? (
                     <>
-                      <p className="text-lg font-medium text-foreground/90">
+                      <p className="font-medium text-foreground/90 text-lg">
                         우리 회사 웹사이트 주소만 입력하세요
                       </p>
                       <p className="text-base text-muted-foreground leading-relaxed">
@@ -1084,7 +1098,7 @@ export function ChatRoom() {
                     </>
                   ) : (
                     <>
-                      <p className="text-lg font-medium text-foreground/90">
+                      <p className="font-medium text-foreground/90 text-lg">
                         원하는 조건을 선택하세요
                       </p>
                       <p className="text-base text-muted-foreground leading-relaxed">
@@ -1096,27 +1110,27 @@ export function ChatRoom() {
 
                 {/* 모드 전환 탭 */}
                 <div className="flex justify-center">
-                  <div className="inline-flex rounded-lg border border-border p-1 bg-muted/30">
+                  <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
                     <button
-                      type="button"
-                      onClick={() => setSearchMode("website")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
                         searchMode === "website"
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      onClick={() => setSearchMode("website")}
+                      type="button"
                     >
                       <Globe className="h-4 w-4" />
                       웹사이트로 시작
                     </button>
                     <button
-                      type="button"
-                      onClick={() => setSearchMode("detailed")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
                         searchMode === "detailed"
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      onClick={() => setSearchMode("detailed")}
+                      type="button"
                     >
                       <SlidersHorizontal className="h-4 w-4" />
                       조건으로 찾기
@@ -1128,11 +1142,11 @@ export function ChatRoom() {
                 <div className="w-full">
                   {searchMode === "website" ? (
                     // 웹사이트 모드: 기존 텍스트 입력
-                    <form onSubmit={handleSubmit} className="space-y-2">
-                      <div className="rounded-2xl bg-background border overflow-hidden">
+                    <form className="space-y-2" onSubmit={handleSubmit}>
+                      <div className="overflow-hidden rounded-2xl border bg-background">
                         <textarea
-                          ref={inputRef}
-                          value={input}
+                          className="min-h-[72px] w-full resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={isSearching}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
@@ -1141,16 +1155,16 @@ export function ChatRoom() {
                             }
                           }}
                           placeholder="https://www.example.com"
-                          disabled={isSearching}
+                          ref={inputRef}
                           rows={3}
-                          className="w-full min-h-[72px] resize-none bg-transparent text-base px-4 pt-4 pb-2 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          value={input}
                         />
                         <div className="flex items-center justify-end px-4 pb-3">
                           <Button
-                            type="submit"
-                            size="sm"
-                            disabled={isSearching || !isInputValid()}
                             className="gap-2"
+                            disabled={isSearching || !isInputValid()}
+                            size="sm"
+                            type="submit"
                           >
                             {isSearching ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1164,9 +1178,9 @@ export function ChatRoom() {
                         </div>
                       </div>
                       {/* 유효성 에러 메시지 */}
-                      <div className="min-h-[22px] mt-1.5 px-1">
+                      <div className="mt-1.5 min-h-[22px] px-1">
                         {input.trim() && !isValidWebsiteUrl(input) && (
-                          <div className="text-sm text-red-500 dark:text-red-400">
+                          <div className="text-red-500 text-sm dark:text-red-400">
                             웹사이트 주소를 확인해주세요 (예: https://www.example.com)
                           </div>
                         )}
@@ -1174,11 +1188,11 @@ export function ChatRoom() {
                     </form>
                   ) : (
                     // 조건 검색 모드: 드롭다운 폼
-                    <div className="rounded-2xl bg-background border p-5">
+                    <div className="rounded-2xl border bg-background p-5">
                       <FilterSearchForm
-                        onSubmit={handleFilterSearch}
-                        isLoading={isSearching}
                         disabled={isSearching}
+                        isLoading={isSearching}
+                        onSubmit={handleFilterSearch}
                       />
                     </div>
                   )}
@@ -1186,34 +1200,34 @@ export function ChatRoom() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col h-full">
+            <div className="flex h-full flex-col">
               {/* 새 검색 버튼 헤더 */}
-              <div className="flex-shrink-0 px-4 pt-3 pb-2 border-b border-border/50 bg-background/95 backdrop-blur-sm">
+              <div className="flex-shrink-0 border-border/50 border-b bg-background/95 px-4 pt-3 pb-2 backdrop-blur-sm">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
                   onClick={handleNewSearch}
-                  className="gap-1.5 text-xs h-7"
+                  size="sm"
+                  variant="outline"
                 >
                   <ArrowRight className="h-3 w-3 rotate-180" />새 검색
                 </Button>
               </div>
               <ScrollArea
-                className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll"
+                className="[&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll min-h-0 flex-1"
                 ref={scrollRef}
               >
-                <div className="p-4 pt-4 space-y-4">
+                <div className="space-y-4 p-4 pt-4">
                   {/* 검색 중이고 메시지가 없을 때만 상단에 progress 표시 (메시지가 있으면 메시지 내부에서 표시) */}
                   {isSearching && messages.length === 0 && (
                     <div className="flex justify-start">
                       <div className="w-full space-y-4">
                         <LeadDiscoveryProgress
-                          status={streamingState.status}
+                          analyzedPages={streamingState.analyzedPages}
+                          className="max-w-2xl"
+                          customerAnalysisSummary={streamingState.customerAnalysisSummary}
                           message={streamingState.message}
                           mode={streamingState.mode}
-                          analyzedPages={streamingState.analyzedPages}
-                          customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                          className="max-w-2xl"
+                          status={streamingState.status}
                         />
                       </div>
                     </div>
@@ -1238,15 +1252,15 @@ export function ChatRoom() {
                     })
                     .map((message) => (
                       <div
-                        key={message.id}
                         className={cn(
                           "flex",
                           message.role === "user" ? "justify-end" : "justify-start",
                         )}
+                        key={message.id}
                       >
                         {message.role === "user" ? (
-                          <div className="max-w-[85%] rounded-lg px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-foreground">
-                            <p className="text-base whitespace-pre-wrap">{message.content}</p>
+                          <div className="max-w-[85%] rounded-lg bg-zinc-100 px-4 py-2.5 text-foreground dark:bg-zinc-800">
+                            <p className="whitespace-pre-wrap text-base">{message.content}</p>
                           </div>
                         ) : (
                           <div className="w-full space-y-4">
@@ -1259,26 +1273,26 @@ export function ChatRoom() {
                                   streamingState.status !== "waiting_selection" &&
                                   !streamingState.selectedRecommendationId && (
                                     <LeadDiscoveryProgress
-                                      status={streamingState.status}
-                                      message={streamingState.message}
-                                      mode={streamingState.mode}
                                       analyzedPages={streamingState.analyzedPages}
+                                      className="max-w-2xl"
                                       customerAnalysisSummary={
                                         streamingState.customerAnalysisSummary
                                       }
-                                      className="max-w-2xl"
+                                      message={streamingState.message}
+                                      mode={streamingState.mode}
+                                      status={streamingState.status}
                                     />
                                   )}
 
                                 {/* 선택 후 검색 중 로딩 UI */}
                                 {isSearching && streamingState.selectedRecommendationId && (
                                   <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
                                     className="flex items-center gap-3 py-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    transition={{ duration: 0.3 }}
                                   >
-                                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
                                     <span className="text-base text-muted-foreground">
                                       선택하신 타겟에 맞는 바이어를 찾고 있어요
                                     </span>
@@ -1289,7 +1303,7 @@ export function ChatRoom() {
 
                             {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
                             {message.content && (
-                              <div className="prose prose-sm max-w-none dark:prose-invert text-base">
+                              <div className="prose prose-sm dark:prose-invert max-w-none text-base">
                                 <ReactMarkdown components={markdownComponents}>
                                   {message.content}
                                 </ReactMarkdown>
@@ -1302,16 +1316,16 @@ export function ChatRoom() {
                                 <div className="flex flex-wrap gap-2">
                                   {workspaces.map((ws) => (
                                     <Button
+                                      className="gap-1.5"
                                       key={ws.id}
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
                                       onClick={(e) => {
                                         e.preventDefault()
                                         e.stopPropagation()
                                         handleSelectWorkspace(ws.id, ws.name)
                                       }}
-                                      className="gap-1.5"
+                                      size="sm"
+                                      type="button"
+                                      variant="outline"
                                     >
                                       <Globe className="h-3.5 w-3.5" />
                                       {ws.name}
@@ -1323,20 +1337,20 @@ export function ChatRoom() {
 
                             {/* 워크스페이스가 없는 경우 생성 안내 */}
                             {message.type === "workspace_select" && workspaces.length === 0 && (
-                              <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border/50">
-                                <p className="text-sm text-muted-foreground mb-3">
+                              <div className="mt-4 rounded-lg border border-border/50 bg-muted/50 p-4">
+                                <p className="mb-3 text-muted-foreground text-sm">
                                   아직 워크스페이스가 없습니다. 워크스페이스를 먼저 생성해주세요.
                                 </p>
                                 <Button
-                                  type="button"
-                                  variant="default"
-                                  size="sm"
+                                  className="gap-1.5"
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
                                     navigate("/settings/workspaces")
                                   }}
-                                  className="gap-1.5"
+                                  size="sm"
+                                  type="button"
+                                  variant="default"
                                 >
                                   <FolderPlus className="h-3.5 w-3.5" />
                                   워크스페이스 생성하기
@@ -1353,16 +1367,10 @@ export function ChatRoom() {
                                   (isWaitingSelection ||
                                     streamingState.selectedRecommendationId))) && (
                                 <BuyerRecommendationCards
-                                  recommendations={streamingState.recommendations}
-                                  onSelect={handleRecommendationSelect}
-                                  disabled={
-                                    isSearching || !!streamingState.selectedRecommendationId
-                                  }
-                                  selectedId={streamingState.selectedRecommendationId}
                                   analysisSummary={streamingState.analysisSummary}
                                   className="max-w-2xl"
-                                  isLoadingRecommendations={
-                                    streamingState.status === "recommending"
+                                  disabled={
+                                    isSearching || !!streamingState.selectedRecommendationId
                                   }
                                   isAnalysisComplete={
                                     isWaitingSelection ||
@@ -1373,6 +1381,12 @@ export function ChatRoom() {
                                     streamingState.status === "analyzing" ||
                                     streamingState.status === "recommending"
                                   }
+                                  isLoadingRecommendations={
+                                    streamingState.status === "recommending"
+                                  }
+                                  onSelect={handleRecommendationSelect}
+                                  recommendations={streamingState.recommendations}
+                                  selectedId={streamingState.selectedRecommendationId}
                                 />
                               )}
 
@@ -1382,10 +1396,10 @@ export function ChatRoom() {
                               streamingState.clarificationData && (
                                 <ClarificationCards
                                   clarificationData={streamingState.clarificationData}
-                                  onSubmit={handleClarificationSubmit}
+                                  className="max-w-2xl"
                                   disabled={isSearching}
                                   isSubmitting={clarifyMutation.isPending}
-                                  className="max-w-2xl"
+                                  onSubmit={handleClarificationSubmit}
                                 />
                               )}
 
@@ -1395,18 +1409,18 @@ export function ChatRoom() {
                               customers.length > 0 &&
                               !bulkEnrichmentState.isRunning && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
+                                  className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
                                   transition={{ duration: 0.3, delay: 0.5 }}
-                                  className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5"
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
                                       <Sparkles className="h-5 w-5 text-primary" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-medium text-foreground">프로필 고도화</p>
-                                      <p className="text-sm text-muted-foreground mt-1">
+                                      <p className="mt-1 text-muted-foreground text-sm">
                                         {
                                           customers.filter((c) => c.web_address && !c.verified)
                                             .length
@@ -1414,8 +1428,8 @@ export function ChatRoom() {
                                         개 리드의 상세 정보를 AI로 추출합니다
                                       </p>
                                       <Button
-                                        onClick={handleBulkEnrichment}
                                         className="mt-3 gap-2"
+                                        onClick={handleBulkEnrichment}
                                         size="sm"
                                       >
                                         <Sparkles className="h-4 w-4" />
@@ -1430,21 +1444,21 @@ export function ChatRoom() {
                             {message.id === streamingState.messageId &&
                               bulkEnrichmentState.isRunning && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5"
+                                  className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-medium text-foreground">
                                         프로필 고도화 진행 중
                                       </p>
                                       <div className="mt-2">
-                                        <div className="flex items-center justify-between text-sm mb-1">
-                                          <span className="text-muted-foreground truncate max-w-[200px]">
+                                        <div className="mb-1 flex items-center justify-between text-sm">
+                                          <span className="max-w-[200px] truncate text-muted-foreground">
                                             {bulkEnrichmentState.currentCompany || "준비 중..."}
                                           </span>
                                           <span className="font-medium text-primary">
@@ -1456,17 +1470,17 @@ export function ChatRoom() {
                                             %
                                           </span>
                                         </div>
-                                        <div className="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-primary/10">
                                           <motion.div
-                                            className="h-full bg-primary rounded-full"
-                                            initial={{ width: 0 }}
                                             animate={{
                                               width: `${(bulkEnrichmentState.completed / bulkEnrichmentState.total) * 100}%`,
                                             }}
+                                            className="h-full rounded-full bg-primary"
+                                            initial={{ width: 0 }}
                                             transition={{ duration: 0.3 }}
                                           />
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">
+                                        <p className="mt-1 text-muted-foreground text-xs">
                                           {bulkEnrichmentState.completed} /{" "}
                                           {bulkEnrichmentState.total} 완료
                                         </p>
@@ -1484,25 +1498,25 @@ export function ChatRoom() {
                               !createGroupState.isCreating &&
                               !createGroupState.groupId && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
+                                  className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
                                   transition={{ duration: 0.3, delay: 0.7 }}
-                                  className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5"
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
                                       <FolderPlus className="h-5 w-5 text-emerald-500" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-medium text-foreground">
                                         새 고객그룹으로 추가하기
                                       </p>
-                                      <p className="text-sm text-muted-foreground mt-1">
+                                      <p className="mt-1 text-muted-foreground text-sm">
                                         {customers.length}개 리드를 새 고객그룹으로 저장합니다
                                       </p>
                                       <Button
-                                        onClick={handleCreateGroup}
                                         className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700"
+                                        onClick={handleCreateGroup}
                                         size="sm"
                                       >
                                         <FolderPlus className="h-4 w-4" />
@@ -1517,19 +1531,19 @@ export function ChatRoom() {
                             {message.id === streamingState.messageId &&
                               createGroupState.isCreating && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5"
+                                  className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                      <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" />
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                                      <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-medium text-foreground">
                                         고객그룹 생성 중...
                                       </p>
-                                      <p className="text-sm text-muted-foreground mt-1">
+                                      <p className="mt-1 text-muted-foreground text-sm">
                                         {createGroupState.leadsCount}개 리드를 저장하고 있습니다
                                       </p>
                                     </div>
@@ -1541,24 +1555,22 @@ export function ChatRoom() {
                             {message.id === streamingState.messageId &&
                               createGroupState.groupId && (
                                 <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10"
+                                  className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
                                 >
                                   <div className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
                                       <Check className="h-5 w-5 text-emerald-500" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-medium text-foreground">
                                         고객그룹이 생성되었습니다!
                                       </p>
-                                      <p className="text-sm text-muted-foreground mt-1">
+                                      <p className="mt-1 text-muted-foreground text-sm">
                                         {customers.length}개 리드가 새 고객그룹에 추가되었습니다
                                       </p>
                                       <Button
-                                        variant="outline"
-                                        size="sm"
                                         className="mt-3 gap-2"
                                         onClick={() =>
                                           window.open(
@@ -1566,6 +1578,8 @@ export function ChatRoom() {
                                             "_blank",
                                           )
                                         }
+                                        size="sm"
+                                        variant="outline"
                                       >
                                         고객그룹 보기
                                         <ArrowRight className="h-3 w-3" />
@@ -1576,7 +1590,7 @@ export function ChatRoom() {
                               )}
 
                             {message.customersAdded && message.customersAdded.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-border/50">
+                              <div className="mt-2 border-border/50 border-t pt-2">
                                 <p className="text-sm opacity-70">
                                   새로 추가된 고객{" "}
                                   {message.customersAdded
@@ -1599,12 +1613,13 @@ export function ChatRoom() {
 
         {/* 입력 영역 - 하단 고정 (메시지가 있거나 검색 중일 때 표시) */}
         {(messages.length > 0 || isSearching) && (
-          <div className="shrink-0 p-3 border-t bg-background">
-            <form onSubmit={handleSubmit} className="space-y-2">
-              <div className="rounded-2xl bg-muted/50 border border-border/50 overflow-hidden">
+          <div className="shrink-0 border-t bg-background p-3">
+            <form className="space-y-2" onSubmit={handleSubmit}>
+              <div className="overflow-hidden rounded-2xl border border-border/50 bg-muted/50">
                 {/* 1행: Textarea */}
                 <textarea
-                  value={input}
+                  className="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 pt-3 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isSearching}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -1617,28 +1632,27 @@ export function ChatRoom() {
                       ? "https://www.example.com"
                       : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
                   }
-                  disabled={isSearching}
                   rows={3}
-                  className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  value={input}
                 />
 
                 {/* 2행: 버튼들 */}
-                <div className="flex items-center justify-between px-3 pb-3 pt-2">
+                <div className="flex items-center justify-between px-3 pt-2 pb-3">
                   {/* 좌측: 검색 모드 선택 드롭다운 */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
+                        className="h-8 gap-1.5 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
+                        size="sm"
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
                       >
                         {searchMode === "website" ? (
                           <Globe className="h-4 w-4" />
                         ) : (
                           <SlidersHorizontal className="h-4 w-4" />
                         )}
-                        <span className="text-xs font-medium">
+                        <span className="font-medium text-xs">
                           {searchMode === "website" ? "웹사이트" : "조건 검색"}
                         </span>
                         <ChevronDown className="h-3 w-3 opacity-50" />
@@ -1646,32 +1660,32 @@ export function ChatRoom() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-[260px]">
                       <DropdownMenuItem
+                        className="flex cursor-pointer flex-col items-start gap-1 py-3"
                         onClick={() => setSearchMode("website")}
-                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
                       >
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="flex w-full items-center gap-2">
                           <Globe className="h-4 w-4" />
                           <span className="font-medium">웹사이트로 시작하기</span>
                           {searchMode === "website" && (
-                            <Check className="h-4 w-4 ml-auto text-primary" />
+                            <Check className="ml-auto h-4 w-4 text-primary" />
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground pl-6">
+                        <span className="pl-6 text-muted-foreground text-xs">
                           우리 회사 웹사이트 주소만 있으면 돼요
                         </span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        className="flex cursor-pointer flex-col items-start gap-1 py-3"
                         onClick={() => setSearchMode("detailed")}
-                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
                       >
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="flex w-full items-center gap-2">
                           <SlidersHorizontal className="h-4 w-4" />
                           <span className="font-medium">원하는 조건으로 찾기</span>
                           {searchMode === "detailed" && (
-                            <Check className="h-4 w-4 ml-auto text-primary" />
+                            <Check className="ml-auto h-4 w-4 text-primary" />
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground pl-6">
+                        <span className="pl-6 text-muted-foreground text-xs">
                           업종, 지역, 규모 등을 직접 정해요
                         </span>
                       </DropdownMenuItem>
@@ -1680,10 +1694,10 @@ export function ChatRoom() {
 
                   {/* 우측: 제출 버튼 */}
                   <Button
-                    type="submit"
-                    size="icon"
-                    disabled={isSearching || !isInputValid()}
                     className="h-8 w-8 rounded-full"
+                    disabled={isSearching || !isInputValid()}
+                    size="icon"
+                    type="submit"
                   >
                     {isSearching ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1695,9 +1709,9 @@ export function ChatRoom() {
               </div>
 
               {/* 유효성 에러 메시지 - 공간 항상 확보 */}
-              <div className="min-h-[22px] mt-1.5 px-1">
+              <div className="mt-1.5 min-h-[22px] px-1">
                 {searchMode === "website" && input.trim() && !isValidWebsiteUrl(input) && (
-                  <div className="text-sm text-red-500 dark:text-red-400">
+                  <div className="text-red-500 text-sm dark:text-red-400">
                     웹사이트 주소를 확인해주세요 (예: https://www.example.com)
                   </div>
                 )}

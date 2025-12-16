@@ -9,7 +9,7 @@ import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
 import type { EmailTemplate, EmailTemplatesParams } from "@/lib/api/types/email-template"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface EmailTemplatesTableWithPaginationProps {
+type EmailTemplatesTableWithPaginationProps = {
   searchQuery: string
   selectedCategories: string[]
   selectedSharedStatuses: string[]
@@ -38,7 +38,7 @@ export function EmailTemplatesTableWithPagination({
   // Build params for API call
   const params: EmailTemplatesParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     category:
       selectedCategories.length === 1
         ? selectedCategories[0]
@@ -62,17 +62,17 @@ export function EmailTemplatesTableWithPagination({
   const total = templatesData?.total || 0
 
   const getCategoryBadge = (category: string | null | undefined) => {
-    if (!category) return <Badge variant="outline">{t("emailTemplates.table.uncategorized")}</Badge>
+    if (!category) {
+      return <Badge variant="outline">{t("emailTemplates.table.uncategorized")}</Badge>
+    }
     return <Badge variant="outline">{category}</Badge>
   }
 
-  const getSharedBadge = (isShared: boolean) => {
-    return (
-      <Badge variant={isShared ? "default" : "outline"}>
-        {isShared ? t("emailTemplates.filter.shared") : t("emailTemplates.filter.private")}
-      </Badge>
-    )
-  }
+  const getSharedBadge = (isShared: boolean) => (
+    <Badge variant={isShared ? "default" : "outline"}>
+      {isShared ? t("emailTemplates.filter.shared") : t("emailTemplates.filter.private")}
+    </Badge>
+  )
 
   const handleToggleAll = useCallback(() => {
     onToggleAll(templates.map((t) => t.id))
@@ -90,7 +90,7 @@ export function EmailTemplatesTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -100,7 +100,7 @@ export function EmailTemplatesTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -139,7 +139,7 @@ export function EmailTemplatesTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
@@ -148,105 +148,105 @@ export function EmailTemplatesTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "150px" }}
                 >
                   {t("emailTemplates.table.column.templateName")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   {t("emailTemplates.table.column.subject")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("emailTemplates.table.column.category")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("emailTemplates.table.column.sharedStatus")}
                 </th>
 
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("emailTemplates.table.column.createdAt")}
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("emailTemplates.table.column.updatedAt")}
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("emailTemplates.table.column.edit")}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {templates.map((template) => (
                 <tr
+                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                   key={template.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Checkbox
                       checked={selectedTemplates.includes(template.id)}
                       onCheckedChange={() => onToggleTemplate(template.id)}
                     />
                   </td>
                   <td
-                    className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    title={template.name}
+                    className="p-2 font-medium text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "200px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={template.name}
                   >
                     {template.name}
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={template.subject}
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "300px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={template.subject}
                   >
                     {template.subject}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
+                  <td className="whitespace-nowrap p-2 text-sm">
                     {getCategoryBadge(template.category)}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
+                  <td className="whitespace-nowrap p-2 text-sm">
                     {getSharedBadge(template.isShared)}
                   </td>
 
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(template.createdAt)}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(template.updatedAt)}
                   </td>
-                  <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Button
-                      variant="outline"
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       onClick={() => onEditTemplate(template)}
-                      className="text-xs h-8 px-3"
+                      size="sm"
+                      variant="outline"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -262,7 +262,7 @@ export function EmailTemplatesTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -278,22 +278,22 @@ export function EmailTemplatesTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             {t("emailTemplates.table.pagination.first")}
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             {t("emailTemplates.table.pagination.previous")}
@@ -302,12 +302,12 @@ export function EmailTemplatesTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -315,11 +315,11 @@ export function EmailTemplatesTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             {t("emailTemplates.table.pagination.next")}
             <ChevronRight className="h-4 w-4" />
@@ -327,11 +327,11 @@ export function EmailTemplatesTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             {t("emailTemplates.table.pagination.last")}
           </Button>
@@ -339,21 +339,21 @@ export function EmailTemplatesTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             {t("emailTemplates.table.pagination.page")}
           </span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </>

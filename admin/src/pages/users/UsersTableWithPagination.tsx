@@ -8,7 +8,7 @@ import { useUsers } from "@/lib/api/hooks/users"
 import type { User, UserRole, UsersParams } from "@/lib/api/types/user"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface UsersTableWithPaginationProps {
+type UsersTableWithPaginationProps = {
   searchQuery: string
   selectedRoles: string[]
   selectedStatuses: string[]
@@ -36,7 +36,7 @@ export function UsersTableWithPagination({
   // Build params for API call
   const params: UsersParams = {
     page: currentPage,
-    limit: limit,
+    limit,
     role:
       selectedRoles.length === 1
         ? (selectedRoles[0] as UserRole)
@@ -68,9 +68,7 @@ export function UsersTableWithPagination({
     }
   }
 
-  const getRoleBadgeVariant = () => {
-    return "outline" as const
-  }
+  const getRoleBadgeVariant = () => "outline" as const
 
   const handleToggleAll = useCallback(() => {
     onToggleAll(users.map((u) => u.id))
@@ -88,7 +86,7 @@ export function UsersTableWithPagination({
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = Number.parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
         setCurrentPage(page)
       } else {
@@ -98,7 +96,7 @@ export function UsersTableWithPagination({
   }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = Number.parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     } else {
@@ -137,7 +135,7 @@ export function UsersTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th
-                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
@@ -146,105 +144,105 @@ export function UsersTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "100px" }}
                 >
                   사용자명
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ minWidth: "200px" }}
                 >
                   이메일
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   역할
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   상태
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   최근로그인
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   생성일
                 </th>
                 <th
-                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   편집
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {users.map((user) => (
                 <tr
+                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                   key={user.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Checkbox
                       checked={selectedUsers.includes(user.id)}
                       onCheckedChange={() => onToggleUser(user.id)}
                     />
                   </td>
                   <td
-                    className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100"
-                    title={user.username}
+                    className="p-2 font-medium text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "200px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={user.username}
                   >
                     {user.username}
                   </td>
                   <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={user.email}
+                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
                     style={{
                       maxWidth: "300px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
+                    title={user.email}
                   >
                     {user.email}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
-                    <Badge variant={getRoleBadgeVariant()} className="text-xs">
+                  <td className="whitespace-nowrap p-2 text-sm">
+                    <Badge className="text-xs" variant={getRoleBadgeVariant()}>
                       {getRoleText(user.userRole)}
                     </Badge>
                   </td>
-                  <td className="p-2 whitespace-nowrap text-sm">
+                  <td className="whitespace-nowrap p-2 text-sm">
                     <Badge variant="outline">{user.isActive ? "활성" : "비활성"}</Badge>
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(user.lastLoginAt || null)}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
                     {formatRelativeTime(user.createdAt)}
                   </td>
-                  <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
                     <Button
-                      variant="outline"
-                      size="sm"
+                      className="h-8 px-3 text-xs"
                       onClick={() => onEditUser(user)}
-                      className="text-xs h-8 px-3"
+                      size="sm"
+                      variant="outline"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -260,7 +258,7 @@ export function UsersTableWithPagination({
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
@@ -276,22 +274,22 @@ export function UsersTableWithPagination({
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
           <Button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(1)}
+            size="sm"
+            variant="outline"
           >
             처음
           </Button>
 
           {/* Previous Page */}
           <Button
-            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage === 1 || isFetching}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            size="sm"
+            variant="outline"
           >
             <ChevronLeft className="h-4 w-4" />
             이전
@@ -300,12 +298,12 @@ export function UsersTableWithPagination({
           {/* Page Numbers */}
           {getPageNumbers().map((page) => (
             <Button
+              className="min-w-[40px] px-3"
+              disabled={isFetching}
               key={page}
               onClick={() => handlePageChange(page)}
-              disabled={isFetching}
-              variant={page === currentPage ? "default" : "outline"}
               size="sm"
-              className="px-3 min-w-[40px]"
+              variant={page === currentPage ? "default" : "outline"}
             >
               {page}
             </Button>
@@ -313,11 +311,11 @@ export function UsersTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            size="sm"
+            variant="outline"
           >
             다음
             <ChevronRight className="h-4 w-4" />
@@ -325,11 +323,11 @@ export function UsersTableWithPagination({
 
           {/* Last Page */}
           <Button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages || isFetching}
-            variant="outline"
-            size="sm"
             className="px-3"
+            disabled={currentPage >= totalPages || isFetching}
+            onClick={() => handlePageChange(totalPages)}
+            size="sm"
+            variant="outline"
           >
             마지막
           </Button>
@@ -337,19 +335,19 @@ export function UsersTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-muted-foreground text-sm">페이지:</span>
           <Input
-            type="number"
-            min="1"
+            className="h-8 w-20 text-center text-sm"
+            disabled={isFetching}
             max={totalPages || 1}
-            value={pageInputValue}
+            min="1"
+            onBlur={handlePageInputBlur}
             onChange={(e) => handlePageInputChange(e.target.value)}
             onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
+            type="number"
+            value={pageInputValue}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-muted-foreground text-sm">/ {totalPages || 1}</span>
         </div>
       </div>
     </>

@@ -14,7 +14,7 @@ import type {
 } from "@/lib/api/services/dashboard"
 
 // Lead Discovery Notifications (Customer Groups)
-interface LeadDiscoveryNotificationsProps {
+type LeadDiscoveryNotificationsProps = {
   notifications: LeadDiscoveryNotification[]
   isLoading?: boolean
 }
@@ -26,10 +26,10 @@ export function LeadDiscoveryNotifications({
   const { t } = useTranslation()
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="flex h-[500px] flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-medium text-base">
             <Search className="h-4 w-4" />
             {t("dashboard.notifications.leadDiscovery.title")}
           </CardTitle>
@@ -38,8 +38,8 @@ export function LeadDiscoveryNotifications({
           </CardDescription>
         </div>
         <Link
+          className="flex items-center gap-1 text-primary text-xs hover:underline"
           to="/websets"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           {t("dashboard.notifications.leadDiscovery.viewMore")} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -49,34 +49,34 @@ export function LeadDiscoveryNotifications({
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-3 border rounded-lg">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-full mb-1" />
+                <div className="rounded-lg border p-3" key={i}>
+                  <Skeleton className="mb-2 h-4 w-32" />
+                  <Skeleton className="mb-1 h-3 w-full" />
                   <Skeleton className="h-3 w-24" />
                 </div>
               ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
               {t("dashboard.notifications.leadDiscovery.noData")}
             </div>
           ) : (
             <div className="space-y-2">
               {notifications.map((notification) => (
                 <Link
+                  className="block rounded-lg border p-3 transition-colors hover:bg-accent/50"
                   key={notification.id}
                   to={`/leads?groupId=${notification.customerGroupId}`}
-                  className="block p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-1">
-                    <h4 className="text-base font-medium line-clamp-1">
+                  <div className="mb-1 flex items-start justify-between">
+                    <h4 className="line-clamp-1 font-medium text-base">
                       {notification.customerGroupName}
                     </h4>
-                    <Badge variant="secondary" className="text-xs ml-2">
+                    <Badge className="ml-2 text-xs" variant="secondary">
                       +{notification.leadCount}명
                     </Badge>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {formatDistanceToNow(new Date(notification.addedAt), {
                       addSuffix: true,
                       locale: ko,
@@ -94,7 +94,7 @@ export function LeadDiscoveryNotifications({
 }
 
 // Campaign Notifications (Sequences)
-interface CampaignNotificationsProps {
+type CampaignNotificationsProps = {
   notifications: CampaignNotification[]
   isLoading?: boolean
 }
@@ -146,10 +146,10 @@ export function CampaignNotifications({
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="flex h-[500px] flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-medium text-base">
             <Mail className="h-4 w-4" />
             {t("dashboard.notifications.campaign.title")}
           </CardTitle>
@@ -158,8 +158,8 @@ export function CampaignNotifications({
           </CardDescription>
         </div>
         <Link
+          className="flex items-center gap-1 text-primary text-xs hover:underline"
           to="/sequences"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           {t("dashboard.notifications.campaign.viewMore")} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -169,42 +169,42 @@ export function CampaignNotifications({
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-3 border rounded-lg">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-full mb-1" />
+                <div className="rounded-lg border p-3" key={i}>
+                  <Skeleton className="mb-2 h-4 w-32" />
+                  <Skeleton className="mb-1 h-3 w-full" />
                   <Skeleton className="h-3 w-24" />
                 </div>
               ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
               {t("dashboard.notifications.campaign.noData")}
             </div>
           ) : (
             <div className="space-y-2">
               {notifications.map((notification) => (
                 <Link
+                  className="block rounded-lg border p-3 transition-colors hover:bg-accent/50"
                   key={notification.id}
                   to={`/sequences/edit?id=${notification.id}`}
-                  className="block p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-medium line-clamp-1">{notification.name}</h4>
+                  <div className="mb-2 flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="line-clamp-1 font-medium text-base">{notification.name}</h4>
                       {notification.customerGroupName && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="mt-0.5 text-muted-foreground text-xs">
                           {notification.customerGroupName}
                         </p>
                       )}
                     </div>
                     <Badge
+                      className="ml-2 flex-shrink-0 text-xs"
                       variant={getTypeColor(notification.type)}
-                      className="text-xs ml-2 flex-shrink-0"
                     >
                       {getTypeLabel(notification.type)}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 text-xs mb-2">
+                  <div className="mb-2 grid grid-cols-4 gap-2 text-xs">
                     <div className="flex flex-col">
                       <span className="text-muted-foreground">스텝</span>
                       <span className="font-medium">{notification.stepCount}개</span>
@@ -223,13 +223,13 @@ export function CampaignNotifications({
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {formatDistanceToNow(new Date(notification.updatedAt), {
                         addSuffix: true,
                         locale: ko,
                       })}
                     </span>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge className="text-xs" variant="outline">
                       {getStatusLabel(notification.status)}
                     </Badge>
                   </div>
@@ -245,7 +245,7 @@ export function CampaignNotifications({
 }
 
 // Reply Notifications (Inbox)
-interface ReplyNotificationsProps {
+type ReplyNotificationsProps = {
   notifications: ReplyNotification[]
   isLoading?: boolean
 }
@@ -254,9 +254,8 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
   const { t } = useTranslation()
 
   // Intent를 우선 표시하고, 없으면 sentiment 사용
-  const getDisplayValue = (notification: ReplyNotification) => {
-    return notification.intent || notification.sentiment
-  }
+  const getDisplayValue = (notification: ReplyNotification) =>
+    notification.intent || notification.sentiment
 
   const getIcon = (value: string | null) => {
     switch (value) {
@@ -304,10 +303,10 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="flex h-[500px] flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-medium text-base">
             <Mail className="h-4 w-4" />
             {t("dashboard.notifications.reply.title")}
           </CardTitle>
@@ -316,8 +315,8 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
           </CardDescription>
         </div>
         <Link
+          className="flex items-center gap-1 text-primary text-xs hover:underline"
           to="/replied-emails"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           {t("dashboard.notifications.reply.viewMore")} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -327,57 +326,59 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-3 border rounded-lg">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-full mb-1" />
+                <div className="rounded-lg border p-3" key={i}>
+                  <Skeleton className="mb-2 h-4 w-32" />
+                  <Skeleton className="mb-1 h-3 w-full" />
                   <Skeleton className="h-3 w-24" />
                 </div>
               ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
               {t("dashboard.notifications.reply.noData")}
             </div>
           ) : (
             <div className="space-y-2">
               {notifications.map((notification) => (
                 <Link
+                  className="block rounded-lg border p-3 transition-colors hover:bg-accent/50"
                   key={notification.id}
                   to={`/replied-emails/${notification.id}`}
-                  className="block p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-base font-medium truncate">
+                  <div className="mb-1 flex items-start justify-between">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate font-medium text-base">
                         {notification.fromEmail}
                       </span>
                       {notification.leadName && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge className="text-xs" variant="secondary">
                           {notification.leadName}
                         </Badge>
                       )}
                     </div>
                     {(() => {
                       const displayValue = getDisplayValue(notification)
-                      if (!displayValue) return null
+                      if (!displayValue) {
+                        return null
+                      }
                       return (
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="ml-2 flex items-center gap-1">
                           {getIcon(displayValue)}
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {getLabel(displayValue)}
                           </span>
                         </div>
                       )
                     })()}
                   </div>
-                  <div className="text-xs font-medium mb-1 line-clamp-1">
+                  <div className="mb-1 line-clamp-1 font-medium text-xs">
                     {notification.subject || t("dashboard.notifications.reply.noSubject")}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
+                  <p className="mb-1 line-clamp-2 text-muted-foreground text-xs">
                     {notification.bodyText?.slice(0, 100) ||
                       t("dashboard.notifications.reply.noContent")}
                   </p>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {formatDistanceToNow(new Date(notification.createdAt), {
                       addSuffix: true,
                       locale: ko,

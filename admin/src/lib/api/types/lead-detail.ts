@@ -3,7 +3,7 @@
 export type ContactType = "phone" | "email" | "fax" | "other"
 export type SocialMediaPlatform = "facebook" | "instagram" | "twitter" | "linkedin"
 
-export interface LeadContact {
+export type LeadContact = {
   id: string
   leadId: string
   contactType: ContactType
@@ -16,7 +16,7 @@ export interface LeadContact {
   updatedAt: string
 }
 
-export interface LeadSocialMedia {
+export type LeadSocialMedia = {
   id: string
   leadId: string
   platform: SocialMediaPlatform
@@ -28,7 +28,7 @@ export interface LeadSocialMedia {
   updatedAt: string
 }
 
-export interface LeadProduct {
+export type LeadProduct = {
   id: string
   leadId: string
   productName: string
@@ -36,21 +36,21 @@ export interface LeadProduct {
   createdAt: string
 }
 
-export interface LeadBusinessSector {
+export type LeadBusinessSector = {
   id: string
   leadId: string
   sectorName: string
   createdAt: string
 }
 
-export interface LeadProductCategory {
+export type LeadProductCategory = {
   id: string
   leadId: string
   categoryName: string
   createdAt: string
 }
 
-export interface LeadIndustryType {
+export type LeadIndustryType = {
   id: string
   leadId: string
   industryName: string

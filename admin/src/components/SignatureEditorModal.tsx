@@ -20,7 +20,7 @@ import {
   useUpdateEmailSignature,
 } from "@/lib/api/hooks/email-signatures"
 
-interface SignatureEditorModalProps {
+type SignatureEditorModalProps = {
   isOpen: boolean
   onClose: () => void
   defaultSignature: string
@@ -63,7 +63,7 @@ export function SignatureEditorModal({
   }, [existingSignature, defaultSignature])
 
   const handleSave = async () => {
-    if (!workspaceId || !userId) {
+    if (!(workspaceId && userId)) {
       toast.error("사용자 정보가 없습니다. 다시 로그인해주세요.")
       return
     }
@@ -130,8 +130,8 @@ export function SignatureEditorModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog onOpenChange={handleClose} open={isOpen}>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -147,11 +147,11 @@ export function SignatureEditorModal({
             <Label htmlFor={nameId}>서명 이름 (선택사항)</Label>
             <Input
               id={nameId}
-              value={signatureName}
               onChange={(e) => setSignatureName(e.target.value)}
               placeholder="예: 공식 서명, 간단한 서명"
+              value={signatureName}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               서명 이름은 참고용입니다. 이메일에는 포함되지 않습니다.
             </p>
           </div>
@@ -159,34 +159,34 @@ export function SignatureEditorModal({
           <div className="space-y-2">
             <Label htmlFor={contentId}>서명 내용</Label>
             <RichTextEditor
-              value={signatureContent}
+              height="300px"
               onChange={setSignatureContent}
               placeholder="서명 내용을 입력하세요"
-              height="300px"
+              value={signatureContent}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               서명은 이메일 본문 하단에 자동으로 추가됩니다.
             </p>
           </div>
 
           <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               💡 <strong>팁:</strong> 서명에는 이름, 직책, 연락처, 회사 정보 등을 포함할 수
               있습니다. HTML 형식으로 작성하면 더 풍부한 표현이 가능합니다.
             </p>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={handleClose}>
-            <X className="h-4 w-4 mr-2" />
+        <div className="flex justify-end gap-2 border-t pt-4">
+          <Button onClick={handleClose} variant="outline">
+            <X className="mr-2 h-4 w-4" />
             취소
           </Button>
           <Button
-            onClick={handleSave}
             disabled={createSignature.isPending || updateSignature.isPending}
+            onClick={handleSave}
           >
-            <Mail className="h-4 w-4 mr-2" />
+            <Mail className="mr-2 h-4 w-4" />
             {createSignature.isPending || updateSignature.isPending
               ? "저장 중..."
               : "저장하고 적용"}

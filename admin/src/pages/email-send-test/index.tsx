@@ -204,12 +204,12 @@ export default function EmailSendTestPage() {
   }
 
   const handleSingleSend = async () => {
-    if (!selectedSendWorkspace || !selectedSendUser) {
+    if (!(selectedSendWorkspace && selectedSendUser)) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
       return
     }
 
-    if (!singleRecipient || !singleSubject) {
+    if (!(singleRecipient && singleSubject)) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자, 제목)")
       return
     }
@@ -245,12 +245,12 @@ export default function EmailSendTestPage() {
   }
 
   const handleBulkSend = async () => {
-    if (!selectedSendWorkspace || !selectedSendUser) {
+    if (!(selectedSendWorkspace && selectedSendUser)) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
       return
     }
 
-    if (!bulkRecipients || !bulkSubject) {
+    if (!(bulkRecipients && bulkSubject)) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자 목록, 제목)")
       return
     }
@@ -320,12 +320,12 @@ export default function EmailSendTestPage() {
   }
 
   const handleScheduleSend = async () => {
-    if (!selectedSendWorkspace || !selectedSendUser) {
+    if (!(selectedSendWorkspace && selectedSendUser)) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
       return
     }
 
-    if (!scheduleRecipients || !scheduleSubject || !scheduleDateTime) {
+    if (!(scheduleRecipients && scheduleSubject && scheduleDateTime)) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자 목록, 제목, 예약 시간)")
       return
     }
@@ -422,7 +422,7 @@ export default function EmailSendTestPage() {
 
   // 30초 후 테스트 발송 (3명)
   const handleQuickTest = async () => {
-    if (!selectedSendWorkspace || !selectedSendUser) {
+    if (!(selectedSendWorkspace && selectedSendUser)) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
       return
     }
@@ -516,12 +516,12 @@ export default function EmailSendTestPage() {
   }
 
   const handleGroupSend = async () => {
-    if (!selectedSendWorkspace || !selectedSendUser) {
+    if (!(selectedSendWorkspace && selectedSendUser)) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
       return
     }
 
-    if (!selectedWorkspace || !selectedCustomerGroup || !groupSubject) {
+    if (!(selectedWorkspace && selectedCustomerGroup && groupSubject)) {
       toast.error("필수 항목을 모두 입력해주세요 (워크스페이스, 고객 그룹, 제목)")
       return
     }
@@ -583,7 +583,7 @@ export default function EmailSendTestPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       {/* 발송 설정 - 워크스페이스 및 사용자 선택 */}
       <Card>
         <CardHeader>
@@ -593,10 +593,10 @@ export default function EmailSendTestPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={sendWorkspaceId}>워크스페이스 *</Label>
-              <Select value={selectedSendWorkspace} onValueChange={setSelectedSendWorkspace}>
+              <Select onValueChange={setSelectedSendWorkspace} value={selectedSendWorkspace}>
                 <SelectTrigger id={sendWorkspaceId}>
                   <SelectValue placeholder="워크스페이스 선택" />
                 </SelectTrigger>
@@ -611,14 +611,14 @@ export default function EmailSendTestPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 이 워크스페이스의 이메일 계정으로 발송됩니다
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={sendUserId}>사용자 *</Label>
-              <Select value={selectedSendUser} onValueChange={setSelectedSendUser}>
+              <Select onValueChange={setSelectedSendUser} value={selectedSendUser}>
                 <SelectTrigger id={sendUserId}>
                   <SelectValue placeholder="사용자 선택" />
                 </SelectTrigger>
@@ -633,7 +633,7 @@ export default function EmailSendTestPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 이 사용자에게 등록된 이메일 계정으로 발송됩니다
               </p>
             </div>
@@ -641,37 +641,37 @@ export default function EmailSendTestPage() {
 
           {/* 로딩 상태 */}
           {isLoadingEmailAccount && selectedSendWorkspace && selectedSendUser && (
-            <div className="p-4 bg-muted rounded-lg text-sm text-muted-foreground">
+            <div className="rounded-lg bg-muted p-4 text-muted-foreground text-sm">
               이메일 계정 정보를 불러오는 중...
             </div>
           )}
 
           {/* 이메일 계정 정보 표시 */}
           {emailAccountInfo && !isLoadingEmailAccount && (
-            <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
+            <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                   <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-green-900 dark:text-green-100">
+                  <div className="font-semibold text-green-900 text-sm dark:text-green-100">
                     발신 이메일 계정 설정됨
                   </div>
-                  <div className="text-xs text-green-600 dark:text-green-400">
+                  <div className="text-green-600 text-xs dark:text-green-400">
                     이 계정으로 모든 이메일이 발송됩니다
                   </div>
                 </div>
               </div>
               <div className="space-y-2 pl-10">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-green-700 dark:text-green-300 font-medium">이메일:</span>
+                  <span className="font-medium text-green-700 dark:text-green-300">이메일:</span>
                   <span className="font-mono text-green-900 dark:text-green-100">
                     {emailAccountInfo.emailAddress}
                   </span>
                 </div>
                 {emailAccountInfo.displayName && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-green-700 dark:text-green-300 font-medium">
+                    <span className="font-medium text-green-700 dark:text-green-300">
                       표시 이름:
                     </span>
                     <span className="text-green-900 dark:text-green-100">
@@ -688,14 +688,14 @@ export default function EmailSendTestPage() {
             !isLoadingEmailAccount &&
             selectedSendWorkspace &&
             selectedSendUser && (
-              <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-2">
+              <div className="space-y-2 rounded-lg bg-destructive/10 p-4 text-destructive">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-8 h-8 bg-destructive/20 rounded-full">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/20">
                     <Mail className="h-4 w-4" />
                   </div>
                   <div className="font-semibold">이메일 계정을 찾을 수 없습니다</div>
                 </div>
-                <p className="text-sm pl-10">
+                <p className="pl-10 text-sm">
                   선택한 워크스페이스(
                   <strong>{workspaces.find((w) => w.id === selectedSendWorkspace)?.name}</strong>
                   )와 사용자(
@@ -712,13 +712,13 @@ export default function EmailSendTestPage() {
           <div className="space-y-2">
             <Label htmlFor={fromNameId}>발신자 이름 (선택)</Label>
             <Input
+              disabled={!emailAccountInfo}
               id={fromNameId}
+              onChange={(e) => setFromName(e.target.value)}
               placeholder="발신자 이름"
               value={fromName}
-              onChange={(e) => setFromName(e.target.value)}
-              disabled={!emailAccountInfo}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               비어있으면 이메일 계정의 표시 이름(
               {emailAccountInfo?.displayName || "미설정"})이 사용됩니다
             </p>
@@ -788,7 +788,7 @@ export default function EmailSendTestPage() {
       */}
 
       {/* 탭으로 단일/대량/스케줄/그룹 발송 구분 */}
-      <Tabs defaultValue="single" className="w-full">
+      <Tabs className="w-full" defaultValue="single">
         <TabsList className="grid w-full max-w-4xl grid-cols-4">
           <TabsTrigger value="single">
             <Mail className="mr-2 h-4 w-4" />
@@ -820,10 +820,10 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={singleRecipientId}>수신자 (To) *</Label>
                 <Input
                   id={singleRecipientId}
-                  type="email"
-                  placeholder="recipient@example.com"
-                  value={singleRecipient}
                   onChange={(e) => setSingleRecipient(e.target.value)}
+                  placeholder="recipient@example.com"
+                  type="email"
+                  value={singleRecipient}
                 />
               </div>
 
@@ -831,9 +831,9 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={singleSubjectId}>제목 *</Label>
                 <Input
                   id={singleSubjectId}
+                  onChange={(e) => setSingleSubject(e.target.value)}
                   placeholder="이메일 제목"
                   value={singleSubject}
-                  onChange={(e) => setSingleSubject(e.target.value)}
                 />
               </div>
 
@@ -841,9 +841,9 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={singleCcId}>참조 (CC)</Label>
                 <Input
                   id={singleCcId}
+                  onChange={(e) => setSingleCc(e.target.value)}
                   placeholder="여러 주소는 쉼표(,)로 구분"
                   value={singleCc}
-                  onChange={(e) => setSingleCc(e.target.value)}
                 />
               </div>
 
@@ -851,50 +851,50 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={singleBccId}>숨은 참조 (BCC)</Label>
                 <Input
                   id={singleBccId}
+                  onChange={(e) => setSingleBcc(e.target.value)}
                   placeholder="여러 주소는 쉼표(,)로 구분"
                   value={singleBcc}
-                  onChange={(e) => setSingleBcc(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={singleBodyTextId}>본문 (텍스트)</Label>
                 <RichTextEditor
-                  value={singleBodyText}
+                  height="150px"
                   onChange={setSingleBodyText}
                   placeholder="텍스트 형식의 이메일 본문"
-                  height="150px"
+                  value={singleBodyText}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={singleBodyHtmlId}>본문 (HTML)</Label>
                 <RichTextEditor
-                  value={singleBodyHtml}
+                  height="150px"
                   onChange={setSingleBodyHtml}
                   placeholder="<p>HTML 형식의 이메일 본문</p>"
-                  height="150px"
+                  value={singleBodyHtml}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>첨부 파일</Label>
                 <FileAttachment files={singleFiles} onFilesChange={setSingleFiles} />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   최대 10개 파일, 총 30MB까지 첨부 가능
                 </p>
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  onClick={handleSingleSend}
-                  disabled={!singleRecipient || !singleSubject || sendEmailMutation.isPending}
                   className="flex-1"
+                  disabled={!(singleRecipient && singleSubject) || sendEmailMutation.isPending}
+                  onClick={handleSingleSend}
                 >
                   <Send className="mr-2 h-4 w-4" />
                   {sendEmailMutation.isPending ? "발송 중..." : "이메일 발송"}
                 </Button>
-                <Button variant="outline" onClick={clearSingleForm}>
+                <Button onClick={clearSingleForm} variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
                   초기화
                 </Button>
@@ -914,12 +914,12 @@ export default function EmailSendTestPage() {
               <div className="space-y-2">
                 <Label htmlFor={bulkRecipientsId}>수신자 목록 (줄바꿈으로 구분) *</Label>
                 <RichTextEditor
-                  value={bulkRecipients}
+                  height="200px"
                   onChange={setBulkRecipients}
                   placeholder="recipient1@example.com&#10;recipient2@example.com&#10;recipient3@example.com"
-                  height="200px"
+                  value={bulkRecipients}
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   총 {bulkRecipients.split("\n").filter((e) => e.trim()).length}
                   개의 이메일 주소
                 </p>
@@ -929,42 +929,42 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={bulkSubjectId}>제목 *</Label>
                 <Input
                   id={bulkSubjectId}
+                  onChange={(e) => setBulkSubject(e.target.value)}
                   placeholder="이메일 제목"
                   value={bulkSubject}
-                  onChange={(e) => setBulkSubject(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={bulkBodyTextId}>본문 (텍스트)</Label>
                 <RichTextEditor
-                  value={bulkBodyText}
+                  height="150px"
                   onChange={setBulkBodyText}
                   placeholder="텍스트 형식의 이메일 본문"
-                  height="150px"
+                  value={bulkBodyText}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={bulkBodyHtmlId}>본문 (HTML)</Label>
                 <RichTextEditor
-                  value={bulkBodyHtml}
+                  height="150px"
                   onChange={setBulkBodyHtml}
                   placeholder="<p>HTML 형식의 이메일 본문</p>"
-                  height="150px"
+                  value={bulkBodyHtml}
                 />
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  onClick={handleBulkSend}
-                  disabled={!bulkRecipients || !bulkSubject || sendEmailMutation.isPending}
                   className="flex-1"
+                  disabled={!(bulkRecipients && bulkSubject) || sendEmailMutation.isPending}
+                  onClick={handleBulkSend}
                 >
                   <Send className="mr-2 h-4 w-4" />
                   {sendEmailMutation.isPending ? "발송 중..." : "대량 발송"}
                 </Button>
-                <Button variant="outline" onClick={clearBulkForm}>
+                <Button onClick={clearBulkForm} variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
                   초기화
                 </Button>
@@ -986,12 +986,12 @@ export default function EmailSendTestPage() {
               <div className="space-y-2">
                 <Label htmlFor={scheduleRecipientsId}>수신자 목록 (줄바꿈으로 구분) *</Label>
                 <RichTextEditor
-                  value={scheduleRecipients}
+                  height="200px"
                   onChange={setScheduleRecipients}
                   placeholder="recipient1@example.com&#10;recipient2@example.com&#10;recipient3@example.com"
-                  height="200px"
+                  value={scheduleRecipients}
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   총 {scheduleRecipients.split("\n").filter((e) => e.trim()).length}
                   개의 이메일 주소
                 </p>
@@ -1001,11 +1001,11 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={scheduleDateTimeId}>예약 시간 *</Label>
                 <Input
                   id={scheduleDateTimeId}
+                  onChange={(e) => setScheduleDateTime(e.target.value)}
                   type="datetime-local"
                   value={scheduleDateTime}
-                  onChange={(e) => setScheduleDateTime(e.target.value)}
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   예약된 시간에 모든 수신자에게 이메일이 발송됩니다 (한국 시간 기준)
                 </p>
               </div>
@@ -1014,73 +1014,71 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={scheduleSubjectId}>제목 *</Label>
                 <Input
                   id={scheduleSubjectId}
+                  onChange={(e) => setScheduleSubject(e.target.value)}
                   placeholder="이메일 제목"
                   value={scheduleSubject}
-                  onChange={(e) => setScheduleSubject(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={scheduleBodyTextId}>본문 (텍스트)</Label>
                 <RichTextEditor
-                  value={scheduleBodyText}
+                  height="150px"
                   onChange={setScheduleBodyText}
                   placeholder="텍스트 형식의 이메일 본문"
-                  height="150px"
+                  value={scheduleBodyText}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={scheduleBodyHtmlId}>본문 (HTML)</Label>
                 <RichTextEditor
-                  value={scheduleBodyHtml}
+                  height="150px"
                   onChange={setScheduleBodyHtml}
                   placeholder="<p>HTML 형식의 이메일 본문</p>"
-                  height="150px"
+                  value={scheduleBodyHtml}
                 />
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  onClick={handleScheduleSend}
+                  className="flex-1"
                   disabled={
-                    !scheduleRecipients ||
-                    !scheduleSubject ||
-                    !scheduleDateTime ||
+                    !(scheduleRecipients && scheduleSubject && scheduleDateTime) ||
                     sendEmailMutation.isPending
                   }
-                  className="flex-1"
+                  onClick={handleScheduleSend}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   {sendEmailMutation.isPending ? "예약 중..." : "스케줄 발송 예약"}
                 </Button>
-                <Button variant="outline" onClick={clearScheduleForm}>
+                <Button onClick={clearScheduleForm} variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
                   초기화
                 </Button>
               </div>
 
               {/* Quick Test Button */}
-              <div className="mt-6 pt-6 border-t">
+              <div className="mt-6 border-t pt-6">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="text-sm font-semibold text-foreground">🧪 빠른 테스트</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <h4 className="font-semibold text-foreground text-sm">🧪 빠른 테스트</h4>
+                    <p className="mt-1 text-muted-foreground text-xs">
                       3명의 테스트 수신자에게 30초 후 발송 예약을 빠르게 테스트할 수 있습니다
                     </p>
                   </div>
                   <Button
-                    onClick={handleQuickTest}
-                    disabled={sendEmailMutation.isPending}
-                    variant="secondary"
                     className="w-full"
+                    disabled={sendEmailMutation.isPending}
+                    onClick={handleQuickTest}
+                    variant="secondary"
                   >
                     <TestTube className="mr-2 h-4 w-4" />
                     30초 후 테스트 발송 (3명)
                   </Button>
-                  <div className="bg-muted/50 rounded-md p-3 text-xs space-y-1">
+                  <div className="space-y-1 rounded-md bg-muted/50 p-3 text-xs">
                     <p className="font-medium">테스트 수신자:</p>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                    <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
                       <li>wks0968@gmail.com</li>
                       <li>admin@grinda.ai</li>
                       <li>grindaai1@gmail.com</li>
@@ -1102,10 +1100,10 @@ export default function EmailSendTestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor={groupWorkspaceId}>워크스페이스 *</Label>
-                  <Select value={selectedWorkspace} onValueChange={handleWorkspaceChange}>
+                  <Select onValueChange={handleWorkspaceChange} value={selectedWorkspace}>
                     <SelectTrigger id={groupWorkspaceId}>
                       <SelectValue placeholder="워크스페이스 선택" />
                     </SelectTrigger>
@@ -1125,9 +1123,9 @@ export default function EmailSendTestPage() {
                 <div className="space-y-2">
                   <Label htmlFor={groupCustomerGroupId}>고객 그룹 *</Label>
                   <Select
-                    value={selectedCustomerGroup}
-                    onValueChange={handleCustomerGroupChange}
                     disabled={!selectedWorkspace}
+                    onValueChange={handleCustomerGroupChange}
+                    value={selectedCustomerGroup}
                   >
                     <SelectTrigger id={groupCustomerGroupId}>
                       <SelectValue placeholder="고객 그룹 선택" />
@@ -1150,9 +1148,9 @@ export default function EmailSendTestPage() {
               {selectedCustomerGroup && (
                 <div className="space-y-2">
                   <Label>그룹 멤버 정보</Label>
-                  <div className="p-3 bg-muted rounded-md">
+                  <div className="rounded-md bg-muted p-3">
                     {isLoadingGroupMembers ? (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         멤버 정보를 불러오는 중...
                       </div>
                     ) : groupMembers.length > 0 ? (
@@ -1163,12 +1161,12 @@ export default function EmailSendTestPage() {
                             이메일 주소 보유: {groupMembers.filter((m) => m.email).length}명
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           이메일 주소가 있는 멤버들에게만 이메일이 발송됩니다
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         이 그룹에는 멤버가 없습니다
                       </div>
                     )}
@@ -1180,48 +1178,46 @@ export default function EmailSendTestPage() {
                 <Label htmlFor={groupSubjectId}>제목 *</Label>
                 <Input
                   id={groupSubjectId}
+                  onChange={(e) => setGroupSubject(e.target.value)}
                   placeholder="이메일 제목"
                   value={groupSubject}
-                  onChange={(e) => setGroupSubject(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={groupBodyTextId}>본문 (텍스트)</Label>
                 <RichTextEditor
-                  value={groupBodyText}
+                  height="150px"
                   onChange={setGroupBodyText}
                   placeholder="텍스트 형식의 이메일 본문"
-                  height="150px"
+                  value={groupBodyText}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={groupBodyHtmlId}>본문 (HTML)</Label>
                 <RichTextEditor
-                  value={groupBodyHtml}
+                  height="150px"
                   onChange={setGroupBodyHtml}
                   placeholder="<p>HTML 형식의 이메일 본문</p>"
-                  height="150px"
+                  value={groupBodyHtml}
                 />
               </div>
 
               <div className="flex gap-2">
                 <Button
-                  onClick={handleGroupSend}
+                  className="flex-1"
                   disabled={
-                    !selectedWorkspace ||
-                    !selectedCustomerGroup ||
-                    !groupSubject ||
+                    !(selectedWorkspace && selectedCustomerGroup && groupSubject) ||
                     groupMembers.length === 0 ||
                     sendEmailMutation.isPending
                   }
-                  className="flex-1"
+                  onClick={handleGroupSend}
                 >
                   <UserCheck className="mr-2 h-4 w-4" />
                   {sendEmailMutation.isPending ? "발송 중..." : "그룹 발송"}
                 </Button>
-                <Button variant="outline" onClick={clearGroupForm}>
+                <Button onClick={clearGroupForm} variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
                   초기화
                 </Button>

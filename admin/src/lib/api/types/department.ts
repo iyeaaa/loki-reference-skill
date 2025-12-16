@@ -2,7 +2,7 @@
 // Department Types
 // ========================================
 
-export interface Department {
+export type Department = {
   id: string
   name: string
   code: string
@@ -13,7 +13,7 @@ export interface Department {
   updatedAt: string
 }
 
-export interface DepartmentCreateRequest {
+export type DepartmentCreateRequest = {
   name: string
   code: string
   parentId?: string | null
@@ -21,7 +21,7 @@ export interface DepartmentCreateRequest {
   isActive?: boolean
 }
 
-export interface DepartmentUpdateRequest {
+export type DepartmentUpdateRequest = {
   name?: string
   code?: string
   parentId?: string | null
@@ -29,7 +29,7 @@ export interface DepartmentUpdateRequest {
   isActive?: boolean
 }
 
-export interface DepartmentsResponse {
+export type DepartmentsResponse = {
   departments: Department[]
   total?: number
 }

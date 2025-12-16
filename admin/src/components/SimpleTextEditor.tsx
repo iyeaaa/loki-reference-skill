@@ -1,6 +1,6 @@
 import { Textarea } from "@/components/ui/textarea"
 
-interface SimpleTextEditorProps {
+type SimpleTextEditorProps = {
   value: string
   onChange: (value: string) => void
   placeholder?: string
@@ -15,10 +15,10 @@ export function SimpleTextEditor({
 }: SimpleTextEditorProps) {
   return (
     <Textarea
-      value={value}
+      className={`min-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${className}`}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`min-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${className}`}
+      value={value}
     />
   )
 }

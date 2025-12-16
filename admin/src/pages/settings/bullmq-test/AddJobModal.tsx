@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAddBulkJobs, useAddJob } from "@/lib/api/hooks/bullmq-test"
 import type { AddJobRequest, BulkJobRequest } from "@/lib/api/types/bullmq-test"
 
-interface AddJobModalProps {
+type AddJobModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -148,7 +148,9 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
   // Apply preset configuration
   const applyPreset = (presetKey: string) => {
     const preset = presets[presetKey as keyof typeof presets]
-    if (!preset) return
+    if (!preset) {
+      return
+    }
 
     const timestamp = Date.now().toString(36).slice(-4)
     const randomMessage = testMessages[Math.floor(Math.random() * testMessages.length)]
@@ -198,7 +200,7 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
         scheduleDelay: isMixed ? Math.floor(Math.random() * 3000) : 0,
         processingDelay: isMixed
           ? Math.floor(Math.random() * 2000) + 500
-          : parseInt(presets[preset].config.processingDelay, 10) || 1000,
+          : Number.parseInt(presets[preset].config.processingDelay, 10) || 1000,
         shouldFail: isMixed ? Math.random() < 0.1 : presets[preset].config.shouldFail,
       }
     })
@@ -220,7 +222,7 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
     }
 
     if (isBulkMode) {
-      const count = parseInt(formData.bulkCount, 10) || 5
+      const count = Number.parseInt(formData.bulkCount, 10) || 5
       const isMixedPreset = selectedPreset === "mixed"
 
       const jobs: BulkJobRequest[] = Array.from({ length: count }, (_, i) => ({
@@ -229,14 +231,14 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
         scheduleDelay: isMixedPreset
           ? Math.floor(Math.random() * 5000)
           : formData.scheduleDelay
-            ? parseInt(formData.scheduleDelay, 10)
+            ? Number.parseInt(formData.scheduleDelay, 10)
             : undefined,
         processingDelay: isMixedPreset
           ? Math.floor(Math.random() * 2000) + 500
           : formData.processingDelay
-            ? parseInt(formData.processingDelay, 10)
+            ? Number.parseInt(formData.processingDelay, 10)
             : undefined,
-        priority: formData.priority ? parseInt(formData.priority, 10) : undefined,
+        priority: formData.priority ? Number.parseInt(formData.priority, 10) : undefined,
         shouldFail: isMixedPreset ? Math.random() < 0.1 : formData.shouldFail,
         customData: customDataParsed,
       }))
@@ -251,12 +253,14 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
       const jobData: AddJobRequest = {
         message: formData.message,
         jobName: formData.jobName || undefined,
-        scheduleDelay: formData.scheduleDelay ? parseInt(formData.scheduleDelay, 10) : undefined,
-        processingDelay: formData.processingDelay
-          ? parseInt(formData.processingDelay, 10)
+        scheduleDelay: formData.scheduleDelay
+          ? Number.parseInt(formData.scheduleDelay, 10)
           : undefined,
-        priority: formData.priority ? parseInt(formData.priority, 10) : undefined,
-        attempts: formData.attempts ? parseInt(formData.attempts, 10) : undefined,
+        processingDelay: formData.processingDelay
+          ? Number.parseInt(formData.processingDelay, 10)
+          : undefined,
+        priority: formData.priority ? Number.parseInt(formData.priority, 10) : undefined,
+        attempts: formData.attempts ? Number.parseInt(formData.attempts, 10) : undefined,
         shouldFail: formData.shouldFail,
         customData: customDataParsed,
       }
@@ -273,8 +277,8 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
   const isPending = addJob.isPending || addBulkJobs.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>{isBulkMode ? "대량 작업 추가" : "작업 추가"}</DialogTitle>
           <DialogDescription>
@@ -285,62 +289,62 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
         </DialogHeader>
 
         {/* Quick Actions */}
-        <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">빠른 추가</span>
+            <span className="font-medium text-sm">빠른 추가</span>
             <div className="flex gap-2">
               <Button
+                disabled={isPending}
+                onClick={handleQuickAdd}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={handleQuickAdd}
-                disabled={isPending}
               >
-                <Zap className="h-3 w-3 mr-1" />
+                <Zap className="mr-1 h-3 w-3" />
                 1개 추가
               </Button>
               <Button
+                disabled={isPending}
+                onClick={() => handleQuickBulkAdd(5)}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => handleQuickBulkAdd(5)}
-                disabled={isPending}
               >
-                <Zap className="h-3 w-3 mr-1" />
+                <Zap className="mr-1 h-3 w-3" />
                 5개 추가
               </Button>
               <Button
+                disabled={isPending}
+                onClick={() => handleQuickBulkAdd(10)}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => handleQuickBulkAdd(10)}
-                disabled={isPending}
               >
-                <Zap className="h-3 w-3 mr-1" />
+                <Zap className="mr-1 h-3 w-3" />
                 10개 추가
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             랜덤 메시지와 딜레이로 즉시 작업을 추가합니다 (10% 실패율)
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Mode and Preset Selection */}
-          <div className="flex items-center justify-between gap-4 pb-2 border-b">
+          <div className="flex items-center justify-between gap-4 border-b pb-2">
             <div className="flex items-center space-x-2">
               <Checkbox
-                id={bulkModeId}
                 checked={isBulkMode}
+                id={bulkModeId}
                 onCheckedChange={(checked) => setIsBulkMode(!!checked)}
               />
-              <Label htmlFor={bulkModeId} className="cursor-pointer">
+              <Label className="cursor-pointer" htmlFor={bulkModeId}>
                 대량 추가 모드
               </Label>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={generateRandomData}>
-              <Dices className="h-4 w-4 mr-1" />
+            <Button onClick={generateRandomData} size="sm" type="button" variant="ghost">
+              <Dices className="mr-1 h-4 w-4" />
               자동 생성
             </Button>
           </div>
@@ -348,7 +352,7 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
           {/* Preset Selection */}
           <div className="space-y-2">
             <Label>프리셋 선택</Label>
-            <Select value={selectedPreset} onValueChange={applyPreset}>
+            <Select onValueChange={applyPreset} value={selectedPreset}>
               <SelectTrigger>
                 <SelectValue placeholder="프리셋을 선택하세요..." />
               </SelectTrigger>
@@ -357,7 +361,7 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
                   <SelectItem key={key} value={key}>
                     <div className="flex flex-col">
                       <span>{preset.label}</span>
-                      <span className="text-xs text-muted-foreground">{preset.description}</span>
+                      <span className="text-muted-foreground text-xs">{preset.description}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -370,10 +374,10 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
             <Label htmlFor={messageId}>메시지 *</Label>
             <Input
               id={messageId}
-              value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               placeholder="작업 메시지를 입력하세요"
               required
+              value={formData.message}
             />
           </div>
 
@@ -383,13 +387,13 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
               <Label htmlFor={bulkCountId}>작업 개수</Label>
               <Input
                 id={bulkCountId}
-                type="number"
-                min="1"
                 max="100"
-                value={formData.bulkCount}
+                min="1"
                 onChange={(e) => setFormData({ ...formData, bulkCount: e.target.value })}
+                type="number"
+                value={formData.bulkCount}
               />
-              <p className="text-xs text-gray-500">1~100개까지 추가 가능</p>
+              <p className="text-gray-500 text-xs">1~100개까지 추가 가능</p>
             </div>
           )}
 
@@ -398,9 +402,9 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
             <Label htmlFor={jobNameId}>작업 이름</Label>
             <Input
               id={jobNameId}
-              value={formData.jobName}
               onChange={(e) => setFormData({ ...formData, jobName: e.target.value })}
               placeholder="test-job"
+              value={formData.jobName}
             />
           </div>
 
@@ -411,13 +415,13 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
               <Label htmlFor={scheduleDelayId}>스케줄 딜레이 (ms)</Label>
               <Input
                 id={scheduleDelayId}
-                type="number"
                 min="0"
-                value={formData.scheduleDelay}
                 onChange={(e) => setFormData({ ...formData, scheduleDelay: e.target.value })}
                 placeholder="0"
+                type="number"
+                value={formData.scheduleDelay}
               />
-              <p className="text-xs text-gray-500">시작 대기 시간</p>
+              <p className="text-gray-500 text-xs">시작 대기 시간</p>
             </div>
 
             {/* Processing Delay */}
@@ -425,13 +429,13 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
               <Label htmlFor={processingDelayId}>처리 딜레이 (ms)</Label>
               <Input
                 id={processingDelayId}
-                type="number"
                 min="0"
-                value={formData.processingDelay}
                 onChange={(e) => setFormData({ ...formData, processingDelay: e.target.value })}
                 placeholder="0"
+                type="number"
+                value={formData.processingDelay}
               />
-              <p className="text-xs text-gray-500">처리 시뮬레이션</p>
+              <p className="text-gray-500 text-xs">처리 시뮬레이션</p>
             </div>
           </div>
 
@@ -442,10 +446,10 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
               <Label htmlFor={priorityId}>우선순위</Label>
               <Input
                 id={priorityId}
-                type="number"
-                value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 placeholder="낮을수록 우선"
+                type="number"
+                value={formData.priority}
               />
             </div>
 
@@ -455,11 +459,11 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
                 <Label htmlFor={attemptsId}>재시도 횟수</Label>
                 <Input
                   id={attemptsId}
-                  type="number"
-                  min="1"
                   max="10"
-                  value={formData.attempts}
+                  min="1"
                   onChange={(e) => setFormData({ ...formData, attempts: e.target.value })}
+                  type="number"
+                  value={formData.attempts}
                 />
               </div>
             )}
@@ -468,11 +472,11 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
           {/* Should Fail */}
           <div className="flex items-center space-x-2">
             <Checkbox
-              id={shouldFailId}
               checked={formData.shouldFail}
+              id={shouldFailId}
               onCheckedChange={(checked) => setFormData({ ...formData, shouldFail: !!checked })}
             />
-            <Label htmlFor={shouldFailId} className="cursor-pointer">
+            <Label className="cursor-pointer" htmlFor={shouldFailId}>
               의도적 실패 (테스트용)
             </Label>
           </div>
@@ -481,29 +485,29 @@ export function AddJobModal({ open, onOpenChange }: AddJobModalProps) {
           <div className="space-y-2">
             <Label htmlFor={customDataId}>커스텀 데이터 (JSON)</Label>
             <Textarea
+              className="font-mono text-sm"
               id={customDataId}
-              value={formData.customData}
               onChange={(e) => setFormData({ ...formData, customData: e.target.value })}
               placeholder='{"key": "value"}'
-              className="font-mono text-sm"
               rows={3}
+              value={formData.customData}
             />
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 border-t pt-4">
             <Button
+              disabled={isPending}
+              onClick={() => onOpenChange(false)}
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
             >
               취소
             </Button>
             <Button
-              type="submit"
-              disabled={isPending || !formData.message}
               className="min-w-[100px]"
+              disabled={isPending || !formData.message}
+              type="submit"
             >
               {isPending ? "추가 중..." : isBulkMode ? `${formData.bulkCount}개 추가` : "추가"}
             </Button>

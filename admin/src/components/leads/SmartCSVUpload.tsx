@@ -33,7 +33,7 @@ import {
 import { ColumnMappingModal } from "./ColumnMappingModal"
 import { TemplateDownloadButton } from "./TemplateDownloadCard"
 
-interface SmartCSVUploadProps {
+type SmartCSVUploadProps = {
   onDataReady: (leads: LeadCSVData[]) => void
   onCancel?: () => void
   maxFileSize?: number // MB 단위
@@ -41,7 +41,7 @@ interface SmartCSVUploadProps {
 
 type UploadStep = "initial" | "analyzing" | "mapping" | "ready"
 
-interface FileInfo {
+type FileInfo = {
   name: string
   size: number
   type: "csv" | "xlsx"
@@ -69,7 +69,7 @@ export function SmartCSVUpload({
       const isCSV = fileName.endsWith(".csv")
       const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
 
-      if (!isCSV && !isXLSX) {
+      if (!(isCSV || isXLSX)) {
         toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
         return
       }
@@ -162,7 +162,9 @@ export function SmartCSVUpload({
   // 매핑 확인 핸들러
   const handleMappingConfirm = useCallback(
     (mappings: Record<string, keyof LeadCSVData | null>) => {
-      if (!csvText) return
+      if (!csvText) {
+        return
+      }
 
       const { leads, errors } = parseCSVWithMappings(csvText, mappings)
 
@@ -228,9 +230,9 @@ export function SmartCSVUpload({
             const isCompleted = index < currentStepIndex
 
             return (
-              <div key={step.id} className="flex items-center">
+              <div className="flex items-center" key={step.id}>
                 <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors ${
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : isCompleted
@@ -242,7 +244,7 @@ export function SmartCSVUpload({
                   <span className="hidden sm:inline">{step.label}</span>
                 </div>
                 {index < steps.length - 1 && (
-                  <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
+                  <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />
                 )}
               </div>
             )
@@ -254,27 +256,27 @@ export function SmartCSVUpload({
         {/* 초기 상태: 파일 업로드 영역 */}
         {currentStep === "initial" && (
           <label
-            htmlFor={smartCsvUploadInputId}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className={`relative block border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
+            className={`relative block cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all ${
               isDragOver
                 ? "border-primary bg-primary/5"
                 : "border-muted-foreground/25 hover:border-muted-foreground/50"
             }`}
+            htmlFor={smartCsvUploadInputId}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           >
             <input
-              id={smartCsvUploadInputId}
-              type="file"
               accept=".csv,.xlsx,.xls"
-              onChange={handleFileInput}
               className="sr-only"
+              id={smartCsvUploadInputId}
+              onChange={handleFileInput}
+              type="file"
             />
 
             <div className="flex flex-col items-center gap-4">
               <div
-                className={`p-4 rounded-full ${
+                className={`rounded-full p-4 ${
                   isDragOver ? "bg-primary/10" : "bg-muted"
                 } transition-colors`}
               >
@@ -287,14 +289,14 @@ export function SmartCSVUpload({
                 <h3 className="font-medium text-lg">
                   {isDragOver ? "파일을 여기에 놓으세요" : "CSV 또는 Excel 파일을 업로드하세요"}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   파일을 드래그하거나 클릭하여 선택하세요.
                   <br />
                   최대 {maxFileSize}MB까지 업로드 가능합니다.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Badge variant="outline">
                   <FileSpreadsheet className="mr-1 h-3 w-3" />
                   .xlsx
@@ -314,16 +316,16 @@ export function SmartCSVUpload({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <div className="text-center">
               <h3 className="font-medium text-lg">파일 분석 중...</h3>
-              <p className="text-sm text-muted-foreground">{fileInfo?.name}</p>
+              <p className="text-muted-foreground text-sm">{fileInfo?.name}</p>
             </div>
-            <Progress value={60} className="w-full max-w-xs" />
+            <Progress className="w-full max-w-xs" value={60} />
           </div>
         )}
 
         {/* 준비 완료 */}
         {currentStep === "ready" && (
           <div className="space-y-4">
-            <Alert className="bg-emerald-500/10 border-emerald-500/30">
+            <Alert className="border-emerald-500/30 bg-emerald-500/10">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               <AlertTitle className="text-emerald-700 dark:text-emerald-400">준비 완료</AlertTitle>
               <AlertDescription>
@@ -340,7 +342,7 @@ export function SmartCSVUpload({
                     <summary className="cursor-pointer text-sm">
                       {parseErrors.length}개 행이 스킵되었습니다. (클릭하여 상세 보기)
                     </summary>
-                    <ul className="mt-2 text-sm max-h-32 overflow-y-auto">
+                    <ul className="mt-2 max-h-32 overflow-y-auto text-sm">
                       {parseErrors.slice(0, 10).map((error, idx) => (
                         <li key={idx}>{error}</li>
                       ))}
@@ -356,23 +358,23 @@ export function SmartCSVUpload({
             )}
 
             {/* 리드 미리보기 */}
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted px-4 py-2 border-b">
-                <h4 className="text-sm font-medium">리드 미리보기 (최대 5개)</h4>
+            <div className="overflow-hidden rounded-lg border">
+              <div className="border-b bg-muted px-4 py-2">
+                <h4 className="font-medium text-sm">리드 미리보기 (최대 5개)</h4>
               </div>
               <div className="divide-y">
                 {parsedLeads.slice(0, 5).map((lead, idx) => (
-                  <div key={idx} className="px-4 py-3">
+                  <div className="px-4 py-3" key={idx}>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-medium">{lead.companyName}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {lead.contactName && <span>{lead.contactName} • </span>}
                           {lead.primaryEmail}
                         </p>
                       </div>
                       {lead.websiteUrl && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge className="text-xs" variant="outline">
                           {
                             new URL(
                               lead.websiteUrl.startsWith("http")
@@ -388,8 +390,8 @@ export function SmartCSVUpload({
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={handleReset}>
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleReset} variant="outline">
                 <X className="mr-2 h-4 w-4" />
                 다시 선택
               </Button>

@@ -4,14 +4,16 @@ import { Separator } from "@/components/ui/separator"
 import type { EmailReplyWithDetails } from "@/lib/api/types/email-reply"
 import { formatRelativeTime } from "@/lib/date-utils"
 
-interface EmailReplyDetailsDialogProps {
+type EmailReplyDetailsDialogProps = {
   reply: EmailReplyWithDetails
   onClose: () => void
 }
 
 export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDialogProps) {
   const getSentimentBadge = (sentiment: string | null) => {
-    if (!sentiment) return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+    if (!sentiment) {
+      return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+    }
 
     switch (sentiment) {
       case "positive":
@@ -37,7 +39,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-lg">답장 정보</h3>
-          <Badge variant="outline" className={sentimentBadge.color}>
+          <Badge className={sentimentBadge.color} variant="outline">
             {sentimentBadge.label}
           </Badge>
         </div>
@@ -61,22 +63,22 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
       <div className="space-y-3">
         <h4 className="font-semibold text-md">원본 이메일</h4>
         {reply.originalEmail ? (
-          <div className="bg-muted p-4 rounded-lg space-y-2">
+          <div className="space-y-2 rounded-lg bg-muted p-4">
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div>
-                <span className="text-muted-foreground font-medium">제목:</span>
+                <span className="font-medium text-muted-foreground">제목:</span>
                 <span className="ml-2">{reply.originalEmail.subject || "(제목 없음)"}</span>
               </div>
               <div>
-                <span className="text-muted-foreground font-medium">발신자:</span>
+                <span className="font-medium text-muted-foreground">발신자:</span>
                 <span className="ml-2">{reply.originalEmail.fromEmail}</span>
               </div>
               <div>
-                <span className="text-muted-foreground font-medium">수신자:</span>
+                <span className="font-medium text-muted-foreground">수신자:</span>
                 <span className="ml-2">{reply.originalEmail.toEmail}</span>
               </div>
               <div>
-                <span className="text-muted-foreground font-medium">발송일:</span>
+                <span className="font-medium text-muted-foreground">발송일:</span>
                 <span className="ml-2">
                   {reply.originalEmail.sentAt
                     ? formatRelativeTime(new Date(reply.originalEmail.sentAt))
@@ -86,7 +88,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">원본 이메일 정보가 없습니다.</div>
+          <div className="text-muted-foreground text-sm">원본 이메일 정보가 없습니다.</div>
         )}
       </div>
 
@@ -97,22 +99,22 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
         <h4 className="font-semibold text-md">받은 답장</h4>
         {reply.replyEmail ? (
           <div className="space-y-3">
-            <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="space-y-2 rounded-lg bg-muted p-4">
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground font-medium">제목:</span>
+                  <span className="font-medium text-muted-foreground">제목:</span>
                   <span className="ml-2">{reply.replyEmail.subject || "(제목 없음)"}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground font-medium">발신자:</span>
+                  <span className="font-medium text-muted-foreground">발신자:</span>
                   <span className="ml-2">{reply.replyEmail.fromEmail}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground font-medium">수신자:</span>
+                  <span className="font-medium text-muted-foreground">수신자:</span>
                   <span className="ml-2">{reply.replyEmail.toEmail}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground font-medium">수신일:</span>
+                  <span className="font-medium text-muted-foreground">수신일:</span>
                   <span className="ml-2">
                     {reply.replyEmail.sentAt
                       ? formatRelativeTime(new Date(reply.replyEmail.sentAt))
@@ -123,23 +125,23 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
             </div>
 
             {/* Email Body */}
-            <div className="border rounded-lg p-4 max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto rounded-lg border p-4">
               {reply.replyEmail.bodyHtml ? (
                 <div className="prose prose-sm max-w-none">
                   {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Email HTML content from trusted webhook source */}
                   <div dangerouslySetInnerHTML={{ __html: reply.replyEmail.bodyHtml }} />
                 </div>
               ) : reply.replyEmail.bodyText ? (
-                <pre className="whitespace-pre-wrap text-sm font-sans">
+                <pre className="whitespace-pre-wrap font-sans text-sm">
                   {reply.replyEmail.bodyText}
                 </pre>
               ) : (
-                <div className="text-sm text-muted-foreground">내용이 없습니다.</div>
+                <div className="text-muted-foreground text-sm">내용이 없습니다.</div>
               )}
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">답장 이메일 정보가 없습니다.</div>
+          <div className="text-muted-foreground text-sm">답장 이메일 정보가 없습니다.</div>
         )}
       </div>
 
@@ -149,7 +151,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
           <Separator />
           <div className="space-y-3">
             <h4 className="font-semibold text-md">AI 요약</h4>
-            <div className="bg-blue-50 p-4 rounded-lg text-sm">{reply.aiSummary}</div>
+            <div className="rounded-lg bg-blue-50 p-4 text-sm">{reply.aiSummary}</div>
           </div>
         </>
       )}
@@ -160,7 +162,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
           <Separator />
           <div className="space-y-3">
             <h4 className="font-semibold text-md">의도 분석</h4>
-            <div className="bg-purple-50 p-4 rounded-lg text-sm">{reply.intent}</div>
+            <div className="rounded-lg bg-purple-50 p-4 text-sm">{reply.intent}</div>
           </div>
         </>
       )}

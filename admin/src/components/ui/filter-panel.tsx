@@ -15,7 +15,7 @@ import {
 import { Input } from "./input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./sheet"
 
-export interface FilterConfig {
+export type FilterConfig = {
   sentiment: string[]
   category: string[]
   priority: string[]
@@ -24,7 +24,7 @@ export interface FilterConfig {
   dateTo?: string
 }
 
-interface FilterPanelProps {
+type FilterPanelProps = {
   onFilterChange?: (filters: FilterConfig) => void
   className?: string
   placeholder?: string
@@ -87,18 +87,18 @@ const FilterContent = ({
     <div className="space-y-4">
       {/* Sentiment Filter */}
       <div>
-        <h4 className="text-sm font-medium mb-2">Sentiment</h4>
+        <h4 className="mb-2 font-medium text-sm">Sentiment</h4>
         <div className="space-y-1">
           {sentimentOptions.map((option) => (
             <label
+              className="flex cursor-pointer items-center gap-2 rounded-md p-2 hover:bg-accent"
               key={option.value}
-              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
             >
               <input
-                type="checkbox"
                 checked={selectedSentiment.includes(option.value)}
-                onChange={() => onToggleFilter("sentiment", option.value)}
                 className="rounded border-gray-300"
+                onChange={() => onToggleFilter("sentiment", option.value)}
+                type="checkbox"
               />
               <span className="text-sm">{option.label}</span>
             </label>
@@ -108,18 +108,18 @@ const FilterContent = ({
 
       {/* Category Filter */}
       <div>
-        <h4 className="text-sm font-medium mb-2">Category</h4>
+        <h4 className="mb-2 font-medium text-sm">Category</h4>
         <div className="space-y-1">
           {categoryOptions.map((option) => (
             <label
+              className="flex cursor-pointer items-center gap-2 rounded-md p-2 hover:bg-accent"
               key={option.value}
-              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
             >
               <input
-                type="checkbox"
                 checked={selectedCategory.includes(option.value)}
-                onChange={() => onToggleFilter("category", option.value)}
                 className="rounded border-gray-300"
+                onChange={() => onToggleFilter("category", option.value)}
+                type="checkbox"
               />
               <span className="text-sm">{option.label}</span>
             </label>
@@ -129,18 +129,18 @@ const FilterContent = ({
 
       {/* Priority Filter */}
       <div>
-        <h4 className="text-sm font-medium mb-2">Priority</h4>
+        <h4 className="mb-2 font-medium text-sm">Priority</h4>
         <div className="space-y-1">
           {priorityOptions.map((option) => (
             <label
+              className="flex cursor-pointer items-center gap-2 rounded-md p-2 hover:bg-accent"
               key={option.value}
-              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
             >
               <input
-                type="checkbox"
                 checked={selectedPriority.includes(option.value)}
-                onChange={() => onToggleFilter("priority", option.value)}
                 className="rounded border-gray-300"
+                onChange={() => onToggleFilter("priority", option.value)}
+                type="checkbox"
               />
               <span className="text-sm">{option.label}</span>
             </label>
@@ -150,30 +150,30 @@ const FilterContent = ({
 
       {/* Date Range */}
       <div>
-        <h4 className="text-sm font-medium mb-2">Date Range</h4>
+        <h4 className="mb-2 font-medium text-sm">Date Range</h4>
         <div className="space-y-2">
           <div>
-            <label htmlFor={dateFromId} className="text-xs text-muted-foreground">
+            <label className="text-muted-foreground text-xs" htmlFor={dateFromId}>
               From
             </label>
             <Input
+              className="h-8 text-sm"
               id={dateFromId}
+              onChange={(e) => onDateChange("from", e.target.value)}
               type="date"
               value={dateFrom}
-              onChange={(e) => onDateChange("from", e.target.value)}
-              className="h-8 text-sm"
             />
           </div>
           <div>
-            <label htmlFor={dateToId} className="text-xs text-muted-foreground">
+            <label className="text-muted-foreground text-xs" htmlFor={dateToId}>
               To
             </label>
             <Input
+              className="h-8 text-sm"
               id={dateToId}
+              onChange={(e) => onDateChange("to", e.target.value)}
               type="date"
               value={dateTo}
-              onChange={(e) => onDateChange("to", e.target.value)}
-              className="h-8 text-sm"
             />
           </div>
         </div>
@@ -181,7 +181,7 @@ const FilterContent = ({
 
       {/* Clear All Button */}
       {activeFilterCount > 0 && (
-        <Button variant="outline" size="sm" onClick={onClearAll} className="w-full">
+        <Button className="w-full" onClick={onClearAll} size="sm" variant="outline">
           Clear All Filters
         </Button>
       )}
@@ -243,12 +243,24 @@ export function FilterPanel({
   // Auto-apply filters when they change
   useEffect(() => {
     const params = new URLSearchParams()
-    if (searchQuery) params.set("search", searchQuery)
-    if (selectedSentiment.length > 0) params.set("sentiment", selectedSentiment.join(","))
-    if (selectedCategory.length > 0) params.set("category", selectedCategory.join(","))
-    if (selectedPriority.length > 0) params.set("priority", selectedPriority.join(","))
-    if (dateFrom) params.set("dateFrom", dateFrom)
-    if (dateTo) params.set("dateTo", dateTo)
+    if (searchQuery) {
+      params.set("search", searchQuery)
+    }
+    if (selectedSentiment.length > 0) {
+      params.set("sentiment", selectedSentiment.join(","))
+    }
+    if (selectedCategory.length > 0) {
+      params.set("category", selectedCategory.join(","))
+    }
+    if (selectedPriority.length > 0) {
+      params.set("priority", selectedPriority.join(","))
+    }
+    if (dateFrom) {
+      params.set("dateFrom", dateFrom)
+    }
+    if (dateTo) {
+      params.set("dateTo", dateTo)
+    }
 
     setSearchParams(params, { replace: true })
 
@@ -338,10 +350,10 @@ export function FilterPanel({
       <div className="flex gap-2">
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={placeholder}
-            value={searchInput}
+            aria-label="Search"
+            className="pr-9 pl-9"
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -352,18 +364,18 @@ export function FilterPanel({
                 setSearchQuery("")
               }
             }}
-            className="pl-9 pr-9"
-            aria-label="Search"
+            placeholder={placeholder}
+            value={searchInput}
           />
           {searchInput && (
             <button
-              type="button"
+              aria-label="Clear search"
+              className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
               onClick={() => {
                 setSearchInput("")
                 setSearchQuery("")
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
+              type="button"
             >
               <X className="h-4 w-4" />
             </button>
@@ -371,39 +383,88 @@ export function FilterPanel({
         </div>
 
         {/* Filter Button - Desktop Dropdown */}
-        {!isMobile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        {isMobile ? (
+          /* Filter Button - Mobile Sheet */
+          <Sheet>
+            <SheetTrigger asChild>
               <Button
-                variant="outline"
-                size="icon"
+                aria-label="Open filters"
                 className={cn(
                   "relative flex-shrink-0",
                   activeFilterCount > 0 && "border-primary text-primary",
                 )}
-                aria-label="Open filters"
+                size="icon"
+                variant="outline"
               >
                 <Filter className="h-4 w-4" />
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+                  <span className="-top-1 -right-1 absolute flex h-5 w-5 items-center justify-center rounded-full bg-primary font-medium text-[10px] text-primary-foreground">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[300px] sm:w-[400px]" side="right">
+              <SheetHeader>
+                <SheetTitle>Filters</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <FilterContent
+                  activeFilterCount={activeFilterCount}
+                  categoryOptions={CATEGORY_OPTIONS}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onClearAll={clearAllFilters}
+                  onDateChange={(type, value) => {
+                    if (type === "from") {
+                      setDateFrom(value)
+                    } else {
+                      setDateTo(value)
+                    }
+                  }}
+                  onToggleFilter={toggleFilter}
+                  priorityOptions={PRIORITY_OPTIONS}
+                  selectedCategory={selectedCategory}
+                  selectedPriority={selectedPriority}
+                  selectedSentiment={selectedSentiment}
+                  sentimentOptions={SENTIMENT_OPTIONS}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label="Open filters"
+                className={cn(
+                  "relative flex-shrink-0",
+                  activeFilterCount > 0 && "border-primary text-primary",
+                )}
+                size="icon"
+                variant="outline"
+              >
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="-top-1 -right-1 absolute flex h-5 w-5 items-center justify-center rounded-full bg-primary font-medium text-[10px] text-primary-foreground">
                     {activeFilterCount}
                   </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 max-h-[500px] overflow-y-auto">
+            <DropdownMenuContent align="end" className="max-h-[500px] w-64 overflow-y-auto">
               <DropdownMenuLabel>Filters</DropdownMenuLabel>
               <DropdownMenuSeparator />
 
               {/* Sentiment */}
               <div className="px-2 py-2">
-                <DropdownMenuLabel className="text-xs text-muted-foreground px-0">
+                <DropdownMenuLabel className="px-0 text-muted-foreground text-xs">
                   Sentiment
                 </DropdownMenuLabel>
                 {SENTIMENT_OPTIONS.map((option) => (
                   <DropdownMenuCheckboxItem
-                    key={option.value}
                     checked={selectedSentiment.includes(option.value)}
+                    key={option.value}
                     onCheckedChange={() => toggleFilter("sentiment", option.value)}
                   >
                     {option.label}
@@ -415,13 +476,13 @@ export function FilterPanel({
 
               {/* Category */}
               <div className="px-2 py-2">
-                <DropdownMenuLabel className="text-xs text-muted-foreground px-0">
+                <DropdownMenuLabel className="px-0 text-muted-foreground text-xs">
                   Category
                 </DropdownMenuLabel>
                 {CATEGORY_OPTIONS.map((option) => (
                   <DropdownMenuCheckboxItem
-                    key={option.value}
                     checked={selectedCategory.includes(option.value)}
+                    key={option.value}
                     onCheckedChange={() => toggleFilter("category", option.value)}
                   >
                     {option.label}
@@ -433,13 +494,13 @@ export function FilterPanel({
 
               {/* Priority */}
               <div className="px-2 py-2">
-                <DropdownMenuLabel className="text-xs text-muted-foreground px-0">
+                <DropdownMenuLabel className="px-0 text-muted-foreground text-xs">
                   Priority
                 </DropdownMenuLabel>
                 {PRIORITY_OPTIONS.map((option) => (
                   <DropdownMenuCheckboxItem
-                    key={option.value}
                     checked={selectedPriority.includes(option.value)}
+                    key={option.value}
                     onCheckedChange={() => toggleFilter("priority", option.value)}
                   >
                     {option.label}
@@ -451,32 +512,32 @@ export function FilterPanel({
 
               {/* Date Range */}
               <div className="px-2 py-2">
-                <DropdownMenuLabel className="text-xs text-muted-foreground px-0">
+                <DropdownMenuLabel className="px-0 text-muted-foreground text-xs">
                   Date Range
                 </DropdownMenuLabel>
-                <div className="space-y-2 mt-2">
+                <div className="mt-2 space-y-2">
                   <div>
-                    <label htmlFor={dateFromDropdownId} className="text-xs text-muted-foreground">
+                    <label className="text-muted-foreground text-xs" htmlFor={dateFromDropdownId}>
                       From
                     </label>
                     <Input
+                      className="h-8 text-sm"
                       id={dateFromDropdownId}
+                      onChange={(e) => setDateFrom(e.target.value)}
                       type="date"
                       value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="h-8 text-sm"
                     />
                   </div>
                   <div>
-                    <label htmlFor={dateToDropdownId} className="text-xs text-muted-foreground">
+                    <label className="text-muted-foreground text-xs" htmlFor={dateToDropdownId}>
                       To
                     </label>
                     <Input
+                      className="h-8 text-sm"
                       id={dateToDropdownId}
+                      onChange={(e) => setDateTo(e.target.value)}
                       type="date"
                       value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="h-8 text-sm"
                     />
                   </div>
                 </div>
@@ -487,10 +548,10 @@ export function FilterPanel({
                   <DropdownMenuSeparator />
                   <div className="px-2 py-2">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearAllFilters}
                       className="w-full justify-center"
+                      onClick={clearAllFilters}
+                      size="sm"
+                      variant="ghost"
                     >
                       Clear All Filters
                     </Button>
@@ -499,52 +560,6 @@ export function FilterPanel({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : (
-          /* Filter Button - Mobile Sheet */
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className={cn(
-                  "relative flex-shrink-0",
-                  activeFilterCount > 0 && "border-primary text-primary",
-                )}
-                aria-label="Open filters"
-              >
-                <Filter className="h-4 w-4" />
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle>Filters</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <FilterContent
-                  sentimentOptions={SENTIMENT_OPTIONS}
-                  categoryOptions={CATEGORY_OPTIONS}
-                  priorityOptions={PRIORITY_OPTIONS}
-                  selectedSentiment={selectedSentiment}
-                  selectedCategory={selectedCategory}
-                  selectedPriority={selectedPriority}
-                  dateFrom={dateFrom}
-                  dateTo={dateTo}
-                  onToggleFilter={toggleFilter}
-                  onDateChange={(type, value) => {
-                    if (type === "from") setDateFrom(value)
-                    else setDateTo(value)
-                  }}
-                  activeFilterCount={activeFilterCount}
-                  onClearAll={clearAllFilters}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
         )}
       </div>
 
@@ -552,87 +567,87 @@ export function FilterPanel({
       {activeFilterCount > 0 && (
         <div className="flex flex-wrap gap-2">
           {searchQuery && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge className="gap-1" variant="secondary">
               Search: {searchQuery}
               <button
-                type="button"
+                aria-label="Remove search filter"
+                className="ml-1 rounded-full hover:bg-accent"
                 onClick={() => {
                   setSearchInput("")
                   setSearchQuery("")
                 }}
-                className="ml-1 hover:bg-accent rounded-full"
-                aria-label="Remove search filter"
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {selectedSentiment.map((value) => (
-            <Badge key={value} variant="secondary" className="gap-1">
+            <Badge className="gap-1" key={value} variant="secondary">
               {SENTIMENT_OPTIONS.find((o) => o.value === value)?.label}
               <button
-                type="button"
-                onClick={() => removeFilter("sentiment", value)}
-                className="ml-1 hover:bg-accent rounded-full"
                 aria-label={`Remove ${value} sentiment filter`}
+                className="ml-1 rounded-full hover:bg-accent"
+                onClick={() => removeFilter("sentiment", value)}
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           ))}
           {selectedCategory.map((value) => (
-            <Badge key={value} variant="secondary" className="gap-1">
+            <Badge className="gap-1" key={value} variant="secondary">
               {CATEGORY_OPTIONS.find((o) => o.value === value)?.label}
               <button
-                type="button"
-                onClick={() => removeFilter("category", value)}
-                className="ml-1 hover:bg-accent rounded-full"
                 aria-label={`Remove ${value} category filter`}
+                className="ml-1 rounded-full hover:bg-accent"
+                onClick={() => removeFilter("category", value)}
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           ))}
           {selectedPriority.map((value) => (
-            <Badge key={value} variant="secondary" className="gap-1">
+            <Badge className="gap-1" key={value} variant="secondary">
               {PRIORITY_OPTIONS.find((o) => o.value === value)?.label}
               <button
-                type="button"
-                onClick={() => removeFilter("priority", value)}
-                className="ml-1 hover:bg-accent rounded-full"
                 aria-label={`Remove ${value} priority filter`}
+                className="ml-1 rounded-full hover:bg-accent"
+                onClick={() => removeFilter("priority", value)}
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           ))}
           {dateFrom && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge className="gap-1" variant="secondary">
               From: {dateFrom}
               <button
-                type="button"
-                onClick={() => setDateFrom("")}
-                className="ml-1 hover:bg-accent rounded-full"
                 aria-label="Remove date from filter"
+                className="ml-1 rounded-full hover:bg-accent"
+                onClick={() => setDateFrom("")}
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {dateTo && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge className="gap-1" variant="secondary">
               To: {dateTo}
               <button
-                type="button"
-                onClick={() => setDateTo("")}
-                className="ml-1 hover:bg-accent rounded-full"
                 aria-label="Remove date to filter"
+                className="ml-1 rounded-full hover:bg-accent"
+                onClick={() => setDateTo("")}
+                type="button"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
-          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 px-2 text-xs">
+          <Button className="h-6 px-2 text-xs" onClick={clearAllFilters} size="sm" variant="ghost">
             Clear All
           </Button>
         </div>

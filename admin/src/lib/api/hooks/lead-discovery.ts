@@ -7,6 +7,7 @@
 
 import { useMutation } from "@tanstack/react-query"
 import pLimit from "p-limit"
+import { API_BASE_URL } from "@/lib/env"
 import type {
   AnalyzedPage,
   BigQueryResult,
@@ -77,7 +78,7 @@ interface SelectRequest {
   workspaceId: string
 }
 
-const BASE_URL = import.meta.env.VITE_API_URL || ""
+const BASE_URL = API_BASE_URL
 
 // 도커 스타일 로깅 유틸리티
 const getTimestamp = () => new Date().toISOString()

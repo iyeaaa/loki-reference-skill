@@ -1,7 +1,7 @@
-// API Configuration
-// In development, use empty string to use Vite proxy
-// In production, set VITE_API_URL environment variable
-export const API_BASE_URL = import.meta.env.VITE_API_URL || ""
+import { API_BASE_URL } from "@/lib/env"
+
+// Re-export API_BASE_URL for backwards compatibility
+export { API_BASE_URL }
 
 // Token Management
 const TOKEN_KEY = "authToken"

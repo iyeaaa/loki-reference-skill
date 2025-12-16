@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/table"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
 import { calculateFitScores, enrichLeads, loadMoreResults } from "@/lib/api/hooks/lead-discovery"
+import { API_BASE_URL } from "@/lib/env"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
@@ -379,7 +380,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     setIsAddingToGroup(true)
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || ""
       const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/add-to-group`, {
         method: "POST",
         headers: {

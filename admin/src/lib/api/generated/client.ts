@@ -1,9 +1,11 @@
 import createFetchClient from "openapi-fetch"
 import createClient from "openapi-react-query"
+import { env } from "@/lib/env"
 import type { paths } from "./schema"
 
-// Get API base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
+// Get API base URL from validated environment
+// Use localhost fallback for generated client to ensure compatibility with openapi-fetch
+const API_BASE_URL = env.VITE_API_URL || "http://localhost:3001"
 
 // Create the typed fetch client (react query)
 export const client = createFetchClient<paths>({

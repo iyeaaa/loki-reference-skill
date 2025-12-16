@@ -56,6 +56,7 @@ import {
   Table as UITable,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { API_BASE_URL } from "@/lib/env"
 import { cn } from "@/lib/utils"
 
 // Enrichment 결과 타입
@@ -497,7 +498,6 @@ ${t("bigquery-search.welcome.exampleHint")}`,
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
-  const API_BASE_URL = import.meta.env.VITE_API_URL || ""
 
   // 스크롤 자동 이동
   const scrollToBottom = useCallback(() => {

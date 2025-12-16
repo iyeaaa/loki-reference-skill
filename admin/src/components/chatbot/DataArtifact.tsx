@@ -4,6 +4,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { Badge } from "@/components/ui/badge"
 import type { ImportProgress, ImportResult, PreviewLeadData } from "@/lib/api/services/lead-import"
 import type { Insight } from "@/lib/api/types/chatbot"
+import { isDevelopment } from "@/lib/env"
 import { LeadPreviewArtifact } from "./LeadPreviewArtifact"
 import { LeadProgressSection } from "./LeadProgressSection"
 import { LeadResultSection } from "./LeadResultSection"
@@ -250,7 +251,7 @@ export function DataArtifact({
           />
         )}
         {/* SQL Query Section - Only show in development mode */}
-        {sql && process.env.NODE_ENV === "development" && (
+        {sql && isDevelopment && (
           <div
             className={`
               space-y-3 transition-all duration-500 ease-out
@@ -287,7 +288,7 @@ export function DataArtifact({
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
             style={{
-              transitionDelay: sql && process.env.NODE_ENV === "development" ? "50ms" : "0ms",
+              transitionDelay: sql && isDevelopment ? "50ms" : "0ms",
             }}
           >
             <SectionHeader title={t("chatbot.artifact.queryResults", { count: data.length })} />
@@ -338,7 +339,7 @@ export function DataArtifact({
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
             style={{
-              transitionDelay: sql && process.env.NODE_ENV === "development" ? "100ms" : "0ms",
+              transitionDelay: sql && isDevelopment ? "100ms" : "0ms",
             }}
           >
             <SectionHeader title={t("chatbot.artifact.keyInsights")} />
@@ -352,7 +353,7 @@ export function DataArtifact({
                     ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
                   `}
                   style={{
-                    transitionDelay: `${(sql && process.env.NODE_ENV === "development" ? 100 : 0) + i * 100}ms`,
+                    transitionDelay: `${(sql && isDevelopment ? 100 : 0) + i * 100}ms`,
                   }}
                 >
                   <div className="mb-2 flex items-center gap-2">

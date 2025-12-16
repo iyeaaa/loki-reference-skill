@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { API_BASE_URL } from "@/lib/env"
 
 interface LeadResult {
   // 기존 필드 (레거시)
@@ -99,9 +100,6 @@ export default function GeminiSearchPage() {
   const driveMetaSourceId = useId()
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
-  // 배포 환경: nginx가 /api/를 프록시하므로 빈 문자열 사용 (상대 경로)
-  // 로컬 개발: VITE_API_URL=http://localhost:3001
-  const API_BASE_URL = import.meta.env.VITE_API_URL || ""
 
   // 고객 그룹 목록 가져오기
   const fetchCustomerGroups = useCallback(async () => {

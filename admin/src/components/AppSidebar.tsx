@@ -128,10 +128,10 @@ interface MenuItem {
  */
 const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
   {
-    title: t("sidebar.menu.analytics"),
-    url: "/analytics",
-    icon: BarChart3,
-    permission: { resource: IAM_RESOURCES.ANALYTICS, action: IAM_ACTIONS.READ },
+    title: t("sidebar.menu.home"),
+    url: "/dashboard",
+    icon: Home,
+    permission: "public",
   },
   {
     title: t("sidebar.menu.leadDiscovery"),
@@ -158,10 +158,10 @@ const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
     permission: { resource: IAM_RESOURCES.EMAILS, action: IAM_ACTIONS.LIST },
   },
   {
-    title: t("sidebar.menu.home"),
-    url: "/dashboard",
-    icon: Home,
-    permission: "public",
+    title: t("sidebar.menu.analytics"),
+    url: "/analytics",
+    icon: BarChart3,
+    permission: { resource: IAM_RESOURCES.ANALYTICS, action: IAM_ACTIONS.READ },
   },
   // {
   //   title: t("sidebar.menu.geminiSearch"),

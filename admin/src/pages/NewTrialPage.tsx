@@ -1,6 +1,5 @@
 import { motion } from "framer-motion"
 import { useAtomValue } from "jotai"
-import { Mail } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -9,7 +8,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { DashboardPreview } from "@/components/trial/DashboardPreview"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } from "@/lib/animations"
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
@@ -42,7 +40,7 @@ export default function NewTrialPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
   const [processedCode, setProcessedCode] = useState<string | null>(null)
-  const [email, setEmail] = useState("")
+  // const [email, setEmail] = useState("")
 
   // Read survey data from Jotai (localStorage)
   const surveyData = useAtomValue(surveyDataAtom)
@@ -159,79 +157,79 @@ export default function NewTrialPage() {
     }
   }
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) {
-      toast.error("이메일을 입력해주세요.")
-      return
-    }
+  // const handleEmailSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   if (!email) {
+  //     toast.error("이메일을 입력해주세요.")
+  //     return
+  //   }
 
-    setIsLoading(true)
-    try {
-      // Build request body with email + survey data (if available)
-      const requestBody: Record<string, string> = { email }
-      if (
-        surveyData?.industry &&
-        surveyData?.target &&
-        surveyData?.country &&
-        surveyData?.experience
-      ) {
-        requestBody.industry = surveyData.industry
-        requestBody.target = surveyData.target
-        requestBody.country = surveyData.country
-        requestBody.experience = surveyData.experience
-        if (surveyData.lang) requestBody.lang = surveyData.lang
-      }
+  //   setIsLoading(true)
+  //   try {
+  //     // Build request body with email + survey data (if available)
+  //     const requestBody: Record<string, string> = { email }
+  //     if (
+  //       surveyData?.industry &&
+  //       surveyData?.target &&
+  //       surveyData?.country &&
+  //       surveyData?.experience
+  //     ) {
+  //       requestBody.industry = surveyData.industry
+  //       requestBody.target = surveyData.target
+  //       requestBody.country = surveyData.country
+  //       requestBody.experience = surveyData.experience
+  //       if (surveyData.lang) requestBody.lang = surveyData.lang
+  //     }
 
-      const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
-        method: "POST",
-        body: JSON.stringify(requestBody),
-      })
+  //     const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
+  //       method: "POST",
+  //       body: JSON.stringify(requestBody),
+  //     })
 
-      // Create proper AuthUser format
-      const authUser = {
-        id: response.user.id,
-        email: response.user.email,
-        username: response.user.username,
-        userRole: response.user.userRole,
-        isActive: response.user.isActive,
-        trialStatus: response.user.trialStatus,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+  //     // Create proper AuthUser format
+  //     const authUser = {
+  //       id: response.user.id,
+  //       email: response.user.email,
+  //       username: response.user.username,
+  //       userRole: response.user.userRole,
+  //       isActive: response.user.isActive,
+  //       trialStatus: response.user.trialStatus,
+  //       createdAt: new Date().toISOString(),
+  //       updatedAt: new Date().toISOString(),
+  //     }
 
-      // Store auth data
-      authApi.storeAuthData(response.token, authUser)
+  //     // Store auth data
+  //     authApi.storeAuthData(response.token, authUser)
 
-      // Update auth context
-      await login(response.token, authUser, true) // Email registration login
+  //     // Update auth context
+  //     await login(response.token, authUser, true) // Email registration login
 
-      toast.success(`환영합니다! 이메일로 가입이 완료되었습니다.`)
+  //     toast.success(`환영합니다! 이메일로 가입이 완료되었습니다.`)
 
-      if (response.user.trialStatus?.isTrialActive) {
-        toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
-      }
+  //     if (response.user.trialStatus?.isTrialActive) {
+  //       toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
+  //     }
 
-      // If survey was completed, show result page first
-      if (hasCompleteSurvey && surveyData) {
-        const params = new URLSearchParams({
-          industry: surveyData.industry || "",
-          target: surveyData.target || "",
-          country: surveyData.country || "",
-          experience: surveyData.experience || "",
-        })
-        navigate(`/trial/result?${params.toString()}`)
-      } else {
-        // No survey data, go directly to company page
-        navigate("/company")
-      }
-    } catch (error) {
-      console.error("Email registration error:", error)
-      toast.error("이메일 등록 중 오류가 발생했습니다.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  //     // If survey was completed, show result page first
+  //     if (hasCompleteSurvey && surveyData) {
+  //       const params = new URLSearchParams({
+  //         industry: surveyData.industry || "",
+  //         target: surveyData.target || "",
+  //         country: surveyData.country || "",
+  //         experience: surveyData.experience || "",
+  //       })
+  //       navigate(`/trial/result?${params.toString()}`)
+  //     } else {
+  //       // No survey data, go directly to company page
+  //       navigate("/company")
+  //     }
+  //   } catch (error) {
+  //     console.error("Email registration error:", error)
+  //     toast.error("이메일 등록 중 오류가 발생했습니다.")
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
 
   if (isProcessingCallback) {
     return (
@@ -324,17 +322,17 @@ export default function NewTrialPage() {
           </motion.div>
 
           {/* Divider */}
-          <motion.div
+          {/* <motion.div
             className="flex items-center mb-6"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
             <div className="flex-1 border-t border-gray-300"></div>
             <span className="px-3 text-sm text-gray-500">또는</span>
             <div className="flex-1 border-t border-gray-300"></div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Email Form */}
-          <motion.form
+          {/* <motion.form
             onSubmit={handleEmailSubmit}
             className="space-y-4"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
@@ -363,7 +361,7 @@ export default function NewTrialPage() {
                 <>{t("trial.new.emailButton")} →</>
               )}
             </Button>
-          </motion.form>
+          </motion.form> */}
 
           {/* Disclaimer */}
           <motion.p
@@ -371,7 +369,10 @@ export default function NewTrialPage() {
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
             {t("trial.new.disclaimer")}{" "}
-            <a href="/privacy-policy" className="text-blue-600 hover:underline">
+            {/* <a href="/privacy-policy" className="text-blue-600 hover:underline">
+              {t("trial.new.privacyPolicy")}
+            </a> */}
+            <a href="https://rinda.ai/privacy-policy" className="text-blue-600 hover:underline">
               {t("trial.new.privacyPolicy")}
             </a>
             {t("trial.new.disclaimerEnd")}

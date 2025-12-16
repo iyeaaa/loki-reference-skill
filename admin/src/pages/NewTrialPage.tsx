@@ -1,6 +1,5 @@
 import { motion } from "framer-motion"
-import { useAtomValue } from "jotai"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -12,7 +11,12 @@ import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } fro
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
 import { useAuth } from "@/lib/auth-provider"
-import { isValidSurveyData, surveyDataAtom } from "@/store/survey"
+import {
+  clearSurveyStorage,
+  getSurveyFromStorage,
+  isValidSurveyData,
+  type SurveyData,
+} from "@/store/survey"
 
 interface GoogleAuthResponse {
   token: string
@@ -39,28 +43,72 @@ export default function NewTrialPage() {
   const { t } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
-  const [processedCode, setProcessedCode] = useState<string | null>(null)
-  // const [email, setEmail] = useState("")
 
-  // Read survey data from Jotai (localStorage)
-  const surveyData = useAtomValue(surveyDataAtom)
-  const hasCompleteSurvey = isValidSurveyData(surveyData)
+  // Ref to prevent duplicate OAuth processing
+  const processedCodeRef = useRef<string | null>(null)
 
-  console.log("[NewTrialPage] Survey data from Jotai:", surveyData)
-  console.log("[NewTrialPage] Has complete survey:", hasCompleteSurvey)
+  /**
+   * OAuth/Email 로그인 성공 후 처리
+   */
+  const handleLoginSuccess = useCallback(
+    (response: GoogleAuthResponse, surveyData: SurveyData | null) => {
+      const authUser = {
+        id: response.user.id,
+        email: response.user.email,
+        username: response.user.username,
+        userRole: response.user.userRole,
+        isActive: response.user.isActive,
+        trialStatus: response.user.trialStatus,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
 
+      // Store auth data
+      authApi.storeAuthData(response.token, authUser)
+
+      // Update auth context
+      login(response.token, authUser, true)
+
+      toast.success(`환영합니다, ${response.user.username}님!`)
+
+      if (response.user.trialStatus?.isTrialActive) {
+        toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
+      }
+
+      // Clear survey data from localStorage after successful login
+      clearSurveyStorage()
+
+      // Navigate based on survey completion
+      if (isValidSurveyData(surveyData)) {
+        const params = new URLSearchParams({
+          industry: surveyData.industry || "",
+          target: surveyData.target || "",
+          country: surveyData.country || "",
+          experience: surveyData.experience || "",
+        })
+        navigate(`/trial/result?${params.toString()}`)
+      } else {
+        navigate("/company")
+      }
+    },
+    [login, navigate],
+  )
+
+  /**
+   * Google OAuth Callback 처리
+   * - Hydration-safe하게 localStorage 직접 접근
+   */
   const handleGoogleCallback = useCallback(
     async (code: string) => {
       setIsProcessingCallback(true)
+
       try {
-        // Build request body with OAuth code + survey data (if available)
+        // Hydration-safe: 직접 localStorage에서 읽기
+        const surveyData = getSurveyFromStorage()
+
         const requestBody: Record<string, string> = { code }
-        if (
-          surveyData?.industry &&
-          surveyData?.target &&
-          surveyData?.country &&
-          surveyData?.experience
-        ) {
+
+        if (isValidSurveyData(surveyData)) {
           requestBody.industry = surveyData.industry
           requestBody.target = surveyData.target
           requestBody.country = surveyData.country
@@ -73,55 +121,19 @@ export default function NewTrialPage() {
           body: JSON.stringify(requestBody),
         })
 
-        // Create proper AuthUser format
-        const authUser = {
-          id: response.user.id,
-          email: response.user.email,
-          username: response.user.username,
-          userRole: response.user.userRole,
-          isActive: response.user.isActive,
-          trialStatus: response.user.trialStatus,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-
-        // Store auth data
-        authApi.storeAuthData(response.token, authUser)
-
-        // Update auth context
-        await login(response.token, authUser, true) // OAuth login
-
-        toast.success(`환영합니다, ${response.user.username}님!`)
-
-        if (response.user.trialStatus?.isTrialActive) {
-          toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
-        }
-
-        // If survey was completed, show result page first
-        if (hasCompleteSurvey && surveyData) {
-          const params = new URLSearchParams({
-            industry: surveyData.industry || "",
-            target: surveyData.target || "",
-            country: surveyData.country || "",
-            experience: surveyData.experience || "",
-          })
-          navigate(`/trial/result?${params.toString()}`)
-        } else {
-          // No survey data, go directly to company page
-          navigate("/company")
-        }
+        handleLoginSuccess(response, surveyData)
       } catch (error) {
-        console.error("Google OAuth callback error:", error)
+        console.error("[NewTrialPage] Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")
         navigate("/trial", { replace: true })
       } finally {
         setIsProcessingCallback(false)
       }
     },
-    [login, navigate, hasCompleteSurvey, surveyData],
+    [handleLoginSuccess, navigate],
   )
 
-  // Handle OAuth callback
+  // Handle OAuth callback - runs once on mount if code is present
   useEffect(() => {
     const code = searchParams.get("code")
     const error = searchParams.get("error")
@@ -132,105 +144,29 @@ export default function NewTrialPage() {
       return
     }
 
-    if (code && code !== processedCode && !isProcessingCallback && surveyData) {
-      setProcessedCode(code)
+    // Process OAuth callback (only once per code)
+    if (code && code !== processedCodeRef.current && !isProcessingCallback) {
+      processedCodeRef.current = code
       handleGoogleCallback(code)
     }
-  }, [
-    searchParams,
-    processedCode,
-    isProcessingCallback,
-    handleGoogleCallback,
-    navigate,
-    surveyData,
-  ])
+  }, [searchParams, isProcessingCallback, handleGoogleCallback, navigate])
 
+  /**
+   * Google 로그인 시작
+   */
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     try {
       const response = await apiFetch<{ authUrl: string }>("/api/v1/auth/google")
       window.location.href = response.authUrl
     } catch (error) {
-      console.error("Google OAuth error:", error)
+      console.error("[NewTrialPage] Google OAuth error:", error)
       toast.error("Google 로그인 URL을 가져오는데 실패했습니다.")
       setIsLoading(false)
     }
   }
 
-  // const handleEmailSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault()
-  //   if (!email) {
-  //     toast.error("이메일을 입력해주세요.")
-  //     return
-  //   }
-
-  //   setIsLoading(true)
-  //   try {
-  //     // Build request body with email + survey data (if available)
-  //     const requestBody: Record<string, string> = { email }
-  //     if (
-  //       surveyData?.industry &&
-  //       surveyData?.target &&
-  //       surveyData?.country &&
-  //       surveyData?.experience
-  //     ) {
-  //       requestBody.industry = surveyData.industry
-  //       requestBody.target = surveyData.target
-  //       requestBody.country = surveyData.country
-  //       requestBody.experience = surveyData.experience
-  //       if (surveyData.lang) requestBody.lang = surveyData.lang
-  //     }
-
-  //     const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
-  //       method: "POST",
-  //       body: JSON.stringify(requestBody),
-  //     })
-
-  //     // Create proper AuthUser format
-  //     const authUser = {
-  //       id: response.user.id,
-  //       email: response.user.email,
-  //       username: response.user.username,
-  //       userRole: response.user.userRole,
-  //       isActive: response.user.isActive,
-  //       trialStatus: response.user.trialStatus,
-  //       createdAt: new Date().toISOString(),
-  //       updatedAt: new Date().toISOString(),
-  //     }
-
-  //     // Store auth data
-  //     authApi.storeAuthData(response.token, authUser)
-
-  //     // Update auth context
-  //     await login(response.token, authUser, true) // Email registration login
-
-  //     toast.success(`환영합니다! 이메일로 가입이 완료되었습니다.`)
-
-  //     if (response.user.trialStatus?.isTrialActive) {
-  //       toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
-  //     }
-
-  //     // If survey was completed, show result page first
-  //     if (hasCompleteSurvey && surveyData) {
-  //       const params = new URLSearchParams({
-  //         industry: surveyData.industry || "",
-  //         target: surveyData.target || "",
-  //         country: surveyData.country || "",
-  //         experience: surveyData.experience || "",
-  //       })
-  //       navigate(`/trial/result?${params.toString()}`)
-  //     } else {
-  //       // No survey data, go directly to company page
-  //       navigate("/company")
-  //     }
-  //   } catch (error) {
-  //     console.error("Email registration error:", error)
-  //     toast.error("이메일 등록 중 오류가 발생했습니다.")
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // }
-
+  // Show loading state during OAuth processing
   if (isProcessingCallback) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
@@ -321,57 +257,12 @@ export default function NewTrialPage() {
             </Button>
           </motion.div>
 
-          {/* Divider */}
-          {/* <motion.div
-            className="flex items-center mb-6"
-            variants={shouldReduceMotion() ? {} : staggerItemVariants}
-          >
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-3 text-sm text-gray-500">또는</span>
-            <div className="flex-1 border-t border-gray-300"></div>
-          </motion.div> */}
-
-          {/* Email Form */}
-          {/* <motion.form
-            onSubmit={handleEmailSubmit}
-            className="space-y-4"
-            variants={shouldReduceMotion() ? {} : staggerItemVariants}
-          >
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="email"
-                placeholder={t("trial.new.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 h-11 sm:h-12 text-sm sm:text-base"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  등록 중...
-                </div>
-              ) : (
-                <>{t("trial.new.emailButton")} →</>
-              )}
-            </Button>
-          </motion.form> */}
-
           {/* Disclaimer */}
           <motion.p
             className="text-xs text-gray-500 mt-6 text-center"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
             {t("trial.new.disclaimer")}{" "}
-            {/* <a href="/privacy-policy" className="text-blue-600 hover:underline">
-              {t("trial.new.privacyPolicy")}
-            </a> */}
             <a href="https://rinda.ai/privacy-policy" className="text-blue-600 hover:underline">
               {t("trial.new.privacyPolicy")}
             </a>
@@ -459,7 +350,7 @@ export default function NewTrialPage() {
             </div>
           </motion.div>
 
-          {/* Testimonial Section - Outside dashboard */}
+          {/* Testimonial Section */}
           <motion.div
             className="mb-6 lg:mb-8"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}

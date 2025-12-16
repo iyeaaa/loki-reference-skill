@@ -1,0 +1,480 @@
+@startuml bullmq-overall-architecture
+!theme plain
+title BullMQ Email Scheduling System - Overall Architecture
+
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle uml2
+skinparam defaultFontName Malgun Gothic
+
+package "API Layer" {
+  [Elysia Server] as API
+  [POST /api/v1/emails/send] as SendAPI
+  [POST /api/v1/emails/schedule-batch] as BatchAPI
+}
+
+package "Queue Service Layer" {
+  [Email Queue Service] as QueueService
+  [Rate Limiter Service] as RateLimiter
+}
+
+package "BullMQ Queues (Redis)" {
+  queue "email:immediate" as ImmediateQ
+  queue "email:scheduled" as ScheduledQ
+  queue "email:daily-batch" as DailyQ
+  queue "email:failed" as FailedQ
+}
+
+package "Worker Layer" {
+  [Worker 1\nconcurrency=5] as W1
+  [Worker 2\nconcurrency=5] as W2
+  [Worker 3\nconcurrency=5] as W3
+}
+
+package "External Services" {
+  cloud "SendGrid API" as SendGrid
+}
+
+database "PostgreSQL" as DB {
+  [emails table]
+  [user_email_accounts]
+}
+
+database "Redis" as Redis {
+  [Rate Limit Counter]
+  [Queue Data]
+}
+
+API --> SendAPI
+API --> BatchAPI
+SendAPI --> QueueService
+BatchAPI --> QueueService
+
+QueueService --> RateLimiter
+QueueService --> ImmediateQ
+QueueService --> ScheduledQ
+QueueService --> DailyQ
+
+RateLimiter --> Redis
+
+ImmediateQ --> W1
+ScheduledQ --> W2
+DailyQ --> W3
+FailedQ --> W1
+
+W1 --> SendGrid
+W2 --> SendGrid
+W3 --> SendGrid
+
+W1 --> DB
+W2 --> DB
+W3 --> DB
+
+@enduml
+
+
+@startuml bullmq-rate-limiting-flow
+!theme plain
+title Rate Limiting Flow - Per Account Daily 20 Limit
+
+skinparam backgroundColor #FEFEFE
+skinparam activityDiamondBackgroundColor #FFD700
+
+|API|
+start
+:Receive email send request;
+
+|Rate Limiter|
+:Query Redis Key\nemail:limit:{accountId}:{YYYYMMDD};
+:Get current count;
+
+if (count < 20?) then (yes)
+  :INCR count;
+  if (count == 1?) then (yes)
+    :Set TTL 86400s (24h);
+  endif
+  :Return allowed=true;
+
+  |Queue Service|
+  :Add job to queue;
+
+  |Worker|
+  :Process email;
+  :Send via SendGrid;
+
+  |Database|
+  :Update email status\nto 'sent';
+
+  |API|
+  :Return success response;
+
+else (no)
+  |Rate Limiter|
+  :Return allowed=false;
+
+  |API|
+  :Return rate limit error\n"Daily limit exceeded (20/20)";
+
+endif
+
+stop
+
+@enduml
+
+
+@startuml bullmq-delayed-job-flow
+!theme plain
+title Delayed Job Processing Flow
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+
+participant "Producer" as P
+participant "Redis\n(Sorted Set)" as R
+participant "Delay Monitor\n(Worker Internal)" as DM
+participant "Queue\n(Wait List)" as Q
+participant "Worker" as W
+participant "SendGrid" as SG
+
+P -> R: ZADD email:delayed\n{score: timestamp+delay} jobId
+note right of R: score = scheduled time
+
+loop Every 1 second
+  DM -> R: ZRANGEBYSCORE email:delayed\n-inf {now}
+
+  alt Jobs with score <= now exist
+    R --> DM: Return due jobs [123, 124]
+
+    loop For each due job
+      DM -> R: ZREM email:delayed {jobId}
+      DM -> Q: ZADD email:wait {priority} {jobId}
+    end
+  end
+end
+
+Q -> W: BRPOPLPUSH email:wait email:active
+W -> W: Process job
+W -> SG: Send email
+SG --> W: Success response
+W -> R: Update status to 'completed'
+
+@enduml
+
+
+@startuml bullmq-business-hours-distribution
+!theme plain
+title Business Hours Distribution (9AM-6PM)
+
+skinparam backgroundColor #FEFEFE
+
+|Scheduler|
+start
+:Receive 20 emails to schedule;
+:Get current KST time;
+
+if (Current hour < 9?) then (yes)
+  :Set start = 9:00;
+else if (Current hour >= 18?) then (yes)
+  :Set date = tomorrow;
+  :Set start = 9:00;
+else (within business hours)
+  :Set start = current hour;
+endif
+
+:Calculate work minutes\n= (18 - startHour) * 60;
+:Calculate interval\n= workMinutes / emailCount;
+
+|Distribution|
+:emails[0] -> start + 0 * interval;
+:emails[1] -> start + 1 * interval;
+:emails[2] -> start + 2 * interval;
+:...;
+:emails[19] -> start + 19 * interval;
+
+note right
+  Example (20 emails from 9AM):
+  9 hours * 60 min = 540 min
+  540 / 20 = 27 min interval
+
+  Email 1: 09:00
+  Email 2: 09:27
+  Email 3: 09:54
+  ...
+  Email 20: 17:33
+end note
+
+|Queue Service|
+:Add each email as delayed job\nwith calculated delay;
+
+stop
+
+@enduml
+
+
+@startuml bullmq-retry-strategy
+!theme plain
+title Exponential Backoff Retry Strategy
+
+skinparam backgroundColor #FEFEFE
+skinparam state {
+  BackgroundColor #FFFACD
+  BorderColor #333333
+}
+
+state "Job Created" as Created
+state "Processing" as Processing
+state "Success" as Success #90EE90
+state "Retry Wait" as RetryWait #FFB6C1
+state "Failed" as Failed #FF6347
+
+[*] --> Created
+
+Created --> Processing : Worker picks up
+
+Processing --> Success : Send successful
+Processing --> RetryWait : Send failed\n(attempts < maxAttempts)
+Processing --> Failed : Send failed\n(attempts >= maxAttempts)
+
+RetryWait --> Processing : After backoff delay
+
+Success --> [*]
+Failed --> [*]
+
+note right of RetryWait
+  Exponential Backoff:
+  Attempt 1: Wait 1 min
+  Attempt 2: Wait 2 min
+  Attempt 3: Wait 4 min
+  Attempt 4: Wait 8 min
+  Attempt 5: Wait 16 min (max)
+end note
+
+note bottom of Failed
+  After max retries:
+  - Update DB status to 'failed'
+  - Record error message
+  - Move to DLQ (optional)
+end note
+
+@enduml
+
+
+@startuml bullmq-worker-concurrency
+!theme plain
+title Worker Concurrency Model
+
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+
+package "BullMQ Queue: email:immediate" {
+  queue "Waiting Jobs" as WQ {
+  }
+}
+
+package "Worker Instance (concurrency=5)" {
+  rectangle "Slot 1" as S1 #90EE90
+  rectangle "Slot 2" as S2 #90EE90
+  rectangle "Slot 3" as S3 #FFB6C1
+  rectangle "Slot 4" as S4 #90EE90
+  rectangle "Slot 5" as S5 #FFFACD
+}
+
+WQ --> S1 : Job 1
+WQ --> S2 : Job 2
+WQ --> S3 : Job 3 (processing)
+WQ --> S4 : Job 4
+WQ --> S5 : Job 5 (waiting SendGrid)
+
+note bottom of S1
+  Available
+end note
+
+note bottom of S3
+  Processing
+  Email Send
+end note
+
+note bottom of S5
+  I/O Wait
+  (SendGrid API)
+end note
+
+note right
+  With concurrency=5:
+  - Process up to 5 jobs simultaneously
+  - When I/O waiting, other slots can process
+  - Maximizes throughput for I/O-bound tasks
+
+  Rate Limiter (optional):
+  - max: 10, duration: 60000
+  - Limits to 10 jobs per minute
+  - Prevents overwhelming SendGrid
+end note
+
+@enduml
+
+
+@startuml bullmq-queue-status-monitoring
+!theme plain
+title Queue Status Monitoring (Bull Board)
+
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle uml2
+
+package "Bull Board Dashboard" {
+  [Real-time Metrics] as Metrics
+  [Job Inspector] as Inspector
+  [Queue Controls] as Controls
+}
+
+package "Queue: email:immediate" {
+  [Waiting: 45] as W1
+  [Active: 5] as A1
+  [Completed: 1,234] as C1
+  [Failed: 12] as F1
+  [Delayed: 0] as D1
+}
+
+package "Queue: email:scheduled" {
+  [Waiting: 0] as W2
+  [Active: 2] as A2
+  [Completed: 567] as C2
+  [Failed: 3] as F2
+  [Delayed: 189] as D2
+}
+
+package "Queue: email:daily-batch" {
+  [Waiting: 0] as W3
+  [Active: 0] as A3
+  [Completed: 45] as C3
+  [Failed: 0] as F3
+  [Delayed: 20] as D3
+}
+
+Metrics --> W1
+Metrics --> A1
+Metrics --> C1
+Metrics --> F1
+Metrics --> D1
+
+Metrics --> W2
+Metrics --> A2
+Metrics --> C2
+Metrics --> F2
+Metrics --> D2
+
+Metrics --> W3
+Metrics --> A3
+Metrics --> C3
+Metrics --> F3
+Metrics --> D3
+
+note right of Controls
+  Available Actions:
+  - Pause/Resume Queue
+  - Retry Failed Jobs
+  - Clean Completed Jobs
+  - View Job Details
+  - Delete Jobs
+end note
+
+@enduml
+
+
+@startuml bullmq-migration-strategy
+!theme plain
+title Migration Strategy: PostgreSQL Polling -> BullMQ
+
+skinparam backgroundColor #FEFEFE
+
+|Phase 1: Parallel Operation|
+start
+:Deploy BullMQ infrastructure;
+:Start BullMQ workers alongside\nexisting PostgreSQL workers;
+
+fork
+  :PostgreSQL Worker\n(handles existing jobs);
+fork again
+  :BullMQ Worker\n(handles new jobs\nwhen feature flag enabled);
+end fork
+
+|Phase 2: Traffic Split|
+:Enable feature flag for 10% traffic;
+:Monitor error rates and performance;
+
+if (Metrics OK?) then (yes)
+  :Increase to 50% traffic;
+  if (Metrics OK?) then (yes)
+    :Increase to 100% traffic;
+  else (no)
+    :Rollback to 10%;
+  endif
+else (no)
+  :Rollback to 0%;
+  :Investigate issues;
+endif
+
+|Phase 3: Full Migration|
+:Disable PostgreSQL workers;
+:Migrate remaining scheduled jobs\nfrom PostgreSQL to BullMQ;
+:Remove legacy worker code;
+
+|Phase 4: Cleanup|
+:Archive old scheduled_email_worker.ts;
+:Update documentation;
+:Remove feature flags;
+
+stop
+
+@enduml
+
+
+@startuml bullmq-error-handling-flow
+!theme plain
+title Error Handling and Dead Letter Queue
+
+skinparam backgroundColor #FEFEFE
+skinparam activityDiamondBackgroundColor #FFD700
+
+|Worker|
+start
+:Receive job from queue;
+:Attempt to send email;
+
+if (Send successful?) then (yes)
+  :Update status = 'sent';
+  :Record messageId;
+  stop
+else (no)
+  :Catch error;
+
+  |Error Handler|
+  if (Error type?) then (RATE_LIMIT)
+    :Throw retryable error;
+    :Job will retry with backoff;
+  else if (INVALID_EMAIL) then
+    :Throw UnrecoverableError;
+    :Job fails immediately;
+  else (OTHER)
+    :Check attempts;
+
+    if (attempts < maxAttempts?) then (yes)
+      :Throw error for retry;
+      :Apply exponential backoff;
+      :Job returns to queue;
+    else (no)
+      |Dead Letter Queue|
+      :Move to email:dlq;
+      :Record original data;
+      :Record error details;
+      :Record timestamp;
+
+      |Alerting|
+      :Send alert to ops team;
+      :Log failure metrics;
+    endif
+  endif
+endif
+
+stop
+
+@enduml

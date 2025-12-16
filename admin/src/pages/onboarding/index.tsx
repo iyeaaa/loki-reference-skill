@@ -1,12 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion"
-import { useAtom } from "jotai"
+import { useSetAtom } from "jotai"
 import { ArrowLeft } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Progress } from "@/components/ui/progress"
-import { surveyDataAtom } from "@/store/survey"
+import {
+  getLastCompletedStep,
+  getSurveyFromStorage,
+  mergeSurveyData,
+  surveyDataAtom,
+} from "@/store/survey"
 import { ValuePropsPanel } from "./components/ValuePropsPanel"
 import {
   EXPORT_EXPERIENCES,
@@ -27,22 +32,38 @@ export default function OnboardingPage() {
   const { step } = useParams<{ step: string }>()
   const currentStep = Math.min(Math.max(Number(step) || 1, 1), TOTAL_STEPS)
 
-  // Jotai atom for persistent survey data
-  const [, setSurveyData] = useAtom(surveyDataAtom)
+  // Jotai atom setter (for syncing after localStorage update)
+  const setSurveyData = useSetAtom(surveyDataAtom)
 
-  // Local state for UI
-  const [data, setData] = useState<OnboardingData>({
-    industry: null,
-    target: null,
-    country: null,
-    experience: null,
+  // Local state for UI - initialized from localStorage
+  const [data, setData] = useState<OnboardingData>(() => {
+    // Hydration-safe: 초기 렌더링 시 localStorage에서 복원
+    const stored = getSurveyFromStorage()
+    return {
+      industry: (stored?.industry as Industry) ?? null,
+      target: (stored?.target as TargetCustomer) ?? null,
+      country: (stored?.country as TargetCountry) ?? null,
+      experience: (stored?.experience as ExportExperience) ?? null,
+    }
   })
 
-  // Redirect to step 1 if invalid step
+  // Redirect logic: invalid step or trying to skip ahead
   useEffect(() => {
     const stepNum = Number(step)
+
+    // Invalid step format
     if (!step || Number.isNaN(stepNum) || stepNum < 1 || stepNum > TOTAL_STEPS) {
       navigate("/trial/survey/1", { replace: true })
+      return
+    }
+
+    // Check if user is trying to skip steps
+    const lastCompleted = getLastCompletedStep(getSurveyFromStorage())
+    const maxAllowedStep = lastCompleted + 1
+
+    // Allow going to any completed step or the next one
+    if (stepNum > maxAllowedStep) {
+      navigate(`/trial/survey/${maxAllowedStep}`, { replace: true })
     }
   }, [step, navigate])
 
@@ -54,68 +75,40 @@ export default function OnboardingPage() {
     }
   }
 
+  /**
+   * 스텝 선택 핸들러 - 부분 업데이트로 기존 데이터 보존
+   */
   const handleSelectIndustry = (industry: Industry) => {
-    const newData = { ...data, industry }
-    setData(newData)
-    // Save to Jotai (localStorage) - partial data is fine
-    setSurveyData({
-      industry,
-      target: data.target,
-      country: data.country,
-      experience: data.experience,
-      lang: i18n.language,
-    })
-    console.log("[OnboardingPage] Industry selected:", industry)
+    // 1. localStorage에 부분 업데이트 (기존 데이터 보존)
+    const updated = mergeSurveyData({ industry, lang: i18n.language })
+
+    // 2. 로컬 state 업데이트
+    setData((prev) => ({ ...prev, industry }))
+
+    // 3. Jotai atom 동기화
+    setSurveyData(updated)
+
     navigate("/trial/survey/2")
   }
 
   const handleSelectTarget = (target: TargetCustomer) => {
-    const newData = { ...data, target }
-    setData(newData)
-    // Save to Jotai (localStorage)
-    setSurveyData({
-      industry: data.industry,
-      target,
-      country: data.country,
-      experience: data.experience,
-      lang: i18n.language,
-    })
-    console.log("[OnboardingPage] Target selected:", target)
+    const updated = mergeSurveyData({ target, lang: i18n.language })
+    setData((prev) => ({ ...prev, target }))
+    setSurveyData(updated)
     navigate("/trial/survey/3")
   }
 
   const handleSelectCountry = (country: TargetCountry) => {
-    const newData = { ...data, country }
-    setData(newData)
-    // Save to Jotai (localStorage)
-    setSurveyData({
-      industry: data.industry,
-      target: data.target,
-      country,
-      experience: data.experience,
-      lang: i18n.language,
-    })
-    console.log("[OnboardingPage] Country selected:", country)
+    const updated = mergeSurveyData({ country, lang: i18n.language })
+    setData((prev) => ({ ...prev, country }))
+    setSurveyData(updated)
     navigate("/trial/survey/4")
   }
 
   const handleSelectExperience = (experience: ExportExperience) => {
-    const newData = { ...data, experience }
-    setData(newData)
-
-    // Save complete survey data to Jotai (localStorage)
-    const completeSurvey = {
-      industry: data.industry,
-      target: data.target,
-      country: data.country,
-      experience,
-      lang: i18n.language,
-    }
-    setSurveyData(completeSurvey)
-    console.log("[OnboardingPage] Survey completed, saved to Jotai:", completeSurvey)
-
-    // Navigate to /trial (registration page)
-    // No longer need URL params - data is in Jotai/localStorage
+    const updated = mergeSurveyData({ experience, lang: i18n.language })
+    setData((prev) => ({ ...prev, experience }))
+    setSurveyData(updated)
     navigate("/trial")
   }
 

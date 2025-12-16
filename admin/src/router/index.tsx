@@ -1,10 +1,9 @@
-import { useAtomValue } from "jotai"
 import { lazy } from "react"
 import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
 import { ProtectedRoute, UserProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 import { PermissionProvider, RouteGuard } from "@/lib/permission"
-import { isValidSurveyData, surveyDataAtom } from "@/store/survey"
+import { getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
 
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
@@ -90,40 +89,44 @@ function LoginRedirect() {
   return <Navigate to={`/auth${search ? `?${search}` : ""}`} replace />
 }
 
-// Redirect /trial to /trial/survey/1 if no survey data
+/**
+ * Trial 페이지 라우팅 로직 (Hydration-safe)
+ *
+ * 우선순위:
+ * 1. OAuth callback (code/error param) → NewTrialPage (로그인 처리)
+ * 2. 로그아웃에서 온 경우 → NewTrialPage
+ * 3. Survey 완료된 경우 → NewTrialPage (로그인 대기)
+ * 4. Survey 미완료 → /trial/survey/1 리다이렉트
+ *
+ * 핵심: Jotai hydration 문제를 피하기 위해 직접 localStorage 접근
+ */
 function TrialRedirect() {
   const [searchParams] = useSearchParams()
-  const surveyData = useAtomValue(surveyDataAtom)
+
+  // Hydration-safe: 직접 localStorage에서 읽기 (Jotai atom 대신)
+  const surveyData = getSurveyFromStorage()
   const hasSurveyData = isValidSurveyData(surveyData)
 
   const isFromLogout = searchParams.get("from") === "logout"
-  const isOAuthCallback = searchParams.has("code") // Google OAuth callback
-  const hasError = searchParams.has("error") // OAuth error
+  const isOAuthCallback = searchParams.has("code")
+  const hasError = searchParams.has("error")
 
-  console.log("[TrialRedirect] Survey data:", surveyData)
-  console.log("[TrialRedirect] Has valid survey data:", hasSurveyData)
-  console.log("[TrialRedirect] Is OAuth callback:", isOAuthCallback)
-
-  // If OAuth callback (has code param), always show NewTrialPage
-  // This prevents flash to survey during Jotai hydration
+  // 1. OAuth callback → always show NewTrialPage
   if (isOAuthCallback || hasError) {
-    console.log("[TrialRedirect] ✅ OAuth callback, showing NewTrialPage")
     return <NewTrialPage />
   }
 
-  // If user logged out, stay on /trial (show login page)
+  // 2. User logged out → show login page
   if (isFromLogout) {
     return <NewTrialPage />
   }
 
-  // If survey completed (data in Jotai), show login page
+  // 3. Survey completed → show login page
   if (hasSurveyData) {
-    console.log("[TrialRedirect] ✅ Survey completed, showing NewTrialPage")
     return <NewTrialPage />
   }
 
-  // No survey data, redirect to survey
-  console.log("[TrialRedirect] ⚠️ No survey data, redirecting to /trial/survey/1")
+  // 4. No survey data → redirect to survey
   return <Navigate to="/trial/survey/1" replace />
 }
 

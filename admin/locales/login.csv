@@ -31,3 +31,20 @@ error.employeeIdRequired,사번을 입력해주세요,Please enter your employee
 error.employeeIdMax,사번은 최대 20자까지 가능합니다,Employee ID must be at most 20 characters
 error.departmentRequired,부서를 선택해주세요,Please select a department
 error.passwordMismatch,비밀번호가 일치하지 않습니다,Passwords do not match
+button.continue,[NO TRANSLATION] login.button.continue,[NO TRANSLATION] login.button.continue
+button.directLogin,[NO TRANSLATION] login.button.directLogin,[NO TRANSLATION] login.button.directLogin
+button.google,[NO TRANSLATION] login.button.google,[NO TRANSLATION] login.button.google
+directLoginTitle,[NO TRANSLATION] login.directLoginTitle,[NO TRANSLATION] login.directLoginTitle
+divider,[NO TRANSLATION] login.divider,[NO TRANSLATION] login.divider
+error.googleCancelled,[NO TRANSLATION] login.error.googleCancelled,[NO TRANSLATION] login.error.googleCancelled
+error.googleFailed,[NO TRANSLATION] login.error.googleFailed,[NO TRANSLATION] login.error.googleFailed
+error.googleUrlFailed,[NO TRANSLATION] login.error.googleUrlFailed,[NO TRANSLATION] login.error.googleUrlFailed
+hasAccount,[NO TRANSLATION] login.hasAccount,[NO TRANSLATION] login.hasAccount
+loading.connecting,[NO TRANSLATION] login.loading.connecting,[NO TRANSLATION] login.loading.connecting
+loading.google,[NO TRANSLATION] login.loading.google,[NO TRANSLATION] login.loading.google
+noAccount,[NO TRANSLATION] login.noAccount,[NO TRANSLATION] login.noAccount
+success.signupComplete,[NO TRANSLATION] login.success.signupComplete,[NO TRANSLATION] login.success.signupComplete
+success.trialRemaining,[NO TRANSLATION] login.success.trialRemaining,[NO TRANSLATION] login.success.trialRemaining
+success.welcome,[NO TRANSLATION] login.success.welcome,[NO TRANSLATION] login.success.welcome
+trial.link,[NO TRANSLATION] login.trial.link,[NO TRANSLATION] login.trial.link
+trial.question,[NO TRANSLATION] login.trial.question,[NO TRANSLATION] login.trial.question

@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CreditCard,
   FileText,
+  FlaskConical,
   Globe,
   ListTree,
   Mail,
@@ -48,6 +49,7 @@ import { CustomersPage, PlansPage, ProductsPage, SubscriptionsPage } from "./bil
 import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
 import { AuditLogsPage, PoliciesPage, RolesPage, TierBoundariesPage } from "./iam"
 import LeadImportPage from "./lead-import/index"
+import { BullMQTestPage } from "./settings/BullMQTestPage"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
@@ -227,24 +229,6 @@ export default function SettingsPage() {
         icon: <Users className="h-4 w-4" />,
         permission: "admin-only",
       },
-      {
-        id: "bulk-lead-import",
-        label: t("settings.system.import.title"),
-        icon: <Upload className="h-4 w-4" />,
-        permission: { resource: IAM_RESOURCES.LEADS, action: IAM_ACTIONS.IMPORT },
-      },
-      {
-        id: "web-extraction",
-        label: t("settings.system.webExtraction.title"),
-        icon: <Globe className="h-4 w-4" />,
-        permission: "admin-only",
-      },
-      {
-        id: "nylas-email-test",
-        label: t("settings.nylasTest.title"),
-        icon: <Mail className="h-4 w-4" />,
-        permission: "admin-only",
-      },
       // ───────────────────────────────────────────────────────────────────────
       // 결제 - Admin 전용 (billing:* 권한)
       // ───────────────────────────────────────────────────────────────────────
@@ -317,6 +301,40 @@ export default function SettingsPage() {
         id: "activity-logs",
         label: "활동 로그",
         icon: <Activity className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      // ───────────────────────────────────────────────────────────────────────
+      // 테스트 - Admin 전용 (개발/테스트용 기능)
+      // ───────────────────────────────────────────────────────────────────────
+      {
+        id: "header-test",
+        label: "테스트",
+        icon: null,
+        type: "header",
+        permission: "admin-only",
+      },
+      {
+        id: "bulk-lead-import",
+        label: t("settings.system.import.title"),
+        icon: <Upload className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
+        id: "nylas-email-test",
+        label: t("settings.nylasTest.title"),
+        icon: <Mail className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
+        id: "web-extraction",
+        label: t("settings.system.webExtraction.title"),
+        icon: <Globe className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
+        id: "bullmq-test",
+        label: "BullMQ 테스트",
+        icon: <FlaskConical className="h-4 w-4" />,
         permission: "admin-only",
       },
     ],
@@ -545,6 +563,9 @@ export default function SettingsPage() {
         return <SubscriptionsPage />
       case "billing-customers":
         return <CustomersPage />
+      // Test Pages
+      case "bullmq-test":
+        return <BullMQTestPage />
       default:
         return null
     }
@@ -569,7 +590,7 @@ export default function SettingsPage() {
       {/* Sidebar - Hidden on mobile, visible on sm+ */}
       <div
         className={`
-          fixed sm:relative inset-y-0 left-0 z-50
+          fixed sm:relative inset-y-0 left-0 z-50 h-full
           transform transition-transform duration-300 ease-in-out
           sm:transform-none sm:translate-x-0 shrink-0
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}

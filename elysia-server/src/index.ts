@@ -20,6 +20,7 @@ import {
   subscriptionsRoutes,
 } from "./routes/billing.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
+import { bullmqTestRoutes } from "./routes/bullmq-test.routes"
 import { chatbotRoutes } from "./routes/chatbot.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
 import { dashboardRoutes } from "./routes/dashboard.routes"
@@ -212,6 +213,8 @@ const app = new Elysia()
   .use(iamMyPermissionsRoutes)
   // Onboarding routes
   .use(onboardingRoutes)
+  // BullMQ Test routes
+  .use(bullmqTestRoutes)
 
   .listen(config.port)
 

@@ -109,7 +109,7 @@ export function SettingsSidebar({
         )}
 
         {/* Menu Items */}
-        <nav className="flex-1 px-2 py-2 overflow-y-auto">
+        <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/30">
           <ul className="space-y-0.5">
             {items.map((item) => {
               // Render separator

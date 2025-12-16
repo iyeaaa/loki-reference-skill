@@ -61,8 +61,8 @@ jobs:
           echo "[+] Deploying SendGrinda containers"
           docker compose up -d --no-build --remove-orphans
 
-          echo "[+] Running health checks (timeout: 60s)"
-          HEALTH_CHECK_TIMEOUT=60
+          echo "[+] Running health checks (timeout: 90s)"
+          HEALTH_CHECK_TIMEOUT=90
           HEALTH_CHECK_INTERVAL=5
           ELAPSED=0
 
@@ -70,18 +70,27 @@ jobs:
             ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
             ELYSIA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
 
-            if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ]; then
-              echo " => Health check passed: All services are healthy"
-              break
+            # Check bullmq-worker container health via Docker
+            WORKER_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' send-grid-test-bullmq-worker-1 2>/dev/null || echo "unknown")
+            WORKER_RUNNING=$(docker inspect --format='{{.State.Running}}' send-grid-test-bullmq-worker-1 2>/dev/null || echo "false")
+
+            if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ] && [ "$WORKER_RUNNING" = "true" ]; then
+              # Worker health check takes time, so we also accept "starting" status initially
+              if [ "$WORKER_HEALTH" = "healthy" ] || [ "$WORKER_HEALTH" = "starting" ]; then
+                echo " => Health check passed: All services are healthy (Worker: $WORKER_HEALTH)"
+                break
+              fi
             fi
 
-            echo " => Waiting for services (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS) [$ELAPSED/$HEALTH_CHECK_TIMEOUT s]"
+            echo " => Waiting for services (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS, Worker: $WORKER_RUNNING/$WORKER_HEALTH) [$ELAPSED/$HEALTH_CHECK_TIMEOUT s]"
             sleep $HEALTH_CHECK_INTERVAL
             ELAPSED=$((ELAPSED + HEALTH_CHECK_INTERVAL))
           done
 
           if [ $ELAPSED -ge $HEALTH_CHECK_TIMEOUT ]; then
             echo "[!] Health check failed - Rolling back deployment"
+            echo "[!] Final status - Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS, Worker: $WORKER_RUNNING/$WORKER_HEALTH"
+            docker compose logs --tail=50 bullmq-worker
             docker compose down
             if [ -f /tmp/previous_containers.txt ]; then
               echo "[+] Restoring previous containers"

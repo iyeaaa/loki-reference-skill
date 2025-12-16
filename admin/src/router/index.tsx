@@ -65,6 +65,9 @@ const SubscriptionsPage = lazy(() =>
 const SSETestPage = lazy(() =>
   import("../pages/settings/SSETestPage").then((m) => ({ default: m.SSETestPage })),
 )
+const BullMQTestPage = lazy(() =>
+  import("../pages/settings/BullMQTestPage").then((m) => ({ default: m.BullMQTestPage })),
+)
 const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
 const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction"))
 const WebsetPage = lazy(() => import("../pages/webset"))
@@ -393,6 +396,14 @@ export const router = createBrowserRouter([
             element: (
               <RouteGuard>
                 <SSETestPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "test/bullmq",
+            element: (
+              <RouteGuard>
+                <BullMQTestPage />
               </RouteGuard>
             ),
           },

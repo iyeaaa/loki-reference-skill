@@ -1,0 +1,31 @@
+FROM oven/bun:1-alpine
+
+WORKDIR /app
+
+# Install PostgreSQL client for health checks (workers may need DB access)
+RUN apk add --no-cache postgresql-client
+
+# Copy package files
+COPY package.json ./
+COPY bun.lockb* ./
+
+# Install dependencies using bun
+RUN bun install --frozen-lockfile || bun install
+
+# Copy source code and configuration files
+COPY src ./src
+COPY tsconfig.json ./
+COPY drizzle.config.ts ./
+# Copy migration files (for schema types)
+COPY drizzle ./drizzle
+# Copy .env files
+COPY .env* ./
+
+# Health check - verify Redis connection using redis-cli
+RUN apk add --no-cache redis
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} -a ${REDIS_PASSWORD} ping | grep -q PONG || exit 1
+
+# Start the worker process
+CMD ["bun", "run", "src/worker.ts"]

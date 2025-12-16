@@ -97,6 +97,13 @@ export const config = {
     windowMs: getEnvInt("RATE_LIMIT_WINDOW_MS", 60000), // 1 minute
   },
 
+  // Redis (for BullMQ)
+  redis: {
+    host: getEnvOrDefault("REDIS_HOST", "localhost"),
+    port: getEnvInt("REDIS_PORT", 6379),
+    password: getEnvOrDefault("REDIS_PASSWORD", ""),
+  },
+
   // Monitoring (optional)
   monitoring: {
     sentryDsn: process.env.SENTRY_DSN,

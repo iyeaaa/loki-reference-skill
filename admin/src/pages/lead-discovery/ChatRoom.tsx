@@ -333,7 +333,7 @@ export function ChatRoom() {
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
-      setCustomers(newCustomers)  // Replace instead of append for new search
+      setCustomers(newCustomers) // Replace instead of append for new search
 
       // "원하는 조건으로 찾기" 모드에서 FitScore 계산을 위해 selectedTarget 자동 설정
       if (results.length > 0) {
@@ -418,7 +418,7 @@ export function ChatRoom() {
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Selection results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
-      setCustomers(newCustomers)  // Replace instead of append for selection results
+      setCustomers(newCustomers) // Replace instead of append for selection results
     },
     onComplete: (data) => {
       const recInfo = data.selectedRecommendation
@@ -694,7 +694,14 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
     },
-    [isSearching, selectedWorkspace, addMessage, searchMutation, setStreamingState, resetSearchState],
+    [
+      isSearching,
+      selectedWorkspace,
+      addMessage,
+      searchMutation,
+      setStreamingState,
+      resetSearchState,
+    ],
   )
 
   const handleSubmit = useCallback(

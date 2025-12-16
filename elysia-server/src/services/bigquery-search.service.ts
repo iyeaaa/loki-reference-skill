@@ -356,7 +356,49 @@ Query: "USA Real Estate & Construction 회사 100개"
 ## Table Information
 - Table Name: \`${dataDictionary.tableName}\`
 - Columns: ${dataDictionary.columns.join(", ")}
+${
+  dataDictionary.tableName.includes("revation_leads")
+    ? `
+## ⚠️ SPECIAL RULE FOR REVATION_LEADS TABLE - KOREAN COUNTRY NAMES!
 
+**THIS TABLE USES KOREAN COUNTRY NAMES, NOT ENGLISH!**
+
+When searching revation_leads table, you MUST use KOREAN country names:
+
+| English | KOREAN Value to Use in SQL |
+|---------|---------------------------|
+| Canada | 캐나다 |
+| United States, USA | 미국 |
+| Japan | 일본 |
+| France | 프랑스 |
+| Netherlands | 네덜란드 |
+| United Kingdom, UK | 영국 |
+| Belgium | 벨기에 |
+| Denmark | 덴마크 |
+
+### ✅ CORRECT SQL for revation_leads:
+- "Pet retailers in Canada" → WHERE country = '캐나다' AND ...
+- "Home decor in France" → WHERE country = '프랑스' AND ...
+- "Canada의 펫 소매업체" → WHERE country = '캐나다' AND ...
+
+### ❌ WRONG SQL for revation_leads:
+- WHERE country = 'Canada' → WRONG! Use '캐나다'
+- WHERE country = 'United States' → WRONG! Use '미국'
+
+Also, for this table:
+- Industry values are comma-separated (e.g., "Pet retail, E-commerce, Pet Services")
+- **CRITICAL: Use OR conditions, NOT AND for industry keywords!**
+- This table has curated premium leads - be LENIENT with industry matching
+
+### ✅ CORRECT SQL for revation_leads (use OR):
+WHERE country = '캐나다' AND (LOWER(industry) LIKE '%pet%' OR LOWER(industry) LIKE '%retail%' OR LOWER(industry) LIKE '%distribution%')
+
+### ❌ WRONG SQL for revation_leads (too strict):
+WHERE country = '캐나다' AND LOWER(industry) LIKE '%pet%' AND LOWER(industry) LIKE '%retail%' AND LOWER(industry) LIKE '%wholesale%'
+-- This is TOO STRICT! Use OR instead of AND for industry keywords!
+`
+    : ""
+}
 ## Available Values
 
 ### Industries (산업군) - ONLY use keywords from this list:

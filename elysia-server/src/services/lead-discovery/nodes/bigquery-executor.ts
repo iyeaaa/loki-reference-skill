@@ -760,6 +760,119 @@ const FRESH_LEADS_DATA_DICTIONARY = {
   revenueRanges: [], // revenue 데이터 없음
 }
 
+// Revation Leads 테이블 (큐레이션된 프리미엄 리드)
+const REVATION_LEADS_DATA_DICTIONARY = {
+  tableName: "gen-lang-client-0140658679.test_lead_01.revation_leads",
+  columns: [
+    "company",
+    "website",
+    "email",
+    "description",
+    "industry",
+    "business_type",
+    "country",
+    "city",
+    "employee_count",
+    "products",
+  ],
+  // industry 값 (실제 데이터 기반)
+  industries: [
+    // 리테일/이커머스
+    "Retail",
+    "E-commerce",
+    "Retail, E-commerce",
+    // 펫
+    "Pet retail",
+    "Pet Retail",
+    "Pet Supplies",
+    "Pet Food",
+    "Pet Services",
+    // 홈/리빙/인테리어
+    "Home & Living",
+    "Home décor",
+    "Home Goods",
+    "Furniture",
+    "Furniture Retail",
+    "Interior & Home Decor",
+    "Lifestyle",
+    "Lifestyle Goods",
+    // 패션/뷰티
+    "Fashion",
+    "Beauty",
+    "Beauty retail",
+    "Luxury Retail",
+    // 식품/음료
+    "Food & Beverage",
+    "Food & Snacks",
+    // 기타 리테일
+    "Gifts",
+    "Gifts retail",
+    "Stationery retail",
+    "Department Store",
+    "Marketplace",
+    // 디자인/미디어
+    "Design",
+    "Design Goods",
+    "Media",
+    "Publishing",
+    // 유통/도매
+    "Distribution",
+    "Wholesale",
+    "Wholesale Distribution",
+    // 서비스
+    "Trade Shows & Events",
+    "Corporate Gifting",
+    "Spa Services",
+    "Wellness",
+  ],
+  // business_type 값
+  businessTypes: [
+    "소매업체",
+    "온라인 플랫폼",
+    "유통업체",
+    "도매업체",
+    "수입업체",
+    "브랜드 소유자",
+    "마케팅업체",
+    "백화점",
+    "드러그스토어",
+  ],
+  // 국가 값
+  countries: [
+    "캐나다",
+    "미국",
+    "일본",
+    "프랑스",
+    "네덜란드",
+    "영국",
+    "벨기에",
+    "덴마크",
+    "Canada",
+    "United States",
+    "Japan",
+    "France",
+    "Netherlands",
+    "United Kingdom",
+    "Belgium",
+    "Denmark",
+  ],
+  employeeRanges: [
+    "1-10",
+    "2-10",
+    "5-20",
+    "10-20",
+    "10-50",
+    "20-50",
+    "50-100",
+    "100-200",
+    "100-500",
+    "500-1000",
+    "1000-5000",
+    "5000-10000",
+  ],
+  revenueRanges: [],
+}
+
 // Build natural language query from parameters
 function buildNaturalLanguageQuery(params: {
   query: string
@@ -1229,32 +1342,35 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
 
   // Perplexity 결과는 항상 최상위 (실시간 웹 검색 결과)
   const perplexityResults = results.filter((r) => r.source === "perplexity")
-  const otherResults = results.filter((r) => r.source !== "perplexity")
+  // Revation 결과는 2순위 (큐레이션된 프리미엄 리드)
+  const revationResults = results.filter((r) => r.source === "revation")
+  const otherResults = results.filter((r) => r.source !== "perplexity" && r.source !== "revation")
 
   leadDiscoveryLogger.info(
-    `[스마트 정렬] Perplexity 결과: ${perplexityResults.length}개 (최상위 노출)`,
+    `[스마트 정렬] Perplexity 결과: ${perplexityResults.length}개 (최상위 노출), Revation 결과: ${revationResults.length}개 (2순위)`,
   )
 
-  // 키워드가 없어도 소스 기반 우선순위 적용 (Perplexity > Apollo > Fresh > 기타)
+  // 키워드가 없어도 소스 기반 우선순위 적용 (Perplexity > Revation > Apollo > Fresh > 기타)
   if (countryKeywords.length === 0 && industryKeywords.length === 0) {
     leadDiscoveryLogger.info(
-      "[스마트 정렬] 키워드 없음 - 소스 기반 우선순위 적용 (Perplexity > Apollo > Fresh)",
+      "[스마트 정렬] 키워드 없음 - 소스 기반 우선순위 적용 (Perplexity > Revation > Apollo > Fresh)",
     )
 
-    // Perplexity 최우선, Apollo 다음, Fresh, 나머지
+    // Perplexity 최우선, Revation 다음, Apollo, Fresh, 나머지
     const apolloResults = otherResults.filter((r) => r.source === "apollo")
     const freshResults = otherResults.filter((r) => r.source === "fresh")
     const restResults = otherResults.filter((r) => r.source !== "apollo" && r.source !== "fresh")
 
     return [
       ...perplexityResults, // Perplexity 최상위 (셔플 안 함 - 정확도 순서 유지)
+      ...revationResults, // Revation 2순위 (프리미엄 리드 - 순서 유지)
       ...shuffleArray(apolloResults),
       ...shuffleArray(freshResults),
       ...shuffleArray(restResults),
     ]
   }
 
-  // 각 리드에 매칭 점수 계산 (국가 + 산업 + 소스 보너스) - Perplexity 제외한 나머지
+  // 각 리드에 매칭 점수 계산 (국가 + 산업 + 소스 보너스) - Perplexity/Revation 제외한 나머지
   const scored = otherResults.map((lead) => {
     const countryScore = calculateCountryMatchScore(lead, countryKeywords, isSpecificCountry)
     let industryScore = calculateIndustryMatchScore(lead, industryKeywords)
@@ -1310,9 +1426,10 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
       `기타=${noMatch.length}`,
   )
 
-  // 우선순위대로 결합 (Perplexity가 최상위, 자재/도매 키워드 매칭이 다음)
+  // 우선순위대로 결합 (Perplexity > Revation > 자재/도매 키워드 매칭)
   const sortedResults = [
     ...perplexityResults, // Perplexity 실시간 검색 결과 최상위 (정확도 순서 유지)
+    ...revationResults, // Revation 프리미엄 큐레이션 리드 2순위 (순서 유지)
     ...shuffleArray(priorityMatch).map((s) => s.lead), // 자재/도매 + 국가 매칭
     ...shuffleArray(bothMatch).map((s) => s.lead), // 국가 + 산업 매칭
     ...shuffleArray(countryWithPartialIndustry).map((s) => s.lead), // 국가 + 부분 산업
@@ -1343,6 +1460,23 @@ function transformApolloResults(
     email: undefined, // Apollo에는 email 없음
     employee: row.employees?.toString() || undefined,
     source, // 데이터 소스
+  }))
+}
+
+// Transform Revation results to our format (큐레이션된 프리미엄 리드)
+function transformRevationResults(results: Record<string, unknown>[]): BigQueryResult[] {
+  return results.map((row) => ({
+    companyName: row.company as string | undefined,
+    webAddress: row.website as string | undefined,
+    description: row.description as string | undefined,
+    fitScore: undefined, // 추후 계산 가능
+    country: row.country as string | undefined,
+    category: row.business_type as string | undefined,
+    mainIndustry: row.industry as string | undefined,
+    subIndustry: row.products as string | undefined,
+    email: row.email as string | undefined,
+    employee: row.employee_count as string | undefined,
+    source: "revation" as const,
   }))
 }
 
@@ -1454,16 +1588,31 @@ export async function executeBigQuery(
     // Perplexity 검색용 쿼리 최적화
     const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-    const [b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult] =
-      await Promise.allSettled([
-        searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
-        searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
-        searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
-        searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
-        searchLeadsWithPerplexity(perplexityQuery, 10), // 상위 10개 실시간 검색
-      ])
+    const [
+      b2bResult,
+      crunchbaseResult,
+      apolloResult,
+      freshResult,
+      revationResult,
+      perplexityResult,
+    ] = await Promise.allSettled([
+      searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY), // 큐레이션된 프리미엄 리드
+      searchLeadsWithPerplexity(perplexityQuery, 10), // 상위 10개 실시간 검색
+    ])
 
-    return { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult, nlQuery }
+    return {
+      b2bResult,
+      crunchbaseResult,
+      apolloResult,
+      freshResult,
+      revationResult,
+      perplexityResult,
+      nlQuery,
+    }
   }
 
   try {
@@ -1476,8 +1625,14 @@ export async function executeBigQuery(
       attemptCount++
       searchResults = await executeSearchOnce(attemptCount)
 
-      const { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult } =
-        searchResults
+      const {
+        b2bResult,
+        crunchbaseResult,
+        apolloResult,
+        freshResult,
+        revationResult,
+        perplexityResult,
+      } = searchResults
 
       // 결과 수 계산
       totalResultCount = 0
@@ -1486,6 +1641,8 @@ export async function executeBigQuery(
         totalResultCount += crunchbaseResult.value.totalCount
       if (apolloResult.status === "fulfilled") totalResultCount += apolloResult.value.totalCount
       if (freshResult.status === "fulfilled") totalResultCount += freshResult.value.totalCount
+      // Revation 결과 추가 (큐레이션된 프리미엄 리드)
+      if (revationResult.status === "fulfilled") totalResultCount += revationResult.value.totalCount
       // Perplexity 결과 추가
       if (perplexityResult.status === "fulfilled")
         totalResultCount += perplexityResult.value.totalCount
@@ -1540,8 +1697,14 @@ export async function executeBigQuery(
     }
 
     // 결과 처리
-    const { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult } =
-      searchResults
+    const {
+      b2bResult,
+      crunchbaseResult,
+      apolloResult,
+      freshResult,
+      revationResult,
+      perplexityResult,
+    } = searchResults
 
     // B2B Leads 결과 처리
     let b2bTransformed: ReturnType<typeof transformResults> = []
@@ -1607,6 +1770,27 @@ export async function executeBigQuery(
       leadDiscoveryLogger.error(`[리드 검색] fresh_leads 검색 실패: ${reason}`)
     }
 
+    // Revation Leads 결과 처리 (큐레이션된 프리미엄 리드)
+    let revationTransformed: BigQueryResult[] = []
+    let revationTotal = 0
+    let revationSql = ""
+    leadDiscoveryLogger.info(`[Revation] status: ${revationResult.status}`)
+    if (revationResult.status === "fulfilled") {
+      revationTransformed = transformRevationResults(revationResult.value.results)
+      revationTotal = revationResult.value.totalCount
+      revationSql = revationResult.value.sql
+      leadDiscoveryLogger.info(
+        `[리드 검색] revation_leads: ${revationTotal.toLocaleString()}개 ⭐ (프리미엄)`,
+      )
+      leadDiscoveryLogger.info(`[Revation SQL] ${revationSql}`)
+    } else {
+      const reason =
+        revationResult.reason instanceof Error
+          ? revationResult.reason.message
+          : String(revationResult.reason)
+      leadDiscoveryLogger.warn(`[리드 검색] revation_leads 검색 실패: ${reason}`)
+    }
+
     // Perplexity 결과 처리 (실시간 웹 검색)
     let perplexityTransformed: BigQueryResult[] = []
     let perplexityTotal = 0
@@ -1638,12 +1822,13 @@ export async function executeBigQuery(
 
     // 각 테이블 결과 수 로그
     leadDiscoveryLogger.info(
-      `[셔플 전] Perplexity: ${perplexityTransformed.length}, B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
+      `[셔플 전] Perplexity: ${perplexityTransformed.length}, Revation: ${revationTransformed.length}, B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
     )
 
-    // 결과 합치기 (Perplexity 결과를 맨 앞에 배치 - 실시간 검색 결과 상위 노출)
+    // 결과 합치기 (Perplexity > Revation > Apollo > Fresh > B2B > Crunchbase)
     const allResults = [
       ...perplexityTransformed, // Perplexity 실시간 검색 결과 최우선
+      ...revationTransformed, // Revation 프리미엄 큐레이션 리드 (2순위)
       ...apolloTransformed, // Apollo BigQuery 결과
       ...freshTransformed,
       ...b2bTransformed,
@@ -1668,14 +1853,16 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(
       `[더 가져오기] 전체: ${combinedResults.length}개, 반환: 100개, 남음: ${combinedResults.length - 100}개`,
     )
-    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal + perplexityTotal
-    const combinedSql = `-- Perplexity (실시간): ${perplexityTotal} results\n\n-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
+    const totalCount =
+      b2bTotal + crunchbaseTotal + apolloTotal + freshTotal + revationTotal + perplexityTotal
+    const combinedSql = `-- Perplexity (실시간): ${perplexityTotal} results\n\n-- Revation (프리미엄):\n${revationSql}\n\n-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
     const duration = Date.now() - startTime
 
     // 상세 로그: 검색 결과
     leadDiscoveryLogger.info(`[리드 검색] 검색 완료:`)
     leadDiscoveryLogger.info(`  - Perplexity (실시간): ${perplexityTotal}개 ⭐ (상위 노출)`)
+    leadDiscoveryLogger.info(`  - Revation (프리미엄): ${revationTotal}개 ⭐ (2순위)`)
     leadDiscoveryLogger.info(`  - B2B Leads: ${b2bTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
@@ -1691,14 +1878,18 @@ export async function executeBigQuery(
 
     // 고객군 분석 없이 바로 결과 반환
     if (emitter) {
-      const perplexityNote = perplexityTotal > 0 ? ` (실시간 ${perplexityTotal}개 포함)` : ""
+      const premiumNote =
+        perplexityTotal > 0 || revationTotal > 0
+          ? ` (프리미엄 ${perplexityTotal + revationTotal}개 포함)`
+          : ""
       emitter.nodeComplete(
         "executeBigQuery",
-        `${totalCount.toLocaleString()}개 리드 검색 완료${perplexityNote}`,
+        `${totalCount.toLocaleString()}개 리드 검색 완료${premiumNote}`,
         {
           resultCount: limitedResults.length,
           totalCount: totalCount,
           perplexityCount: perplexityTotal,
+          revationCount: revationTotal,
           b2bCount: b2bTotal,
           crunchbaseCount: crunchbaseTotal,
           apolloCount: apolloTotal,

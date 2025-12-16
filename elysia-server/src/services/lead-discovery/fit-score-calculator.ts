@@ -40,6 +40,98 @@ export interface FitScoreResult {
   reason?: string
 }
 
+// 단순 지역/국가 검색인지 확인 (산업군 등 추가 조건이 없는 경우)
+function isSimpleLocationSearch(query: string): boolean {
+  // 1. "국가: XX" 또는 "지역: XX" 패턴 체크
+  const parts = query.split(",").map((p) => p.trim())
+  const isLocationPrefixOnly = parts.every((part) => /^(국가|지역):/.test(part) || part === "")
+  if (isLocationPrefixOnly) return true
+
+  // 2. "XX 회사", "XX 기업", "XX 업체" 등 단순 국가/지역 + 일반 명사 패턴 체크
+  // 산업군 키워드가 없으면 단순 지역 검색으로 처리
+  const industryKeywords = [
+    // 영어 산업군
+    "cosmetic",
+    "beauty",
+    "pharmaceutical",
+    "automotive",
+    "electronics",
+    "semiconductor",
+    "software",
+    "manufacturing",
+    "retail",
+    "wholesale",
+    "distributor",
+    "healthcare",
+    "medical",
+    "food",
+    "beverage",
+    "textile",
+    "chemical",
+    "energy",
+    "construction",
+    "real estate",
+    "finance",
+    "insurance",
+    "logistics",
+    "transportation",
+    "agriculture",
+    "mining",
+    "telecom",
+    "media",
+    "entertainment",
+    "hospitality",
+    "education",
+    "consulting",
+    // 한국어 산업군
+    "화장품",
+    "뷰티",
+    "제약",
+    "자동차",
+    "전자",
+    "반도체",
+    "소프트웨어",
+    "IT",
+    "제조",
+    "소매",
+    "도매",
+    "유통",
+    "헬스케어",
+    "의료",
+    "식품",
+    "음료",
+    "섬유",
+    "화학",
+    "에너지",
+    "건설",
+    "부동산",
+    "금융",
+    "보험",
+    "물류",
+    "운송",
+    "농업",
+    "광업",
+    "통신",
+    "미디어",
+    "엔터테인먼트",
+    "호텔",
+    "교육",
+    "컨설팅",
+    "바이오",
+    "배터리",
+    "태양광",
+    "풍력",
+  ]
+
+  const lowerQuery = query.toLowerCase()
+  const hasIndustryKeyword = industryKeywords.some((keyword) =>
+    lowerQuery.includes(keyword.toLowerCase()),
+  )
+
+  // 산업군 키워드가 없으면 단순 지역 검색
+  return !hasIndustryKeyword
+}
+
 // 한국어 쿼리에서 국가명 추출
 function extractCountryFromQuery(query: string): string | null {
   const countryMap: Record<string, string> = {
@@ -97,6 +189,20 @@ export async function calculateFitScores(
   onScore: (result: FitScoreResult) => void,
   userQuery?: string, // 사용자 검색 쿼리 추가
 ): Promise<void> {
+  // 단순 지역/국가 검색인 경우 AI 호출 없이 모두 100점 반환
+  if (userQuery && isSimpleLocationSearch(userQuery)) {
+    leadDiscoveryLogger.info(
+      `Simple location search detected: "${userQuery}". All leads scored 100.`,
+    )
+    for (const lead of leads) {
+      onScore({
+        leadId: lead.id,
+        score: 100,
+      })
+    }
+    return
+  }
+
   const BATCH_SIZE = 10
 
   for (let i = 0; i < leads.length; i += BATCH_SIZE) {
@@ -288,39 +394,34 @@ Companies that USE or CONSUME these products should score HIGH!`
 ## Task:
 For each lead, calculate a FIT SCORE (0-100) based on:
 
-1. **COUNTRY MATCH (30 points max)**
-   - EXACT country match = 30 points
-   - Related region = 15 points
+1. **COUNTRY MATCH (40 points max)**
+   - EXACT country match = 40 points
+   - Related region = 20 points
    - Different country/region = 0 points
    ${extractedCountry ? `- User specifically requested "${extractedCountry}". If lead's country doesn't match, score penalty applies.` : ""}
    
-2. **INDUSTRY/INTENT MATCH (40 points max) - MOST IMPORTANT** ${
+2. **INDUSTRY/INTENT MATCH (60 points max) - MOST IMPORTANT** ${
     isMaterialsSearch && !isSalesSearch
       ? `
-   - Actual materials supplier/distributor/manufacturer = 40 points
-   - Company with materials + services = 25 points
-   - Pure service/contractor company = 10 points
+   - Actual materials supplier/distributor/manufacturer = 60 points
+   - Company with materials + services = 40 points
+   - Pure service/contractor company = 15 points
    - Unrelated industry = 0 points`
       : isSalesSearch
         ? `
-   - Company that directly USES/CONSUMES the product = 40 points
+   - Company that directly USES/CONSUMES the product = 60 points
      (e.g., construction company for building materials)
-   - Company that PURCHASES for projects/resale = 30 points
+   - Company that PURCHASES for projects/resale = 45 points
      (e.g., developers, contractors)
-   - Company in related field that might need the product = 20 points
+   - Company in related field that might need the product = 30 points
      (e.g., architecture firms for building materials)
-   - Competitor (same type of seller) = 5 points
+   - Competitor (same type of seller) = 10 points
    - Completely unrelated industry = 0 points`
         : `
-   - Industry exactly matches = 40 points
-   - Related industry = 20 points
+   - Industry exactly matches = 60 points
+   - Related industry = 30 points
    - Unrelated industry = 0 points`
   }
-   
-3. **Data Completeness (30 points max)**
-   - Has email = 10 points
-   - Has phone = 10 points
-   - Has website = 10 points
 
 ${
   isMaterialsSearch && !isSalesSearch

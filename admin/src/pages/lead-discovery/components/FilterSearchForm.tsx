@@ -1,6 +1,6 @@
 /**
  * FilterSearchForm Component
- * 조건 검색 모드에서 드롭다운을 통해 국가, 산업군 등을 선택하거나 자연어로 검색하는 폼
+ * 조건 검색 모드에서 드롭다운을 통해 국가/지역을 선택하거나 자연어로 검색하는 폼
  */
 
 import { ArrowRight, Loader2, RotateCcw } from "lucide-react"
@@ -16,14 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  buildSearchQuery,
-  COUNTRIES,
-  EMPLOYEE_RANGES,
-  INDUSTRIES,
-  REGIONS,
-  SUB_INDUSTRIES,
-} from "../constants/data-dictionary"
+import { COUNTRIES, REGIONS } from "../constants/data-dictionary"
 
 interface FilterSearchFormProps {
   onSubmit: (query: string) => void
@@ -38,38 +31,42 @@ export function FilterSearchForm({
 }: FilterSearchFormProps) {
   const [country, setCountry] = useState<string>("")
   const [region, setRegion] = useState<string>("")
-  const [industry, setIndustry] = useState<string>("")
-  const [subIndustry, setSubIndustry] = useState<string>("")
-  const [employeeRange, setEmployeeRange] = useState<string>("")
   const [freeText, setFreeText] = useState<string>("") // 자연어 입력
 
-  // 선택된 필터로 쿼리 생성
+  // 선택된 필터로 쿼리 생성 (자연어 + 국가/지역 조합)
   const generatedQuery = useMemo(() => {
-    // 자연어 입력이 있으면 우선 사용
-    if (freeText.trim()) {
-      return freeText.trim()
-    }
-    return buildSearchQuery({
-      country,
-      region,
-      industry,
-      subIndustry,
-      employeeRange,
-    })
-  }, [country, region, industry, subIndustry, employeeRange, freeText])
+    const parts: string[] = []
 
-  // 유효성 검사: 자연어 또는 최소 하나의 필터 선택 필요
+    // 자연어 입력이 있으면 추가
+    if (freeText.trim()) {
+      parts.push(freeText.trim())
+    }
+
+    // 국가 또는 지역 추가
+    if (country) {
+      const countryOption = COUNTRIES.find((c) => c.value === country)
+      if (countryOption) {
+        parts.push(`국가: ${countryOption.labelKo}`)
+      }
+    } else if (region) {
+      const regionOption = REGIONS.find((r) => r.value === region)
+      if (regionOption) {
+        parts.push(`지역: ${regionOption.labelKo}`)
+      }
+    }
+
+    return parts.join(", ")
+  }, [country, region, freeText])
+
+  // 유효성 검사: 자연어 또는 국가/지역 선택 필요
   const isValid = useMemo(() => {
-    return !!(freeText.trim() || country || region || industry || subIndustry)
-  }, [freeText, country, region, industry, subIndustry])
+    return !!(freeText.trim() || country || region)
+  }, [freeText, country, region])
 
   // 폼 초기화
   const handleReset = useCallback(() => {
     setCountry("")
     setRegion("")
-    setIndustry("")
-    setSubIndustry("")
-    setEmployeeRange("")
     setFreeText("")
   }, [])
 
@@ -103,7 +100,7 @@ export function FilterSearchForm({
         <textarea
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
-          placeholder="예: 미국에 위치한 화장품 유통업체, 직원 50명 이상"
+          placeholder="예: 화장품 유통업체"
           disabled={disabled}
           rows={2}
           className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -199,175 +196,6 @@ export function FilterSearchForm({
           </Select>
         </div>
       </div>
-
-      {/* 산업군 선택 */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">산업군</Label>
-        <Select value={industry} onValueChange={setIndustry} disabled={disabled}>
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="산업군 선택" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectGroup>
-              <SelectLabel>기술/IT</SelectLabel>
-              {INDUSTRIES.slice(0, 7).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>제조</SelectLabel>
-              {INDUSTRIES.slice(7, 15).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>헬스케어</SelectLabel>
-              {INDUSTRIES.slice(15, 19).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>금융/전문서비스</SelectLabel>
-              {INDUSTRIES.slice(19, 25).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>소매/소비재</SelectLabel>
-              {INDUSTRIES.slice(25, 30).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>부동산/건설</SelectLabel>
-              {INDUSTRIES.slice(30, 33).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>기타</SelectLabel>
-              {INDUSTRIES.slice(33).map((i) => (
-                <SelectItem key={i.value} value={i.value}>
-                  {i.labelKo} ({i.label})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 세부 산업군 (선택) */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-muted-foreground">세부 산업군 (선택)</Label>
-        <Select value={subIndustry} onValueChange={setSubIndustry} disabled={disabled}>
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="세부 산업군 선택 (선택사항)" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectGroup>
-              <SelectLabel>비즈니스 서비스</SelectLabel>
-              {SUB_INDUSTRIES.slice(0, 5).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>기술</SelectLabel>
-              {SUB_INDUSTRIES.slice(5, 8).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>헬스케어</SelectLabel>
-              {SUB_INDUSTRIES.slice(8, 12).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>제조</SelectLabel>
-              {SUB_INDUSTRIES.slice(12, 18).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>소매/도매</SelectLabel>
-              {SUB_INDUSTRIES.slice(18, 22).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>금융</SelectLabel>
-              {SUB_INDUSTRIES.slice(22, 25).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>부동산/건설</SelectLabel>
-              {SUB_INDUSTRIES.slice(25, 28).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>교육/호스피탈리티</SelectLabel>
-              {SUB_INDUSTRIES.slice(28).map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.labelKo}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 직원 수 (선택) */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-muted-foreground">직원 수 (선택)</Label>
-        <Select value={employeeRange} onValueChange={setEmployeeRange} disabled={disabled}>
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="직원 수 범위 선택 (선택사항)" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            {EMPLOYEE_RANGES.map((e) => (
-              <SelectItem key={e.value} value={e.value}>
-                {e.labelKo}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 생성된 쿼리 미리보기 */}
-      {generatedQuery && (
-        <div className="rounded-lg bg-muted/50 p-3 border border-border/50">
-          <p className="text-xs text-muted-foreground mb-1">검색 쿼리 미리보기</p>
-          <p className="text-sm font-medium text-foreground">{generatedQuery}</p>
-        </div>
-      )}
 
       {/* 버튼 */}
       <div className="flex items-center gap-2 pt-2">

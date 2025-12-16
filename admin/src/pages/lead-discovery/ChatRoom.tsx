@@ -13,7 +13,6 @@ import {
   ChevronDown,
   FolderPlus,
   Globe,
-  Lightbulb,
   Loader2,
   SlidersHorizontal,
   Sparkles,
@@ -125,8 +124,6 @@ export function ChatRoom() {
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
-  const [animatingCard, setAnimatingCard] = useState<string | null>(null)
-  const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
 
   // 새 검색 핸들러 - 모든 상태 초기화
   const handleNewSearch = useCallback(() => {
@@ -139,7 +136,6 @@ export function ChatRoom() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
   // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
@@ -380,6 +376,7 @@ export function ChatRoom() {
         }
         // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
         // 더 가져오기 정보도 포함
+        // userQuery도 유지하여 FitScore 계산에 사용
         return {
           ...initialStreamingState,
           status: "complete" as const,
@@ -388,6 +385,7 @@ export function ChatRoom() {
           hasMore: data.hasMore,
           totalAvailable: data.totalAvailable,
           loadedOffset: 100, // 초기 100개 로드됨
+          userQuery: prev.userQuery, // FitScore 계산용 쿼리 유지
         }
       })
     },
@@ -525,237 +523,6 @@ export function ChatRoom() {
     [],
   )
 
-  // 산업별 카드 데이터 (2025년 12월 기준 바이어 탐색 수요가 많은 순서)
-  const cardExamples = useMemo(
-    () => ({
-      "ev-battery": [
-        {
-          title: "전기차 배터리 유럽 진출",
-          description: "EV 배터리셀/팩을 유럽 완성차 업체에 납품",
-          query: "전기차 배터리 유럽 완성차 업체 납품",
-        },
-        {
-          title: "배터리 소재 북미 공급",
-          description: "리튬/니켈/코발트 등 양극재 소재 미국 배터리 제조사 공급",
-          query: "배터리 양극재 소재 미국 제조사 공급",
-        },
-        {
-          title: "배터리 관리 시스템(BMS) 중국 진출",
-          description: "차량용 BMS를 중국 전기차 제조사에 납품",
-          query: "BMS 배터리 관리 시스템 중국 전기차 납품",
-        },
-        {
-          title: "전기차 충전 인프라 동남아",
-          description: "급속 충전기를 동남아 충전소 운영사에 공급",
-          query: "전기차 급속 충전기 동남아 충전소 공급",
-        },
-        {
-          title: "배터리 재활용 솔루션 유럽",
-          description: "폐배터리 리사이클링 기술을 유럽 재활용 업체에 제안",
-          query: "배터리 재활용 기술 유럽 리사이클링 업체",
-        },
-        {
-          title: "전고체 배터리 소재 일본",
-          description: "차세대 전고체 배터리 소재를 일본 연구기관/제조사 공급",
-          query: "전고체 배터리 소재 일본 연구소 납품",
-        },
-      ],
-      semiconductor: [
-        {
-          title: "반도체 제조 장비 대만 진출",
-          description: "식각/증착 장비를 대만 파운드리에 납품",
-          query: "반도체 제조 장비 대만 파운드리 납품",
-        },
-        {
-          title: "반도체 소재 한국 공급",
-          description: "포토레지스트/CMP 슬러리를 한국 반도체 제조사 공급",
-          query: "반도체 소재 포토레지스트 한국 제조사 공급",
-        },
-        {
-          title: "디스플레이 장비 중국 진출",
-          description: "OLED 제조 장비를 중국 디스플레이 공장에 납품",
-          query: "OLED 디스플레이 장비 중국 공장 납품",
-        },
-        {
-          title: "반도체 테스트 장비 미국",
-          description: "웨이퍼 검사 장비를 미국 반도체 회사에 공급",
-          query: "반도체 테스트 검사 장비 미국 공급",
-        },
-        {
-          title: "AI 칩 설계 IP 유럽",
-          description: "AI/ML 반도체 IP를 유럽 팹리스에 라이선싱",
-          query: "AI 반도체 IP 유럽 팹리스 라이선싱",
-        },
-        {
-          title: "반도체 패키징 장비 베트남",
-          description: "후공정 패키징 장비를 베트남 OSAT 업체에 납품",
-          query: "반도체 패키징 장비 베트남 OSAT 납품",
-        },
-      ],
-      "bio-healthcare": [
-        {
-          title: "바이오 의약품 미국 FDA 진출",
-          description: "바이오 신약 원료를 미국 제약사에 공급",
-          query: "바이오 의약품 원료 미국 제약사 FDA 납품",
-        },
-        {
-          title: "의료기기 유럽 CE 인증",
-          description: "진단기기를 유럽 병원/클리닉에 판매",
-          query: "의료 진단기기 유럽 병원 CE인증 판매",
-        },
-        {
-          title: "헬스케어 웨어러블 일본",
-          description: "스마트 헬스케어 디바이스를 일본 유통사에 공급",
-          query: "헬스케어 웨어러블 디바이스 일본 유통사",
-        },
-        {
-          title: "유전자 분석 서비스 중동",
-          description: "NGS 유전체 분석 솔루션을 중동 병원에 제공",
-          query: "유전자 분석 NGS 솔루션 중동 병원",
-        },
-        {
-          title: "의료용 AI 진단 동남아",
-          description: "AI 영상진단 소프트웨어를 동남아 의료기관에 판매",
-          query: "AI 의료 영상진단 소프트웨어 동남아 병원",
-        },
-        {
-          title: "재생의료 바이오소재 미국",
-          description: "줄기세포/조직공학 소재를 미국 연구기관 공급",
-          query: "재생의료 줄기세포 소재 미국 연구기관",
-        },
-      ],
-      "eco-energy": [
-        {
-          title: "태양광 모듈 유럽 진출",
-          description: "고효율 태양광 패널을 유럽 설치업체에 공급",
-          query: "태양광 모듈 패널 유럽 설치업체 공급",
-        },
-        {
-          title: "풍력 터빈 부품 북미",
-          description: "풍력발전 터빈 부품을 미국/캐나다 발전사에 납품",
-          query: "풍력 터빈 부품 북미 발전사 납품",
-        },
-        {
-          title: "ESS 에너지 저장 호주",
-          description: "대용량 에너지 저장 시스템을 호주 전력 기업에 공급",
-          query: "ESS 에너지 저장 시스템 호주 전력 기업",
-        },
-        {
-          title: "수소 연료전지 일본",
-          description: "수소 발전/모빌리티용 연료전지를 일본 에너지 기업 납품",
-          query: "수소 연료전지 발전 일본 에너지 기업",
-        },
-        {
-          title: "친환경 패키징 유럽",
-          description: "생분해성 포장재를 유럽 식품/유통 기업에 공급",
-          query: "친환경 생분해성 패키징 유럽 식품 기업",
-        },
-        {
-          title: "탄소 포집 기술 중동",
-          description: "CCUS 탄소 포집 설비를 중동 석유/화학 기업에 제안",
-          query: "탄소 포집 CCUS 설비 중동 석유 화학",
-        },
-      ],
-      "food-consumer": [
-        {
-          title: "K-뷰티 화장품 중동",
-          description: "스킨케어/색조 화장품을 중동 유통사에 공급",
-          query: "K-뷰티 화장품 스킨케어 중동 유통사",
-        },
-        {
-          title: "프리미엄 식품 미국",
-          description: "K-푸드(김치/고추장 등)를 미국 식품 유통망 진출",
-          query: "한국 프리미엄 식품 김치 미국 유통망",
-        },
-        {
-          title: "건강기능식품 일본",
-          description: "홍삼/프로바이오틱스를 일본 건강식품 시장 진출",
-          query: "건강기능식품 홍삼 프로바이오틱스 일본",
-        },
-        {
-          title: "비건 식품 유럽",
-          description: "식물성 대체육/유제품을 유럽 비건 시장 공급",
-          query: "비건 대체육 식물성 식품 유럽 시장",
-        },
-        {
-          title: "스낵/과자 동남아",
-          description: "K-스낵(과자/라면 등)을 동남아 편의점 유통망 진출",
-          query: "한국 과자 라면 스낵 동남아 편의점",
-        },
-        {
-          title: "음료/베버리지 중국",
-          description: "기능성 음료를 중국 유통 채널에 공급",
-          query: "기능성 음료 베버리지 중국 유통 채널",
-        },
-      ],
-      manufacturing: [
-        {
-          title: "산업용 로봇 독일 진출",
-          description: "협동로봇/자동화 솔루션을 독일 제조사에 납품",
-          query: "산업용 협동로봇 자동화 독일 제조사",
-        },
-        {
-          title: "스마트 공장 솔루션 베트남",
-          description: "IoT/MES 스마트팩토리 시스템을 베트남 공장에 구축",
-          query: "스마트팩토리 IoT MES 베트남 공장",
-        },
-        {
-          title: "정밀 금형 일본",
-          description: "고정밀 프레스/사출 금형을 일본 자동차 부품사 공급",
-          query: "정밀 금형 프레스 사출 일본 자동차",
-        },
-        {
-          title: "3D 프린팅 장비 미국",
-          description: "산업용 3D 프린터를 미국 제조/항공 업체에 판매",
-          query: "산업용 3D 프린터 미국 제조 항공",
-        },
-        {
-          title: "레이저 가공 장비 중국",
-          description: "레이저 절단/용접 장비를 중국 금속 가공 업체에 납품",
-          query: "레이저 절단 용접 장비 중국 금속 가공",
-        },
-        {
-          title: "자동화 컨베이어 인도",
-          description: "물류 자동화 컨베이어 시스템을 인도 물류센터에 구축",
-          query: "자동화 컨베이어 물류 시스템 인도 물류센터",
-        },
-      ],
-      beauty: [
-        {
-          title: "K-뷰티 스킨케어 미국",
-          description: "세럼/마스크팩 등을 미국 뷰티 리테일러에 공급",
-          query: "K-뷰티 스킨케어 세럼 마스크팩 미국 리테일",
-        },
-        {
-          title: "더마 코스메틱 유럽",
-          description: "피부과 전문 화장품을 유럽 약국 채널 진출",
-          query: "더마 코스메틱 피부과 화장품 유럽 약국",
-        },
-        {
-          title: "헤어케어 제품 동남아",
-          description: "샴푸/트리트먼트를 동남아 뷰티 유통사 공급",
-          query: "헤어케어 샴푸 트리트먼트 동남아 유통",
-        },
-        {
-          title: "남성 그루밍 일본",
-          description: "남성 스킨케어/그루밍 제품을 일본 시장 진출",
-          query: "남성 그루밍 스킨케어 제품 일본 시장",
-        },
-        {
-          title: "클린뷰티 호주",
-          description: "천연/비건 화장품을 호주 클린뷰티 매장 공급",
-          query: "클린뷰티 천연 비건 화장품 호주 매장",
-        },
-        {
-          title: "색조 화장품 중동",
-          description: "립스틱/아이섀도 등을 중동 백화점/면세점 진출",
-          query: "색조 화장품 립스틱 아이섀도 중동 백화점",
-        },
-      ],
-    }),
-    [],
-  )
-
   // 스크롤 맨 아래로 - 메시지 추가시 자동 스크롤
   const scrollToBottom = useCallback(() => {
     if (scrollEndRef.current) {
@@ -788,46 +555,6 @@ export function ChatRoom() {
     return trimmed.length >= 2
   }, [input, searchMode, isValidWebsiteUrl])
 
-  // 카드 클릭 핸들러 (최적화)
-  const handleCardClick = useCallback(
-    (query: string, cardIndex: number) => {
-      const cardElement = cardRefs.current.get(query)
-      const inputElement = inputRef.current
-
-      if (cardElement && inputElement) {
-        // DOM 측정을 한 번만 수행
-        const cardRect = cardElement.getBoundingClientRect()
-        const inputRect = inputElement.getBoundingClientRect()
-
-        // 거리 계산 최적화 (변수 재사용)
-        const baseDistance = cardRect.bottom - inputRect.top
-        const rowIndex = (cardIndex / 3) >> 0 // Math.floor 대신 비트 연산자 사용 (더 빠름)
-
-        // 한 번의 계산으로 최종 거리 도출
-        setCardAnimationDistance(baseDistance * 1.3 + 200 + rowIndex * 200)
-      }
-
-      // 상태 업데이트를 배치로 처리
-      setInput("")
-      setAnimatingCard(query)
-
-      // 타이머 최적화
-      setTimeout(() => {
-        setSearchMode("detailed")
-        setInput(query)
-        inputRef.current?.focus()
-      }, 400)
-    },
-    [], // setSearchMode는 안정적인 함수이므로 의존성 제거
-  )
-
-  // 입력값이 변경되면 애니메이션 상태 초기화
-  useEffect(() => {
-    if (input && animatingCard && input !== animatingCard) {
-      setAnimatingCard(null)
-    }
-  }, [input, animatingCard])
-
   // 모드 전환 시 입력값 초기화 (상세 -> 웹사이트 모드)
   const prevSearchModeRef = useRef<SearchMode>(searchMode)
   useEffect(() => {
@@ -835,7 +562,6 @@ export function ChatRoom() {
     const modeChanged = prevSearchModeRef.current !== searchMode
     if (modeChanged && searchMode === "website" && input && !isValidWebsiteUrl(input)) {
       setInput("")
-      setAnimatingCard(null)
     }
     prevSearchModeRef.current = searchMode
   }, [searchMode, input, isValidWebsiteUrl])
@@ -988,7 +714,6 @@ export function ChatRoom() {
       console.log("[ChatRoom] Adding user message:", userMessage.id)
       addMessage(userMessage)
       setInput("")
-      setAnimatingCard(null)
 
       // 워크스페이스 확인
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
@@ -1196,63 +921,6 @@ export function ChatRoom() {
                     </div>
                   )}
                 </div>
-
-                {/* 카드 섹션 - 웹사이트 모드에서만 표시, 한 줄 수평 스크롤 */}
-                {searchMode === "website" && (
-                  <div className="w-full space-y-3">
-                    {/* 제목 */}
-                    <div className="flex items-center gap-2 justify-center">
-                      <Lightbulb className="h-4 w-4 text-amber-500" />
-                      <p className="text-sm text-muted-foreground">
-                        웹사이트가 없으신가요? 템플릿을 클릭하세요
-                      </p>
-                    </div>
-
-                    {/* 수평 스크롤 카드 */}
-                    <div className="overflow-x-auto pb-2 -mx-4 px-4">
-                      <div className="flex gap-3" style={{ width: "max-content" }}>
-                        {Object.values(cardExamples)
-                          .flat()
-                          .slice(0, 12) // 대표 12개만 표시
-                          .map((example, index) => (
-                            <button
-                              key={example.query}
-                              ref={(el) => {
-                                if (el) {
-                                  cardRefs.current.set(example.query, el)
-                                }
-                              }}
-                              type="button"
-                              onClick={() => handleCardClick(example.query, index)}
-                              className={cn(
-                                "group flex-shrink-0 w-[180px] p-3 rounded-lg border border-border bg-background hover:border-primary hover:shadow-md transition-all text-left",
-                                animatingCard === example.query && "pointer-events-none",
-                                animatingCard === example.query &&
-                                  input === example.query &&
-                                  "!opacity-0",
-                              )}
-                              style={
-                                animatingCard === example.query && input !== example.query
-                                  ? {
-                                      animation: "fly-to-input 0.4s ease-in-out forwards",
-                                      // @ts-expect-error
-                                      "--distance": `${cardAnimationDistance}px`,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              <div className="font-medium text-sm text-foreground mb-1 group-hover:text-primary transition-colors leading-snug line-clamp-1">
-                                {example.title}
-                              </div>
-                              <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                                {example.description}
-                              </div>
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ) : (

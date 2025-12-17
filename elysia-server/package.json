@@ -5,7 +5,7 @@
   "version": "1.0.3",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -n api,bullmq-worker -c blue,green \"bun --watch src/index.ts\" \"bun --watch src/worker.ts\"",
+    "dev": "concurrently -n api,bullmq-worker -c blue,green \"bun --watch src/index.ts\" \"bun --watch src/worker.ts || echo '[bullmq-worker] Worker exited (Redis not available)'\"",
     "dev:api": "bun --watch src/index.ts",
     "dev:local": "docker compose -f compose.db.yml up -d && bun run dev",
     "dev:worker": "bun --watch src/worker.ts",

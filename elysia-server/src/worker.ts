@@ -166,8 +166,12 @@ async function main(): Promise<void> {
   logger.info("[Worker] Checking Redis connection...")
   const redisHealthy = await checkRedisHealth()
   if (!redisHealthy) {
-    logger.error("[Worker] Redis connection failed, exiting")
-    process.exit(1)
+    logger.warn(
+      "[Worker] Redis connection failed - Worker will not process jobs. To enable, configure Redis connection.",
+    )
+    logger.warn("[Worker] Skipping worker initialization due to missing Redis connection")
+    // Redis가 없으면 worker 시작하지 않고 종료
+    process.exit(0)
   }
   logger.info("[Worker] Redis connection OK")
 

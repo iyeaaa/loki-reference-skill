@@ -244,9 +244,11 @@ export default function NewTrialPage() {
               "{t("trial.new.testimonial")}"
             </p>
             <div className="flex items-center justify-center lg:justify-start">
-              <div className="mr-3 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-400 sm:h-12 sm:w-12">
-                <span className="font-bold text-sm text-white sm:text-base">박</span>
-              </div>
+              <img
+                alt="박상민 대표"
+                className="mr-3 h-10 w-10 flex-shrink-0 rounded-full object-cover ring-2 ring-white/30 sm:h-12 sm:w-12"
+                src="/images/50ceo.png"
+              />
               <div>
                 <div className="font-medium text-base text-white sm:text-lg">
                   {t("trial.new.testimonialName")}

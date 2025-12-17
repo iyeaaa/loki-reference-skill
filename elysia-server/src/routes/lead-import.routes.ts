@@ -5,7 +5,7 @@
 
 import * as chardet from "chardet"
 import { Elysia, t } from "elysia"
-import * as iconv from "iconv-lite"
+import iconv from "iconv-lite"
 import * as XLSX from "xlsx"
 import type { ImportProgress } from "../services/lead-import.service"
 import { importLeadsBatch } from "../services/lead-import.service"

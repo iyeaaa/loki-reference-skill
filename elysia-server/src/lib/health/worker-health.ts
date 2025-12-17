@@ -328,134 +328,147 @@ async function getQueueMetrics(): Promise<QueueMetrics> {
 // HTTP Server
 // ============================================================================
 
-let healthServer: Elysia | null = null
+/**
+ * Health Check Elysia 앱 생성 (타입 추론용 분리)
+ */
+function createHealthApp() {
+  return (
+    new Elysia({ name: "worker-health" })
+      // ========================================
+      // Kubernetes Probes
+      // ========================================
+
+      /**
+       * Liveness Probe
+       * 프로세스가 살아있는지만 확인 (빠른 응답)
+       */
+      .get("/healthz", () => ({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+      }))
+
+      /**
+       * Readiness Probe
+       * 트래픽을 받을 준비가 되었는지 확인
+       */
+      .get("/readyz", async ({ set }) => {
+        const health = await performHealthCheck()
+
+        if (health.status === "unhealthy") {
+          set.status = 503
+        }
+
+        return {
+          status: health.status,
+          timestamp: health.timestamp,
+          checks: {
+            redis: health.checks.redis.status,
+            worker: health.checks.worker.status,
+            queue: health.checks.queue.status,
+          },
+        }
+      })
+
+      // ========================================
+      // Detailed Health Endpoints
+      // ========================================
+
+      /**
+       * 상세 Health Check
+       */
+      .get("/health", async ({ set }) => {
+        const health = await performHealthCheck()
+
+        if (health.status === "unhealthy") {
+          set.status = 503
+        }
+
+        return health
+      })
+
+      /**
+       * Queue 메트릭
+       */
+      .get("/metrics/queue", async () => {
+        return getQueueMetrics()
+      })
+
+      /**
+       * Worker 메트릭
+       */
+      .get("/metrics/worker", () => {
+        const status = getTestWorkerStatus()
+        const memory = process.memoryUsage()
+
+        return {
+          ...status,
+          totalProcessed: totalJobsProcessed,
+          totalFailed: totalJobsFailed,
+          lastProcessedAt: lastJobProcessedAt?.toISOString() || null,
+          uptime: Math.floor((Date.now() - startTime) / 1000),
+          memory: {
+            heapUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
+            rssMB: Math.round(memory.rss / 1024 / 1024),
+          },
+        }
+      })
+
+      /**
+       * 전체 메트릭 (Prometheus 형식 아님, JSON)
+       */
+      .get("/metrics", async () => {
+        const queue = await getQueueMetrics()
+        const workerStatus = getTestWorkerStatus()
+        const memory = process.memoryUsage()
+
+        return {
+          queue,
+          worker: {
+            ...workerStatus,
+            totalProcessed: totalJobsProcessed,
+            totalFailed: totalJobsFailed,
+            lastProcessedAt: lastJobProcessedAt?.toISOString() || null,
+          },
+          memory: {
+            heapUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
+            heapTotalMB: Math.round(memory.heapTotal / 1024 / 1024),
+            rssMB: Math.round(memory.rss / 1024 / 1024),
+          },
+          system: {
+            platform: process.platform,
+            nodeVersion: process.version,
+            cpus: os.cpus().length,
+            loadAvg: os.loadavg(),
+          },
+          uptime: Math.floor((Date.now() - startTime) / 1000),
+          timestamp: new Date().toISOString(),
+        }
+      })
+  )
+}
+
+/** Health Server 타입 */
+type HealthServer = ReturnType<typeof createHealthApp>
+
+let healthServer: HealthServer | null = null
 
 /**
  * Health Check HTTP 서버 생성 및 시작
  */
-export function startHealthServer(port: number = 3010): Elysia {
+export function startHealthServer(port: number = 3010): HealthServer {
   if (healthServer) {
     logger.warn("[HealthServer] Server already running")
     return healthServer
   }
 
-  healthServer = new Elysia({ name: "worker-health" })
-    // ========================================
-    // Kubernetes Probes
-    // ========================================
+  const server = createHealthApp()
 
-    /**
-     * Liveness Probe
-     * 프로세스가 살아있는지만 확인 (빠른 응답)
-     */
-    .get("/healthz", () => ({
-      status: "ok",
-      timestamp: new Date().toISOString(),
-    }))
-
-    /**
-     * Readiness Probe
-     * 트래픽을 받을 준비가 되었는지 확인
-     */
-    .get("/readyz", async ({ set }) => {
-      const health = await performHealthCheck()
-
-      if (health.status === "unhealthy") {
-        set.status = 503
-      }
-
-      return {
-        status: health.status,
-        timestamp: health.timestamp,
-        checks: {
-          redis: health.checks.redis.status,
-          worker: health.checks.worker.status,
-          queue: health.checks.queue.status,
-        },
-      }
-    })
-
-    // ========================================
-    // Detailed Health Endpoints
-    // ========================================
-
-    /**
-     * 상세 Health Check
-     */
-    .get("/health", async ({ set }) => {
-      const health = await performHealthCheck()
-
-      if (health.status === "unhealthy") {
-        set.status = 503
-      }
-
-      return health
-    })
-
-    /**
-     * Queue 메트릭
-     */
-    .get("/metrics/queue", async () => {
-      return getQueueMetrics()
-    })
-
-    /**
-     * Worker 메트릭
-     */
-    .get("/metrics/worker", () => {
-      const status = getTestWorkerStatus()
-      const memory = process.memoryUsage()
-
-      return {
-        ...status,
-        totalProcessed: totalJobsProcessed,
-        totalFailed: totalJobsFailed,
-        lastProcessedAt: lastJobProcessedAt?.toISOString() || null,
-        uptime: Math.floor((Date.now() - startTime) / 1000),
-        memory: {
-          heapUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
-          rssMB: Math.round(memory.rss / 1024 / 1024),
-        },
-      }
-    })
-
-    /**
-     * 전체 메트릭 (Prometheus 형식 아님, JSON)
-     */
-    .get("/metrics", async () => {
-      const queue = await getQueueMetrics()
-      const workerStatus = getTestWorkerStatus()
-      const memory = process.memoryUsage()
-
-      return {
-        queue,
-        worker: {
-          ...workerStatus,
-          totalProcessed: totalJobsProcessed,
-          totalFailed: totalJobsFailed,
-          lastProcessedAt: lastJobProcessedAt?.toISOString() || null,
-        },
-        memory: {
-          heapUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
-          heapTotalMB: Math.round(memory.heapTotal / 1024 / 1024),
-          rssMB: Math.round(memory.rss / 1024 / 1024),
-        },
-        system: {
-          platform: process.platform,
-          nodeVersion: process.version,
-          cpus: os.cpus().length,
-          loadAvg: os.loadavg(),
-        },
-        uptime: Math.floor((Date.now() - startTime) / 1000),
-        timestamp: new Date().toISOString(),
-      }
-    })
-
-  healthServer.listen(port, () => {
+  server.listen(port, () => {
     logger.info({ port }, "[HealthServer] Started")
   })
 
-  return healthServer
+  healthServer = server
+  return server
 }
 
 /**

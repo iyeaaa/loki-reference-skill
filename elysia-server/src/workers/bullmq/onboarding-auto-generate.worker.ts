@@ -8,7 +8,9 @@
 import { type Job, Worker } from "bullmq"
 import { eq } from "drizzle-orm"
 import { db } from "../../db"
+import { leads } from "../../db/schema/leads"
 import { onboardingProgress } from "../../db/schema/onboarding"
+import { sequenceSteps } from "../../db/schema/sequences"
 import { recordJobCompleted, recordJobFailed } from "../../lib/health"
 import {
   type OnboardingAutoGenerateJob,
@@ -128,9 +130,9 @@ async function processOnboardingJob(
     } else {
       // Recovery: Get existing lead IDs from DB
       const existingLeads = await db
-        .select({ id: (await import("../../db/schema/leads")).leads.id })
-        .from((await import("../../db/schema/leads")).leads)
-        .where(eq((await import("../../db/schema/leads")).leads.workspaceId, workspaceId))
+        .select({ id: leads.id })
+        .from(leads)
+        .where(eq(leads.workspaceId, workspaceId))
         .limit(300)
       leadIds = existingLeads.map((l) => l.id)
       logger.info(
@@ -219,15 +221,13 @@ async function processOnboardingJob(
 
       // If steps array is empty, fetch from DB
       if (steps.length === 0) {
-        const sequenceSteps = await db
+        const sequenceStepsData = await db
           .select()
-          .from((await import("../../db/schema/sequences")).sequenceSteps)
-          .where(
-            eq((await import("../../db/schema/sequences")).sequenceSteps.sequenceId, sequenceId),
-          )
-          .orderBy((await import("../../db/schema/sequences")).sequenceSteps.stepOrder)
+          .from(sequenceSteps)
+          .where(eq(sequenceSteps.sequenceId, sequenceId))
+          .orderBy(sequenceSteps.stepOrder)
 
-        steps = sequenceSteps.map((s) => ({
+        steps = sequenceStepsData.map((s) => ({
           stepId: s.id,
           stepOrder: s.stepOrder,
           delayDays: s.delayDays,

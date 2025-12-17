@@ -1,4 +1,30 @@
+import { config } from "../config"
 import logger from "../utils/logger"
+import { hashString, RedisCache } from "./redis-cache.service"
+
+// Initialize cache for lead enrichment
+const cache = RedisCache.fromConfig(config.cache.leadEnrichment)
+
+// Cache value types
+type HunterCacheValue = {
+  emails: Array<{ value: string; type: string; confidence: number }>
+  organization?: string
+  description?: string
+}
+
+type JinaCacheValue = {
+  content: string
+  title?: string
+  description?: string
+}
+
+type GeminiCacheValue = {
+  description: string
+  industry?: string
+  products?: string
+  attachedEmailValue?: string
+  attachedEmailType?: string
+}
 
 // Enrichment 결과 타입
 export interface EnrichmentResult {
@@ -33,6 +59,13 @@ export const findEmailsWithHunter = async (
   organization?: string
   description?: string
 }> => {
+  // Check cache first
+  const cached = await cache.get<HunterCacheValue>(`hunter:${domain}`)
+  if (cached) {
+    console.log(`[Hunter.io] ✅ Cache hit for ${domain}`)
+    return cached
+  }
+
   console.log(`[Hunter.io] Searching emails for domain: ${domain}`)
   const startTime = Date.now()
 
@@ -82,6 +115,9 @@ export const findEmailsWithHunter = async (
       console.log(`[Hunter.io]   - emails: ${result.emails.map((e) => e.value).join(", ")}`)
     }
 
+    // Cache the result
+    await cache.set(`hunter:${domain}`, result)
+
     return result
   } catch (error) {
     console.error(`[Hunter.io] ❌ Failed to fetch emails for ${domain}:`, error)
@@ -98,6 +134,13 @@ export const extractWebsiteContent = async (
   title?: string
   description?: string
 }> => {
+  // Check cache first
+  const cached = await cache.get<JinaCacheValue>(`jina:${url}`)
+  if (cached) {
+    console.log(`[JinaReader] ✅ Cache hit for ${url}`)
+    return cached
+  }
+
   const TIMEOUT_MS = 15000 // 15초 타임아웃
 
   console.log(`[JinaReader] Extracting content from: ${url}`)
@@ -143,11 +186,16 @@ export const extractWebsiteContent = async (
         console.log(`[JinaReader]   - title: ${title.substring(0, 50)}...`)
       }
 
-      return {
+      const result = {
         content: content.slice(0, 5000), // 최대 5000자
         title,
         description,
       }
+
+      // Cache the result
+      await cache.set(`jina:${url}`, result)
+
+      return result
     } catch (error) {
       clearTimeout(timeoutId)
       if (error instanceof Error && error.name === "AbortError") {
@@ -176,6 +224,14 @@ export const summarizeCompanyInfo = async (
   attachedEmailValue?: string
   attachedEmailType?: string
 }> => {
+  // Use content hash for caching to deduplicate similar content
+  const contentHash = hashString(content.slice(0, 3000))
+  const cached = await cache.get<GeminiCacheValue>(`gemini:${contentHash}`)
+  if (cached) {
+    console.log(`[Gemini] ✅ Cache hit for ${companyName}`)
+    return cached
+  }
+
   console.log(`[Gemini] Summarizing company info for: ${companyName}`)
   const startTime = Date.now()
 
@@ -217,6 +273,9 @@ JSON response:`
     if (result.industry) {
       console.log(`[Gemini]   - industry: ${result.industry}`)
     }
+
+    // Cache the result
+    await cache.set(`gemini:${contentHash}`, result)
 
     return result
   } catch (error) {

@@ -42,14 +42,10 @@ import * as workspaceServiceImport from "./workspace.service"
 
 export interface CheckpointState {
   phase: "init" | "discovery" | "group" | "templates" | "sequence" | "previews" | "complete"
-  iteration: number
   leadsWithEmailsCount: number
   lastIterationCompleted: boolean
   customerGroupId?: string
   sequenceId?: string
-  // Discovery phase state (for idempotency)
-  processedWebsites?: string[] // Websites already enriched and saved
-  usedQueries?: string[] // Search queries already executed
   // Templates phase state (for idempotency)
   generatedTemplates?: Array<{
     stepOrder: number
@@ -89,14 +85,13 @@ export function loadCheckpoint(
 ): CheckpointState {
   const defaultState: CheckpointState = {
     phase: "init",
-    iteration: 0,
     leadsWithEmailsCount: 0,
     lastIterationCompleted: false,
     errors: [],
   }
 
   // BullMQ stores checkpoint in job.data.checkpoint
-  const checkpoint = (job.data as any).checkpoint as Partial<CheckpointState> | undefined
+  const checkpoint = job.data.checkpoint as Partial<CheckpointState> | undefined
 
   if (!checkpoint) {
     return defaultState
@@ -184,174 +179,112 @@ export async function runDiscoveryPhase(
   count: number
 }> {
   const { workspaceId, userId, surveyData } = context
-  const TARGET_LEADS = 300
-  const MAX_ITERATIONS = 5
-  const BATCH_SIZE = 200
+  const BATCH_SIZE = 300
 
   console.log(`[DiscoveryPhase] Starting for workspace ${workspaceId}`)
 
   // Load checkpoint from BullMQ job data
-  const checkpoint = loadCheckpoint(job)
-  let iteration = checkpoint.iteration || 0
+  const _checkpoint = loadCheckpoint(job)
 
   // Map codes to actual Apollo BigQuery values
   const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
   const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
 
-  // Restore state from checkpoint (for idempotency on restart)
-  const usedQueries = new Set<string>(checkpoint.usedQueries || [])
-  const processedWebsites = new Set<string>(checkpoint.processedWebsites || [])
-
   try {
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
       phase: "discovery",
-      iteration,
     })
 
-    // Iterative discovery loop
-    while (iteration < MAX_ITERATIONS) {
-      iteration++
-      console.log(`[DiscoveryPhase] Iteration ${iteration}/${MAX_ITERATIONS}`)
+    // Report progress to keep job alive (extends lock)
+    await job.updateProgress({
+      phase: "discovery",
+      progressPercent: 15, // 15%
+    })
 
-      // Report progress to keep job alive (extends lock)
-      await job.updateProgress({
-        phase: "discovery",
-        iteration,
-        progressPercent: 10 + (iteration / MAX_ITERATIONS) * 20, // 10-30%
+    // Generate simple generic search query
+    const query = `${industryName} companies in ${countryName} ${BATCH_SIZE}개`
+    console.log(`[DiscoveryPhase] Query: "${query}"`)
+
+    // Search BigQuery
+    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+
+    if (!result.results.length) {
+      console.log("[DiscoveryPhase] No results from BigQuery")
+      return { leadIds: [], count: 0 }
+    }
+
+    console.log(`[DiscoveryPhase] Found ${result.results.length} results from BigQuery`)
+
+    // Prepare leads for enrichment
+    const leadsToEnrich = result.results
+      .filter((row) => row.website)
+      .map((row) => ({
+        company: row.company as string,
+        website: row.website as string,
+        industry: row.industry as string,
+        employees: row.employees?.toString() || "",
+        country: row.country as string,
+      }))
+
+    console.log(`[DiscoveryPhase] Prepared ${leadsToEnrich.length} leads for enrichment`)
+
+    // Enrich leads
+    if (leadsToEnrich.length > 0) {
+      console.log(`[DiscoveryPhase] Enriching ${leadsToEnrich.length} leads...`)
+      const enrichedLeads = await enrichLeadsForOnboarding(leadsToEnrich)
+
+      const enrichedCount = enrichedLeads.filter((l) => l.primaryEmail).length
+      console.log(
+        `[DiscoveryPhase] Enrichment complete: ${enrichedCount}/${enrichedLeads.length} have emails`,
+      )
+
+      // Save enriched leads with emails to DB
+      const enrichedLeadsWithEmails = enrichedLeads.filter((lead) => {
+        if (!lead.primaryEmail) return false
+        const email = lead.primaryEmail.toLowerCase()
+        // Filter out generic no-reply addresses
+        if (email.includes("noreply")) return false
+        if (email.startsWith("postmaster@")) return false
+        if (email.startsWith("abuse@")) return false
+        return true
       })
 
-      // BASE CASE: Check DB for leads with emails BEFORE starting this iteration
-      const dbLeadsCount = await countLeadsWithEmails(workspaceId)
-      console.log(`[DiscoveryPhase] Current DB leads with emails: ${dbLeadsCount}/${TARGET_LEADS}`)
-
-      if (dbLeadsCount >= TARGET_LEADS) {
-        console.log(`[DiscoveryPhase] Target reached: ${dbLeadsCount} leads`)
-        await saveCheckpoint(job, {
-          iteration, // Save current iteration number where target was reached
-          leadsWithEmailsCount: dbLeadsCount,
-          lastIterationCompleted: true,
-        })
-        break
-      }
-
-      // Generate unique search query
-      const query = generateUniqueQuery(
-        industryName,
-        countryName,
-        BATCH_SIZE,
-        iteration,
-        usedQueries,
-      )
-
-      if (!query) {
-        console.warn("[DiscoveryPhase] No more unique queries")
-        break
-      }
-
-      console.log(`[DiscoveryPhase] Query: "${query}"`)
-
-      // Search BigQuery
-      const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
-
-      if (!result.results.length) {
-        console.log("[DiscoveryPhase] No results from BigQuery")
-        continue
-      }
-
-      console.log(`[DiscoveryPhase] Found ${result.results.length} results from BigQuery`)
-
-      // Filter out already processed leads and prepare for enrichment
-      const newLeadsToEnrich = result.results
-        .filter((row) => {
-          const website = row.website as string
-          if (!website) return false
-          if (processedWebsites.has(website)) {
-            console.log(`[DiscoveryPhase] Skipping already processed website: ${website}`)
-            return false
-          }
-          return true
-        })
-        .map((row) => ({
-          company: row.company as string,
-          website: row.website as string,
-          industry: row.industry as string,
-          employees: row.employees?.toString() || "",
-          country: row.country as string,
-        }))
-
-      console.log(
-        `[DiscoveryPhase] Found ${newLeadsToEnrich.length} new leads to process (${result.results.length - newLeadsToEnrich.length} already processed)`,
-      )
-
-      // Enrich new leads
-      if (newLeadsToEnrich.length > 0) {
-        console.log(`[DiscoveryPhase] Enriching ${newLeadsToEnrich.length} leads...`)
-        const enrichedLeads = await enrichLeadsForOnboarding(newLeadsToEnrich)
-
-        const enrichedCount = enrichedLeads.filter((l) => l.primaryEmail).length
+      if (enrichedLeadsWithEmails.length > 0) {
         console.log(
-          `[DiscoveryPhase] Enrichment complete: ${enrichedCount}/${enrichedLeads.length} have emails`,
+          `[DiscoveryPhase] Saving ${enrichedLeadsWithEmails.length} enriched leads to DB...`,
         )
 
-        // Save enriched leads with emails to DB (incremental save)
-        const enrichedLeadsWithEmails = enrichedLeads.filter((lead) => {
-          if (!lead.primaryEmail) return false
-          const email = lead.primaryEmail.toLowerCase()
-          // Filter out generic no-reply addresses
-          if (email.includes("noreply")) return false
-          if (email.startsWith("postmaster@")) return false
-          if (email.startsWith("abuse@")) return false
-          return true
+        const leadsToCreate = enrichedLeadsWithEmails.map((lead) => ({
+          companyName: lead.companyName,
+          foundCompanyName: lead.companyName,
+          websiteUrl: lead.websiteUrl,
+          businessType: lead.businessType,
+          country: lead.country,
+          employeeCount: lead.employeeCount,
+          description: lead.description,
+          primaryEmail: lead.primaryEmail,
+          leadSource: "bigquery-auto" as const,
+          leadStatus: "new" as const,
+        }))
+
+        const { stats } = await bulkCreateLeads({
+          workspaceId,
+          leads: leadsToCreate,
+          createdBy: userId,
         })
 
-        if (enrichedLeadsWithEmails.length > 0) {
-          console.log(
-            `[DiscoveryPhase] Saving ${enrichedLeadsWithEmails.length} enriched leads to DB...`,
-          )
-
-          const leadsToCreate = enrichedLeadsWithEmails.map((lead) => ({
-            companyName: lead.companyName,
-            foundCompanyName: lead.companyName,
-            websiteUrl: lead.websiteUrl,
-            businessType: lead.businessType,
-            country: lead.country,
-            employeeCount: lead.employeeCount,
-            description: lead.description,
-            primaryEmail: lead.primaryEmail,
-            leadSource: "bigquery-auto" as const,
-            leadStatus: "new" as const,
-          }))
-
-          const { stats } = await bulkCreateLeads({
-            workspaceId,
-            leads: leadsToCreate,
-            createdBy: userId,
-          })
-
-          console.log(
-            `[DiscoveryPhase] Saved ${stats.created} new leads (${stats.skipped} duplicates skipped)`,
-          )
-        }
-
-        // Mark ALL enriched websites as processed (even those without emails)
-        // to prevent re-enrichment of websites that don't yield results
-        for (const lead of newLeadsToEnrich) {
-          if (lead.website) {
-            processedWebsites.add(lead.website)
-          }
-        }
+        console.log(
+          `[DiscoveryPhase] Saved ${stats.created} new leads (${stats.skipped} duplicates skipped)`,
+        )
       }
-
-      // Update checkpoint after iteration
-      await saveCheckpoint(job, {
-        iteration,
-        leadsWithEmailsCount: await countLeadsWithEmails(workspaceId),
-        lastIterationCompleted: true,
-        processedWebsites: Array.from(processedWebsites),
-        usedQueries: Array.from(usedQueries),
-      })
     }
+
+    // Update checkpoint after completion
+    await saveCheckpoint(job, {
+      leadsWithEmailsCount: await countLeadsWithEmails(workspaceId),
+      lastIterationCompleted: true,
+    })
 
     // Get all lead IDs with emails from DB
     const finalLeads = await db
@@ -368,7 +301,7 @@ export async function runDiscoveryPhase(
           isNotNull(leadContacts.contactValue),
         ),
       )
-      .limit(TARGET_LEADS)
+      .limit(BATCH_SIZE)
 
     const leadIds = finalLeads.map((l) => l.id)
     const finalCount = leadIds.length
@@ -384,38 +317,6 @@ export async function runDiscoveryPhase(
     await addCheckpointError(job, "discovery", String(error))
     throw error
   }
-}
-
-/**
- * Generate unique search queries to avoid fetching the same leads
- */
-function generateUniqueQuery(
-  industryName: string,
-  countryName: string,
-  batchSize: number,
-  iteration: number,
-  usedQueries: Set<string>,
-): string | null {
-  const strategies = [
-    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
-    () => `${industryName} businesses in ${countryName} ${batchSize * iteration}개`,
-  ]
-
-  for (const strategy of strategies) {
-    const query = strategy()
-    if (!usedQueries.has(query)) {
-      usedQueries.add(query)
-      return query
-    }
-  }
-
-  return null
 }
 
 /**

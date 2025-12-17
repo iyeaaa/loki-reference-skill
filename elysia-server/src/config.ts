@@ -104,6 +104,17 @@ export const config = {
     password: getEnvOrDefault("REDIS_PASSWORD", ""),
   },
 
+  // Redis Cache Configuration
+  cache: {
+    leadEnrichment: {
+      enabled:
+        getEnvOrDefault("LEAD_ENRICHMENT_REDIS_CACHE_ENABLED", "true").toLowerCase() === "true",
+      keyPrefix: getEnvOrDefault("LEAD_ENRICHMENT_REDIS_CACHE_PREFIX", "lead_enrichment:v1:"),
+      ttlMs: getEnvInt("LEAD_ENRICHMENT_CACHE_TTL_MS", 6 * 60 * 60 * 1000), // 6 hours
+      timeoutMs: getEnvInt("LEAD_ENRICHMENT_REDIS_TIMEOUT_MS", 250),
+    },
+  },
+
   // Monitoring (optional)
   monitoring: {
     sentryDsn: getEnvOrDefault("SENTRY_DSN", ""),

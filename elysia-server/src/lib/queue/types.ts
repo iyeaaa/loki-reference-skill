@@ -74,7 +74,6 @@ export interface OnboardingAutoGenerateJob {
   // BullMQ native checkpoint state (persisted in Redis via job.updateData())
   checkpoint?: {
     phase: "init" | "discovery" | "group" | "templates" | "sequence" | "previews" | "complete"
-    iteration: number
     leadsWithEmailsCount: number
     lastIterationCompleted: boolean
     customerGroupId?: string

@@ -118,6 +118,10 @@ export function FilterSearchForm({
       if (i.value && lower.includes(i.value.toLowerCase())) {
         return true
       }
+      // 동의어/유사어 검색
+      if (i.synonyms?.some((syn) => lower.includes(syn.toLowerCase()))) {
+        return true
+      }
       return false
     })?.value
 

@@ -54,6 +54,331 @@ const INDUSTRY_MAPPING: Record<string, string> = {
   정부: "Government",
 }
 
+// 동의어/유사어 → 산업 매핑 (자연어 파싱용)
+const INDUSTRY_SYNONYMS: Array<{ synonyms: string[]; industry: string }> = [
+  // Healthcare & Life Sciences
+  {
+    synonyms: [
+      "건강기능식품",
+      "건기식",
+      "영양제",
+      "보충제",
+      "웰니스",
+      "웰빙",
+      "건강식품",
+      "기능성식품",
+      "프로바이오틱스",
+      "유산균",
+      "비타민",
+      "오메가3",
+      "홍삼",
+      "건강보조식품",
+      "다이어트식품",
+      "병원",
+      "클리닉",
+      "의원",
+      "의료",
+      "건강",
+      "헬스",
+    ],
+    industry: "Healthcare",
+  },
+  {
+    synonyms: ["의약품", "약품", "신약", "제네릭", "바이오의약품", "의약", "제약"],
+    industry: "Pharmaceuticals",
+  },
+  {
+    synonyms: ["바이오", "생명공학", "유전자", "세포치료", "진단", "바이오테크"],
+    industry: "Biotechnology",
+  },
+  {
+    synonyms: ["의료장비", "진단기기", "치료기기", "헬스케어기기", "의료용품", "의료기기"],
+    industry: "Medical Devices",
+  },
+  // Beauty & Cosmetics
+  {
+    synonyms: [
+      "화장품",
+      "코스메틱",
+      "스킨케어",
+      "마스크팩",
+      "메이크업",
+      "색조",
+      "기초화장품",
+      "더마",
+      "더마코스메틱",
+      "클렌저",
+      "세럼",
+      "에센스",
+      "로션",
+      "크림",
+      "선크림",
+      "자외선차단",
+      "미백",
+      "주름개선",
+      "안티에이징",
+      "K뷰티",
+      "K-Beauty",
+      "헤어케어",
+      "바디케어",
+      "네일",
+      "향수",
+      "퍼퓸",
+      "미용",
+      "에스테틱",
+      "피부과",
+      "피부",
+      "뷰티",
+    ],
+    industry: "Beauty",
+  },
+  // Technology & Software
+  {
+    synonyms: ["테크", "tech", "아이티", "정보통신", "ICT", "디지털", "하이테크", "기술"],
+    industry: "Software & Internet",
+  },
+  {
+    synonyms: ["SW", "앱", "애플리케이션", "프로그램", "솔루션", "플랫폼"],
+    industry: "Software & Internet",
+  },
+  {
+    synonyms: [
+      "B2B SaaS",
+      "클라우드서비스",
+      "구독서비스",
+      "서비스형소프트웨어",
+      "B2B",
+      "기업용솔루션",
+      "SaaS",
+    ],
+    industry: "Software & Internet",
+  },
+  {
+    synonyms: [
+      "전자상거래",
+      "온라인쇼핑",
+      "쇼핑몰",
+      "온라인마켓",
+      "마켓플레이스",
+      "D2C",
+      "온라인판매",
+      "이커머스",
+    ],
+    industry: "Software & Internet",
+  },
+  {
+    synonyms: [
+      "인공지능",
+      "딥러닝",
+      "ML",
+      "자동화",
+      "로보틱스",
+      "챗봇",
+      "생성AI",
+      "GenAI",
+      "AI",
+      "머신러닝",
+    ],
+    industry: "Software & Internet",
+  },
+  // Manufacturing
+  {
+    synonyms: ["생산", "공장", "산업재", "OEM", "ODM", "가공"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["전자제품", "가전", "반도체", "디스플레이", "PCB", "전자부품", "LED", "배터리"],
+    industry: "Computers & Electronics",
+  },
+  {
+    synonyms: ["기계장비", "산업기계", "공작기계", "중장비", "설비", "기계"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["자동차부품", "모빌리티", "EV", "전기차", "자동차제조", "차량", "자동차"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["화학제품", "석유화학", "정밀화학", "화공", "원료", "화학"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["원단", "직물", "봉제", "의류제조", "니트", "패브릭", "섬유"],
+    industry: "Manufacturing",
+  },
+  // Finance
+  {
+    synonyms: ["핀테크", "자산관리", "투자", "증권", "펀드", "금융서비스"],
+    industry: "Financial Services",
+  },
+  {
+    synonyms: ["뱅킹", "저축은행", "신용협동조합", "금고", "은행"],
+    industry: "Financial Services",
+  },
+  {
+    synonyms: ["보험사", "생명보험", "손해보험", "인슈어테크", "보험"],
+    industry: "Financial Services",
+  },
+  // Retail & Consumer & Distribution
+  {
+    synonyms: ["리테일", "매장", "판매점", "오프라인매장", "편의점", "백화점", "마트"],
+    industry: "Retail",
+  },
+  {
+    synonyms: [
+      "유통",
+      "유통업체",
+      "도매업",
+      "수입유통",
+      "수출입",
+      "무역",
+      "수입상",
+      "수출상",
+      "디스트리뷰터",
+      "대리점",
+      "총판",
+      "공급업체",
+      "도매",
+    ],
+    industry: "Retail",
+  },
+  {
+    synonyms: ["소비용품", "생활용품", "일용품", "FMCG", "생활소비재", "소비재"],
+    industry: "Retail",
+  },
+  // Food & Beverage
+  {
+    synonyms: [
+      "식품",
+      "음료",
+      "F&B",
+      "식자재",
+      "가공식품",
+      "베이커리",
+      "제과",
+      "냉동식품",
+      "유기농",
+      "푸드테크",
+    ],
+    industry: "Food & Beverage",
+  },
+  // Fashion
+  {
+    synonyms: [
+      "의류",
+      "옷",
+      "브랜드",
+      "어패럴",
+      "스포츠웨어",
+      "캐주얼",
+      "잡화",
+      "액세서리",
+      "패션",
+    ],
+    industry: "Retail",
+  },
+  // Real Estate & Construction
+  {
+    synonyms: ["리얼에스테이트", "프롭테크", "임대", "분양", "개발"],
+    industry: "Real Estate & Construction",
+  },
+  {
+    synonyms: ["건축", "시공", "토목", "인테리어", "리모델링", "플랜트"],
+    industry: "Real Estate & Construction",
+  },
+  // Energy
+  {
+    synonyms: ["전력", "발전", "유틸리티", "전기", "에너지"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["정유", "석유", "천연가스", "LNG", "정유사"],
+    industry: "Manufacturing",
+  },
+  {
+    synonyms: ["신재생에너지", "태양광", "풍력", "ESS", "그린에너지", "친환경에너지", "재생에너지"],
+    industry: "Manufacturing",
+  },
+  // Media & Entertainment
+  {
+    synonyms: ["방송", "콘텐츠", "영상", "게임", "음악", "OTT", "스트리밍", "엔터"],
+    industry: "Media & Entertainment",
+  },
+  {
+    synonyms: [
+      "광고대행사",
+      "마케팅대행",
+      "디지털마케팅",
+      "PR",
+      "홍보",
+      "퍼포먼스마케팅",
+      "광고",
+      "마케팅",
+    ],
+    industry: "Business Services",
+  },
+  // Education
+  {
+    synonyms: ["에듀테크", "이러닝", "학원", "온라인교육", "직업훈련", "연수"],
+    industry: "Education",
+  },
+  // Hospitality & Travel
+  {
+    synonyms: ["호텔", "숙박", "리조트", "펜션", "게스트하우스", "호스피탈리티"],
+    industry: "Business Services",
+  },
+  {
+    synonyms: ["여행사", "투어", "관광", "항공", "OTA", "여행"],
+    industry: "Business Services",
+  },
+  // Logistics
+  {
+    synonyms: ["배송", "택배", "창고", "풀필먼트", "3PL", "포워딩"],
+    industry: "Transportation & Storage",
+  },
+  {
+    synonyms: ["통신사", "텔레콤", "모바일", "네트워크", "5G"],
+    industry: "Telecommunications",
+  },
+  // Agriculture
+  {
+    synonyms: ["농산물", "축산", "수산", "애그테크", "스마트팜", "원예"],
+    industry: "Agriculture & Mining",
+  },
+  // Business Services
+  {
+    synonyms: ["경영컨설팅", "전략컨설팅", "IT컨설팅", "자문", "컨설팅"],
+    industry: "Business Services",
+  },
+  {
+    synonyms: ["법률", "로펌", "법무", "변호사", "특허"],
+    industry: "Business Services",
+  },
+  {
+    synonyms: ["세무", "회계법인", "감사", "재무", "회계"],
+    industry: "Business Services",
+  },
+  {
+    synonyms: ["HR", "인사관리", "채용대행", "헤드헌팅", "HRD", "HRM", "인사", "채용"],
+    industry: "Business Services",
+  },
+]
+
+/**
+ * 자연어 입력에서 동의어를 검색하여 산업을 찾습니다.
+ */
+function findIndustryFromSynonyms(input: string): string | undefined {
+  const lower = input.toLowerCase()
+  for (const { synonyms, industry } of INDUSTRY_SYNONYMS) {
+    for (const synonym of synonyms) {
+      if (lower.includes(synonym.toLowerCase())) {
+        return industry
+      }
+    }
+  }
+  return undefined
+}
+
 // Country mapping
 const COUNTRY_MAPPING: Record<string, string> = {
   USA: "USA",
@@ -356,6 +681,15 @@ export async function generateBigQueryParams(
       if (existingParams?.industry) {
         existingParams.industry =
           INDUSTRY_MAPPING[existingParams.industry] || existingParams.industry
+      }
+
+      // 산업이 아직 없으면 동의어로 검색
+      if (!existingParams.industry) {
+        const industryFromSynonyms = findIndustryFromSynonyms(state.userInput)
+        if (industryFromSynonyms) {
+          existingParams.industry = industryFromSynonyms
+          leadDiscoveryLogger.info(`[검색 조건] 동의어로 산업 감지: ${industryFromSynonyms}`)
+        }
       }
 
       // Parse employee range from user input

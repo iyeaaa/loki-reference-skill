@@ -28,11 +28,13 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  MousePointerClick,
   RotateCcw,
   Search,
   Sparkles,
   Trash2,
   UserPlus,
+  Users,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
@@ -311,6 +313,39 @@ function EmptyStateFilteredEmpty({
         <RotateCcw className="h-4 w-4" />
         필터 초기화
       </Button>
+    </motion.div>
+  )
+}
+
+// Empty State: 바이어 선택 대기 중
+function EmptyStateWaitingSelection() {
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col items-center justify-center px-8 py-16"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative mb-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30">
+          <Users className="h-10 w-10 text-violet-600 dark:text-violet-400" />
+        </div>
+        <div className="-right-1 -bottom-1 absolute flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
+          <MousePointerClick className="h-4 w-4 text-white" />
+        </div>
+      </div>
+      <h3 className="mb-2 font-semibold text-foreground text-lg">바이어 타겟을 선택해주세요</h3>
+      <p className="mb-4 max-w-sm text-center text-muted-foreground text-sm leading-relaxed">
+        왼쪽 채팅에서 추천된 바이어 타겟 중 하나를 선택하면
+        <br />
+        해당 조건에 맞는 바이어를 검색합니다
+      </p>
+      <div className="flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 dark:bg-violet-900/20">
+        <Loader2 className="h-4 w-4 animate-spin text-violet-600 dark:text-violet-400" />
+        <span className="font-medium text-sm text-violet-600 dark:text-violet-400">
+          선택 대기 중
+        </span>
+      </div>
     </motion.div>
   )
 }
@@ -1473,9 +1508,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                         onClearFilter={() => setGlobalFilter("")}
                         totalCount={customers.length}
                       />
+                    ) : /* 바이어 선택 대기 중 */
+                    streamingState.status === "waiting_selection" ? (
+                      <EmptyStateWaitingSelection />
                     ) : /* 검색 완료 후 결과가 0개인 경우 */
-                    streamingState.status === "complete" ||
-                      streamingState.status === "waiting_selection" ? (
+                    streamingState.status === "complete" ? (
                       <EmptyStateNoResults userQuery={streamingState.userQuery} />
                     ) : (
                       /* 아직 검색하지 않은 초기 상태 */

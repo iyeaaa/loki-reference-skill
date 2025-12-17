@@ -78,6 +78,7 @@ export interface AnalyzedPage {
   title?: string
   favicon?: string
   contentLength: number
+  canEmbed?: boolean // X-Frame-Options 헤더 기반 iframe 임베딩 가능 여부
 }
 
 // Website analysis result

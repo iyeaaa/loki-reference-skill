@@ -246,6 +246,7 @@ export interface PageInfo {
   title?: string
   favicon?: string
   contentLength: number
+  canEmbed?: boolean // X-Frame-Options 헤더 기반 iframe 임베딩 가능 여부
 }
 
 export async function fetchWithDepth(
@@ -296,8 +297,21 @@ export async function fetchWithDepth(
     clearTimeout(timeoutId)
     httpStatus = response.status
 
+    // X-Frame-Options 헤더 확인 (iframe 임베딩 가능 여부)
+    const xFrameOptions = response.headers.get("X-Frame-Options")?.toUpperCase()
+    const contentSecurityPolicy = response.headers.get("Content-Security-Policy")
+    // frame-ancestors 지시어 확인 (CSP)
+    const hasFrameAncestors =
+      contentSecurityPolicy?.includes("frame-ancestors") &&
+      !contentSecurityPolicy?.includes("frame-ancestors *")
+    // X-Frame-Options DENY/SAMEORIGIN 또는 CSP frame-ancestors가 있으면 iframe 불가
+    const canEmbed =
+      !xFrameOptions?.includes("DENY") &&
+      !xFrameOptions?.includes("SAMEORIGIN") &&
+      !hasFrameAncestors
+
     logger.info(
-      { status: httpStatus, url: normalizedUrl },
+      { status: httpStatus, url: normalizedUrl, canEmbed, xFrameOptions },
       "[fetchWithDepth] Successfully fetched main page",
     )
     onProgress?.("홈페이지를 찾았어요")
@@ -329,6 +343,10 @@ export async function fetchWithDepth(
     // Fallback to /favicon.ico
     if (!siteFavicon) {
       siteFavicon = new URL("/favicon.ico", normalizedUrl).href
+    }
+    // Mixed Content 방지: http:// → https:// 변환
+    if (siteFavicon?.startsWith("http://")) {
+      siteFavicon = siteFavicon.replace("http://", "https://")
     }
 
     // 메타데이터 추출 (script 제거 전에 수행 - JSON-LD가 script 태그 안에 있음)
@@ -467,6 +485,7 @@ export async function fetchWithDepth(
         title,
         favicon: siteFavicon,
         contentLength: pageContent.length,
+        canEmbed,
       }
       pages.push(mainPageInfo)
 
@@ -525,6 +544,7 @@ export async function fetchWithDepth(
             title: pageName,
             favicon: siteFavicon, // 사이트 공통 favicon 사용
             contentLength: pageResult.content.length,
+            canEmbed, // 메인 페이지와 동일한 도메인이므로 동일한 값 사용
           }
           pages.push(additionalPageInfo)
 

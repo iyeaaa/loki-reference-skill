@@ -73,8 +73,9 @@ function StepIcon({ status }: { status: "pending" | "in_progress" | "completed" 
 
 // iframe 웹사이트 프리뷰 컴포넌트
 function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
+  // canEmbed가 false이면 처음부터 에러 상태로 설정 (X-Frame-Options 차단)
+  const [isLoading, setIsLoading] = useState(page.canEmbed !== false)
+  const [hasError, setHasError] = useState(page.canEmbed === false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -88,6 +89,13 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: page.url 변경 시 의도적으로 타임아웃 재설정
   useEffect(() => {
+    // canEmbed가 false이면 이미 에러 상태이므로 타임아웃 설정하지 않음
+    if (page.canEmbed === false) {
+      setHasError(true)
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setHasError(false)
 
@@ -103,7 +111,7 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [page.url])
+  }, [page.url, page.canEmbed])
 
   const handleLoad = () => {
     if (timeoutRef.current) {
@@ -145,13 +153,19 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
                 alt=""
                 className="h-4 w-4 flex-shrink-0 object-contain"
                 onError={(e) => {
+                  // 이미지 로드 실패 시 숨기고 다음 sibling(Globe) 표시
                   e.currentTarget.style.display = "none"
+                  e.currentTarget.nextElementSibling?.classList.remove("hidden")
                 }}
                 src={page.favicon}
               />
-            ) : (
-              <Globe className="h-4 w-4 flex-shrink-0" />
-            )}
+            ) : null}
+            <Globe
+              className={cn(
+                "h-4 w-4 flex-shrink-0 text-muted-foreground",
+                page.favicon && "hidden",
+              )}
+            />
             <span className="truncate">{page.url}</span>
           </div>
 

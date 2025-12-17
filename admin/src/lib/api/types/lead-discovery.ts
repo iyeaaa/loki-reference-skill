@@ -42,6 +42,7 @@ export type AnalyzedPage = {
   ogImage?: string
   description?: string
   contentLength: number
+  canEmbed?: boolean // X-Frame-Options 헤더 기반 iframe 임베딩 가능 여부
 }
 
 // 웹사이트 분석 결과

@@ -524,18 +524,17 @@ export function LeadDiscoveryProgress({
   const progressPercent = Math.round((completedSteps / totalSteps) * 100)
 
   return (
-    <div
+    <section
       aria-busy={status !== "complete"}
       aria-label="리드 검색 진행 상태"
       className={cn("space-y-3", className)}
-      role="region"
     >
       {/* 스크린 리더용 진행 상태 안내 (aria-live) */}
-      <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">
+      <output aria-atomic="true" aria-live="polite" className="sr-only">
         {status === "complete"
           ? "리드 검색이 완료되었습니다."
           : `리드 검색 진행 중: ${NODE_CONFIG[status]?.name || "처리 중"}. ${completedSteps}/${totalSteps} 단계 완료.`}
-      </div>
+      </output>
 
       {/* 현재 진행 메시지 */}
       <div aria-hidden="true" className="flex items-center gap-2.5">
@@ -634,6 +633,6 @@ export function LeadDiscoveryProgress({
           title="잠재 바이어 분석 리포트"
         />
       )}
-    </div>
+    </section>
   )
 }

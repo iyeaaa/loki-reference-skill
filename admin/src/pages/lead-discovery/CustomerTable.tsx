@@ -1382,19 +1382,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </>
           )}
 
-          <span aria-live="polite" className="text-muted-foreground text-sm" role="status">
+          <output aria-live="polite" className="text-muted-foreground text-sm">
             <span className="sr-only">검색 결과:</span>
             {table.getFilteredRowModel().rows.length} results
-          </span>
+          </output>
         </div>
       </div>
 
       {/* 테이블 */}
-      <div
+      <section
         aria-label="잠재 고객 목록"
         className="min-h-0 flex-1 overflow-scroll rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3"
-        role="region"
-        tabIndex={0}
       >
         <Table aria-label="잠재 고객 테이블" className="border-collapse">
           <TableHeader className="sticky top-0 z-10">
@@ -1489,7 +1487,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </AnimatePresence>
           </TableBody>
         </Table>
-      </div>
+      </section>
 
       {/* 더 가져오기 버튼 */}
       {streamingState.hasMore && streamingState.sessionId && (
@@ -1525,10 +1523,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
       {/* 푸터 - 선택 정보 */}
       {Object.keys(rowSelection).length > 0 && (
-        <div
+        <output
           aria-live="polite"
           className="flex items-center justify-between border-t bg-muted/50 p-4"
-          role="status"
         >
           <span className="text-muted-foreground text-sm">
             {Object.keys(rowSelection).length} of {table.getFilteredRowModel().rows.length} row(s)
@@ -1542,7 +1539,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           >
             Clear selection
           </Button>
-        </div>
+        </output>
       )}
     </div>
   )

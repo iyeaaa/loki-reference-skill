@@ -33,6 +33,9 @@ export const findEmailsWithHunter = async (
   organization?: string
   description?: string
 }> => {
+  console.log(`[Hunter.io] Searching emails for domain: ${domain}`)
+  const startTime = Date.now()
+
   try {
     // type=generic: 공식 이메일만 가져옴 (contact@, info@, sales@, support@ 등)
     const url = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&type=generic&api_key=${apiKey}`
@@ -41,6 +44,7 @@ export const findEmailsWithHunter = async (
 
     if (!response.ok) {
       const error = await response.json()
+      console.error(`[Hunter.io] ❌ API error for ${domain}:`, error)
       logger.warn({ domain, error }, "Hunter.io API error")
       return { emails: [] }
     }
@@ -65,13 +69,22 @@ export const findEmailsWithHunter = async (
 
     // 신뢰도 순으로 정렬
     const sortedEmails = genericEmails.sort((a, b) => b.confidence - a.confidence)
+    const elapsed = Date.now() - startTime
 
-    return {
+    const result = {
       emails: sortedEmails.slice(0, 5), // 상위 5개만
       organization: data.data?.organization,
       description: data.data?.description,
     }
+
+    console.log(`[Hunter.io] ✅ Found ${result.emails.length} emails for ${domain} (${elapsed}ms)`)
+    if (result.emails.length > 0) {
+      console.log(`[Hunter.io]   - emails: ${result.emails.map((e) => e.value).join(", ")}`)
+    }
+
+    return result
   } catch (error) {
+    console.error(`[Hunter.io] ❌ Failed to fetch emails for ${domain}:`, error)
     logger.error({ error, domain }, "Failed to fetch emails from Hunter.io")
     return { emails: [] }
   }
@@ -86,6 +99,9 @@ export const extractWebsiteContent = async (
   description?: string
 }> => {
   const TIMEOUT_MS = 15000 // 15초 타임아웃
+
+  console.log(`[JinaReader] Extracting content from: ${url}`)
+  const startTime = Date.now()
 
   try {
     // URL 정규화
@@ -106,11 +122,13 @@ export const extractWebsiteContent = async (
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        console.error(`[JinaReader] ❌ API error for ${url}: status ${response.status}`)
         logger.warn({ url, status: response.status }, "Jina Reader API error")
         return { content: "" }
       }
 
       const content = await response.text()
+      const elapsed = Date.now() - startTime
 
       // 콘텐츠에서 제목과 설명 추출 시도
       const titleMatch = content.match(/^#\s*(.+)$/m)
@@ -120,6 +138,11 @@ export const extractWebsiteContent = async (
       const paragraphs = content.split("\n\n").filter((p) => p.trim().length > 50)
       const description = paragraphs.slice(0, 2).join(" ").slice(0, 500)
 
+      console.log(`[JinaReader] ✅ Extracted ${content.length} chars from ${url} (${elapsed}ms)`)
+      if (title) {
+        console.log(`[JinaReader]   - title: ${title.substring(0, 50)}...`)
+      }
+
       return {
         content: content.slice(0, 5000), // 최대 5000자
         title,
@@ -128,12 +151,14 @@ export const extractWebsiteContent = async (
     } catch (error) {
       clearTimeout(timeoutId)
       if (error instanceof Error && error.name === "AbortError") {
+        console.warn(`[JinaReader] ⚠️ Request timed out for ${url} (${TIMEOUT_MS}ms)`)
         logger.warn({ url, timeout: TIMEOUT_MS }, "Jina Reader request timed out")
         return { content: "" }
       }
       throw error
     }
   } catch (error) {
+    console.error(`[JinaReader] ❌ Failed to extract content from ${url}:`, error)
     logger.error({ error, url }, "Failed to extract content with Jina Reader")
     return { content: "" }
   }
@@ -151,6 +176,9 @@ export const summarizeCompanyInfo = async (
   attachedEmailValue?: string
   attachedEmailType?: string
 }> => {
+  console.log(`[Gemini] Summarizing company info for: ${companyName}`)
+  const startTime = Date.now()
+
   try {
     const { GoogleGenAI } = await import("@google/genai")
     const ai = new GoogleGenAI({ apiKey: geminiApiKey })
@@ -171,6 +199,7 @@ Respond in JSON format:
 
 JSON response:`
 
+    console.log(`[Gemini] Calling Gemini API...`)
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: prompt,
@@ -178,9 +207,20 @@ JSON response:`
 
     const text = response.text?.trim() || "{}"
     const cleaned = text.replace(/```json\n?/gi, "").replace(/```\n?/gi, "")
+    const elapsed = Date.now() - startTime
 
-    return JSON.parse(cleaned)
+    const result = JSON.parse(cleaned)
+    console.log(`[Gemini] ✅ Summarized ${companyName} (${elapsed}ms)`)
+    if (result.description) {
+      console.log(`[Gemini]   - description: ${result.description.substring(0, 50)}...`)
+    }
+    if (result.industry) {
+      console.log(`[Gemini]   - industry: ${result.industry}`)
+    }
+
+    return result
   } catch (error) {
+    console.error(`[Gemini] ❌ Failed to summarize ${companyName}:`, error)
     logger.error({ error, companyName }, "Failed to summarize company info")
     return { description: "" }
   }

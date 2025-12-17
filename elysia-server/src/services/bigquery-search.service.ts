@@ -457,15 +457,23 @@ export const convertNaturalLanguageToSql = async (
   query: string,
   dataDictionary: DataDictionary,
 ): Promise<{ sql: string; explanation: string }> => {
+  console.log(`[BigQuery] Converting natural language to SQL`)
+  console.log(`[BigQuery]   - query: "${query}"`)
+  console.log(`[BigQuery]   - table: ${dataDictionary.tableName}`)
+  const startTime = Date.now()
+
   const ai = getGeminiClient()
 
   const prompt = generateSqlPrompt(query, dataDictionary)
 
   try {
+    console.log(`[BigQuery] Calling Gemini for SQL generation...`)
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: prompt,
     })
+    const geminiElapsed = Date.now() - startTime
+    console.log(`[BigQuery] Gemini responded (${geminiElapsed}ms)`)
 
     const sqlQuery = response.text?.trim() || ""
 
@@ -477,12 +485,14 @@ export const convertNaturalLanguageToSql = async (
 
     // 도움말 요청 체크
     if (cleanedSql.startsWith("HELP_QUERY:")) {
+      console.log(`[BigQuery] Help query detected`)
       const helpMessage = cleanedSql.replace("HELP_QUERY:", "").trim()
       throw new InvalidQueryError(`ℹ️ 검색 가이드\n\n${helpMessage}`)
     }
 
     // 유효하지 않은 쿼리 체크
     if (cleanedSql === "INVALID_QUERY" || cleanedSql.includes("INVALID_QUERY")) {
+      console.log(`[BigQuery] Invalid query detected`)
       throw new InvalidQueryError(
         '검색어가 올바르지 않습니다. 리드/회사 검색과 관련된 질문을 입력해주세요.\n\n예시:\n- "헬스케어 산업의 미국 회사 100개 보여줘"\n- "직원 수 1000명 이상인 소프트웨어 회사"\n- "캐나다에 있는 금융 서비스 회사"',
       )
@@ -524,11 +534,15 @@ SQL: ${cleanedSql}
 
     const explanation = explanationResponse.text?.trim() || "검색 결과입니다."
 
+    console.log(`[BigQuery] ✅ SQL generated successfully`)
+    console.log(`[BigQuery]   - SQL: ${cleanedSql.substring(0, 100)}...`)
+
     return { sql: cleanedSql, explanation }
   } catch (error) {
     if (error instanceof InvalidQueryError) {
       throw error
     }
+    console.error(`[BigQuery] ❌ Failed to convert to SQL:`, error)
     logger.error({ error }, "Failed to convert natural language to SQL")
     throw error
   }
@@ -536,6 +550,8 @@ SQL: ${cleanedSql}
 
 // BigQuery에서 쿼리 실행 (SDK 사용)
 export const executeBigQuerySql = async (sql: string): Promise<SearchResult> => {
+  console.log(`[BigQuery] Executing SQL query...`)
+  const startTime = Date.now()
   const bigquery = getBigQueryClient()
 
   // LIMIT 제거한 쿼리로 총 개수 확인
@@ -544,20 +560,29 @@ export const executeBigQuerySql = async (sql: string): Promise<SearchResult> => 
   let totalCount = 0
 
   try {
+    console.log(`[BigQuery] Fetching total count...`)
     const [countRows] = await bigquery.query({
       query: countSql,
       location: "US",
     })
     totalCount = Number(countRows[0]?.total || 0)
+    console.log(`[BigQuery] Total matching rows: ${totalCount}`)
   } catch (error) {
+    console.warn(`[BigQuery] ⚠️ Failed to get total count, using result count instead`)
     logger.warn({ error }, "Failed to get total count, using result count instead")
   }
 
   // 실제 데이터 쿼리 실행
+  console.log(`[BigQuery] Executing main query...`)
   const [rows] = await bigquery.query({
     query: sql,
     location: "US",
   })
+  const elapsed = Date.now() - startTime
+
+  console.log(`[BigQuery] ✅ Query executed (${elapsed}ms)`)
+  console.log(`[BigQuery]   - rows returned: ${rows.length}`)
+  console.log(`[BigQuery]   - total matches: ${totalCount || rows.length}`)
 
   logger.info({ rowCount: rows.length, totalCount }, "BigQuery query executed")
 
@@ -574,6 +599,12 @@ export const searchBigQuery = async (
   query: string,
   dataDictionary: DataDictionary,
 ): Promise<SearchResult> => {
+  console.log(`[BigQuery] ========================================`)
+  console.log(`[BigQuery] searchBigQuery started`)
+  console.log(`[BigQuery]   - query: "${query}"`)
+  console.log(`[BigQuery]   - table: ${dataDictionary.tableName}`)
+  const totalStartTime = Date.now()
+
   // 1. 자연어 → SQL 변환
   const { sql, explanation } = await convertNaturalLanguageToSql(query, dataDictionary)
 
@@ -581,6 +612,7 @@ export const searchBigQuery = async (
 
   // NO_INDUSTRY_MATCH: 빈 결과 반환 (에러 아님)
   if (sql === "NO_INDUSTRY_MATCH") {
+    console.log(`[BigQuery] ⚠️ No industry match found, returning empty results`)
     logger.info(`[${dataDictionary.tableName}] Returning empty results due to NO_INDUSTRY_MATCH`)
     return {
       sql: "-- NO_INDUSTRY_MATCH",
@@ -592,6 +624,11 @@ export const searchBigQuery = async (
 
   // 2. BigQuery 실행
   const result = await executeBigQuerySql(sql)
+  const totalElapsed = Date.now() - totalStartTime
+
+  console.log(`[BigQuery] ✅ searchBigQuery completed (${totalElapsed}ms total)`)
+  console.log(`[BigQuery]   - results: ${result.results.length} rows`)
+  console.log(`[BigQuery] ========================================`)
 
   return {
     ...result,

@@ -103,9 +103,15 @@ class AITemplateGenerationService {
       temperature = 0.7,
     } = options
 
+    console.log(`[AITemplate] Starting email template generation`)
+    console.log(`[AITemplate]   - workspace: ${workspaceName}`)
+    console.log(`[AITemplate]   - country: ${country}`)
+    console.log(`[AITemplate]   - model: ${model}`)
+
     try {
       // 1. 랜덤 예시 5개 선택
       const examples = this.getRandomExamples(5)
+      console.log(`[AITemplate] Selected ${examples.length} random email examples`)
       const examplesText =
         examples.length > 0
           ? examples
@@ -185,20 +191,30 @@ BODY:
 placeholder를 적절히 활용하여 개인화가 가능하도록 만들어주세요.`
 
       // 2. AI API 호출
+      console.log(`[AITemplate] Calling OpenAI API...`)
+      const startTime = Date.now()
       const { text } = await generateText({
         model: this.openai(model),
         system: systemPrompt,
         prompt: userMessage,
         temperature,
       })
+      const elapsed = Date.now() - startTime
+      console.log(`[AITemplate] OpenAI API response received (${elapsed}ms)`)
 
       logger.info({ country, workspaceName }, "AI template generation successful")
 
       // 3. 응답 파싱
+      console.log(`[AITemplate] Parsing AI response...`)
       const parsedTemplate = this.parseAIResponse(text)
+      console.log(`[AITemplate] ✅ Template generated successfully`)
+      console.log(`[AITemplate]   - subject: ${parsedTemplate.subject.substring(0, 50)}...`)
+      console.log(`[AITemplate]   - language: ${parsedTemplate.detectedLanguage}`)
+      console.log(`[AITemplate]   - bodyLength: ${parsedTemplate.bodyText.length} chars`)
 
       return parsedTemplate
     } catch (error) {
+      console.error(`[AITemplate] ❌ Template generation failed:`, error)
       logger.error({ err: error, country, workspaceName }, "AI template generation failed")
       throw error
     }

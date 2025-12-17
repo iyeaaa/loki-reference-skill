@@ -20,12 +20,16 @@ import {
   Columns3,
   ExternalLink,
   Filter,
+  FilterX,
+  Globe,
   GripVertical,
+  Lightbulb,
   Loader2,
   Maximize2,
   Minimize2,
   MoreHorizontal,
   RotateCcw,
+  Search,
   Sparkles,
   Trash2,
   UserPlus,
@@ -169,6 +173,147 @@ const loadTableSettings = (): PersistedTableSettings | null => {
 }
 
 const DEFAULT_COLUMN_ORDER = sanitizeColumnOrder(COLUMN_IDS)
+
+// 검색어 추천 데이터
+const SEARCH_SUGGESTIONS = [
+  { country: "United States", industry: "Beauty & Cosmetics", label: "🇺🇸 미국 뷰티/화장품" },
+  { country: "Japan", industry: "Food & Beverage", label: "🇯🇵 일본 식음료" },
+  { country: "Germany", industry: "Automotive", label: "🇩🇪 독일 자동차" },
+  { country: "United Kingdom", industry: "Fashion & Apparel", label: "🇬🇧 영국 패션" },
+  { country: "China", industry: "Electronics", label: "🇨🇳 중국 전자제품" },
+  { country: "Vietnam", industry: "Manufacturing", label: "🇻🇳 베트남 제조업" },
+]
+
+// Empty State: 아직 검색하지 않은 초기 상태
+function EmptyStateInitial() {
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col items-center justify-center px-8 py-16"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative mb-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
+          <Globe className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="-right-1 -bottom-1 absolute flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg">
+          <Search className="h-4 w-4 text-white" />
+        </div>
+      </div>
+      <h3 className="mb-2 font-semibold text-foreground text-lg">잠재 고객을 찾아보세요</h3>
+      <p className="mb-6 max-w-sm text-center text-muted-foreground text-sm leading-relaxed">
+        좌측 채팅에서 웹사이트를 입력하거나 조건을 선택하면
+        <br />
+        AI가 맞춤 바이어를 찾아드립니다
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {SEARCH_SUGGESTIONS.slice(0, 3).map((suggestion) => (
+          <span
+            className="rounded-full bg-muted/60 px-3 py-1.5 text-muted-foreground text-xs"
+            key={suggestion.label}
+          >
+            {suggestion.label}
+          </span>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
+// Empty State: 검색 완료 후 결과가 0개인 경우
+function EmptyStateNoResults({
+  userQuery,
+  onSuggestionClick,
+}: {
+  userQuery?: string
+  onSuggestionClick?: (country: string, industry: string) => void
+}) {
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col items-center justify-center px-8 py-16"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative mb-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-gray-100 dark:from-slate-800/50 dark:to-gray-800/50">
+          <Search className="h-10 w-10 text-slate-400 dark:text-slate-500" />
+        </div>
+        <div className="-right-1 -bottom-1 absolute flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-400 to-pink-500 shadow-lg">
+          <span className="font-bold text-white text-xs">0</span>
+        </div>
+      </div>
+      <h3 className="mb-2 font-semibold text-foreground text-lg">검색 결과가 없습니다</h3>
+      <p className="mb-2 max-w-sm text-center text-muted-foreground text-sm">
+        {userQuery ? (
+          <>
+            <span className="font-medium text-foreground">"{userQuery}"</span>에 대한 결과를 찾지
+            못했어요
+          </>
+        ) : (
+          "조건에 맞는 바이어를 찾지 못했어요"
+        )}
+      </p>
+      <p className="mb-6 text-muted-foreground/80 text-xs">
+        다른 검색어나 조건으로 다시 시도해보세요
+      </p>
+
+      {/* 검색어 추천 */}
+      <div className="w-full max-w-md space-y-3">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
+          <Lightbulb className="h-3.5 w-3.5" />
+          <span>이런 검색은 어떠세요?</span>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {SEARCH_SUGGESTIONS.map((suggestion) => (
+            <button
+              className="rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+              key={suggestion.label}
+              onClick={() => onSuggestionClick?.(suggestion.country, suggestion.industry)}
+              type="button"
+            >
+              {suggestion.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// Empty State: 필터로 인해 결과가 0개인 경우
+function EmptyStateFilteredEmpty({
+  totalCount,
+  onClearFilter,
+}: {
+  totalCount: number
+  onClearFilter: () => void
+}) {
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col items-center justify-center px-8 py-16"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative mb-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30">
+          <FilterX className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+        </div>
+      </div>
+      <h3 className="mb-2 font-semibold text-foreground text-lg">필터 조건에 맞는 결과가 없어요</h3>
+      <p className="mb-6 max-w-sm text-center text-muted-foreground text-sm">
+        전체 <span className="font-medium text-foreground">{totalCount}개</span>의 결과 중 현재 필터
+        조건에 맞는 항목이 없습니다
+      </p>
+      <Button className="gap-2" onClick={onClearFilter} size="sm" variant="outline">
+        <RotateCcw className="h-4 w-4" />
+        필터 초기화
+      </Button>
+    </motion.div>
+  )
+}
 
 // 적합도 배지 컴포넌트
 function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boolean }) {
@@ -1294,14 +1439,21 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                 ))
               ) : (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell
-                    className="h-[400px] text-center align-middle"
-                    colSpan={columns.length}
-                  >
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <p className="font-medium text-base">아직 발견된 고객이 없습니다</p>
-                      <p className="mt-2 text-sm">채팅으로 새로운 잠재 고객을 찾아보세요</p>
-                    </div>
+                  <TableCell className="h-[400px] p-0" colSpan={columns.length}>
+                    {/* 필터로 인해 결과가 0개인 경우 */}
+                    {customers.length > 0 && globalFilter ? (
+                      <EmptyStateFilteredEmpty
+                        onClearFilter={() => setGlobalFilter("")}
+                        totalCount={customers.length}
+                      />
+                    ) : /* 검색 완료 후 결과가 0개인 경우 */
+                    streamingState.status === "complete" ||
+                      streamingState.status === "waiting_selection" ? (
+                      <EmptyStateNoResults userQuery={streamingState.userQuery} />
+                    ) : (
+                      /* 아직 검색하지 않은 초기 상태 */
+                      <EmptyStateInitial />
+                    )}
                   </TableCell>
                 </TableRow>
               )}

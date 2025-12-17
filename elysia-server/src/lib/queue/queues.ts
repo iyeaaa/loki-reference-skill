@@ -5,6 +5,7 @@ import { redisConnection } from "../redis/connection"
 import {
   type CampaignEmailJob,
   type MetricsSyncJob,
+  type OnboardingAutoGenerateJob,
   QUEUE_NAMES,
   type ScheduledEmailJob,
   type TestJob,
@@ -80,6 +81,31 @@ export const metricsSyncQueue = new Queue<MetricsSyncJob>(QUEUE_NAMES.METRICS_SY
 })
 
 /**
+ * Onboarding Auto-Generate Queue
+ * Handles automated onboarding data generation (leads, emails, sequences)
+ * Long-running job with checkpointing for resilience
+ */
+export const onboardingGenerationQueue = new Queue<OnboardingAutoGenerateJob>(
+  QUEUE_NAMES.ONBOARDING_GENERATION,
+  {
+    connection: redisConnection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 120000, // 2 min → 4 min → 8 min
+      },
+      removeOnComplete: {
+        age: 7 * 24 * 3600, // 7 days
+      },
+      removeOnFail: {
+        age: 30 * 24 * 3600, // 30 days
+      },
+    },
+  },
+)
+
+/**
  * Test Queue
  * For testing BullMQ functionality
  * DB에 로그가 저장되므로 Redis 보존 기간은 짧게 유지
@@ -111,6 +137,7 @@ export function getAllQueues() {
     [QUEUE_NAMES.SCHEDULED_EMAIL]: scheduledEmailQueue,
     [QUEUE_NAMES.WORKFLOW_STEP]: workflowStepQueue,
     [QUEUE_NAMES.METRICS_SYNC]: metricsSyncQueue,
+    [QUEUE_NAMES.ONBOARDING_GENERATION]: onboardingGenerationQueue,
     [QUEUE_NAMES.TEST_QUEUE]: testQueue,
   }
 }
@@ -124,6 +151,7 @@ export async function closeAllQueues(): Promise<void> {
     scheduledEmailQueue.close(),
     workflowStepQueue.close(),
     metricsSyncQueue.close(),
+    onboardingGenerationQueue.close(),
     testQueue.close(),
   ])
 }

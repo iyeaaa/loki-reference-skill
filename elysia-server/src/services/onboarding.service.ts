@@ -156,6 +156,24 @@ export async function getOnboardingProgressById(
   return (result as OnboardingProgressData) || null
 }
 
+/**
+ * Update job information in onboarding progress
+ */
+export async function updateJobInfo(
+  workspaceId: string,
+  jobId: string,
+  jobStatus: "waiting" | "active" | "completed" | "failed" | "delayed" | "stalled",
+): Promise<void> {
+  await db
+    .update(onboardingProgress)
+    .set({
+      jobId,
+      jobStatus,
+      updatedAt: new Date(),
+    })
+    .where(eq(onboardingProgress.workspaceId, workspaceId))
+}
+
 // ====================================
 // SURVEY DATA OPERATIONS
 // ====================================
@@ -608,7 +626,7 @@ export async function resetOnboarding(workspaceId: string): Promise<OnboardingPr
 
 // Country code → actual Apollo BigQuery country values (must match data exactly)
 // Apollo has individual country names, not regions like "Southeast Asia"
-const COUNTRY_NAMES: Record<string, string> = {
+export const COUNTRY_NAMES: Record<string, string> = {
   jp: "Japan",
   us: "United States",
   sea: "Singapore", // Apollo has individual SEA countries - use Singapore as representative
@@ -619,7 +637,7 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 // Industry code → English keywords for BigQuery LIKE search
 // Apollo uses free-form industry text - these keywords will match via LIKE
-const INDUSTRY_NAMES: Record<string, string> = {
+export const INDUSTRY_NAMES: Record<string, string> = {
   beauty: "beauty cosmetics skincare",
   fashion: "fashion apparel clothing",
   food: "food beverage",
@@ -663,7 +681,7 @@ function replaceVariables(
  * @param leadDetails - Array of lead details including contactEmail
  * @returns Number of emails created
  */
-async function generatePreviewEmailsForSequence(
+export async function generatePreviewEmailsForSequence(
   workspaceId: string,
   userEmailAccountId: string,
   fromEmail: string,
@@ -1029,7 +1047,7 @@ function generateUniqueQuery(
  * Uses Hunter.io for email discovery and Jina/Gemini for company analysis
  * Processes leads in parallel batches (10 concurrent) with 2s delays between batches
  */
-async function enrichLeadsForOnboarding(
+export async function enrichLeadsForOnboarding(
   leadsToEnrich: Array<{
     company: string
     website: string
@@ -1138,7 +1156,7 @@ async function enrichLeadsForOnboarding(
 // Research shows: First follow-up boosts reply rates by 49-65.8%, 70% of responses come from 2nd-4th email
 // Touch 1: Brief intro with pain point + low-commitment CTA
 // Touch 2: Follow-up with new value + time-bound CTA (3 days later)
-const EMAIL_TYPES_2TOUCH = [
+export const EMAIL_TYPES_2TOUCH = [
   {
     type: "introduction",
     promptKr:
@@ -1160,7 +1178,7 @@ const EMAIL_TYPES_2TOUCH = [
 // Placeholder email for leads without contact email
 const TRIAL_PLACEHOLDER_EMAIL = "trial@preview.local"
 
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+export const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 
 /**
  * Auto-generate onboarding content after trial signup

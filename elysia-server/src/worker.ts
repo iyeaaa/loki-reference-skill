@@ -1,8 +1,12 @@
 /**
- * BullMQ Test Worker Entry Point
+ * BullMQ Workers Entry Point
  *
- * This is the main entry point for the independent test worker process.
- * It runs separately from the API server and handles test job processing.
+ * This is the main entry point for the independent worker process.
+ * It runs separately from the API server and handles background job processing.
+ *
+ * Workers:
+ * - TestWorker: Test job processing
+ * - OnboardingAutoGenerateWorker: Auto-generate onboarding data
  *
  * Features:
  * - Graceful shutdown handling
@@ -15,7 +19,14 @@ import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
-import { getTestWorkerStatus, startTestWorker, stopTestWorker } from "./workers/bullmq"
+import {
+  getOnboardingAutoGenerateWorkerStatus,
+  getTestWorkerStatus,
+  startOnboardingAutoGenerateWorker,
+  startTestWorker,
+  stopOnboardingAutoGenerateWorker,
+  stopTestWorker,
+} from "./workers/bullmq"
 
 // ============================================================================
 // Configuration
@@ -65,9 +76,12 @@ async function gracefulShutdown(signal: string): Promise<void> {
     await stopHealthServer()
     logger.info("[Worker] Health server stopped")
 
-    // Stop test worker (finish current jobs)
+    // Stop workers (finish current jobs)
     await stopTestWorker()
     logger.info("[Worker] TestWorker stopped")
+
+    await stopOnboardingAutoGenerateWorker()
+    logger.info("[Worker] OnboardingWorker stopped")
 
     // Close Redis connection
     await redisConnection.quit()
@@ -105,22 +119,29 @@ async function checkRedisHealth(): Promise<boolean> {
 function startInternalHealthCheck(): void {
   healthCheckInterval = setInterval(async () => {
     const redisHealthy = await checkRedisHealth()
-    const workerStatus = getTestWorkerStatus()
+    const testWorkerStatus = getTestWorkerStatus()
+    const onboardingWorkerStatus = getOnboardingAutoGenerateWorkerStatus()
 
     if (!redisHealthy) {
       logger.error("[Worker] Redis health check failed")
     }
 
-    if (!workerStatus.running) {
-      logger.error("[Worker] Worker is not running")
+    if (!testWorkerStatus.running) {
+      logger.error("[Worker] TestWorker is not running")
+    }
+
+    if (!onboardingWorkerStatus.running) {
+      logger.error("[Worker] OnboardingWorker is not running")
     }
 
     // Log periodic status (debug level)
     logger.debug(
       {
         redis: redisHealthy,
-        worker: workerStatus.running,
-        activeJobs: workerStatus.activeJobs,
+        testWorker: testWorkerStatus.running,
+        testWorkerActiveJobs: testWorkerStatus.activeJobs,
+        onboardingWorker: onboardingWorkerStatus.running,
+        onboardingWorkerActiveJobs: onboardingWorkerStatus.activeJobs,
       },
       "[Worker] Health check",
     )
@@ -134,11 +155,12 @@ function startInternalHealthCheck(): void {
 async function main(): Promise<void> {
   logger.info(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  BullMQ Test Worker Process
+  BullMQ Workers Process
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Environment:   ${config.nodeEnv}
   Redis Host:    ${config.redis.host}:${config.redis.port}
   Health Port:   ${HEALTH_SERVER_PORT}
+  Workers:       TestWorker, OnboardingAutoGenerateWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 
@@ -179,12 +201,19 @@ async function main(): Promise<void> {
   startHealthServer(HEALTH_SERVER_PORT)
   logger.info(`[Worker] Health server started on port ${HEALTH_SERVER_PORT}`)
 
-  // 3. Start Test Worker
+  // 3. Start Workers
   startTestWorker()
-  const status = getTestWorkerStatus()
+  const testStatus = getTestWorkerStatus()
   logger.info(
-    { running: status.running, concurrency: status.concurrency },
+    { running: testStatus.running, concurrency: testStatus.concurrency },
     "[Worker] TestWorker started",
+  )
+
+  startOnboardingAutoGenerateWorker()
+  const onboardingStatus = getOnboardingAutoGenerateWorkerStatus()
+  logger.info(
+    { running: onboardingStatus.running, concurrency: onboardingStatus.concurrency },
+    "[Worker] OnboardingAutoGenerateWorker started",
   )
 
   // 4. Start internal health check interval

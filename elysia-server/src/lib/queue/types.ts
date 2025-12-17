@@ -8,6 +8,7 @@ export const QUEUE_NAMES = {
   SCHEDULED_EMAIL: "scheduled-email",
   WORKFLOW_STEP: "workflow-step",
   METRICS_SYNC: "metrics-sync",
+  ONBOARDING_GENERATION: "onboarding-generation",
   TEST_QUEUE: "test-queue", // For testing purposes
 } as const
 
@@ -58,6 +59,35 @@ export interface MetricsSyncJob {
 }
 
 /**
+ * Onboarding Auto-Generate Job - generates onboarding data (leads, emails, etc.)
+ */
+export interface OnboardingAutoGenerateJob {
+  workspaceId: string
+  userId: string
+  surveyData: {
+    industry?: string
+    target?: string
+    country?: string
+    experience?: string
+    lang?: string
+  }
+  // BullMQ native checkpoint state (persisted in Redis via job.updateData())
+  checkpoint?: {
+    phase: "init" | "discovery" | "group" | "templates" | "sequence" | "previews" | "complete"
+    iteration: number
+    leadsWithEmailsCount: number
+    lastIterationCompleted: boolean
+    customerGroupId?: string
+    sequenceId?: string
+    errors: Array<{
+      phase: string
+      message: string
+      timestamp: string
+    }>
+  }
+}
+
+/**
  * Test Job - for testing BullMQ functionality
  */
 export interface TestJob {
@@ -73,6 +103,18 @@ export interface CampaignEmailResult {
   status: "sent" | "skipped" | "failed"
   messageId?: string
   reason?: string
+}
+
+export interface OnboardingAutoGenerateResult {
+  success: boolean
+  phase: "init" | "discovery" | "group" | "templates" | "sequence" | "previews" | "complete"
+  leadsGenerated?: number
+  customerGroupId?: string
+  sequenceId?: string
+  errors?: Array<{
+    phase: string
+    message: string
+  }>
 }
 
 export interface TestJobResult {

@@ -253,6 +253,20 @@
       "when": 1765875355954,
       "tag": "0035_pale_imperial_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1765971013591,
+      "tag": "0036_aberrant_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1765973749523,
+      "tag": "0037_hot_red_shift",
+      "breakpoints": true
     }
   ]
 }

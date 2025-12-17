@@ -9,7 +9,8 @@
  */
 
 import { relations } from "drizzle-orm"
-import { index, integer, jsonb, pgEnum, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { jobStatusEnum } from "./job-logs"
 import { workspaces } from "./workspaces"
 
 // 온보딩 상태 enum
@@ -68,6 +69,10 @@ export const onboardingProgress = pgTable(
     // 온보딩 완료 시간
     completedAt: timestamp("completed_at", { withTimezone: true }),
 
+    // BullMQ Job 추적 필드 (checkpoint는 BullMQ의 job.data에 저장됨)
+    jobId: text("job_id"), // BullMQ Job ID
+    jobStatus: jobStatusEnum("job_status"), // BullMQ Job 상태
+
     // 메타데이터
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -76,6 +81,8 @@ export const onboardingProgress = pgTable(
     workspaceIdx: index("onboarding_progress_workspace_id_idx").on(table.workspaceId),
     statusIdx: index("onboarding_progress_status_idx").on(table.status),
     currentStepIdx: index("onboarding_progress_current_step_idx").on(table.currentStep),
+    jobIdIdx: index("idx_onboarding_job_id").on(table.jobId),
+    jobStatusIdx: index("idx_onboarding_job_status").on(table.jobStatus),
   }),
 )
 

@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia"
+import { onboardingGenerationQueue } from "../lib/queue/queues"
 import * as authService from "../services/auth.service"
 import * as emailAccountService from "../services/email-account.service"
 import * as nylasService from "../services/nylas.service"
@@ -298,18 +299,41 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
               )
               console.log("[Auth] ✅ Survey data saved to onboarding_progress")
 
-              // Fire and forget - auto-generate onboarding content in background
+              // Queue auto-generate onboarding job (background processing with resilience)
               // Note: hasAllOnboardingParams already validates these fields exist
-              console.log("[Auth] 🚀 Starting auto-generate onboarding...")
-              onboardingService
-                .autoGenerateOnboarding(workspace.id, newUser.id, {
-                  industry: industry as string,
-                  target: target as string,
-                  country: country as string,
-                  experience: experience as string,
-                  lang,
-                })
-                .catch((err) => console.error("[Auth] Auto-generate failed:", err))
+              console.log("[Auth] 🚀 Queuing auto-generate onboarding job...")
+              try {
+                const job = await onboardingGenerationQueue.add(
+                  "auto-generate-onboarding" as any,
+                  {
+                    workspaceId: workspace.id,
+                    userId: newUser.id,
+                    surveyData: {
+                      industry: industry as string,
+                      target: target as string,
+                      country: country as string,
+                      experience: experience as string,
+                      lang,
+                    },
+                  },
+                  {
+                    attempts: 3,
+                    backoff: {
+                      type: "exponential",
+                      delay: 120000, // 2 min base delay
+                    },
+                  },
+                )
+                console.log(`[Auth] ✅ Onboarding job queued: ${job.id}`)
+
+                // Store job ID in onboarding_progress
+                if (job.id) {
+                  await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
+                }
+              } catch (queueError) {
+                console.error("[Auth] ❌ Failed to queue onboarding job:", queueError)
+                // Don't throw - onboarding can be done manually
+              }
             } catch (surveyError) {
               console.error("[Auth] ❌ Failed to save survey data:", surveyError)
               // saveSurveyData already calls findOrCreateAndLinkSalesStrategy internally
@@ -568,18 +592,41 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 )
                 console.log("[Auth/Google] ✅ Survey data saved")
 
-                // Fire and forget - auto-generate onboarding content in background
+                // Queue auto-generate onboarding job (background processing with resilience)
                 // Note: hasAllOnboardingParams already validates these fields exist
-                console.log("[Auth/Google] 🚀 Starting auto-generate onboarding...")
-                onboardingService
-                  .autoGenerateOnboarding(workspace.id, user.id, {
-                    industry: industry as string,
-                    target: target as string,
-                    country: country as string,
-                    experience: experience as string,
-                    lang,
-                  })
-                  .catch((err) => console.error("[Auth/Google] Auto-generate failed:", err))
+                console.log("[Auth/Google] 🚀 Queuing auto-generate onboarding job...")
+                try {
+                  const job = await onboardingGenerationQueue.add(
+                    "auto-generate-onboarding" as any,
+                    {
+                      workspaceId: workspace.id,
+                      userId: user.id,
+                      surveyData: {
+                        industry: industry as string,
+                        target: target as string,
+                        country: country as string,
+                        experience: experience as string,
+                        lang,
+                      },
+                    },
+                    {
+                      attempts: 3,
+                      backoff: {
+                        type: "exponential",
+                        delay: 120000, // 2 min base delay
+                      },
+                    },
+                  )
+                  console.log(`[Auth/Google] ✅ Onboarding job queued: ${job.id}`)
+
+                  // Store job ID in onboarding_progress
+                  if (job.id) {
+                    await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
+                  }
+                } catch (queueError) {
+                  console.error("[Auth/Google] ❌ Failed to queue onboarding job:", queueError)
+                  // Don't throw - onboarding can be done manually
+                }
               }
             } catch (onboardingError) {
               console.error("[Auth/Google] ❌ Failed to setup onboarding:", onboardingError)
@@ -761,17 +808,40 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 await onboardingService.saveSurveyData(workspace.id, onboardingParams, user.id)
                 console.log("[Auth/Nylas] ✅ Survey data saved")
 
-                // Fire and forget - auto-generate onboarding content in background
-                console.log("[Auth/Nylas] 🚀 Starting auto-generate onboarding...")
-                onboardingService
-                  .autoGenerateOnboarding(workspace.id, user.id, {
-                    industry: onboardingParams.industry as string,
-                    target: onboardingParams.target as string,
-                    country: onboardingParams.country as string,
-                    experience: onboardingParams.experience as string,
-                    lang: onboardingParams.lang,
-                  })
-                  .catch((err) => console.error("[Auth/Nylas] Auto-generate failed:", err))
+                // Queue auto-generate onboarding job (background processing with resilience)
+                console.log("[Auth/Nylas] 🚀 Queuing auto-generate onboarding job...")
+                try {
+                  const job = await onboardingGenerationQueue.add(
+                    "auto-generate-onboarding" as any,
+                    {
+                      workspaceId: workspace.id,
+                      userId: user.id,
+                      surveyData: {
+                        industry: onboardingParams.industry as string,
+                        target: onboardingParams.target as string,
+                        country: onboardingParams.country as string,
+                        experience: onboardingParams.experience as string,
+                        lang: onboardingParams.lang,
+                      },
+                    },
+                    {
+                      attempts: 3,
+                      backoff: {
+                        type: "exponential",
+                        delay: 120000, // 2 min base delay
+                      },
+                    },
+                  )
+                  console.log(`[Auth/Nylas] ✅ Onboarding job queued: ${job.id}`)
+
+                  // Store job ID in onboarding_progress
+                  if (job.id) {
+                    await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
+                  }
+                } catch (queueError) {
+                  console.error("[Auth/Nylas] ❌ Failed to queue onboarding job:", queueError)
+                  // Don't throw - onboarding can be done manually
+                }
               }
             } catch (onboardingError) {
               console.error("[Auth/Nylas] ❌ Failed to setup onboarding:", onboardingError)

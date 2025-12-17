@@ -744,61 +744,175 @@ async function generatePreviewEmailsForSequence(
  * @param workspaceId - The workspace ID
  * @param userId - The user ID who created the workspace
  * @param surveyData - Survey data with industry, country, and target
- * @returns Object with leadIds array and count
+ * @returns Object with leadIds array, count, and enrichment stats
  */
 async function discoverLeadsForOnboarding(
   workspaceId: string,
   userId: string,
   surveyData: { industry: string; country: string; target: string },
-): Promise<{ leadIds: string[]; count: number }> {
+): Promise<{
+  leadIds: string[]
+  count: number
+  targetCount?: number
+  enrichmentSuccessRate?: string
+  duplicatesSkipped?: number
+  totalEnriched?: number
+  totalDuplicates?: number
+}> {
+  const TARGET_LEADS = 300
+  const MAX_ITERATIONS = 5
+  const BATCH_SIZE = 200
+
   // Map codes to actual Apollo BigQuery values
   const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
   const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
 
-  // Build English query for Gemini AI → SQL conversion
-  // Format: "[industry keywords] companies in [country] 20개"
-  const query = `${industryName} companies in ${countryName} 20개`
+  // In-memory state tracking
+  const uniqueLeadsByWebsite = new Map<
+    string,
+    {
+      company: string
+      website: string
+      industry: string
+      employees: string
+      country: string
+      enriched?: {
+        companyName: string
+        websiteUrl: string
+        businessType: string
+        country: string
+        employeeCount: string
+        description?: string
+        primaryEmail?: string
+      }
+    }
+  >()
+  const usedQueries = new Set<string>()
 
-  console.log(`[LeadDiscovery] Searching: "${query}"`)
+  console.log(`[LeadDiscovery] Target: ${TARGET_LEADS} unique enriched leads with email`)
 
   try {
-    // Call BigQuery directly using Apollo data (291만 high-quality leads)
-    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+    let iteration = 0
 
-    if (!result.results.length) {
-      console.log("[LeadDiscovery] No results from BigQuery")
-      return { leadIds: [], count: 0 }
+    // Iterative loop
+    while (iteration < MAX_ITERATIONS) {
+      iteration++
+
+      // Count current enriched leads with emails
+      const enrichedWithEmails = Array.from(uniqueLeadsByWebsite.values()).filter(
+        (lead) => lead.enriched?.primaryEmail,
+      )
+
+      console.log(
+        `[LeadDiscovery] Iteration ${iteration}/${MAX_ITERATIONS}: ` +
+          `${enrichedWithEmails.length}/${TARGET_LEADS} enriched leads with email`,
+      )
+
+      // BASE CASE: We have 300 unique enriched leads with email
+      if (enrichedWithEmails.length >= TARGET_LEADS) {
+        console.log(
+          `[LeadDiscovery] ✓ Target reached: ${enrichedWithEmails.length} enriched leads with email`,
+        )
+        break
+      }
+
+      // Generate unique search query
+      const query = generateUniqueQuery(
+        industryName,
+        countryName,
+        BATCH_SIZE,
+        iteration,
+        usedQueries,
+      )
+
+      if (!query) {
+        console.warn("[LeadDiscovery] No more unique queries to generate, stopping")
+        break
+      }
+
+      console.log(`[LeadDiscovery] Query: "${query}"`)
+
+      // Search BigQuery
+      const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+
+      if (!result.results.length) {
+        console.log("[LeadDiscovery] No results from BigQuery")
+        continue
+      }
+
+      console.log(`[LeadDiscovery] Found ${result.results.length} results from BigQuery`)
+
+      // Add leads to unique leads in-memory state
+      let newLeadsAdded = 0
+      for (const row of result.results) {
+        const website = row.website as string
+        if (!website || uniqueLeadsByWebsite.has(website)) continue
+
+        uniqueLeadsByWebsite.set(website, {
+          company: row.company as string,
+          website,
+          industry: row.industry as string,
+          employees: row.employees?.toString() || "",
+          country: row.country as string,
+        })
+        newLeadsAdded++
+      }
+
+      console.log(
+        `[LeadDiscovery] Added ${newLeadsAdded} new unique leads ` +
+          `(${result.results.length - newLeadsAdded} duplicates). ` +
+          `Total unique: ${uniqueLeadsByWebsite.size}`,
+      )
+
+      // Enrich un-enriched leads
+      const unenrichedLeads = Array.from(uniqueLeadsByWebsite.values()).filter(
+        (lead) => !lead.enriched,
+      )
+
+      if (unenrichedLeads.length === 0) {
+        console.log("[LeadDiscovery] No un-enriched leads to process")
+        continue
+      }
+
+      console.log(`[LeadDiscovery] Enriching ${unenrichedLeads.length} un-enriched leads...`)
+
+      const enrichedLeads = await enrichLeadsForOnboarding(unenrichedLeads)
+
+      // Update in-memory state with enrichment results
+      for (const enriched of enrichedLeads) {
+        if (!enriched.websiteUrl) continue
+
+        const existing = uniqueLeadsByWebsite.get(enriched.websiteUrl)
+        if (existing) {
+          existing.enriched = enriched
+        }
+      }
+
+      const enrichedCount = enrichedLeads.filter((l) => l.primaryEmail).length
+      console.log(
+        `[LeadDiscovery] Enrichment complete: ${enrichedCount}/${enrichedLeads.length} have emails`,
+      )
     }
 
-    console.log(`[LeadDiscovery] Found ${result.results.length} results from BigQuery`)
+    // Collect all enriched leads with valid emails
+    const enrichedLeadsWithEmails = Array.from(uniqueLeadsByWebsite.values())
+      .filter((lead) => {
+        if (!lead.enriched?.primaryEmail) return false
+        const email = lead.enriched.primaryEmail.toLowerCase()
+        // Filter out generic no-reply addresses
+        if (email.includes("noreply")) return false
+        if (email.startsWith("postmaster@")) return false
+        if (email.startsWith("abuse@")) return false
+        return true
+      })
+      .map((lead) => lead.enriched!)
 
-    // Enrich leads with contact emails and company descriptions
-    const rawLeads = result.results.map((row) => ({
-      company: row.company as string,
-      website: row.website as string,
-      industry: row.industry as string,
-      employees: row.employees?.toString() || "",
-      country: row.country as string,
-    }))
-
-    console.log(`[LeadDiscovery] Enriching ${rawLeads.length} leads...`)
-    const enrichedLeads = await enrichLeadsForOnboarding(rawLeads)
     console.log(
-      `[LeadDiscovery] Enrichment complete. ${enrichedLeads.filter((l) => l.primaryEmail).length} leads have emails`,
+      `[LeadDiscovery] Total enriched leads with valid emails: ${enrichedLeadsWithEmails.length}`,
     )
 
-    console.info({
-      enrichedLeads: enrichedLeads.map((l) => {
-        return {
-          companyName: l.companyName,
-          websiteUrl: l.websiteUrl,
-          primaryEmail: l.primaryEmail,
-        }
-      }),
-    })
-
-    // Transform enriched leads to lead creation format
-    const leadsToCreate = enrichedLeads.map((lead) => ({
+    // Take first 300 and create in database
+    const leadsToCreate = enrichedLeadsWithEmails.slice(0, TARGET_LEADS).map((lead) => ({
       companyName: lead.companyName,
       foundCompanyName: lead.companyName,
       websiteUrl: lead.websiteUrl,
@@ -806,34 +920,114 @@ async function discoverLeadsForOnboarding(
       country: lead.country,
       employeeCount: lead.employeeCount,
       description: lead.description,
-      primaryEmail: lead.primaryEmail, // Creates leadContacts record automatically
+      primaryEmail: lead.primaryEmail,
       leadSource: "bigquery-auto" as const,
       leadStatus: "new" as const,
     }))
 
-    // Create leads in database using bulkCreateLeads
+    console.log(`[LeadDiscovery] Creating ${leadsToCreate.length} leads in database...`)
+
+    // Create leads in database (handles deduplication)
     const { createdLeads, stats } = await bulkCreateLeads({
       workspaceId,
       leads: leadsToCreate,
       createdBy: userId,
     })
 
-    console.log(`[LeadDiscovery] Created ${stats.created} leads (${stats.skipped} skipped)`)
+    const enrichmentSuccessRate =
+      uniqueLeadsByWebsite.size > 0
+        ? ((enrichedLeadsWithEmails.length / uniqueLeadsByWebsite.size) * 100).toFixed(1)
+        : "0.0"
+
+    console.log(
+      `[LeadDiscovery] Final stats: ${stats.created} leads created, ` +
+        `${stats.skipped} duplicates in DB, ` +
+        `${uniqueLeadsByWebsite.size} total unique leads found, ` +
+        `${enrichedLeadsWithEmails.length} enriched with emails. ` +
+        `Success rate: ${enrichmentSuccessRate}%`,
+    )
+
+    if (stats.created < TARGET_LEADS) {
+      console.warn(
+        `[LeadDiscovery] Warning: Only created ${stats.created}/${TARGET_LEADS} leads after deduplication`,
+      )
+    }
 
     return {
       leadIds: createdLeads.map((l) => l.id),
       count: stats.created,
+      targetCount: TARGET_LEADS,
+      enrichmentSuccessRate: `${enrichmentSuccessRate}%`,
+      duplicatesSkipped: stats.skipped,
+      totalEnriched: enrichedLeadsWithEmails.length,
+      totalDuplicates: stats.skipped,
     }
   } catch (error) {
-    console.error("[LeadDiscovery] Error during BigQuery search:", error)
-    return { leadIds: [], count: 0 }
+    console.error("[LeadDiscovery] Error during lead discovery:", error)
+    return {
+      leadIds: [],
+      count: 0,
+      targetCount: TARGET_LEADS,
+      enrichmentSuccessRate: "0.0%",
+      duplicatesSkipped: 0,
+      totalEnriched: 0,
+      totalDuplicates: 0,
+    }
   }
+}
+
+/**
+ * Generate unique search queries to avoid fetching the same leads
+ * Varies by: result count, employee range, specific keywords
+ */
+function generateUniqueQuery(
+  industryName: string,
+  countryName: string,
+  batchSize: number,
+  iteration: number,
+  usedQueries: Set<string>,
+): string | null {
+  // Strategy variations to generate diverse queries
+  const strategies = [
+    // Base query with increasing limits
+    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
+
+    // Add employee size variations
+    () =>
+      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
+    () =>
+      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
+    () =>
+      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
+
+    // Add business type variations
+    () => `${industryName} startups in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} enterprises in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} SMB companies in ${countryName} ${batchSize * iteration}개`,
+
+    // Add keyword variations
+    () => `${industryName} B2B companies in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} software companies in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} service companies in ${countryName} ${batchSize * iteration}개`,
+  ]
+
+  // Try each strategy
+  for (const strategy of strategies) {
+    const query = strategy()
+    if (!usedQueries.has(query)) {
+      usedQueries.add(query)
+      return query
+    }
+  }
+
+  // If all strategies exhausted, return null
+  return null
 }
 
 /**
  * Enrich BigQuery leads with contact emails and company info
  * Uses Hunter.io for email discovery and Jina/Gemini for company analysis
- * Rate-limited with 500ms delay between requests to avoid API throttling
+ * Processes leads in parallel batches (10 concurrent) with 2s delays between batches
  */
 async function enrichLeadsForOnboarding(
   leadsToEnrich: Array<{
@@ -857,55 +1051,83 @@ async function enrichLeadsForOnboarding(
   const hunterApiKey = config.hunter.apiKey
   const geminiApiKey = config.gemini.apiKey
 
+  const BATCH_SIZE = 10 // Process 10 leads concurrently
+  const DELAY_BETWEEN_BATCHES = 2000 // 2s delay between batches
+
   const enrichedLeads = []
 
-  for (const lead of leadsToEnrich) {
-    try {
-      if (!lead.website) {
-        // No website = can't enrich, add basic data
-        enrichedLeads.push({
-          companyName: lead.company || "Unknown Company",
-          websiteUrl: lead.website,
-          businessType: lead.industry,
-          country: lead.country,
-          employeeCount: lead.employees?.toString(),
-        })
-        continue
+  // Process leads in batches
+  for (let i = 0; i < leadsToEnrich.length; i += BATCH_SIZE) {
+    const batch = leadsToEnrich.slice(i, i + BATCH_SIZE)
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1
+    const totalBatches = Math.ceil(leadsToEnrich.length / BATCH_SIZE)
+
+    console.log(
+      `[LeadEnrichment] Processing batch ${batchNumber}/${totalBatches} (${batch.length} leads)`,
+    )
+
+    // Enrich batch in parallel
+    const batchResults = await Promise.allSettled(
+      batch.map(async (lead) => {
+        try {
+          if (!lead.website) {
+            // No website = can't enrich, add basic data
+            return {
+              companyName: lead.company || "Unknown Company",
+              websiteUrl: lead.website,
+              businessType: lead.industry,
+              country: lead.country,
+              employeeCount: lead.employees?.toString(),
+            }
+          }
+
+          const enrichment = await enrichLead(lead.website, lead.company, {
+            hunterApiKey,
+            geminiApiKey,
+            skipHunter: false,
+          })
+
+          // Get primary email (highest confidence)
+          const primaryEmail = enrichment.emails?.[0]?.value
+
+          console.log(`[LeadEnrichment] Enriched ${lead.company}: email=${primaryEmail || "none"}`)
+
+          return {
+            companyName: lead.company || "Unknown Company",
+            websiteUrl: lead.website,
+            businessType: lead.industry,
+            country: lead.country,
+            employeeCount: lead.employees?.toString(),
+            description: enrichment.companyInfo?.description,
+            primaryEmail,
+          }
+        } catch (error) {
+          console.error(`[LeadEnrichment] Failed to enrich ${lead.company}:`, error)
+          // Still return lead without enrichment
+          return {
+            companyName: lead.company || "Unknown Company",
+            websiteUrl: lead.website,
+            businessType: lead.industry,
+            country: lead.country,
+            employeeCount: lead.employees?.toString(),
+          }
+        }
+      }),
+    )
+
+    // Collect successful enrichments
+    for (const result of batchResults) {
+      if (result.status === "fulfilled") {
+        enrichedLeads.push(result.value)
+      } else {
+        console.error(`[LeadEnrichment] Batch promise rejected:`, result.reason)
       }
+    }
 
-      const enrichment = await enrichLead(lead.website, lead.company, {
-        hunterApiKey,
-        geminiApiKey,
-        skipHunter: false,
-      })
-
-      // Get primary email (highest confidence)
-      const primaryEmail = enrichment.emails?.[0]?.value
-
-      enrichedLeads.push({
-        companyName: lead.company || "Unknown Company",
-        websiteUrl: lead.website,
-        businessType: lead.industry,
-        country: lead.country,
-        employeeCount: lead.employees?.toString(),
-        description: enrichment.companyInfo?.description,
-        primaryEmail,
-      })
-
-      console.log(`[LeadEnrichment] Enriched ${lead.company}: email=${primaryEmail || "none"}`)
-
-      // Rate limit: 500ms delay between requests
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    } catch (error) {
-      console.error(`[LeadEnrichment] Failed to enrich ${lead.company}:`, error)
-      // Still add lead without enrichment
-      enrichedLeads.push({
-        companyName: lead.company || "Unknown Company",
-        websiteUrl: lead.website,
-        businessType: lead.industry,
-        country: lead.country,
-        employeeCount: lead.employees?.toString(),
-      })
+    // Rate limiting: wait between batches (except after last batch)
+    if (i + BATCH_SIZE < leadsToEnrich.length) {
+      console.log(`[LeadEnrichment] Waiting ${DELAY_BETWEEN_BATCHES}ms before next batch...`)
+      await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES))
     }
   }
 

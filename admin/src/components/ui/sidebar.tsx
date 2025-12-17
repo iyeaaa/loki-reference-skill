@@ -17,12 +17,27 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
-// const SIDEBAR_COOKIE_NAME = "sidebar_state"
-// const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+const SIDEBAR_STATE_KEY = "sidebar_state"
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+
+// Helper function to get initial sidebar state from localStorage
+function getInitialSidebarState(defaultOpen: boolean): boolean {
+  if (typeof window === "undefined") {
+    return defaultOpen
+  }
+  try {
+    const stored = localStorage.getItem(SIDEBAR_STATE_KEY)
+    if (stored !== null) {
+      return stored === "true"
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return defaultOpen
+}
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -63,7 +78,8 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
+  // Initialize from localStorage to persist state across page navigations
+  const [_open, _setOpen] = React.useState(() => getInitialSidebarState(defaultOpen))
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -74,9 +90,12 @@ function SidebarProvider({
         _setOpen(openState)
       }
 
-      // This sets the cookie to keep the sidebar state.
-      // Disabled: Direct cookie manipulation is not recommended
-      // document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      // Save sidebar state to localStorage
+      try {
+        localStorage.setItem(SIDEBAR_STATE_KEY, String(openState))
+      } catch {
+        // Ignore localStorage errors
+      }
     },
     [setOpenProp, open],
   )
@@ -177,6 +196,8 @@ function Sidebar({
           data-mobile="true"
           data-sidebar="sidebar"
           data-slot="sidebar"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
           side={side}
           style={
             {

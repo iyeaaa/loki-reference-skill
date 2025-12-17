@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -48,8 +48,8 @@ export function StepEmailLink() {
     setError(null)
 
     try {
-      // Get OAuth URL from backend with workspaceId in state
-      const response = await getNylasAuthUrl(workspace?.id)
+      // Get OAuth URL from backend
+      const response = await getNylasAuthUrl()
 
       // Redirect to Google OAuth
       window.location.href = response.url
@@ -66,6 +66,21 @@ export function StepEmailLink() {
     // Go to step 4 (confirmation)
     setSearchParams({ step: "4" })
   }
+
+  // Auto-skip to next step if email account is already linked (not TRIAL_PREVIEW)
+  useEffect(() => {
+    const isTrialPreviewAccount = emailAccount?.apiKey === "TRIAL_PREVIEW"
+
+    if (emailAccount && !isTrialPreviewAccount && !isLoadingWorkspaces && !isLoadingEmailAccounts) {
+      console.log("[StepEmailLink] Email account already linked, auto-advancing to next step")
+      // Small delay to show the success state briefly
+      const timer = setTimeout(() => {
+        setSearchParams({ step: "4" })
+      }, 800)
+
+      return () => clearTimeout(timer)
+    }
+  }, [emailAccount, isLoadingWorkspaces, isLoadingEmailAccounts, setSearchParams])
 
   // Loading state
   if (isLoadingWorkspaces || isLoadingEmailAccounts) {

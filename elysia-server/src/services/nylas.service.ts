@@ -124,9 +124,8 @@ export interface NylasRepliedData {
 
 /**
  * Get Nylas OAuth authorization URL for Google
- * @param state - Optional state parameter to pass through OAuth flow (e.g., workspaceId)
  */
-export function getNylasAuthUrl(state?: string): NylasAuthUrlResponse {
+export function getNylasAuthUrl(loginHint?: string): NylasAuthUrlResponse {
   if (!NYLAS_CLIENT_ID) {
     throw new Error("NYLAS_CLIENT_ID is not configured")
   }
@@ -136,7 +135,7 @@ export function getNylasAuthUrl(state?: string): NylasAuthUrlResponse {
       clientId: NYLAS_CLIENT_ID,
       provider: "google",
       redirectUri: NYLAS_REDIRECT_URI,
-      state: state, // Pass workspaceId as state parameter, not loginHint
+      loginHint: loginHint,
       accessType: "offline",
       scope: [
         "https://www.googleapis.com/auth/gmail.send",
@@ -144,7 +143,7 @@ export function getNylasAuthUrl(state?: string): NylasAuthUrlResponse {
       ],
     })
 
-    logger.info({ redirectUri: NYLAS_REDIRECT_URI, state }, "Generated Nylas auth URL")
+    logger.info({ redirectUri: NYLAS_REDIRECT_URI }, "Generated Nylas auth URL")
 
     return { url: authUrl }
   } catch (error) {

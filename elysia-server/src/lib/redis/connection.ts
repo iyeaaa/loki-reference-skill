@@ -9,6 +9,11 @@ import logger from "../../utils/logger"
 const MAX_RETRY_ATTEMPTS = 5
 
 /**
+ * Redis 재시도 간격 (밀리초)
+ */
+const RETRY_DELAY_MS = 3000 // 3초
+
+/**
  * Redis connection for BullMQ
  * BullMQ requires maxRetriesPerRequest: null
  */
@@ -26,9 +31,10 @@ export const redisConnection = new Redis({
       )
       return null // null을 반환하면 재시도 중단
     }
-    const delay = Math.min(times * 50, 2000)
-    logger.warn(`[Redis] Retry attempt ${times}/${MAX_RETRY_ATTEMPTS}, waiting ${delay}ms...`)
-    return delay
+    logger.warn(
+      `[Redis] Retry attempt ${times}/${MAX_RETRY_ATTEMPTS}, waiting ${RETRY_DELAY_MS}ms...`,
+    )
+    return RETRY_DELAY_MS
   },
 })
 
@@ -68,9 +74,10 @@ export function createRedisConnection(): Redis {
         )
         return null
       }
-      const delay = Math.min(times * 50, 2000)
-      logger.warn(`[Redis] Retry attempt ${times}/${MAX_RETRY_ATTEMPTS}, waiting ${delay}ms...`)
-      return delay
+      logger.warn(
+        `[Redis] Retry attempt ${times}/${MAX_RETRY_ATTEMPTS}, waiting ${RETRY_DELAY_MS}ms...`,
+      )
+      return RETRY_DELAY_MS
     },
   })
 }

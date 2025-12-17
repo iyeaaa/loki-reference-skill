@@ -1,6 +1,7 @@
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
 import { iamMemberRoles } from "../db/schema/iam"
 import { departments, users } from "../db/schema/users"
 import { workspaceMembers } from "../db/schema/workspaces"
@@ -253,11 +254,46 @@ export async function softDeleteUser(id: string) {
       logger.info({ userId: id, memberCount: memberIds.length }, "Deleted IAM role assignments")
     }
 
-    // 4. すべてのワークスペースメンバーシップを削除（メールアカウントはカスケード削除される）
+    // 4. すべてのワークスペースメンバーシップを削除
     await tx.delete(workspaceMembers).where(eq(workspaceMembers.userId, id))
     logger.info({ userId: id, membershipCount: memberIds.length }, "Deleted workspace memberships")
 
-    // 5. ユーザーをソフト削除して匿名化
+    // 5. ユーザーのメールアカウントIDを取得
+    const userEmailAccountIds = await tx
+      .select({ id: userEmailAccounts.id })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.userId, id))
+
+    // 6. これらのメールアカウントから送信されたすべてのメールを削除（FK制約のため先に削除）
+    if (userEmailAccountIds.length > 0) {
+      const accountIds = userEmailAccountIds.map((acc) => acc.id)
+      const deletedEmails = await tx
+        .delete(emails)
+        .where(
+          sql`user_email_account_id IN (${sql.join(
+            accountIds.map((aid) => sql`${aid}`),
+            sql`, `,
+          )})`,
+        )
+        .returning({ id: emails.id })
+      logger.info(
+        { userId: id, deletedEmailsCount: deletedEmails.length },
+        "Deleted emails for user email accounts",
+      )
+    }
+
+    // 7. すべてのユーザーメールアカウントを削除
+    // 注意: Soft deleteなのでcascadeが作動しない。明示的に削除が必要
+    const deletedEmailAccounts = await tx
+      .delete(userEmailAccounts)
+      .where(eq(userEmailAccounts.userId, id))
+      .returning({ id: userEmailAccounts.id })
+    logger.info(
+      { userId: id, deletedEmailAccountsCount: deletedEmailAccounts.length },
+      "Deleted user email accounts",
+    )
+
+    // 6. ユーザーをソフト削除して匿名化
     // Google OAuth 연결 (oauthId)도 null로 설정하여 완전히 연결 해제
     await tx
       .update(users)
@@ -379,6 +415,7 @@ async function verifyUserDeletion(userId: string) {
 // ====================================
 
 // ListUsers :many
+// 삭제된 계정(isActive: false)은 제외
 export async function listUsers(limit: number, offset: number) {
   const result = await db
     .select({
@@ -397,6 +434,7 @@ export async function listUsers(limit: number, offset: number) {
     })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
+    .where(eq(users.isActive, true))
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset)
@@ -404,7 +442,8 @@ export async function listUsers(limit: number, offset: number) {
   return result
 }
 
-// GetAllUsers - 페이지네이션 없이 모든 유저 조회 (모든 유저)
+// GetAllUsers - 페이지네이션 없이 모든 유저 조회 (활성 유저만)
+// 삭제된 계정(isActive: false)은 제외
 export async function getAllUsers() {
   const result = await db
     .select({
@@ -423,6 +462,7 @@ export async function getAllUsers() {
     })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
+    .where(eq(users.isActive, true))
     .orderBy(desc(users.createdAt))
 
   return result
@@ -445,8 +485,11 @@ export async function listUsersWithFilters(
     conditions.push(eq(users.userRole, filters.role))
   }
 
+  // isActive 필터가 명시적으로 지정되지 않으면 기본적으로 활성 사용자만 표시
   if (filters?.isActive !== undefined) {
     conditions.push(eq(users.isActive, filters.isActive))
+  } else {
+    conditions.push(eq(users.isActive, true))
   }
 
   if (filters?.search) {

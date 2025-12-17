@@ -1264,8 +1264,9 @@ export async function updateWorkspace(
 }
 
 // DeleteWorkspace :exec
-export async function deleteWorkspace(id: string) {
-  logger.info({ workspaceId: id }, "Starting workspace deletion")
+export async function deleteWorkspace(id: string, options?: { forceDelete?: boolean }) {
+  const forceDelete = options?.forceDelete ?? false
+  logger.info({ workspaceId: id, forceDelete }, "Starting workspace deletion")
 
   // 1. 이메일 개수 확인 (RESTRICT 방지 - 워크스페이스에 이메일이 있으면 삭제 불가)
   const emailCountResult = await db
@@ -1281,13 +1282,28 @@ export async function deleteWorkspace(id: string) {
   const totalEmails = (emailCountResult[0]?.count || 0) + (emailReplyCountResult[0]?.count || 0)
 
   if (totalEmails > 0) {
-    logger.warn(
-      { workspaceId: id, emailCount: totalEmails },
-      "Cannot delete workspace: emails exist",
-    )
-    throw new Error(
-      `워크스페이스에 ${totalEmails}개의 이메일 또는 답장이 있습니다. 워크스페이스를 삭제하려면 먼저 이메일을 이동하거나 삭제해야 합니다.`,
-    )
+    if (forceDelete) {
+      // 강제 삭제 모드: 이메일과 답장을 먼저 삭제
+      logger.warn(
+        { workspaceId: id, emailCount: totalEmails },
+        "Force deleting workspace with emails",
+      )
+      await db.delete(emailReplies).where(eq(emailReplies.workspaceId, id))
+      await db.delete(emails).where(eq(emails.workspaceId, id))
+      logger.info(
+        { workspaceId: id, deletedEmails: totalEmails },
+        "Deleted emails and replies for workspace",
+      )
+    } else {
+      // 일반 삭제 모드: 이메일이 있으면 에러
+      logger.warn(
+        { workspaceId: id, emailCount: totalEmails },
+        "Cannot delete workspace: emails exist",
+      )
+      throw new Error(
+        `워크스페이스에 ${totalEmails}개의 이메일 또는 답장이 있습니다. 워크스페이스를 삭제하려면 먼저 이메일을 이동하거나 삭제해야 합니다.`,
+      )
+    }
   }
 
   // 2. このワークスペースのすべてのuser_email_accountsを取得（Nylas取り消し用のapiKeyを含む）
@@ -1324,7 +1340,7 @@ export async function deleteWorkspace(id: string) {
           "Failed to delete Nylas grant during workspace deletion (may be already deleted)",
         )
       }
-    } else if (account.apiKey && account.apiKey.startsWith("SG")) {
+    } else if (account.apiKey?.startsWith("SG")) {
       sendGridAccountsSkipped++
     }
   }
@@ -1447,6 +1463,7 @@ async function verifyWorkspaceDeletion(workspaceId: string) {
 // ====================================
 
 // ListWorkspaces :many
+// 소유자가 삭제된 워크스페이스는 제외 (users.isActive: true만)
 export async function listWorkspaces(limit: number, offset: number) {
   const result = await db
     .select({
@@ -1474,6 +1491,7 @@ export async function listWorkspaces(limit: number, offset: number) {
     })
     .from(workspaces)
     .innerJoin(users, eq(workspaces.ownerId, users.id))
+    .where(eq(users.isActive, true))
     .orderBy(desc(workspaces.createdAt))
     .limit(limit)
     .offset(offset)
@@ -1526,6 +1544,9 @@ export async function listWorkspacesWithFilters(
       conditions.push(workspaceCondition)
     }
   }
+
+  // 소유자가 삭제된 워크스페이스는 항상 제외
+  conditions.push(eq(users.isActive, true))
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 

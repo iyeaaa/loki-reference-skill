@@ -1,5 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
+import * as emailAccountService from "../services/email-account.service"
+import * as nylasService from "../services/nylas.service"
 import * as oauthService from "../services/oauth.service"
 import * as onboardingService from "../services/onboarding.service"
 import * as userService from "../services/user.service"
@@ -49,6 +51,11 @@ const googleCallbackSchema = t.Object({
   country: t.Optional(t.String()),
   experience: t.Optional(t.String()),
   lang: t.Optional(t.String()),
+})
+
+const nylasCallbackSchema = t.Object({
+  code: t.String(),
+  state: t.Optional(t.String()),
 })
 
 const googleTokenSchema = t.Object({
@@ -642,6 +649,245 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     },
     {
       body: googleCallbackSchema,
+    },
+  )
+
+  // Nylas OAuth authorization URL (for initial trial signup)
+  .get("/nylas", async ({ query, set }) => {
+    try {
+      const { industry, target, country, experience, lang } = query
+
+      // Encode onboarding params in state
+      const state = JSON.stringify({
+        context: "initial_login",
+        industry,
+        target,
+        country,
+        experience,
+        lang,
+      })
+
+      const authUrl = nylasService.getNylasAuthUrl()
+
+      // Append state to the auth URL
+      const urlWithState = `${authUrl.url}&state=${encodeURIComponent(state)}`
+
+      logger.info({ state }, "Generated Nylas auth URL for initial login")
+
+      return { authUrl: urlWithState }
+    } catch (error) {
+      logger.error({ error }, "Failed to generate Nylas auth URL")
+      set.status = 500
+      return errorResponse("Nylas 인증 URL 생성에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+    }
+  })
+
+  // Nylas OAuth callback (for initial trial signup)
+  .post(
+    "/nylas/callback",
+    async ({ body, set }) => {
+      try {
+        const { code, state } = body
+
+        // Parse state to get onboarding params
+        let onboardingParams: {
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        } = {}
+
+        if (state) {
+          try {
+            const parsedState = JSON.parse(state)
+            onboardingParams = {
+              industry: parsedState.industry,
+              target: parsedState.target,
+              country: parsedState.country,
+              experience: parsedState.experience,
+              lang: parsedState.lang,
+            }
+            console.log("=== Nylas OAuth Callback - Onboarding Params ===")
+            console.log(onboardingParams)
+          } catch (_parseError) {
+            logger.warn({ state }, "Failed to parse state parameter")
+          }
+        }
+
+        // Exchange code for Nylas grant
+        const nylasGrant = await nylasService.exchangeCodeForGrant(code)
+        const { grantId, email, provider } = nylasGrant
+
+        logger.info(
+          { email, grantId, provider },
+          "Successfully created Nylas grant during initial login",
+        )
+
+        // Find or create user
+        const existingUser = await userService.getUserByEmail(email)
+        let user: AuthUser | undefined
+
+        if (existingUser) {
+          await userService.updateLastLogin(existingUser.id)
+          user = existingUser
+        } else {
+          // Create new user with trial period
+          user = await userService.createOrUpdateGoogleUser({
+            username: email.split("@")[0] || email,
+            email: email,
+            oauthId: email, // Use email as oauthId for Nylas-based signup
+            profilePicture: undefined,
+            onboardingParams,
+          })
+
+          // For new users with all onboarding params, save to onboarding_progress and auto-generate
+          const hasAllOnboardingParams = !!(
+            onboardingParams.industry &&
+            onboardingParams.target &&
+            onboardingParams.country &&
+            onboardingParams.experience
+          )
+
+          if (user && hasAllOnboardingParams) {
+            try {
+              // Get the workspace created for this user
+              const workspaces = await workspaceService.getWorkspacesByOwner(user.id)
+              const workspace = workspaces?.[0]
+
+              if (workspace) {
+                // Save survey data to onboarding_progress
+                console.log("[Auth/Nylas] Saving survey data to onboarding_progress...")
+                await onboardingService.saveSurveyData(workspace.id, onboardingParams, user.id)
+                console.log("[Auth/Nylas] ✅ Survey data saved")
+
+                // Fire and forget - auto-generate onboarding content in background
+                console.log("[Auth/Nylas] 🚀 Starting auto-generate onboarding...")
+                onboardingService
+                  .autoGenerateOnboarding(workspace.id, user.id, {
+                    industry: onboardingParams.industry as string,
+                    target: onboardingParams.target as string,
+                    country: onboardingParams.country as string,
+                    experience: onboardingParams.experience as string,
+                    lang: onboardingParams.lang,
+                  })
+                  .catch((err) => console.error("[Auth/Nylas] Auto-generate failed:", err))
+              }
+            } catch (onboardingError) {
+              console.error("[Auth/Nylas] ❌ Failed to setup onboarding:", onboardingError)
+            }
+          }
+        }
+
+        if (!user) {
+          set.status = 500
+          return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+        }
+
+        if (!user.isActive) {
+          set.status = 401
+          return errorResponse(
+            "비활성화된 계정입니다. 관리자에게 문의하세요.",
+            ResponseCode.UNAUTHORIZED,
+          )
+        }
+
+        // Create email account automatically
+        try {
+          const workspaces = await workspaceService.getWorkspacesByOwner(user.id)
+          const workspace = workspaces?.[0]
+
+          if (workspace?.id) {
+            // Check if email account already exists
+            const existingEmailAccount =
+              await emailAccountService.getEmailAccountByWorkspaceAndUserAny(workspace.id, user.id)
+
+            if (!existingEmailAccount || existingEmailAccount.apiKey === "TRIAL_PREVIEW") {
+              // Delete trial preview account if it exists
+              if (existingEmailAccount?.apiKey === "TRIAL_PREVIEW") {
+                await emailAccountService.deleteEmailAccount(existingEmailAccount.id)
+                console.log("[Auth/Nylas] 🗑️  Deleted TRIAL_PREVIEW account")
+              }
+
+              // Create email account with Nylas grant
+              const newEmailAccount = await emailAccountService.createEmailAccount({
+                userId: user.id,
+                workspaceId: workspace.id,
+                emailAddress: email,
+                displayName: user.username, // Use username as display name
+                apiKey: grantId, // Store grantId as apiKey
+                isDefault: true,
+                isVerified: true,
+                dailyLimit: 60, // Default daily limit for trial users
+                monthlyLimit: 1000, // Default monthly limit for trial users
+                status: "active",
+              })
+
+              if (newEmailAccount) {
+                console.log(
+                  "[Auth/Nylas] ✅ Email account created automatically:",
+                  newEmailAccount.emailAddress,
+                )
+              }
+            } else {
+              console.log("[Auth/Nylas] ℹ️  Email account already exists")
+            }
+          }
+        } catch (emailAccountError) {
+          logger.error(
+            { error: emailAccountError, userId: user.id },
+            "Failed to create email account during Nylas login",
+          )
+          // Don't fail the entire auth flow
+        }
+
+        // Generate JWT token
+        const token = authService.generateToken({
+          userId: user.id,
+          email: user.email,
+          userRole: user.userRole,
+        })
+
+        // Get trial status
+        const trialStatus = await userService.checkTrialStatus(user.id)
+
+        return {
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            userRole: user.userRole,
+            isActive: user.isActive,
+            departmentId: user.departmentId,
+            employeeId: user.employeeId,
+            authProvider: "authProvider" in user ? user.authProvider : "google",
+            profilePicture: "profilePicture" in user ? user.profilePicture : null,
+            trialStatus,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            lastLoginAt: user.lastLoginAt,
+            departmentName: "departmentName" in user ? user.departmentName : null,
+            departmentCode: "departmentCode" in user ? user.departmentCode : null,
+          },
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+          "Nylas OAuth callback error",
+        )
+        set.status = 400
+        return errorResponse(
+          error instanceof Error ? error.message : "Nylas 인증에 실패했습니다.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+    },
+    {
+      body: nylasCallbackSchema,
     },
   )
 

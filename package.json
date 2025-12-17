@@ -2,11 +2,7 @@
   "name": "send-grid-test",
   "version": "2.1.0",
   "private": true,
-  "description": "SendGrid Email Service Platform - Monorepo",
-  "workspaces": [
-    "admin",
-    "elysia-server"
-  ],
+  "description": "SendGrid Email Service Platform",
   "scripts": {
     "prepare": "husky",
     "install:all": "cd admin && yarn install && cd ../elysia-server && bun install",

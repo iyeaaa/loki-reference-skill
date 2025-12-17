@@ -85,6 +85,35 @@ function stripCodeFences(text: string): string {
   return result
 }
 
+// 검색 조건 포맷팅 유틸리티
+function formatSearchConditions(data: {
+  selectedRecommendation?: BuyerRecommendation
+  userQuery?: string
+}): string {
+  const parts: string[] = []
+
+  // 사용자 쿼리 (원본 요청)
+  if (data.userQuery) {
+    parts.push(`💬 **원본 요청**: "${data.userQuery}"`)
+  }
+
+  // 선택한 타겟 정보
+  if (data.selectedRecommendation) {
+    const rec = data.selectedRecommendation
+    const targetParts = [rec.country, rec.industry]
+    if (rec.subIndustry) {
+      targetParts.push(rec.subIndustry)
+    }
+    parts.push(`🎯 **검색 타겟**: ${targetParts.join(" / ")}`)
+
+    if (rec.keywords && rec.keywords.length > 0) {
+      parts.push(`🏷️ **키워드**: ${rec.keywords.join(", ")}`)
+    }
+  }
+
+  return parts.length > 0 ? `\n\n---\n\n${parts.join("\n\n")}` : ""
+}
+
 type SearchMode = "website" | "criteria_input" | "criteria_click"
 
 export function ChatRoom() {
@@ -482,10 +511,6 @@ export function ChatRoom() {
     },
     onComplete: (data) => {
       // 스트리밍 메시지를 완료된 메시지로 변환
-      const recInfo = data.selectedRecommendation
-        ? `**선택한 타겟**: ${data.selectedRecommendation.country} / ${data.selectedRecommendation.industry}\n\n`
-        : ""
-
       setStreamingState((prev) => {
         if (prev.messageId) {
           // 분석 결과를 메시지에 포함 (코드 펜스 제거)
@@ -501,8 +526,14 @@ export function ChatRoom() {
             ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
             : ""
 
+          // 검색 조건 정보 포맷팅
+          const searchConditions = formatSearchConditions({
+            selectedRecommendation: data.selectedRecommendation,
+            userQuery: prev.userQuery,
+          })
+
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
+            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
         // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
@@ -621,15 +652,17 @@ export function ChatRoom() {
       setCustomers(newCustomers) // Replace instead of append for selection results
     },
     onComplete: (data) => {
-      const recInfo = data.selectedRecommendation
-        ? `**선택한 타겟**: ${data.selectedRecommendation.country} / ${data.selectedRecommendation.industry}\n\n`
-        : ""
-
       setStreamingState((prev) => {
         // 검색 결과를 응답 메시지(messageId)에 포함
         if (prev.messageId) {
+          // 검색 조건 정보 포맷팅
+          const searchConditions = formatSearchConditions({
+            selectedRecommendation: data.selectedRecommendation,
+            userQuery: prev.userQuery,
+          })
+
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
+            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}`,
           })
         }
 
@@ -702,8 +735,14 @@ export function ChatRoom() {
     onComplete: (data) => {
       setStreamingState((prev) => {
         if (prev.messageId) {
+          // 검색 조건 정보 포맷팅
+          const searchConditions = formatSearchConditions({
+            selectedRecommendation: data.selectedRecommendation,
+            userQuery: prev.userQuery,
+          })
+
           updateMessage(prev.messageId, {
-            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
+            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}`,
           })
         }
 
@@ -1845,7 +1884,7 @@ export function ChatRoom() {
                                         className="mt-3 gap-2"
                                         onClick={() =>
                                           window.open(
-                                            `/customer-groups/${createGroupState.groupId}`,
+                                            `/leads?groupId=${createGroupState.groupId}`,
                                             "_blank",
                                           )
                                         }

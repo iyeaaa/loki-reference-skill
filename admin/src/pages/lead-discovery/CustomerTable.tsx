@@ -2,6 +2,7 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnOrderState,
+  type FilterFn,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -16,12 +17,15 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Columns3,
   ExternalLink,
+  Filter,
   GripVertical,
   Loader2,
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  RotateCcw,
   Sparkles,
   Trash2,
   UserPlus,
@@ -32,12 +36,14 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
@@ -75,6 +81,94 @@ import {
   updateFitScoreAtom,
   updateStreamingStateAtom,
 } from "./store"
+
+const TABLE_SETTINGS_KEY = "lead-discovery-table-settings"
+
+const COLUMN_CONFIG = [
+  { id: "select", label: "번호", canHide: false },
+  { id: "company_name", label: "Company", canHide: true },
+  { id: "web_address", label: "Website", canHide: true },
+  { id: "description", label: "Description", canHide: true },
+  { id: "fitScore", label: "Fit Score", canHide: true },
+  { id: "country", label: "Country", canHide: true },
+  { id: "category", label: "Category", canHide: true },
+  { id: "companyType", label: "Business Type", canHide: true },
+  { id: "industry", label: "Main Industry", canHide: true },
+  { id: "sub_industry", label: "Sub Industry", canHide: true },
+  { id: "email", label: "Company Email", canHide: true },
+  { id: "actions", label: "Actions", canHide: false },
+] as const
+
+type ColumnId = (typeof COLUMN_CONFIG)[number]["id"]
+
+type PersistedTableSettings = {
+  columnOrder: ColumnOrderState
+  columnVisibility: VisibilityState
+  sorting: SortingState
+  globalFilter: string
+}
+
+const COLUMN_IDS: ColumnId[] = COLUMN_CONFIG.map((column) => column.id)
+
+const createDefaultVisibility = (): VisibilityState =>
+  COLUMN_CONFIG.reduce((acc, column) => {
+    acc[column.id] = true
+    return acc
+  }, {} as VisibilityState)
+
+const sanitizeColumnOrder = (order?: string[]): ColumnOrderState => {
+  const seen = new Set<string>()
+  const normalized = (order ?? []).filter((id) => {
+    const isValid = COLUMN_IDS.includes(id as ColumnId)
+    if (!isValid || seen.has(id)) {
+      return false
+    }
+    seen.add(id)
+    return true
+  })
+
+  const missing = COLUMN_IDS.filter((id) => !seen.has(id))
+  const merged = [...normalized, ...missing]
+  const middle = merged.filter((id) => id !== "select" && id !== "actions")
+
+  return ["select", ...middle, "actions"]
+}
+
+const sanitizeVisibility = (visibility?: VisibilityState): VisibilityState => {
+  const next = { ...createDefaultVisibility(), ...(visibility ?? {}) }
+  next.select = true
+  next.actions = true
+  return next
+}
+
+const sanitizeSorting = (sorting?: SortingState): SortingState =>
+  (sorting ?? []).filter((item) => COLUMN_IDS.includes(item.id as ColumnId))
+
+const loadTableSettings = (): PersistedTableSettings | null => {
+  if (typeof localStorage === "undefined") {
+    return null
+  }
+
+  try {
+    const stored = localStorage.getItem(TABLE_SETTINGS_KEY)
+    if (!stored) {
+      return null
+    }
+
+    const parsed = JSON.parse(stored) as PersistedTableSettings
+    return {
+      columnOrder: sanitizeColumnOrder(parsed.columnOrder),
+      columnVisibility: sanitizeVisibility(parsed.columnVisibility),
+      sorting: sanitizeSorting(parsed.sorting),
+      globalFilter: parsed.globalFilter ?? "",
+    }
+  } catch (error) {
+    console.error("Failed to load table settings:", error)
+    return null
+  }
+}
+
+const DEFAULT_COLUMN_ORDER = sanitizeColumnOrder(COLUMN_IDS)
 
 // 적합도 배지 컴포넌트
 function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boolean }) {
@@ -343,12 +437,65 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     setFitScoreLoading,
   ])
 
-  const [sorting, setSorting] = useState<SortingState>([])
+  const initialSettingsRef = useRef<PersistedTableSettings | null>(loadTableSettings())
+
+  const [sorting, setSorting] = useState<SortingState>(() =>
+    sanitizeSorting(initialSettingsRef.current?.sorting ?? []),
+  )
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
+    sanitizeVisibility(initialSettingsRef.current?.columnVisibility),
+  )
   const [rowSelection, setRowSelection] = useState({})
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([])
-  const [globalFilter, setGlobalFilter] = useState("")
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(() =>
+    sanitizeColumnOrder(initialSettingsRef.current?.columnOrder ?? DEFAULT_COLUMN_ORDER),
+  )
+  const [globalFilter, setGlobalFilter] = useState(initialSettingsRef.current?.globalFilter ?? "")
+
+  const globalFilterFn = useCallback<FilterFn<Customer>>((row, _columnId, filterValue) => {
+    if (!filterValue) {
+      return true
+    }
+
+    const searchValue = String(filterValue).toLowerCase()
+    const values = [
+      row.original.company_name,
+      row.original.web_address,
+      row.original.description,
+      row.original.country,
+      row.original.category,
+      row.original.companyType,
+      row.original.industry,
+      row.original.sub_industry,
+      row.original.email,
+    ]
+
+    return values.some((value) => value?.toLowerCase().includes(searchValue))
+  }, [])
+
+  const handleResetTableSettings = useCallback(() => {
+    setColumnOrder(DEFAULT_COLUMN_ORDER)
+    setColumnVisibility(createDefaultVisibility())
+    setColumnFilters([])
+    setSorting([])
+    setGlobalFilter("")
+    toast.success("테이블 설정을 기본값으로 복원했어요")
+  }, [])
+
+  useEffect(() => {
+    const settings: PersistedTableSettings = {
+      columnOrder: sanitizeColumnOrder(columnOrder),
+      columnVisibility: sanitizeVisibility(columnVisibility),
+      sorting: sanitizeSorting(sorting),
+      globalFilter,
+    }
+
+    try {
+      localStorage.setItem(TABLE_SETTINGS_KEY, JSON.stringify(settings))
+    } catch (error) {
+      console.error("Failed to save table settings:", error)
+    }
+  }, [columnOrder, columnVisibility, sorting, globalFilter])
 
   // 드래그 상태
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
@@ -888,15 +1035,22 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     })
   }, [customers, fitScoreState.scores])
 
+  const resolvedColumnOrder = useMemo(() => sanitizeColumnOrder(columnOrder), [columnOrder])
+
+  const resolvedColumnVisibility = useMemo(
+    () => sanitizeVisibility(columnVisibility),
+    [columnVisibility],
+  )
+
   const table = useReactTable({
     data: sortedCustomers,
     columns,
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
+      columnVisibility: resolvedColumnVisibility,
       rowSelection,
-      columnOrder,
+      columnOrder: resolvedColumnOrder,
       globalFilter,
     },
     onSortingChange: setSorting,
@@ -905,6 +1059,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: setColumnOrder,
     onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -926,7 +1081,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         return
       }
 
-      const currentOrder = columnOrder.length > 0 ? columnOrder : columns.map((c) => c.id as string)
+      const currentOrder =
+        resolvedColumnOrder.length > 0 ? resolvedColumnOrder : DEFAULT_COLUMN_ORDER
       const draggedIndex = currentOrder.indexOf(draggedColumn)
       const targetIndex = currentOrder.indexOf(targetColumnId)
 
@@ -938,17 +1094,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       newOrder.splice(draggedIndex, 1)
       newOrder.splice(targetIndex, 0, draggedColumn)
 
-      setColumnOrder(newOrder)
+      setColumnOrder(sanitizeColumnOrder(newOrder))
       setDraggedColumn(null)
     },
-    [draggedColumn, columnOrder, columns],
+    [draggedColumn, resolvedColumnOrder],
   )
 
   return (
     <div className="flex h-full flex-col bg-background">
       {/* 툴바 */}
       <div className="flex items-center justify-between gap-2 border-b px-2 py-2">
-        <div className="flex flex-1 items-center gap-1">
+        <div className="flex flex-1 items-center gap-2">
           {/* 전체화면 토글 버튼 */}
           <Button
             className="h-8 w-8 shrink-0"
@@ -959,6 +1115,41 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
+          <div className="relative w-[240px]">
+            <Filter className="-translate-y-1/2 absolute top-1/2 left-2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="h-8 pl-8 text-sm"
+              onChange={(event) => setGlobalFilter(event.target.value)}
+              placeholder="회사, 산업, 이메일 검색"
+              value={globalFilter}
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="h-8 gap-1" size="sm" variant="outline">
+                <Columns3 className="h-4 w-4" />열 설정
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>표시할 열 선택</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {COLUMN_CONFIG.map((column) => (
+                <DropdownMenuCheckboxItem
+                  checked={table.getColumn(column.id)?.getIsVisible()}
+                  disabled={!column.canHide}
+                  key={column.id}
+                  onCheckedChange={(value) => table.getColumn(column.id)?.toggleVisibility(!!value)}
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleResetTableSettings}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                기본값 복원
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2">

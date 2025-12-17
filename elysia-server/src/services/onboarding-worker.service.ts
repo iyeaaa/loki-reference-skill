@@ -37,6 +37,13 @@ import { getUser } from "./user.service"
 import * as workspaceServiceImport from "./workspace.service"
 
 // ====================================
+// CONSTANTS
+// ====================================
+
+const TARGET_LEADS = 300
+const ENRICHMENT_BATCH_SIZE = 20
+
+// ====================================
 // TYPES
 // ====================================
 
@@ -179,18 +186,54 @@ export async function runDiscoveryPhase(
   count: number
 }> {
   const { workspaceId, userId, surveyData } = context
-  const BATCH_SIZE = 300
 
   console.log(`[DiscoveryPhase] Starting for workspace ${workspaceId}`)
 
   // Load checkpoint from BullMQ job data
   const _checkpoint = loadCheckpoint(job)
 
-  // Map codes to actual Apollo BigQuery values
-  const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
-  const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
-
   try {
+    // Base case: Check if we already have 300+ leads with emails
+    const currentLeadsCount = await countLeadsWithEmails(workspaceId)
+    if (currentLeadsCount >= TARGET_LEADS) {
+      console.log(
+        `[DiscoveryPhase] Base case: Already have ${currentLeadsCount} leads with emails, exiting early`,
+      )
+
+      // Get lead IDs for group assignment
+      const existingLeads = await db
+        .select({
+          id: leadsTable.id,
+        })
+        .from(leadsTable)
+        .innerJoin(leadContacts, eq(leadsTable.id, leadContacts.leadId))
+        .where(
+          and(
+            eq(leadsTable.workspaceId, workspaceId),
+            eq(leadContacts.contactType, "email"),
+            eq(leadContacts.isPrimary, true),
+            isNotNull(leadContacts.contactValue),
+          ),
+        )
+        .limit(TARGET_LEADS)
+
+      const leadIds = existingLeads.map((l) => l.id)
+
+      // Update checkpoint
+      await saveCheckpoint(job, {
+        leadsWithEmailsCount: currentLeadsCount,
+        lastIterationCompleted: true,
+      })
+
+      return {
+        leadIds,
+        count: currentLeadsCount,
+      }
+    }
+
+    // Map codes to actual Apollo BigQuery values
+    const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
+    const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
       phase: "discovery",
@@ -203,7 +246,7 @@ export async function runDiscoveryPhase(
     })
 
     // Generate simple generic search query
-    const query = `${industryName} companies in ${countryName} ${BATCH_SIZE}개`
+    const query = `${industryName} companies in ${countryName}`
     console.log(`[DiscoveryPhase] Query: "${query}"`)
 
     // Search BigQuery
@@ -229,60 +272,83 @@ export async function runDiscoveryPhase(
 
     console.log(`[DiscoveryPhase] Prepared ${leadsToEnrich.length} leads for enrichment`)
 
-    // Enrich leads
+    // Process in batches of 20
     if (leadsToEnrich.length > 0) {
-      console.log(`[DiscoveryPhase] Enriching ${leadsToEnrich.length} leads...`)
-      const enrichedLeads = await enrichLeadsForOnboarding(leadsToEnrich)
+      for (let i = 0; i < leadsToEnrich.length; i += ENRICHMENT_BATCH_SIZE) {
+        const batch = leadsToEnrich.slice(i, i + ENRICHMENT_BATCH_SIZE)
+        const batchNum = Math.floor(i / ENRICHMENT_BATCH_SIZE) + 1
+        const totalBatches = Math.ceil(leadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
 
-      const enrichedCount = enrichedLeads.filter((l) => l.primaryEmail).length
-      console.log(
-        `[DiscoveryPhase] Enrichment complete: ${enrichedCount}/${enrichedLeads.length} have emails`,
-      )
-
-      // Save enriched leads with emails to DB
-      const enrichedLeadsWithEmails = enrichedLeads.filter((lead) => {
-        if (!lead.primaryEmail) return false
-        const email = lead.primaryEmail.toLowerCase()
-        // Filter out generic no-reply addresses
-        if (email.includes("noreply")) return false
-        if (email.startsWith("postmaster@")) return false
-        if (email.startsWith("abuse@")) return false
-        return true
-      })
-
-      if (enrichedLeadsWithEmails.length > 0) {
         console.log(
-          `[DiscoveryPhase] Saving ${enrichedLeadsWithEmails.length} enriched leads to DB...`,
+          `[DiscoveryPhase] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`,
         )
 
-        const leadsToCreate = enrichedLeadsWithEmails.map((lead) => ({
-          companyName: lead.companyName,
-          foundCompanyName: lead.companyName,
-          websiteUrl: lead.websiteUrl,
-          businessType: lead.businessType,
-          country: lead.country,
-          employeeCount: lead.employeeCount,
-          description: lead.description,
-          primaryEmail: lead.primaryEmail,
-          leadSource: "bigquery-auto" as const,
-          leadStatus: "new" as const,
-        }))
+        // Enrich this batch (reuse existing function)
+        const enrichedBatch = await enrichLeadsForOnboarding(batch)
 
-        const { stats } = await bulkCreateLeads({
-          workspaceId,
-          leads: leadsToCreate,
-          createdBy: userId,
+        const enrichedCount = enrichedBatch.filter((l) => l.primaryEmail).length
+        console.log(
+          `[DiscoveryPhase] Batch ${batchNum}: ${enrichedCount}/${enrichedBatch.length} have emails`,
+        )
+
+        // Filter and save batch with emails
+        const batchWithEmails = enrichedBatch.filter((lead) => {
+          if (!lead.primaryEmail) return false
+          const email = lead.primaryEmail.toLowerCase()
+          // Filter out generic no-reply addresses
+          if (email.includes("noreply")) return false
+          if (email.startsWith("postmaster@")) return false
+          if (email.startsWith("abuse@")) return false
+          return true
         })
 
-        console.log(
-          `[DiscoveryPhase] Saved ${stats.created} new leads (${stats.skipped} duplicates skipped)`,
-        )
+        // Save batch immediately if any leads have emails
+        if (batchWithEmails.length > 0) {
+          console.log(
+            `[DiscoveryPhase] Saving batch ${batchNum}: ${batchWithEmails.length} leads with emails`,
+          )
+
+          const leadsToCreate = batchWithEmails.map((lead) => ({
+            companyName: lead.companyName,
+            foundCompanyName: lead.companyName,
+            websiteUrl: lead.websiteUrl,
+            businessType: lead.businessType,
+            country: lead.country,
+            employeeCount: lead.employeeCount,
+            description: lead.description,
+            primaryEmail: lead.primaryEmail,
+            leadSource: "bigquery-auto" as const,
+            leadStatus: "new" as const,
+          }))
+
+          const { stats } = await bulkCreateLeads({
+            workspaceId,
+            leads: leadsToCreate,
+            createdBy: userId,
+          })
+
+          console.log(
+            `[DiscoveryPhase] Batch ${batchNum} saved: ${stats.created} new leads (${stats.skipped} duplicates)`,
+          )
+        }
+
+        // Check if we've reached target after this batch
+        const currentCount = await countLeadsWithEmails(workspaceId)
+        console.log(`[DiscoveryPhase] Progress: ${currentCount}/${TARGET_LEADS} leads`)
+
+        if (currentCount >= TARGET_LEADS) {
+          console.log(
+            `[DiscoveryPhase] Target reached! Stopping enrichment at batch ${batchNum}/${totalBatches}`,
+          )
+          break
+        }
       }
     }
 
-    // Update checkpoint after completion
+    // Update checkpoint with final count
+    const finalCount = await countLeadsWithEmails(workspaceId)
     await saveCheckpoint(job, {
-      leadsWithEmailsCount: await countLeadsWithEmails(workspaceId),
+      leadsWithEmailsCount: finalCount,
       lastIterationCompleted: true,
     })
 
@@ -301,12 +367,13 @@ export async function runDiscoveryPhase(
           isNotNull(leadContacts.contactValue),
         ),
       )
-      .limit(BATCH_SIZE)
+      .limit(TARGET_LEADS)
 
     const leadIds = finalLeads.map((l) => l.id)
-    const finalCount = leadIds.length
 
-    console.log(`[DiscoveryPhase] Complete: ${finalCount} leads with emails`)
+    console.log(
+      `[DiscoveryPhase] Complete: ${finalCount} leads with emails, returning ${leadIds.length} IDs`,
+    )
 
     return {
       leadIds,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { findEmailsWithHunter, enrichLead } from "../src/services/lead-enrichment.service"
 import { config } from "../src/config"
+import { enrichLead, findEmailsWithHunter } from "../src/services/lead-enrichment.service"
 
 const HUNTER_API_KEY = config.hunter.apiKey
 

@@ -1,21 +1,21 @@
 // Quick script to delete a user by email (handles foreign key constraints)
 import "dotenv/config"
+import { eq } from "drizzle-orm"
 import { db } from "../src/db"
 import { users } from "../src/db/schema"
-import { sequences, sequenceEnrollments } from "../src/db/schema/sequences"
-import { leads } from "../src/db/schema/leads"
-import { customerGroups, customerGroupMembers } from "../src/db/schema/customer-groups"
+import { customerGroupMembers, customerGroups } from "../src/db/schema/customer-groups"
 import { emailTemplates } from "../src/db/schema/email-templates"
-import { emails, emailReplies } from "../src/db/schema/emails"
-import { workspaces, workspaceMembers } from "../src/db/schema/workspaces"
+import { emailReplies, emails } from "../src/db/schema/emails"
 import {
-  iamPolicies,
-  iamWorkspaceRoles,
-  iamRolePolicies,
-  iamMemberRoles,
   iamMemberPolicies,
+  iamMemberRoles,
+  iamPolicies,
+  iamRolePolicies,
+  iamWorkspaceRoles,
 } from "../src/db/schema/iam"
-import { eq } from "drizzle-orm"
+import { leads } from "../src/db/schema/leads"
+import { sequenceEnrollments, sequences } from "../src/db/schema/sequences"
+import { workspaceMembers, workspaces } from "../src/db/schema/workspaces"
 
 const EMAIL_TO_DELETE = "zalatanback2@gmail.com"
 
@@ -36,19 +36,46 @@ async function deleteUser() {
   console.log("Nullifying foreign key references...")
 
   await db.update(sequences).set({ createdBy: null }).where(eq(sequences.createdBy, user.id))
-  await db.update(sequenceEnrollments).set({ enrolledBy: null }).where(eq(sequenceEnrollments.enrolledBy, user.id))
+  await db
+    .update(sequenceEnrollments)
+    .set({ enrolledBy: null })
+    .where(eq(sequenceEnrollments.enrolledBy, user.id))
   await db.update(leads).set({ createdBy: null }).where(eq(leads.createdBy, user.id))
-  await db.update(customerGroups).set({ createdBy: null }).where(eq(customerGroups.createdBy, user.id))
-  await db.update(customerGroupMembers).set({ addedBy: null }).where(eq(customerGroupMembers.addedBy, user.id))
-  await db.update(emailTemplates).set({ createdBy: null }).where(eq(emailTemplates.createdBy, user.id))
-  await db.update(emailReplies).set({ assignedTo: null }).where(eq(emailReplies.assignedTo, user.id))
+  await db
+    .update(customerGroups)
+    .set({ createdBy: null })
+    .where(eq(customerGroups.createdBy, user.id))
+  await db
+    .update(customerGroupMembers)
+    .set({ addedBy: null })
+    .where(eq(customerGroupMembers.addedBy, user.id))
+  await db
+    .update(emailTemplates)
+    .set({ createdBy: null })
+    .where(eq(emailTemplates.createdBy, user.id))
+  await db
+    .update(emailReplies)
+    .set({ assignedTo: null })
+    .where(eq(emailReplies.assignedTo, user.id))
 
   // IAM tables - nullify references
   await db.update(iamPolicies).set({ createdBy: null }).where(eq(iamPolicies.createdBy, user.id))
-  await db.update(iamWorkspaceRoles).set({ createdBy: null }).where(eq(iamWorkspaceRoles.createdBy, user.id))
-  await db.update(iamRolePolicies).set({ attachedBy: null }).where(eq(iamRolePolicies.attachedBy, user.id))
-  await db.update(iamMemberRoles).set({ grantedBy: null }).where(eq(iamMemberRoles.grantedBy, user.id))
-  await db.update(iamMemberPolicies).set({ attachedBy: null }).where(eq(iamMemberPolicies.attachedBy, user.id))
+  await db
+    .update(iamWorkspaceRoles)
+    .set({ createdBy: null })
+    .where(eq(iamWorkspaceRoles.createdBy, user.id))
+  await db
+    .update(iamRolePolicies)
+    .set({ attachedBy: null })
+    .where(eq(iamRolePolicies.attachedBy, user.id))
+  await db
+    .update(iamMemberRoles)
+    .set({ grantedBy: null })
+    .where(eq(iamMemberRoles.grantedBy, user.id))
+  await db
+    .update(iamMemberPolicies)
+    .set({ attachedBy: null })
+    .where(eq(iamMemberPolicies.attachedBy, user.id))
 
   // Handle workspace ownership - delete owned workspaces and their data
   const ownedWorkspaces = await db.select().from(workspaces).where(eq(workspaces.ownerId, user.id))

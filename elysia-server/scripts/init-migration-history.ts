@@ -4,8 +4,8 @@
  * Reads all migrations from _journal.json and marks them as applied
  */
 
-import { readFileSync } from "fs"
-import { join } from "path"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import pg from "pg"
 
 const { Pool } = pg

@@ -45,7 +45,7 @@ export async function parseSSEResponse(response: Response): Promise<any> {
         // Remove "data: " prefix and parse JSON
         const jsonStr = chunk.replace(/^data: /, "").trim()
         return JSON.parse(jsonStr) as SSEEvent
-      } catch (error) {
+      } catch (_error) {
         console.error("Failed to parse SSE event:", chunk.substring(0, 100))
         return null
       }
@@ -90,7 +90,7 @@ export async function parseAllSSEEvents(response: Response): Promise<SSEEvent[]>
       try {
         const jsonStr = chunk.replace(/^data: /, "").trim()
         return JSON.parse(jsonStr) as SSEEvent
-      } catch (error) {
+      } catch (_error) {
         console.error("Failed to parse SSE event:", chunk.substring(0, 100))
         return null
       }

@@ -3,7 +3,9 @@
  * AI 기반 리드 적합도 계산 서비스
  */
 
+import { createHash } from "node:crypto"
 import { ChatOpenAI } from "@langchain/openai"
+import { getDefaultFitScoreRedisCache } from "./fit-score-redis-cache"
 import { leadDiscoveryLogger } from "./logger"
 
 const llm = new ChatOpenAI({
@@ -38,6 +40,268 @@ export interface FitScoreResult {
   leadId: string
   score: number
   reason?: string
+}
+
+type FitScoreCacheValue = {
+  score: number
+  reason?: string
+  expiresAt: number
+}
+
+class LruTtlCache {
+  private readonly maxEntries: number
+  private readonly defaultTtlMs: number
+  private readonly map = new Map<string, FitScoreCacheValue>()
+
+  constructor(options: { maxEntries: number; defaultTtlMs: number }) {
+    this.maxEntries = options.maxEntries
+    this.defaultTtlMs = options.defaultTtlMs
+  }
+
+  get(key: string): FitScoreCacheValue | null {
+    const value = this.map.get(key)
+    if (!value) return null
+    if (Date.now() >= value.expiresAt) {
+      this.map.delete(key)
+      return null
+    }
+    // LRU: refresh insertion order
+    this.map.delete(key)
+    this.map.set(key, value)
+    return value
+  }
+
+  set(key: string, value: Omit<FitScoreCacheValue, "expiresAt"> & { ttlMs?: number }): void {
+    const ttlMs = value.ttlMs ?? this.defaultTtlMs
+    const payload: FitScoreCacheValue = {
+      score: value.score,
+      reason: value.reason,
+      expiresAt: Date.now() + ttlMs,
+    }
+
+    if (this.map.has(key)) this.map.delete(key)
+    this.map.set(key, payload)
+
+    while (this.map.size > this.maxEntries) {
+      const oldestKey = this.map.keys().next().value as string | undefined
+      if (!oldestKey) break
+      this.map.delete(oldestKey)
+    }
+  }
+}
+
+const FIT_SCORE_CACHE = new LruTtlCache({
+  // 메모리 캐시: 동일 입력(리드+쿼리+타겟/판매자 컨텍스트) 재평가 방지
+  maxEntries: Number.parseInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CACHE_MAX || "20000", 10),
+  defaultTtlMs:
+    Number.parseInt(
+      process.env.LEAD_DISCOVERY_FIT_SCORE_CACHE_TTL_MS || `${6 * 60 * 60 * 1000}`,
+      10,
+    ) || 6 * 60 * 60 * 1000,
+})
+
+const FIT_SCORE_REDIS_CACHE = getDefaultFitScoreRedisCache()
+
+function normalizeText(value?: string | null): string {
+  return (value ?? "").trim().toLowerCase()
+}
+
+function makeFitScoreCacheKey(params: {
+  lead: LeadForScoring
+  websiteAnalysis: WebsiteAnalysisContext
+  selectedTarget: { country: string; industry: string }
+  userQuery?: string
+  workspaceId?: string
+}): string {
+  const { lead, websiteAnalysis, selectedTarget, userQuery, workspaceId } = params
+  const raw = JSON.stringify({
+    v: 1,
+    workspaceId: workspaceId ?? null,
+    userQuery: userQuery ?? null,
+    selectedTarget,
+    websiteAnalysis: userQuery
+      ? // userQuery 기반 스코어링이면 판매자 정보는 영향도가 낮으니 key 크기 축소
+        { companyName: websiteAnalysis.companyName ?? null }
+      : {
+          companyName: websiteAnalysis.companyName ?? null,
+          description: websiteAnalysis.description ?? null,
+          industry: websiteAnalysis.industry ?? null,
+          products: websiteAnalysis.products ?? null,
+          targetMarkets: websiteAnalysis.targetMarkets ?? null,
+          businessModel: websiteAnalysis.businessModel ?? null,
+        },
+    lead: {
+      id: lead.id,
+      company_name: lead.company_name ?? null,
+      country: lead.country ?? null,
+      industry: lead.industry ?? null,
+      sub_industry: lead.sub_industry ?? null,
+      title: lead.title ?? null,
+      employee: lead.employee ?? null,
+      revenue: lead.revenue ?? null,
+      email: Boolean(lead.email),
+      phone: Boolean(lead.phone),
+      web_address: Boolean(lead.web_address),
+    },
+  })
+
+  return createHash("sha256").update(raw).digest("hex")
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? "", 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  return parsed
+}
+
+function isMaterialsSearchQuery(userQuery: string): boolean {
+  return /building materials?|construction materials?|건축\s*자재|건자재|인테리어\s*자재|외장\s*자재|interior.*materials?|remodel.*materials?|flooring|tile|cabinet|lumber|concrete/i.test(
+    userQuery,
+  )
+}
+
+function isSalesSearchQuery(userQuery: string): boolean {
+  return /wholesale|distributor|supplier|vendor|retailer|판매|도매|유통|공급/i.test(userQuery)
+}
+
+function leadCountryMatches(leadCountry: string | undefined, expectedCountry: string): boolean {
+  const a = normalizeText(leadCountry)
+  const b = normalizeText(expectedCountry)
+  if (!a || !b) return false
+
+  const synonyms: Record<string, string[]> = {
+    "united states": ["us", "usa", "u.s.", "u.s.a", "america", "united states of america"],
+    "united kingdom": ["uk", "u.k.", "britain", "great britain", "england"],
+    "south korea": ["korea", "republic of korea", "kr", "korea, republic of"],
+    japan: ["jp"],
+  }
+
+  const aExpanded = [a, ...(synonyms[a] ?? [])]
+  const bExpanded = [b, ...(synonyms[b] ?? [])]
+
+  for (const left of aExpanded) {
+    for (const right of bExpanded) {
+      if (!left || !right) continue
+      if (left === right) return true
+      if (left.includes(right) || right.includes(left)) return true
+    }
+  }
+  return false
+}
+
+function tryRuleBasedScore(params: {
+  lead: LeadForScoring
+  selectedTarget: { country: string; industry: string }
+  userQuery?: string
+}): FitScoreResult | null {
+  const { lead, selectedTarget, userQuery } = params
+
+  const leadText = normalizeText(
+    `${lead.company_name ?? ""} ${lead.industry ?? ""} ${lead.sub_industry ?? ""}`,
+  )
+  const extractedCountry = userQuery ? extractCountryFromQuery(userQuery) : null
+
+  // (1) Country mismatch is a cheap, high-signal filter
+  if (
+    userQuery &&
+    extractedCountry &&
+    lead.country &&
+    !leadCountryMatches(lead.country, extractedCountry)
+  ) {
+    return {
+      leadId: lead.id,
+      score: 5,
+      reason: `국가 불일치(요청: ${extractedCountry}, 리드: ${lead.country})`,
+    }
+  }
+  if (!userQuery && lead.country && !leadCountryMatches(lead.country, selectedTarget.country)) {
+    return {
+      leadId: lead.id,
+      score: 10,
+      reason: `타겟 국가 불일치(타겟: ${selectedTarget.country}, 리드: ${lead.country})`,
+    }
+  }
+
+  if (!userQuery) return null
+
+  // (2) Query intent-aware cheap rules to avoid LLM on obvious cases
+  const materials = isMaterialsSearchQuery(userQuery)
+  const sales = isSalesSearchQuery(userQuery)
+  const isMaterialsSearch = materials
+  const isSalesSearch = !materials && sales
+
+  if (isMaterialsSearch && !isSalesSearch) {
+    const supplierKeywords = [
+      "aggregates",
+      "aggregate",
+      "ready-mix",
+      "ready mix",
+      "stone",
+      "gravel",
+      "sand",
+      "asphalt",
+      "lumber",
+      "timber",
+      "wood products",
+      "building materials",
+      "construction materials",
+      "building supplies",
+      "construction supplies",
+      "building components",
+      "supplier",
+      "distributor",
+      "wholesale",
+      "supply",
+      "materials",
+    ]
+
+    const contractorKeywords = [
+      "contractor",
+      "contracting",
+      "roofing",
+      "fencing",
+      "installation",
+      "remodel",
+      "renovat",
+      "home builder",
+      "construction company",
+      "construction",
+    ]
+
+    const exclusionKeywords = [
+      "architect",
+      "architecture",
+      "engineering",
+      "engineer",
+      "design studio",
+      "interior design",
+      "landscape",
+      "urban planning",
+      "real estate",
+      "realtor",
+      "insurance",
+      "law",
+      "accounting",
+      "association",
+      "software",
+      "it",
+      "government",
+    ]
+
+    if (exclusionKeywords.some((k) => leadText.includes(k))) {
+      return { leadId: lead.id, score: 15, reason: "명백한 제외군(서비스/전문직/비관련)" }
+    }
+
+    if (supplierKeywords.some((k) => leadText.includes(k))) {
+      return { leadId: lead.id, score: 90, reason: "자재/유통/공급 키워드 매칭" }
+    }
+
+    if (contractorKeywords.some((k) => leadText.includes(k))) {
+      return { leadId: lead.id, score: 30, reason: "시공/서비스 성격(자재 공급사 가능성 낮음)" }
+    }
+  }
+
+  return null
 }
 
 // 단순 지역/국가 검색인지 확인 (산업군 등 추가 조건이 없는 경우)
@@ -188,6 +452,7 @@ export async function calculateFitScores(
   selectedTarget: { country: string; industry: string },
   onScore: (result: FitScoreResult) => void,
   userQuery?: string, // 사용자 검색 쿼리 추가
+  workspaceId?: string,
 ): Promise<void> {
   // 단순 지역/국가 검색인 경우 AI 호출 없이 모두 100점 반환
   if (userQuery && isSimpleLocationSearch(userQuery)) {
@@ -203,29 +468,155 @@ export async function calculateFitScores(
     return
   }
 
-  const BATCH_SIZE = 10
+  const BATCH_SIZE = parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_SIZE, 10)
+  const concurrency =
+    leads.length >= 100
+      ? parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CONCURRENCY, 3)
+      : parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CONCURRENCY, 1)
 
-  for (let i = 0; i < leads.length; i += BATCH_SIZE) {
-    const batch = leads.slice(i, i + BATCH_SIZE)
+  const redisWrites: Array<{ keyHash: string; value: { score: number; reason?: string } }> = []
 
-    try {
-      const scores = await calculateBatchScores(batch, websiteAnalysis, selectedTarget, userQuery)
+  // 0) key precompute (hash) to reuse across memory/redis cache
+  const keyByLeadId = new Map<string, string>()
+  for (const lead of leads) {
+    const keyHash = makeFitScoreCacheKey({
+      lead,
+      websiteAnalysis,
+      selectedTarget,
+      userQuery,
+      workspaceId,
+    })
+    keyByLeadId.set(lead.id, keyHash)
+  }
 
-      for (const score of scores) {
-        onScore(score)
+  const remainingForLlm: LeadForScoring[] = []
+  const candidatesForRedis: LeadForScoring[] = []
+
+  // 1) 메모리 캐시 hit는 즉시 반환
+  for (const lead of leads) {
+    const keyHash = keyByLeadId.get(lead.id)
+    if (!keyHash) {
+      remainingForLlm.push(lead)
+      continue
+    }
+
+    const cached = FIT_SCORE_CACHE.get(keyHash)
+    if (cached) {
+      onScore({ leadId: lead.id, score: cached.score, reason: cached.reason })
+      continue
+    }
+
+    candidatesForRedis.push(lead)
+  }
+
+  // 2) Redis 분산 캐시 hit는 MGET으로 한 번에 처리 (가능하면)
+  if (FIT_SCORE_REDIS_CACHE.isEnabled() && candidatesForRedis.length > 0) {
+    const keyHashes = candidatesForRedis
+      .map((l) => keyByLeadId.get(l.id))
+      .filter((v): v is string => Boolean(v))
+
+    const redisHitMap = await FIT_SCORE_REDIS_CACHE.getMany(keyHashes)
+    if (redisHitMap.size > 0) {
+      const remainingAfterRedis: LeadForScoring[] = []
+      for (const lead of candidatesForRedis) {
+        const keyHash = keyByLeadId.get(lead.id)
+        if (!keyHash) {
+          remainingAfterRedis.push(lead)
+          continue
+        }
+
+        const hit = redisHitMap.get(keyHash)
+        if (hit) {
+          FIT_SCORE_CACHE.set(keyHash, { score: hit.score, reason: hit.reason })
+          onScore({ leadId: lead.id, score: hit.score, reason: hit.reason })
+          continue
+        }
+
+        remainingAfterRedis.push(lead)
       }
-    } catch (error) {
-      leadDiscoveryLogger.error(`Fit score calculation error for batch ${i}: ${error}`)
-      // 에러 시 해당 배치는 50점으로 기본값 설정
-      for (const lead of batch) {
-        onScore({
-          leadId: lead.id,
-          score: 50,
-          reason: "계산 중 오류 발생",
-        })
-      }
+
+      candidatesForRedis.length = 0
+      candidatesForRedis.push(...remainingAfterRedis)
     }
   }
+
+  // 3) 룰 기반 프리필터링 (명백한 케이스는 LLM 스킵)
+  for (const lead of candidatesForRedis) {
+    const keyHash = keyByLeadId.get(lead.id)
+    if (!keyHash) {
+      remainingForLlm.push(lead)
+      continue
+    }
+
+    const ruleScore = tryRuleBasedScore({ lead, selectedTarget, userQuery })
+    if (ruleScore) {
+      FIT_SCORE_CACHE.set(keyHash, { score: ruleScore.score, reason: ruleScore.reason })
+      redisWrites.push({ keyHash, value: { score: ruleScore.score, reason: ruleScore.reason } })
+      onScore(ruleScore)
+      continue
+    }
+
+    remainingForLlm.push(lead)
+  }
+
+  if (remainingForLlm.length === 0) return
+
+  // 2) 10개 배치를 동시성 제한(concurrency)으로 병렬 처리 → 100+ 리드 성능 개선
+  const batches: LeadForScoring[][] = []
+  for (let i = 0; i < remainingForLlm.length; i += BATCH_SIZE) {
+    batches.push(remainingForLlm.slice(i, i + BATCH_SIZE))
+  }
+
+  let nextBatchIndex = 0
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(concurrency, batches.length)) },
+    async () => {
+      while (true) {
+        const currentIndex = nextBatchIndex
+        nextBatchIndex++
+        if (currentIndex >= batches.length) break
+
+        const batch = batches[currentIndex]
+        if (!batch) break
+
+        try {
+          const scores = await calculateBatchScores(
+            batch,
+            websiteAnalysis,
+            selectedTarget,
+            userQuery,
+          )
+          for (const score of scores) {
+            const lead = batch.find((l) => l.id === score.leadId)
+            if (lead) {
+              const keyHash = keyByLeadId.get(lead.id)
+              if (keyHash) {
+                FIT_SCORE_CACHE.set(keyHash, { score: score.score, reason: score.reason })
+                redisWrites.push({ keyHash, value: { score: score.score, reason: score.reason } })
+              }
+            }
+            onScore(score)
+          }
+        } catch (error) {
+          leadDiscoveryLogger.error(
+            `Fit score calculation error for batch ${currentIndex}: ${error}`,
+          )
+          for (const lead of batch) {
+            onScore({
+              leadId: lead.id,
+              score: 50,
+              reason: "계산 중 오류 발생",
+            })
+          }
+        }
+      }
+    },
+  )
+
+  await Promise.all(workers)
+
+  // 4) Redis 캐시 저장은 “성능 보조”이므로 마지막에 일괄 시도 (실패해도 메인 흐름 영향 없음)
+  await FIT_SCORE_REDIS_CACHE.setMany(redisWrites)
 }
 
 /**
@@ -270,17 +661,10 @@ Evaluate each lead based on how well they match this search query.`
   const extractedCountry = userQuery ? extractCountryFromQuery(userQuery) : null
 
   // 자재/제품 검색 감지 (도매/유통사를 찾는 경우) - 먼저 체크
-  const isMaterialsSearch =
-    userQuery &&
-    /building materials?|construction materials?|건축\s*자재|건자재|인테리어\s*자재|외장\s*자재|interior.*materials?|remodel.*materials?|flooring|tile|cabinet|lumber|concrete/i.test(
-      userQuery,
-    )
+  const isMaterialsSearch = Boolean(userQuery && isMaterialsSearchQuery(userQuery))
 
   // 판매 관련 키워드 감지 (자재 검색이면 무시)
-  const isSalesSearch =
-    !isMaterialsSearch &&
-    userQuery &&
-    /wholesale|distributor|supplier|vendor|retailer|판매|도매|유통|공급/i.test(userQuery)
+  const isSalesSearch = Boolean(userQuery && !isMaterialsSearch && isSalesSearchQuery(userQuery))
 
   // 제품/자재 키워드 추출
   const productKeywords = userQuery

@@ -45,6 +45,7 @@ import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
 import { ClarificationCards } from "./components/ClarificationCards"
+import { ErrorCard } from "./components/ErrorCard"
 import { FilterSearchForm } from "./components/FilterSearchForm"
 import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
@@ -53,16 +54,19 @@ import {
   type ChatMessage,
   type Customer,
   chatMessagesAtom,
+  clearErrorAtom,
   createGroupStateAtom,
   customersAtom,
   finishBulkEnrichmentAtom,
   finishCreateGroupAtom,
   finishEnrichmentAtom,
   initialStreamingState,
+  recoverStateAtom,
   resetAllAtom,
   resetSearchStateAtom,
   selectedTargetAtom,
   setCustomersAtom,
+  setErrorAtom,
   startBulkEnrichmentAtom,
   startCreateGroupAtom,
   startEnrichmentAtom,
@@ -71,6 +75,7 @@ import {
   updateChatMessageAtom,
   updateCustomerAtom,
 } from "./store"
+import { classifyError } from "./utils/error-classifier"
 
 // 코드 펜스 제거 유틸리티 (GPT가 ```markdown 으로 감싸는 경우 대비)
 function stripCodeFences(text: string): string {
@@ -134,6 +139,34 @@ export function ChatRoom() {
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
 
+  // 에러 상태 (에러 처리 및 복구)
+  const setError = useSetAtom(setErrorAtom)
+  const clearError = useSetAtom(clearErrorAtom)
+  const recoverState = useSetAtom(recoverStateAtom)
+
+  // 마지막 검색 쿼리 저장 (다시 시도용)
+  const [lastQuery, setLastQuery] = useState<{
+    query: string
+    workspaceId: string
+    sessionId?: string
+  } | null>(null)
+
+  // 브라우저 온라인 상태 감지
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
   // 워크스페이스 선택 대기 중인 쿼리 (워크스페이스 선택 후 자동 검색용)
   // localStorage 사용: HMR/리렌더링에도 값 유지
   const getPendingQuery = useCallback(
@@ -153,7 +186,9 @@ export function ChatRoom() {
     resetAll()
     setStreamingState(initialStreamingState)
     setInput("")
-  }, [resetAll, setStreamingState])
+    clearError()
+    setLastQuery(null)
+  }, [resetAll, setStreamingState, clearError])
 
   // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -487,14 +522,40 @@ export function ChatRoom() {
     },
     onError: (error) => {
       console.error("[ChatRoom] Lead discovery error:", error)
-      setStreamingState((prev) => {
-        if (prev.messageId) {
-          updateMessage(prev.messageId, {
-            content: `오류가 발생했습니다: ${error}`,
-          })
-        }
-        return initialStreamingState
+      const classifiedError = classifyError(error, {
+        node: "search",
+        sessionId: streamingState.sessionId,
       })
+      console.log("[ChatRoom] Classified error:", classifiedError)
+      setError(classifiedError)
+
+      const currentMessageId = streamingState.messageId
+      console.log("[ChatRoom] Current messageId:", currentMessageId)
+
+      if (currentMessageId) {
+        console.log("[ChatRoom] Updating existing message with error")
+        updateMessage(currentMessageId, {
+          content: "",
+          type: "error",
+          errorData: classifiedError,
+        })
+      } else {
+        console.log("[ChatRoom] Creating new error message")
+        const errorMessage: ChatMessage = {
+          id: `msg-${Date.now()}-error`,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+          type: "error",
+          errorData: classifiedError,
+        }
+        addMessage(errorMessage)
+      }
+
+      setStreamingState((prev) => ({
+        ...prev,
+        status: "error",
+      }))
     },
   })
 
@@ -588,13 +649,35 @@ export function ChatRoom() {
     },
     onError: (error) => {
       console.error("[ChatRoom] Selection error:", error)
+      const classifiedError = classifyError(error, {
+        node: "select",
+        sessionId: streamingState.sessionId,
+      })
+      setError(classifiedError)
+
       setStreamingState((prev) => {
         if (prev.messageId) {
           updateMessage(prev.messageId, {
-            content: `오류가 발생했습니다: ${error}`,
+            content: "", // ErrorCard가 대신 표시
+            type: "error",
+            errorData: classifiedError,
           })
+        } else {
+          // messageId가 없으면 새 에러 메시지 추가
+          const errorMessage: ChatMessage = {
+            id: `msg-${Date.now()}-error`,
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+            type: "error",
+            errorData: classifiedError,
+          }
+          addMessage(errorMessage)
         }
-        return initialStreamingState
+        return {
+          ...prev,
+          status: "error",
+        }
       })
     },
   })
@@ -639,16 +722,67 @@ export function ChatRoom() {
     },
     onError: (error) => {
       console.error("[ChatRoom] Clarify error:", error)
+      const classifiedError = classifyError(error, {
+        node: "clarify",
+        sessionId: streamingState.sessionId,
+      })
+      setError(classifiedError)
+
       setStreamingState((prev) => {
         if (prev.messageId) {
           updateMessage(prev.messageId, {
-            content: `오류가 발생했습니다: ${error}`,
+            content: "", // ErrorCard가 대신 표시
+            type: "error",
+            errorData: classifiedError,
           })
+        } else {
+          // messageId가 없으면 새 에러 메시지 추가
+          const errorMessage: ChatMessage = {
+            id: `msg-${Date.now()}-error`,
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+            type: "error",
+            errorData: classifiedError,
+          }
+          addMessage(errorMessage)
         }
-        return initialStreamingState
+        return {
+          ...prev,
+          status: "error",
+        }
       })
     },
   })
+
+  // ============================================
+  // 에러 복구 핸들러 (mutations 선언 후)
+  // ============================================
+
+  // 다시 시도 핸들러
+  const handleRetry = useCallback(() => {
+    if (!lastQuery) {
+      console.warn("[ChatRoom] No last query to retry")
+      return
+    }
+
+    console.log("[ChatRoom] Retrying last query:", lastQuery.query)
+    clearError()
+    setStreamingState(initialStreamingState)
+
+    // 마지막 쿼리로 다시 검색
+    searchMutation.mutate({
+      query: lastQuery.query,
+      workspaceId: lastQuery.workspaceId,
+    })
+  }, [lastQuery, clearError, searchMutation, setStreamingState])
+
+  // 이전 상태로 복구 핸들러
+  const handleRecover = useCallback(() => {
+    console.log("[ChatRoom] Recovering to last successful state")
+    recoverState()
+    clearError()
+  }, [recoverState, clearError])
 
   // 파생 상태
   const isSearching =
@@ -1008,6 +1142,15 @@ export function ChatRoom() {
       // 이전 검색 상태 초기화 (고객 목록, 적합도 점수 등)
       resetSearchState()
 
+      // 에러 상태 클리어
+      clearError()
+
+      // 검색 쿼리 저장 (다시 시도용)
+      setLastQuery({
+        query: userInput,
+        workspaceId: selectedWorkspace.id,
+      })
+
       // 빈 assistant 메시지 먼저 추가 (스트리밍용) - 1ms 후의 timestamp로 순서 보장
       const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
@@ -1048,6 +1191,7 @@ export function ChatRoom() {
       setStreamingState,
       resetSearchState,
       setPendingQuery,
+      clearError,
     ],
   )
 
@@ -1406,6 +1550,24 @@ export function ChatRoom() {
                               </div>
                             )}
 
+                            {/* 에러 UI */}
+                            {message.type === "error" && message.errorData && (
+                              <ErrorCard
+                                className="mt-4"
+                                error={message.errorData}
+                                isRetrying={
+                                  searchMutation.isPending ||
+                                  selectMutation.isPending ||
+                                  clarifyMutation.isPending
+                                }
+                                onNewSearch={handleNewSearch}
+                                onRecover={
+                                  message.errorData.recoverable ? handleRecover : undefined
+                                }
+                                onRetry={message.errorData.retryable ? handleRetry : undefined}
+                              />
+                            )}
+
                             {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
                             {message.id === streamingState.analysisMessageId &&
                               (streamingState.status === "analyzing" ||
@@ -1651,6 +1813,36 @@ export function ChatRoom() {
                         )}
                       </div>
                     ))}
+
+                  {/* 오프라인 상태 알림 - 메시지 목록 하단에 표시 */}
+                  {!isOnline && messages.length > 0 && (
+                    <div className="px-4 pb-4">
+                      <ErrorCard
+                        error={{
+                          type: "network",
+                          message: "인터넷 연결이 끊겼습니다",
+                          originalError: "navigator.onLine = false",
+                          retryable: true,
+                          recoverable: false,
+                          suggestedAction: "인터넷 연결을 확인하고 다시 시도해주세요",
+                          context: {
+                            node: "offline_detection",
+                            timestamp: Date.now(),
+                          },
+                        }}
+                        isRetrying={false}
+                        onNewSearch={undefined}
+                        onRecover={undefined}
+                        onRetry={() => {
+                          // 온라인 복구 후 마지막 쿼리 재시도
+                          if (lastQuery && isOnline) {
+                            handleRetry()
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+
                   {/* 스크롤 앵커 */}
                   <div ref={scrollEndRef} />
                 </div>

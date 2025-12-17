@@ -50,7 +50,8 @@ export type ChatMessage = {
   content: string
   timestamp: Date
   customersAdded?: Customer[]
-  type?: "default" | "workspace_select" // 워크스페이스 선택 UI 표시용
+  type?: "default" | "workspace_select" | "error" // 워크스페이스 선택 UI 표시용, 에러 표시용
+  errorData?: LeadDiscoveryError // 에러 상세 정보
 }
 
 // ============================================
@@ -512,4 +513,79 @@ export const finishCreateGroupAtom = atom(
 // 그룹 생성 상태 초기화
 export const resetCreateGroupStateAtom = atom(null, (_get, set) => {
   set(createGroupStateAtom, initialCreateGroupState)
+})
+
+// ============================================
+// Error State (에러 처리 및 복구)
+// ============================================
+
+import type { LeadDiscoveryError } from "./types/errors"
+
+export type ErrorState = {
+  error: LeadDiscoveryError | null
+  lastSuccessfulState?: Partial<StreamingState> // 복구용 이전 상태 저장
+  retryCount: number
+  lastRetryAt?: Date
+  // 마지막 검색 쿼리 (다시 시도용)
+  lastQuery?: {
+    query: string
+    workspaceId: string
+  }
+}
+
+export const initialErrorState: ErrorState = {
+  error: null,
+  retryCount: 0,
+}
+
+export const errorStateAtom = atom<ErrorState>(initialErrorState)
+
+// 에러 설정 (이전 상태 자동 저장)
+export const setErrorAtom = atom(
+  null,
+  (get, set, error: LeadDiscoveryError, lastQuery?: { query: string; workspaceId: string }) => {
+    const currentStreamingState = get(streamingStateAtom)
+    const currentErrorState = get(errorStateAtom)
+
+    set(errorStateAtom, {
+      error,
+      lastSuccessfulState:
+        currentStreamingState.status !== "error"
+          ? currentStreamingState
+          : currentErrorState.lastSuccessfulState,
+      retryCount: currentErrorState.retryCount + 1,
+      lastRetryAt: new Date(),
+      lastQuery: lastQuery || currentErrorState.lastQuery,
+    })
+  },
+)
+
+// 에러 클리어
+export const clearErrorAtom = atom(null, (_get, set) => {
+  set(errorStateAtom, initialErrorState)
+})
+
+// 이전 상태로 복구
+export const recoverStateAtom = atom(null, (get, set) => {
+  const errorState = get(errorStateAtom)
+  if (errorState.lastSuccessfulState) {
+    set(streamingStateAtom, {
+      ...initialStreamingState,
+      ...errorState.lastSuccessfulState,
+      status:
+        errorState.lastSuccessfulState.status === "error"
+          ? "idle"
+          : errorState.lastSuccessfulState.status || "idle",
+    })
+  }
+  set(errorStateAtom, initialErrorState)
+})
+
+// 재시도 횟수 리셋
+export const resetRetryCountAtom = atom(null, (get, set) => {
+  const current = get(errorStateAtom)
+  set(errorStateAtom, {
+    ...current,
+    retryCount: 0,
+  })
 })

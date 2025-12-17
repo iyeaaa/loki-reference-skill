@@ -565,10 +565,13 @@ export function useLeadDiscoveryMutation(options: UseLeadDiscoveryMutationOption
         return processSSEStream(response, options, sessionIdRef)
       } catch (error) {
         log.error("Fetch failed", error)
+        // options.onError 호출하여 UI에 에러 표시
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        options.onError?.(errorMessage)
         throw error
       }
     },
-    retry: 1,
+    retry: false, // 네트워크 에러 시 즉시 UI 표시 (재시도 버튼으로 수동 재시도)
     retryDelay: 1000,
   })
 }
@@ -617,10 +620,13 @@ export function useLeadDiscoverySelectMutation(options: UseLeadDiscoveryMutation
         return processSSEStream(response, options, sessionIdRef)
       } catch (error) {
         log.error("Select fetch failed", error)
+        // options.onError 호출하여 UI에 에러 표시
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        options.onError?.(errorMessage)
         throw error
       }
     },
-    retry: 1,
+    retry: false, // 네트워크 에러 시 즉시 UI 표시 (재시도 버튼으로 수동 재시도)
     retryDelay: 1000,
   })
 }
@@ -676,10 +682,13 @@ export function useLeadDiscoveryClarifyMutation(options: UseLeadDiscoveryMutatio
         return processSSEStream(response, options, sessionIdRef)
       } catch (error) {
         log.error("Clarify fetch failed", error)
+        // options.onError 호출하여 UI에 에러 표시
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        options.onError?.(errorMessage)
         throw error
       }
     },
-    retry: 1,
+    retry: false, // 네트워크 에러 시 즉시 UI 표시 (재시도 버튼으로 수동 재시도)
     retryDelay: 1000,
   })
 }

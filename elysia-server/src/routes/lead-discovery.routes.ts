@@ -14,6 +14,7 @@ import { Command, GraphInterrupt } from "@langchain/langgraph"
 import { Elysia, t } from "elysia"
 import { v4 as uuidv4 } from "uuid"
 import { createNodeEmitter } from "../services/chatbot/sse-context"
+import { classifyError } from "../services/lead-discovery/error-classifier"
 import {
   calculateFitScores,
   type LeadForScoring,
@@ -301,16 +302,15 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
             }
 
             // 실제 에러 처리
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            leadDiscoveryLogger.error("Graph execution failed", { error: errorMessage })
+            const classifiedError = classifyError(error, {
+              node: "search",
+              sessionId,
+            })
+            leadDiscoveryLogger.error("Graph execution failed", { error: classifiedError })
 
             session.push({
               event: "error",
-              data: {
-                sessionId,
-                error: errorMessage,
-                timestamp: Date.now(),
-              },
+              data: classifiedError,
             })
           }
         },
@@ -490,16 +490,15 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
             // Give client time to process final events
             await new Promise((resolve) => setTimeout(resolve, 300))
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            leadDiscoveryLogger.error("Resume failed", { error: errorMessage })
+            const classifiedError = classifyError(error, {
+              node: "select",
+              sessionId,
+            })
+            leadDiscoveryLogger.error("Resume failed", { error: classifiedError })
 
             session.push({
               event: "error",
-              data: {
-                sessionId,
-                error: errorMessage,
-                timestamp: Date.now(),
-              },
+              data: classifiedError,
             })
           }
         },
@@ -660,16 +659,15 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
               return
             }
 
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            leadDiscoveryLogger.error("Clarify resume failed", { error: errorMessage })
+            const classifiedError = classifyError(error, {
+              node: "clarify",
+              sessionId,
+            })
+            leadDiscoveryLogger.error("Clarify resume failed", { error: classifiedError })
 
             session.push({
               event: "error",
-              data: {
-                sessionId,
-                error: errorMessage,
-                timestamp: Date.now(),
-              },
+              data: classifiedError,
             })
           }
         },
@@ -886,10 +884,17 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
             },
           })
         } catch (error) {
-          leadDiscoveryLogger.error(`[적합도 계산] 오류: ${error}`)
+          const classifiedError = classifyError(error, {
+            node: "fit_score",
+          })
+          leadDiscoveryLogger.error(`[적합도 계산] 오류:`, {
+            error: classifiedError.message,
+            type: classifiedError.type,
+            originalError: classifiedError.originalError,
+          })
           session.push({
             event: "error",
-            data: { error: "적합도 계산 중 오류가 발생했습니다." },
+            data: classifiedError,
           })
         }
       })

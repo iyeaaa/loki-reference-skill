@@ -91,7 +91,7 @@ export function SentEmailsTab() {
 
   // Show connect card for trial preview accounts (regardless of email count)
   if (isTrialPreviewAccount || !(emailAccount || emailAccountLoading)) {
-    return <ConnectEmailCard userEmail={userEmail} />
+    return <ConnectEmailCard userEmail={userEmail} workspaceId={workspaceId} />
   }
 
   if (emails.length === 0) {

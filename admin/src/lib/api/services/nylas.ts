@@ -12,9 +12,10 @@ export type NylasGrantResponse = {
 
 /**
  * Get Nylas OAuth authorization URL for Google
+ * @param workspaceId - The workspace ID to associate with this OAuth flow
  */
-export async function getNylasAuthUrl(state?: string): Promise<NylasAuthUrlResponse> {
-  const params = state ? `?state=${encodeURIComponent(state)}` : ""
+export async function getNylasAuthUrl(workspaceId?: string): Promise<NylasAuthUrlResponse> {
+  const params = workspaceId ? `?state=${encodeURIComponent(workspaceId)}` : ""
   return apiFetch<NylasAuthUrlResponse>(`/api/v1/nylas/auth${params}`)
 }
 

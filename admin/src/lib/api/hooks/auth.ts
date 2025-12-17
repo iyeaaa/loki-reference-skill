@@ -159,7 +159,6 @@ export function useAccountDeletionCheck() {
 }
 
 export function useDeleteAccountMutation() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -175,8 +174,11 @@ export function useDeleteAccountMutation() {
 
       toast.success("계정이 삭제되었습니다.")
 
-      // 認証ページにリダイレクト
-      navigate("/auth")
+      // 認証ページにリダイレクト (window.location.href로 강제 페이지 리로드)
+      // navigate 대신 사용하여 RouteGuard와의 충돌 방지
+      setTimeout(() => {
+        window.location.href = "/auth"
+      }, 500) // toast 메시지가 보이도록 약간의 딜레이
     },
     onError: (error: Error) => {
       toast.error(error.message || "계정 삭제에 실패했습니다.")

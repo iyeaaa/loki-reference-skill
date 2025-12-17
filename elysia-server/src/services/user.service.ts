@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { iamMemberRoles } from "../db/schema/iam"
@@ -165,38 +165,81 @@ export async function softDeleteUser(id: string) {
   const anonymizedEmail = `deleted_${timestamp}_${id.slice(0, 8)}@deleted.local`
   const anonymizedUsername = `deleted_user_${timestamp}`
 
+  logger.info({ userId: id }, "Starting soft delete user process")
+
   // 1. このユーザーのメールアカウントのすべてのNylasグラントを取り消し（トランザクション外 - 外部API呼び出し）
   const emailAccounts = await db
-    .select({ apiKey: userEmailAccounts.apiKey })
+    .select({
+      id: userEmailAccounts.id,
+      apiKey: userEmailAccounts.apiKey,
+      emailAddress: userEmailAccounts.emailAddress,
+      workspaceId: userEmailAccounts.workspaceId,
+    })
     .from(userEmailAccounts)
     .where(eq(userEmailAccounts.userId, id))
+
+  logger.info(
+    { userId: id, emailAccountCount: emailAccounts.length },
+    "Found email accounts for user deletion",
+  )
+
+  let nylasGrantsDeleted = 0
+  let nylasGrantsFailed = 0
 
   for (const account of emailAccounts) {
     // NylasのgrantIdの場合のみ取り消し（"SG"で始まるSendGrid APIキーは除外）
     if (account.apiKey && !account.apiKey.startsWith("SG")) {
       try {
         await deleteGrant(account.apiKey)
+        nylasGrantsDeleted++
         logger.info(
-          { grantId: account.apiKey, userId: id },
-          "アカウント削除中にNylasグラントを取り消しました",
+          {
+            grantId: account.apiKey,
+            userId: id,
+            emailAddress: account.emailAddress,
+            workspaceId: account.workspaceId,
+          },
+          "Successfully deleted Nylas grant during account deletion",
         )
       } catch (error) {
+        nylasGrantsFailed++
         // ログ出力のみで失敗させない - グラントが既に無効な可能性あり
         logger.warn(
-          { err: error, grantId: account.apiKey, userId: id },
-          "アカウント削除中にNylasグラントの取り消しに失敗しました",
+          {
+            err: error,
+            grantId: account.apiKey,
+            userId: id,
+            emailAddress: account.emailAddress,
+            workspaceId: account.workspaceId,
+          },
+          "Failed to delete Nylas grant during account deletion (may be already deleted)",
         )
       }
     }
   }
 
+  logger.info(
+    {
+      userId: id,
+      totalEmailAccounts: emailAccounts.length,
+      nylasGrantsDeleted,
+      nylasGrantsFailed,
+    },
+    "Completed Nylas grant deletion process",
+  )
+
   // 2-5. データベース操作をトランザクション内で実行
   await db.transaction(async (tx) => {
     // 2. 削除前にワークスペースメンバーIDを取得（IAMロールクリーンアップに必要）
     const memberIds = await tx
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, workspaceId: workspaceMembers.workspaceId })
       .from(workspaceMembers)
       .where(eq(workspaceMembers.userId, id))
+
+    logger.info(
+      { userId: id, membershipCount: memberIds.length },
+      "Found workspace memberships for user",
+    )
 
     // 3. すべてのIAMロール割り当てを削除（ワークスペースメンバー削除前に実行必須）
     if (memberIds.length > 0) {
@@ -207,12 +250,15 @@ export async function softDeleteUser(id: string) {
           sql`, `,
         )})`,
       )
+      logger.info({ userId: id, memberCount: memberIds.length }, "Deleted IAM role assignments")
     }
 
     // 4. すべてのワークスペースメンバーシップを削除（メールアカウントはカスケード削除される）
     await tx.delete(workspaceMembers).where(eq(workspaceMembers.userId, id))
+    logger.info({ userId: id, membershipCount: memberIds.length }, "Deleted workspace memberships")
 
     // 5. ユーザーをソフト削除して匿名化
+    // Google OAuth 연결 (oauthId)도 null로 설정하여 완전히 연결 해제
     await tx
       .update(users)
       .set({
@@ -221,13 +267,111 @@ export async function softDeleteUser(id: string) {
         username: anonymizedUsername,
         passwordHash: null,
         profilePicture: null,
-        oauthId: null,
+        oauthId: null, // Google OAuth 연결 해제
         employeeId: null,
         departmentId: null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
+
+    logger.info(
+      { userId: id, anonymizedEmail, anonymizedUsername },
+      "User anonymized and soft deleted successfully",
+    )
   })
+
+  logger.info(
+    {
+      userId: id,
+      emailAccountsProcessed: emailAccounts.length,
+      nylasGrantsDeleted,
+      nylasGrantsFailed,
+    },
+    "Soft delete user process completed successfully",
+  )
+
+  // 삭제 후 검증: 남은 데이터가 있는지 확인
+  await verifyUserDeletion(id)
+}
+
+/**
+ * 사용자 삭제 후 남은 데이터 검증
+ * 찌꺼기 데이터가 남아있는지 확인
+ */
+async function verifyUserDeletion(userId: string) {
+  try {
+    // 1. 이메일 계정 확인
+    const remainingEmailAccounts = await db
+      .select({ count: count() })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.userId, userId))
+
+    // 2. 워크스페이스 멤버십 확인
+    const remainingMemberships = await db
+      .select({ count: count() })
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.userId, userId))
+
+    // 3. IAM 역할 확인 (member_id를 통해 확인)
+    const remainingIamRoles = await db
+      .select({ count: count() })
+      .from(iamMemberRoles)
+      .innerJoin(workspaceMembers, eq(iamMemberRoles.memberId, workspaceMembers.id))
+      .where(eq(workspaceMembers.userId, userId))
+
+    // 4. 사용자 정보 확인 (익명화 확인)
+    const [user] = await db
+      .select({
+        isActive: users.isActive,
+        email: users.email,
+        oauthId: users.oauthId,
+        passwordHash: users.passwordHash,
+        profilePicture: users.profilePicture,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+
+    const emailAccountCount = Number(remainingEmailAccounts[0]?.count || 0)
+    const membershipCount = Number(remainingMemberships[0]?.count || 0)
+    const iamRoleCount = Number(remainingIamRoles[0]?.count || 0)
+
+    const isAnonymized =
+      user &&
+      !user.isActive &&
+      user.email.includes("@deleted.local") &&
+      user.oauthId === null &&
+      user.passwordHash === null &&
+      user.profilePicture === null
+
+    const hasLeftoverData = emailAccountCount > 0 || membershipCount > 0 || iamRoleCount > 0
+
+    if (hasLeftoverData || !isAnonymized) {
+      logger.error(
+        {
+          userId,
+          emailAccountCount,
+          membershipCount,
+          iamRoleCount,
+          isAnonymized,
+          userEmail: user?.email,
+        },
+        "⚠️ WARNING: User deletion verification failed - leftover data detected!",
+      )
+    } else {
+      logger.info(
+        {
+          userId,
+          emailAccountCount,
+          membershipCount,
+          iamRoleCount,
+          isAnonymized,
+        },
+        "✅ User deletion verification passed - no leftover data",
+      )
+    }
+  } catch (error) {
+    logger.error({ err: error, userId }, "Failed to verify user deletion")
+  }
 }
 
 // ====================================

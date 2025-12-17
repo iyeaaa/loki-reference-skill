@@ -188,7 +188,7 @@ export default function NewTrialPage() {
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Language Switcher */}
       <div className="absolute top-4 right-4 z-10">
-        <LanguageSwitcher />
+        <LanguageSwitcher variant="secondary" />
       </div>
 
       {/* Left Side - Login Form */}
@@ -357,7 +357,7 @@ export default function NewTrialPage() {
             className="mb-6 lg:mb-8"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
-            <p className="mb-4 text-center text-base italic leading-relaxed sm:text-lg lg:text-left">
+            <p className="mb-4 whitespace-pre-line text-center text-base italic leading-relaxed sm:text-lg lg:text-left">
               "{t("trial.new.testimonial")}"
             </p>
             <div className="flex items-center justify-center lg:justify-start">

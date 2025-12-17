@@ -1,7 +1,8 @@
+import type { VariantProps } from "class-variance-authority"
 import { Globe } from "lucide-react"
 import { useContext } from "react"
 import { useTranslation } from "react-i18next"
-import { Button } from "@/components/ui/button"
+import { Button, type buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +20,10 @@ const languages = [
 
 type LanguageSwitcherProps = {
   className?: string
+  variant?: VariantProps<typeof buttonVariants>["variant"]
 }
 
-export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
+export function LanguageSwitcher({ className, variant = "ghost" }: LanguageSwitcherProps) {
   const { i18n } = useTranslation()
   const sidebarContext = useContext(SidebarContext)
   const state = sidebarContext?.state
@@ -42,7 +44,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
             className,
           )}
           size="sm"
-          variant="ghost"
+          variant={variant}
         >
           <Globe className="mr-3 h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:mr-0" />
           <span className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">

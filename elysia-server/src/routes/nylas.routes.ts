@@ -98,11 +98,16 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
   .get(
     "/callback",
     async ({ query, headers, set }) => {
+      // Declare variables outside try block for error handler access
+      let userId: string | null = null
+      let workspaceId: string | undefined
+
       try {
-        const { code, workspaceId, state } = query
+        const { code, state } = query
+        workspaceId = query.workspaceId
 
         // Get user from authorization header
-        const userId = await getUserIdFromToken(headers.authorization)
+        userId = await getUserIdFromToken(headers.authorization)
         logger.info({ state, userId, workspaceId }, "Processing Nylas OAuth callback")
 
         // Validate userId is not null
@@ -133,19 +138,22 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
         // Check for existing email account (might be TRIAL_PREVIEW from onboarding)
         const existingAccount = await getEmailAccountByWorkspaceAndUserAny(workspaceId, userId)
 
+        // Store existing TRIAL_PREVIEW account info for later update/deletion
+        let trialPreviewAccountId: string | null = null
+
         if (existingAccount) {
           if (existingAccount.apiKey === "TRIAL_PREVIEW") {
-            // Delete the trial preview account - user is now connecting a real email
+            // Mark for update after creating new account (to handle FK constraints)
+            trialPreviewAccountId = existingAccount.id
             logger.info(
-              { existingAccountId: existingAccount.id, userId, workspaceId },
-              "Deleting TRIAL_PREVIEW account before creating real Nylas account",
+              { existingAccountId: existingAccount.id },
+              "Found TRIAL_PREVIEW account - will migrate after creating real account",
             )
-            await deleteEmailAccount(existingAccount.id)
           } else {
             // User already has a real email account connected
             // Just log and add the new one (supports multiple accounts)
             logger.info(
-              { existingAccountId: existingAccount.id, userId, workspaceId },
+              { existingAccountId: existingAccount.id },
               "User already has a real email account, adding new one",
             )
           }
@@ -201,6 +209,31 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
           },
           "Email account created successfully",
         )
+
+        // If there was a TRIAL_PREVIEW account, update all related emails and delete it
+        if (trialPreviewAccountId) {
+          try {
+            // Update all emails to use the new account
+            await db
+              .update(emails)
+              .set({ userEmailAccountId: emailAccount.id })
+              .where(eq(emails.userEmailAccountId, trialPreviewAccountId))
+
+            // Now safe to delete the TRIAL_PREVIEW account
+            await deleteEmailAccount(trialPreviewAccountId)
+
+            logger.info(
+              { oldAccountId: trialPreviewAccountId, newAccountId: emailAccount.id },
+              "Migrated emails from TRIAL_PREVIEW and deleted old account",
+            )
+          } catch (migrationError) {
+            logger.error(
+              { err: migrationError, trialPreviewAccountId },
+              "Failed to migrate/delete TRIAL_PREVIEW account (non-fatal)",
+            )
+            // Non-fatal - the new account is created successfully
+          }
+        }
 
         // Reschedule any emails that were scheduled in the past
         // This happens when trial users connect their email account after preview emails were generated
@@ -266,7 +299,16 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
           "Email account connected successfully",
         )
       } catch (error) {
-        logger.error({ err: error }, "Failed to process Nylas callback")
+        logger.error(
+          {
+            err: error,
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            userId,
+            workspaceId,
+          },
+          "Failed to process Nylas callback",
+        )
         set.status = 500
         return errorResponse(
           error instanceof Error ? error.message : "Failed to connect email account",

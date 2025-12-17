@@ -12,14 +12,18 @@ export function NylasRedirect() {
   const navigate = useNavigate()
   const [hasProcessed, setHasProcessed] = useState(false)
 
-  // Get user's workspace
+  // Get user's workspace (fallback only)
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
   const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
-  const workspaceId = userWorkspaces?.[0]?.id
+  const fallbackWorkspaceId = userWorkspaces?.[0]?.id
 
   useEffect(() => {
     const code = searchParams.get("code")
+    // Get workspaceId from state parameter (passed from OAuth URL)
+    const stateWorkspaceId = searchParams.get("state")
+    const workspaceId = stateWorkspaceId || fallbackWorkspaceId
+
     if (!code || hasProcessed || !workspaceId) {
       return
     }
@@ -39,7 +43,7 @@ export function NylasRedirect() {
         // Go back to step 4 (email linking) on failure
         navigate("/company?step=3", { replace: true })
       })
-  }, [searchParams, navigate, hasProcessed, t, workspaceId])
+  }, [searchParams, navigate, hasProcessed, t, fallbackWorkspaceId])
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center">

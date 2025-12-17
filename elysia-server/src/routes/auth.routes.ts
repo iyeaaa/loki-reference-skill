@@ -838,36 +838,69 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       // 匿名化される前に監査ログ用のメールアドレスを保存
       const userEmail = user.email
 
+      logger.info(
+        {
+          userId: payload.userId,
+          email: userEmail,
+          workspacesToDelete: workspacesToDelete.length,
+          workspaceNames: workspacesToDelete.map((w) => w.name),
+        },
+        "Starting account deletion process",
+      )
+
       // ユーザーが唯一のオーナーであるワークスペースを削除（FK問題を回避するためユーザー削除前に実行）
+      let workspacesDeleted = 0
+      let workspacesFailed = 0
+
       for (const ws of workspacesToDelete) {
         try {
           await workspaceService.deleteWorkspace(ws.id)
+          workspacesDeleted++
           logger.info(
             { workspaceId: ws.id, workspaceName: ws.name, userId: payload.userId },
-            "アカウント削除中にワークスペースを削除しました",
+            "Successfully deleted workspace during account deletion",
           )
         } catch (wsError) {
+          workspacesFailed++
           logger.error(
-            { err: wsError, workspaceId: ws.id },
-            "アカウント削除中にワークスペースの削除に失敗しました",
+            { err: wsError, workspaceId: ws.id, workspaceName: ws.name },
+            "Failed to delete workspace during account deletion",
           )
           // 他のワークスペースの処理を続行
         }
       }
 
+      logger.info(
+        {
+          userId: payload.userId,
+          totalWorkspaces: workspacesToDelete.length,
+          workspacesDeleted,
+          workspacesFailed,
+        },
+        "Completed workspace deletion process",
+      )
+
+      // 사용자 소프트 삭제 (Nylas grants, IAM roles, memberships, 개인정보 익명화)
       await userService.softDeleteUser(payload.userId)
 
       // 構造化ログによる監査証跡（activity_logsテーブルはworkspaceIdが必要だが、システムレベルのアクションには適用されない）
       logger.info(
-        { userId: payload.userId, email: userEmail, deletedWorkspaces: workspacesToDelete.length },
-        "アカウントが正常に削除されました",
+        {
+          userId: payload.userId,
+          email: userEmail,
+          totalWorkspaces: workspacesToDelete.length,
+          workspacesDeleted,
+          workspacesFailed,
+        },
+        "Account deletion completed successfully - All data cleaned up (Nylas grants, workspaces, IAM roles, memberships, personal info anonymized)",
       )
+
       return {
         message: "계정이 삭제되었습니다.",
         deletedWorkspaces: workspacesToDelete,
       }
     } catch (error) {
-      logger.error({ err: error }, "アカウント削除エラー")
+      logger.error({ err: error, userId: payload.userId }, "Account deletion failed with error")
       set.status = 500
       return errorResponse("계정 삭제 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
     }

@@ -9,7 +9,8 @@ import {
 } from "../db/schema/billing"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
-import { sequenceEnrollments } from "../db/schema/sequences"
+import { leads } from "../db/schema/leads"
+import { sequenceEnrollments, sequences } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaceProducts } from "../db/schema/workspace-products"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
@@ -1301,24 +1302,43 @@ export async function deleteWorkspace(id: string) {
   )
 
   // 3. このワークスペースのすべてのメールアカウントのNylasグラントを取り消し
+  let nylasGrantsDeleted = 0
+  let nylasGrantsFailed = 0
+  let sendGridAccountsSkipped = 0
+
   for (const account of emailAccounts) {
     // NylasのgrantIdの場合のみ取り消し（"SG"で始まるSendGrid APIキーは除外）
     if (account.apiKey && !account.apiKey.startsWith("SG")) {
       try {
         await deleteGrant(account.apiKey)
+        nylasGrantsDeleted++
         logger.info(
-          { grantId: account.apiKey, workspaceId: id },
-          "ワークスペース削除中にNylasグラントを取り消しました",
+          { grantId: account.apiKey, workspaceId: id, emailAccountId: account.id },
+          "Successfully deleted Nylas grant during workspace deletion",
         )
       } catch (error) {
+        nylasGrantsFailed++
         // ログ出力のみで失敗させない - グラントが既に無効な可能性あり
         logger.warn(
-          { err: error, grantId: account.apiKey, workspaceId: id },
-          "ワークスペース削除中にNylasグラントの取り消しに失敗しました",
+          { err: error, grantId: account.apiKey, workspaceId: id, emailAccountId: account.id },
+          "Failed to delete Nylas grant during workspace deletion (may be already deleted)",
         )
       }
+    } else if (account.apiKey && account.apiKey.startsWith("SG")) {
+      sendGridAccountsSkipped++
     }
   }
+
+  logger.info(
+    {
+      workspaceId: id,
+      totalEmailAccounts: emailAccounts.length,
+      nylasGrantsDeleted,
+      nylasGrantsFailed,
+      sendGridAccountsSkipped,
+    },
+    "Completed Nylas grant deletion for workspace",
+  )
 
   // 4. これらのメールアカウントを参照するsequence_enrollmentsを削除
   if (emailAccounts.length > 0) {
@@ -1337,7 +1357,89 @@ export async function deleteWorkspace(id: string) {
 
   // 5. ワークスペースを削除（RESTRICT制約により削除前にメールがチェックされる）
   await db.delete(workspaces).where(eq(workspaces.id, id))
-  logger.info({ workspaceId: id }, "ワークスペースが正常に削除されました")
+  logger.info({ workspaceId: id }, "Workspace deleted successfully")
+
+  // 6. 삭제 후 검증: 남은 데이터가 있는지 확인
+  await verifyWorkspaceDeletion(id)
+}
+
+/**
+ * 워크스페이스 삭제 후 남은 데이터 검증
+ * 찌꺼기 데이터가 남아있는지 확인
+ */
+async function verifyWorkspaceDeletion(workspaceId: string) {
+  try {
+    // 1. 워크스페이스 확인
+    const [workspace] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+
+    // 2. 이메일 계정 확인 (cascade로 삭제되어야 함)
+    const remainingEmailAccounts = await db
+      .select({ count: count() })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.workspaceId, workspaceId))
+
+    // 3. 워크스페이스 멤버 확인 (cascade로 삭제되어야 함)
+    const remainingMembers = await db
+      .select({ count: count() })
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.workspaceId, workspaceId))
+
+    // 4. 리드 확인 (cascade로 삭제되어야 함)
+    const remainingLeads = await db
+      .select({ count: count() })
+      .from(leads)
+      .where(eq(leads.workspaceId, workspaceId))
+
+    // 5. 시퀀스 확인 (cascade로 삭제되어야 함)
+    const remainingSequences = await db
+      .select({ count: count() })
+      .from(sequences)
+      .where(eq(sequences.workspaceId, workspaceId))
+
+    const workspaceExists = workspace !== undefined
+    const emailAccountCount = Number(remainingEmailAccounts[0]?.count || 0)
+    const memberCount = Number(remainingMembers[0]?.count || 0)
+    const leadCount = Number(remainingLeads[0]?.count || 0)
+    const sequenceCount = Number(remainingSequences[0]?.count || 0)
+
+    const hasLeftoverData =
+      workspaceExists ||
+      emailAccountCount > 0 ||
+      memberCount > 0 ||
+      leadCount > 0 ||
+      sequenceCount > 0
+
+    if (hasLeftoverData) {
+      logger.error(
+        {
+          workspaceId,
+          workspaceExists,
+          emailAccountCount,
+          memberCount,
+          leadCount,
+          sequenceCount,
+        },
+        "⚠️ WARNING: Workspace deletion verification failed - leftover data detected!",
+      )
+    } else {
+      logger.info(
+        {
+          workspaceId,
+          workspaceExists: false,
+          emailAccountCount,
+          memberCount,
+          leadCount,
+          sequenceCount,
+        },
+        "✅ Workspace deletion verification passed - no leftover data",
+      )
+    }
+  } catch (error) {
+    logger.error({ err: error, workspaceId }, "Failed to verify workspace deletion")
+  }
 }
 
 // ====================================

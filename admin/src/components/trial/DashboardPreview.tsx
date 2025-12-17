@@ -14,7 +14,7 @@ export function DashboardPreview() {
           <div className="h-3 w-3 rounded-full bg-yellow-400" />
           <div className="h-3 w-3 rounded-full bg-green-400" />
         </div>
-        <div className="text-gray-500 text-xs">app.rinda.io</div>
+        <div className="text-gray-500 text-xs">app.rinda.ai</div>
       </div>
 
       {/* Dashboard Header */}

@@ -7,9 +7,10 @@ import { getNylasAuthUrl } from "@/lib/api/services/nylas"
 
 type ConnectEmailCardProps = {
   userEmail: string
+  workspaceId?: string
 }
 
-export function ConnectEmailCard({ userEmail }: ConnectEmailCardProps) {
+export function ConnectEmailCard({ userEmail, workspaceId }: ConnectEmailCardProps) {
   const { t, i18n } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -20,8 +21,8 @@ export function ConnectEmailCard({ userEmail }: ConnectEmailCardProps) {
     setError(null)
 
     try {
-      // Get OAuth URL from backend
-      const response = await getNylasAuthUrl()
+      // Get OAuth URL from backend with workspaceId in state
+      const response = await getNylasAuthUrl(workspaceId)
 
       // Redirect to Google OAuth
       window.location.href = response.url

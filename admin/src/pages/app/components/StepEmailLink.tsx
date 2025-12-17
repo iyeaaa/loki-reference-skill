@@ -48,8 +48,8 @@ export function StepEmailLink() {
     setError(null)
 
     try {
-      // Get OAuth URL from backend
-      const response = await getNylasAuthUrl()
+      // Get OAuth URL from backend with workspaceId in state
+      const response = await getNylasAuthUrl(workspace?.id)
 
       // Redirect to Google OAuth
       window.location.href = response.url

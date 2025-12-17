@@ -85,7 +85,7 @@ function stripCodeFences(text: string): string {
   return result
 }
 
-type SearchMode = "website" | "detailed"
+type SearchMode = "website" | "criteria_input" | "criteria_click"
 
 export function ChatRoom() {
   const navigate = useNavigate()
@@ -464,7 +464,7 @@ export function ChatRoom() {
       const newCustomers = convertResultsToCustomers(results)
       setCustomers(newCustomers) // Replace instead of append for new search
 
-      // "원하는 조건으로 찾기" 모드에서 FitScore 계산을 위해 selectedTarget 자동 설정
+      // "조건으로 찾기(입력/클릭)" 모드에서도 FitScore 계산을 위해 selectedTarget 자동 설정
       if (results.length > 0) {
         const firstResult = results[0]
         if (firstResult?.country || firstResult?.mainIndustry) {
@@ -881,7 +881,11 @@ export function ChatRoom() {
     if (searchMode === "website") {
       return isValidWebsiteUrl(trimmed)
     }
-    // 상세 조건 모드: 최소 2자 이상
+    // 클릭하여 찾기 모드: 입력을 사용하지 않음
+    if (searchMode === "criteria_click") {
+      return false
+    }
+    // 입력해서 찾기 모드: 최소 2자 이상
     return trimmed.length >= 2
   }, [input, searchMode, isValidWebsiteUrl])
 
@@ -1240,13 +1244,22 @@ export function ChatRoom() {
                         AI가 우리 제품에 관심 있을 바이어를 찾아드려요
                       </p>
                     </>
+                  ) : searchMode === "criteria_input" ? (
+                    <>
+                      <p className="font-medium text-foreground/90 text-lg">
+                        원하는 조건을 자연어로 입력하세요
+                      </p>
+                      <p className="text-base text-muted-foreground leading-relaxed">
+                        “미국 헬스케어 51-200명”처럼 입력하면 자동으로 조건을 해석해요
+                      </p>
+                    </>
                   ) : (
                     <>
                       <p className="font-medium text-foreground/90 text-lg">
-                        원하는 조건을 선택하세요
+                        원하는 조건을 클릭해서 선택하세요
                       </p>
                       <p className="text-base text-muted-foreground leading-relaxed">
-                        국가, 산업군을 선택하면 맞춤 바이어를 찾아드려요
+                        웹사이트/자연어 없이도 조건 선택만으로 검색할 수 있어요
                       </p>
                     </>
                   )}
@@ -1270,9 +1283,13 @@ export function ChatRoom() {
                       id="website-tab"
                       onClick={() => setSearchMode("website")}
                       onKeyDown={(e) => {
-                        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                        if (e.key === "ArrowRight") {
                           e.preventDefault()
-                          setSearchMode(searchMode === "website" ? "detailed" : "website")
+                          setSearchMode("criteria_input")
+                        }
+                        if (e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode("criteria_click")
                         }
                       }}
                       role="tab"
@@ -1283,27 +1300,58 @@ export function ChatRoom() {
                       웹사이트로 시작
                     </button>
                     <button
-                      aria-controls="detailed-search-panel"
-                      aria-selected={searchMode === "detailed"}
+                      aria-controls="criteria-input-panel"
+                      aria-selected={searchMode === "criteria_input"}
                       className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
-                        searchMode === "detailed"
+                        searchMode === "criteria_input"
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
-                      id="detailed-tab"
-                      onClick={() => setSearchMode("detailed")}
+                      id="criteria-input-tab"
+                      onClick={() => setSearchMode("criteria_input")}
                       onKeyDown={(e) => {
-                        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                        if (e.key === "ArrowRight") {
                           e.preventDefault()
-                          setSearchMode(searchMode === "website" ? "detailed" : "website")
+                          setSearchMode("criteria_click")
+                        }
+                        if (e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode("website")
                         }
                       }}
                       role="tab"
-                      tabIndex={searchMode === "detailed" ? 0 : -1}
+                      tabIndex={searchMode === "criteria_input" ? 0 : -1}
                       type="button"
                     >
                       <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
-                      조건으로 찾기
+                      입력해서 찾기
+                    </button>
+                    <button
+                      aria-controls="criteria-click-panel"
+                      aria-selected={searchMode === "criteria_click"}
+                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
+                        searchMode === "criteria_click"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      id="criteria-click-tab"
+                      onClick={() => setSearchMode("criteria_click")}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight") {
+                          e.preventDefault()
+                          setSearchMode("website")
+                        }
+                        if (e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode("criteria_input")
+                        }
+                      }}
+                      role="tab"
+                      tabIndex={searchMode === "criteria_click" ? 0 : -1}
+                      type="button"
+                    >
+                      <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                      클릭하여 찾기
                     </button>
                   </div>
                 </div>
@@ -1374,16 +1422,29 @@ export function ChatRoom() {
                       </div>
                     </form>
                   ) : (
-                    // 조건 검색 모드: 드롭다운 폼
                     <div
-                      aria-labelledby="detailed-tab"
-                      className="rounded-2xl border bg-background p-5"
-                      id="detailed-search-panel"
+                      aria-labelledby={
+                        searchMode === "criteria_input"
+                          ? "criteria-input-tab"
+                          : "criteria-click-tab"
+                      }
+                      className={
+                        searchMode === "criteria_input"
+                          ? "overflow-hidden rounded-2xl border bg-background"
+                          : "rounded-2xl border bg-background p-5"
+                      }
+                      id={
+                        searchMode === "criteria_input"
+                          ? "criteria-input-panel"
+                          : "criteria-click-panel"
+                      }
                       role="tabpanel"
                     >
                       <FilterSearchForm
+                        compact={false}
                         disabled={isSearching}
                         isLoading={isSearching}
+                        mode={searchMode === "criteria_input" ? "input" : "click"}
                         onSubmit={handleFilterSearch}
                       />
                     </div>
@@ -1854,118 +1915,138 @@ export function ChatRoom() {
         {/* 입력 영역 - 하단 고정 (메시지가 있거나 검색 중일 때 표시) */}
         {(messages.length > 0 || isSearching) && (
           <div className="shrink-0 border-t bg-background p-3">
-            <form aria-label="리드 검색 폼" className="space-y-2" onSubmit={handleSubmit}>
-              <div className="overflow-hidden rounded-2xl border border-border/50 bg-muted/50">
-                {/* 1행: Textarea */}
-                <textarea
-                  aria-label={
-                    searchMode === "website" ? "분석할 웹사이트 주소 입력" : "검색 조건 입력"
-                  }
-                  className="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 pt-3 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={isSearching}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit(e)
-                    }
-                  }}
-                  placeholder={
-                    searchMode === "website"
-                      ? "https://www.example.com"
-                      : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
-                  }
-                  rows={3}
-                  value={input}
-                />
-
-                {/* 2행: 버튼들 */}
-                <div className="flex items-center justify-between px-3 pt-2 pb-3">
-                  {/* 좌측: 검색 모드 선택 드롭다운 */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        aria-label={`검색 모드 변경: 현재 ${searchMode === "website" ? "웹사이트" : "조건 검색"} 모드`}
-                        className="h-8 gap-1.5 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        {searchMode === "website" ? (
-                          <Globe aria-hidden="true" className="h-4 w-4" />
-                        ) : (
-                          <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+            <div className="rounded-2xl border border-border/50 bg-muted/50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      aria-label="검색 모드 변경"
+                      className="h-8 gap-1.5 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {searchMode === "website" ? (
+                        <Globe aria-hidden="true" className="h-4 w-4" />
+                      ) : (
+                        <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                      )}
+                      <span className="font-medium text-xs">
+                        {searchMode === "website"
+                          ? "웹사이트"
+                          : searchMode === "criteria_input"
+                            ? "입력해서 찾기"
+                            : "클릭하여 찾기"}
+                      </span>
+                      <ChevronDown aria-hidden="true" className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[280px]">
+                    <DropdownMenuItem
+                      className="flex cursor-pointer flex-col items-start gap-1 py-3"
+                      onClick={() => setSearchMode("website")}
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        <span className="font-medium">웹사이트로 시작하기</span>
+                        {searchMode === "website" && (
+                          <Check className="ml-auto h-4 w-4 text-primary" />
                         )}
-                        <span className="font-medium text-xs">
-                          {searchMode === "website" ? "웹사이트" : "조건 검색"}
-                        </span>
-                        <ChevronDown aria-hidden="true" className="h-3 w-3 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[260px]">
-                      <DropdownMenuItem
-                        className="flex cursor-pointer flex-col items-start gap-1 py-3"
-                        onClick={() => setSearchMode("website")}
-                      >
-                        <div className="flex w-full items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          <span className="font-medium">웹사이트로 시작하기</span>
-                          {searchMode === "website" && (
-                            <Check className="ml-auto h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                        <span className="pl-6 text-muted-foreground text-xs">
-                          우리 회사 웹사이트 주소만 있으면 돼요
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex cursor-pointer flex-col items-start gap-1 py-3"
-                        onClick={() => setSearchMode("detailed")}
-                      >
-                        <div className="flex w-full items-center gap-2">
-                          <SlidersHorizontal className="h-4 w-4" />
-                          <span className="font-medium">원하는 조건으로 찾기</span>
-                          {searchMode === "detailed" && (
-                            <Check className="ml-auto h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                        <span className="pl-6 text-muted-foreground text-xs">
-                          업종, 지역, 규모 등을 직접 정해요
-                        </span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* 우측: 제출 버튼 */}
-                  <Button
-                    aria-label={isSearching ? "검색 중..." : "검색 시작"}
-                    className="h-8 w-8 rounded-full"
-                    disabled={isSearching || !isInputValid()}
-                    size="icon"
-                    type="submit"
-                  >
-                    {isSearching ? (
-                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                      </div>
+                      <span className="pl-6 text-muted-foreground text-xs">
+                        우리 회사 웹사이트 주소만 있으면 돼요
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex cursor-pointer flex-col items-start gap-1 py-3"
+                      onClick={() => setSearchMode("criteria_input")}
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4" />
+                        <span className="font-medium">입력해서 찾기</span>
+                        {searchMode === "criteria_input" && (
+                          <Check className="ml-auto h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                      <span className="pl-6 text-muted-foreground text-xs">
+                        자연어로 입력만 해서 조건 검색
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex cursor-pointer flex-col items-start gap-1 py-3"
+                      onClick={() => setSearchMode("criteria_click")}
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4" />
+                        <span className="font-medium">클릭하여 찾기</span>
+                        {searchMode === "criteria_click" && (
+                          <Check className="ml-auto h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                      <span className="pl-6 text-muted-foreground text-xs">
+                        웹사이트/자연어 없이 조건 선택만으로 검색
+                      </span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
-              {/* 유효성 에러 메시지 - 공간 항상 확보 */}
-              <div className="mt-1.5 min-h-[22px] px-1">
-                {searchMode === "website" && input.trim() && !isValidWebsiteUrl(input) && (
-                  <div
-                    aria-live="polite"
-                    className="text-red-500 text-sm dark:text-red-400"
-                    role="alert"
-                  >
-                    웹사이트 주소를 확인해주세요 (예: https://www.example.com)
+              {searchMode === "website" ? (
+                <form aria-label="리드 검색 폼" className="space-y-2" onSubmit={handleSubmit}>
+                  <textarea
+                    aria-label="분석할 웹사이트 주소 입력"
+                    className="min-h-[72px] w-full resize-none rounded-xl border-0 bg-transparent px-3 pt-3 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isSearching}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSubmit(e)
+                      }
+                    }}
+                    placeholder="https://www.example.com"
+                    rows={3}
+                    value={input}
+                  />
+
+                  <div className="flex items-center justify-end">
+                    <Button
+                      aria-label={isSearching ? "검색 중..." : "검색 시작"}
+                      className="h-8 w-8 rounded-full"
+                      disabled={isSearching || !isInputValid()}
+                      size="icon"
+                      type="submit"
+                    >
+                      {isSearching ? (
+                        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
-                )}
-              </div>
-            </form>
+
+                  <div className="mt-1.5 min-h-[22px] px-1">
+                    {input.trim() && !isValidWebsiteUrl(input) && (
+                      <div
+                        aria-live="polite"
+                        className="text-red-500 text-sm dark:text-red-400"
+                        role="alert"
+                      >
+                        웹사이트 주소를 확인해주세요 (예: https://www.example.com)
+                      </div>
+                    )}
+                  </div>
+                </form>
+              ) : (
+                <FilterSearchForm
+                  compact
+                  disabled={isSearching}
+                  isLoading={isSearching}
+                  mode={searchMode === "criteria_input" ? "input" : "click"}
+                  onSubmit={handleFilterSearch}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>

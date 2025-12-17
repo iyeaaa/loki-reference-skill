@@ -65,8 +65,49 @@ const COUNTRY_MAPPING: Record<string, string> = {
 
 // Parse employee range from natural language
 function parseEmployeeRange(input: string): string | undefined {
-  const lower = input.toLowerCase()
+  const lower = input.toLowerCase().replaceAll(",", "")
 
+  // Explicit patterns: "51-200명", "51~200 employees", "1000+", "직원 200명 이상"
+  const plusMatch = lower.match(/(\d{1,5})\s*\+\s*(?:명|employees?)?/)
+  if (plusMatch?.[1]) {
+    const min = Number.parseInt(plusMatch[1], 10)
+    if (Number.isFinite(min)) {
+      if (min >= 10000) return "10K - 50K"
+      if (min >= 1000) return "1K - 10K"
+      if (min >= 250) return "250 - 1K"
+      if (min >= 100) return "100 - 250"
+      if (min >= 25) return "25 - 100"
+      return "0 - 25"
+    }
+  }
+
+  const rangeMatch = lower.match(/(\d{1,5})\s*(?:-|~|–|—|to)\s*(\d{1,5})\s*(?:명|employees?)?/)
+  if (rangeMatch?.[1] && rangeMatch[2]) {
+    const max = Number.parseInt(rangeMatch[2], 10)
+    if (Number.isFinite(max)) {
+      if (max <= 25) return "0 - 25"
+      if (max <= 100) return "25 - 100"
+      if (max <= 250) return "100 - 250"
+      if (max <= 1000) return "250 - 1K"
+      if (max <= 10000) return "1K - 10K"
+      return "10K - 50K"
+    }
+  }
+
+  const atLeastMatch = lower.match(/(\d{1,5})\s*(?:명\s*)?(?:이상|over|above|more than)/)
+  if (atLeastMatch?.[1]) {
+    const min = Number.parseInt(atLeastMatch[1], 10)
+    if (Number.isFinite(min)) {
+      if (min >= 10000) return "10K - 50K"
+      if (min >= 1000) return "1K - 10K"
+      if (min >= 250) return "250 - 1K"
+      if (min >= 100) return "100 - 250"
+      if (min >= 25) return "25 - 100"
+      return "0 - 25"
+    }
+  }
+
+  // Keyword-based
   if (lower.includes("대기업") || lower.includes("10000") || lower.includes("10k")) {
     return "10K - 50K"
   }
@@ -81,6 +122,36 @@ function parseEmployeeRange(input: string): string | undefined {
   }
 
   return undefined
+}
+
+function parseTaggedFiltersFromUserQuery(input: string): Partial<BigQuerySearchParams> {
+  const result: Partial<BigQuerySearchParams> = {}
+  const normalized = input.replace(/\s+/g, " ").trim()
+
+  const countryMatch = normalized.match(/국가\s*:\s*([^,]+)(?:,|$)/)
+  if (countryMatch?.[1]) {
+    const raw = countryMatch[1].trim()
+    result.country = COUNTRY_MAPPING[raw] || raw
+  }
+
+  const industryMatch = normalized.match(/산업\s*:\s*([^,]+)(?:,|$)/)
+  if (industryMatch?.[1]) {
+    const raw = industryMatch[1].trim()
+    result.industry = INDUSTRY_MAPPING[raw] || raw
+  }
+
+  const subIndustryMatch = normalized.match(/세부\s*산업\s*:\s*([^,]+)(?:,|$)/)
+  if (subIndustryMatch?.[1]) {
+    result.subIndustry = subIndustryMatch[1].trim()
+  }
+
+  const employeeMatch = normalized.match(/직원\s*수\s*:\s*([^,]+)(?:,|$)/)
+  if (employeeMatch?.[1]) {
+    const parsed = parseEmployeeRange(employeeMatch[1].trim())
+    if (parsed) result.employeeRange = parsed
+  }
+
+  return result
 }
 
 // Generate optimized search query from recommendation
@@ -133,6 +204,8 @@ async function optimizeSearchQuery(
 User Query: "${userInput}"
 ${existingParams?.country ? `Detected Country: ${existingParams.country}` : ""}
 ${existingParams?.industry ? `Detected Industry: ${existingParams.industry}` : ""}
+${existingParams?.subIndustry ? `Detected Sub-Industry: ${existingParams.subIndustry}` : ""}
+${existingParams?.employeeRange ? `Detected Employee Range: ${existingParams.employeeRange}` : ""}
 
 ## Available Options:
 Countries: USA, Canada
@@ -160,6 +233,8 @@ Rules:
 - The query should be clear and specific
 - Match user intent to available industries
 - Default limit is 100 unless user specifies
+- If the user explicitly includes tags like "국가: ...", "산업: ...", "세부산업: ...", "직원수: ...", treat them as authoritative.
+- Detect employee range even when written like "51-200명", "1000+", "직원 200명 이상".
 - Respond with JSON only
 
 JSON:`
@@ -258,12 +333,21 @@ export async function generateBigQueryParams(
       leadDiscoveryLogger.info(`[검색 조건] 추천 기반 쿼리 생성 완료: "${query}"`)
     } else {
       // Advanced mode: Optimize user query with LLM
-      const existingParams = state.bigQueryParams
+      const existingParams = state.bigQueryParams ?? { query: state.userInput }
 
       leadDiscoveryLogger.info(`[검색 조건] 고급 검색 - AI로 쿼리 최적화 중`)
       if (emitter) {
         emitter.progress("generateBigQueryParams", "AI가 최적의 검색 조건을 찾고 있어요", 40)
       }
+
+      // Natural language 입력에 태그가 포함되어 있으면 LLM 이전에 우선 반영
+      const tagged = parseTaggedFiltersFromUserQuery(state.userInput)
+      if (tagged.country && !existingParams.country) existingParams.country = tagged.country
+      if (tagged.industry && !existingParams.industry) existingParams.industry = tagged.industry
+      if (tagged.subIndustry && !existingParams.subIndustry)
+        existingParams.subIndustry = tagged.subIndustry
+      if (tagged.employeeRange && !existingParams.employeeRange)
+        existingParams.employeeRange = tagged.employeeRange
 
       // Apply mappings to existing params
       if (existingParams?.country) {

@@ -2,10 +2,12 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   HelpCircle,
+  Inbox,
   Mail,
   MailOpen,
   MessageSquare,
   Minus,
+  Send,
   Star,
   ThumbsDown,
   ThumbsUp,
@@ -48,8 +50,9 @@ export default function EmailRepliesPage() {
   const queryClient = useQueryClient()
 
   const [selectedIntent, setSelectedIntent] = useState<string>("all")
-  const [sidebarActiveItem, setSidebarActiveItem] = useState<string>("all")
+  const [sidebarActiveItem, setSidebarActiveItem] = useState<string>("all_mail")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const [direction, setDirection] = useState<"inbound" | "outbound" | "all">("all")
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [selectedThreads, setSelectedThreads] = useState<string[]>([])
@@ -70,6 +73,29 @@ export default function EmailRepliesPage() {
 
   // Email sidebar sections with counts
   const emailSidebarSections = [
+    {
+      title: "MAILBOX",
+      items: [
+        {
+          id: "all_mail",
+          label: "All Mail",
+          icon: <Mail className="h-4 w-4" />,
+          count: undefined,
+        },
+        {
+          id: "inbox",
+          label: "Inbox",
+          icon: <Inbox className="h-4 w-4" />,
+          count: undefined, // No count for mailbox filter
+        },
+        {
+          id: "sent",
+          label: "Sent",
+          icon: <Send className="h-4 w-4" />,
+          count: undefined,
+        },
+      ],
+    },
     {
       title: "OVERVIEW",
       items: [
@@ -133,6 +159,27 @@ export default function EmailRepliesPage() {
   // Handle sidebar item click
   const handleSidebarItemClick = (itemId: string) => {
     setSidebarActiveItem(itemId)
+
+    // Handle mailbox direction filters
+    if (itemId === "inbox") {
+      setDirection("inbound")
+      setSelectedIntent("all")
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      return
+    }
+    if (itemId === "sent") {
+      setDirection("outbound")
+      setSelectedIntent("all")
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      return
+    }
+    if (itemId === "all_mail") {
+      setDirection("all")
+      setSelectedIntent("all")
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      return
+    }
+
     // Map sidebar items to intent filters
     if (itemId === "all" || itemId === "unread" || itemId === "important") {
       setSelectedIntent("all")
@@ -362,6 +409,7 @@ export default function EmailRepliesPage() {
                     <RepliedEmailsList
                       dateFrom={filters.dateFrom}
                       dateTo={filters.dateTo}
+                      direction={direction}
                       filterCategory={filters.category}
                       filterImportant={sidebarActiveItem === "important" ? true : undefined}
                       filterPriority={filters.priority}

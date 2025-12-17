@@ -83,8 +83,7 @@ export function StepEmailGeneration() {
   }, [isGenerationComplete, isLoadingEmails, refetchEmails])
 
   const handleNext = () => {
-    // TODO: CHANGE STEP 4 -> STEP 3 AFTER DEVELOPING MOST FEATURES FOR NORMAL EMAIL LINKING FLOW
-    setSearchParams({ step: "4" })
+    setSearchParams({ step: "3" })
   }
 
   // Calculate display values

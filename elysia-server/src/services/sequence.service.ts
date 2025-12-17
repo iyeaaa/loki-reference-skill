@@ -2039,7 +2039,6 @@ export async function getPendingStepExecutions(limit: number = 100) {
       stepId: sequenceStepExecutions.stepId,
       stepOrder: sequenceStepExecutions.stepOrder,
       scheduledAt: sequenceStepExecutions.scheduledAt,
-      generationSource: sequenceStepExecutions.generationSource,
       emailSubject: sequenceSteps.emailSubject,
       emailBodyText: sequenceSteps.emailBodyText,
       emailBodyHtml: sequenceSteps.emailBodyHtml,

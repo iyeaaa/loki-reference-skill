@@ -985,47 +985,8 @@ export async function autoGenerateOnboarding(
       return
     }
 
-    // Create trial email account for preview emails
-    // This allows us to store emails in the emails table without FK constraint errors
-    // The apiKey is "TRIAL_PREVIEW" - a dummy value that we can check later to handle special cases
-    let trialEmailAccountId: string | null = null
+    // Store user email for later use
     const userEmail = user.email
-
-    // Try to find existing trial email account first
-    const [existingAccount] = await db
-      .select({ id: userEmailAccounts.id })
-      .from(userEmailAccounts)
-      .where(eq(userEmailAccounts.userId, userId))
-      .limit(1)
-
-    if (existingAccount) {
-      trialEmailAccountId = existingAccount.id
-      console.log(`[AutoGenerate] Using existing email account: ${trialEmailAccountId}`)
-    } else {
-      // Create new trial email account
-      const [newAccount] = await db
-        .insert(userEmailAccounts)
-        .values({
-          userId,
-          workspaceId,
-          emailAddress: userEmail,
-          apiKey: "TRIAL_PREVIEW", // Dummy value - emails won't actually send until real API key is set
-          isVerified: false,
-          isDefault: true, // Set as default for the workspace
-          status: "inactive",
-        })
-        .returning({ id: userEmailAccounts.id })
-
-      if (newAccount) {
-        trialEmailAccountId = newAccount.id
-        console.log(`[AutoGenerate] Created trial email account: ${trialEmailAccountId}`)
-      }
-    }
-
-    if (!trialEmailAccountId) {
-      console.error("[AutoGenerate] Failed to get or create email account")
-      return
-    }
 
     // 1. Discover leads using BigQuery (non-interactive)
     console.log("[AutoGenerate] Discovering leads...")
@@ -1230,9 +1191,46 @@ export async function autoGenerateOnboarding(
         `[AutoGenerate] Found ${leadEmails.length} contact emails for ${leadDetails.length} leads`,
       )
 
+      // Get or create email account RIGHT BEFORE inserting emails
+      // This handles the race condition where TRIAL_PREVIEW was deleted by Nylas callback
+      let emailAccountId: string
+      const [existingAccount] = await db
+        .select({ id: userEmailAccounts.id })
+        .from(userEmailAccounts)
+        .where(
+          and(eq(userEmailAccounts.userId, userId), eq(userEmailAccounts.workspaceId, workspaceId)),
+        )
+        .limit(1)
+
+      if (existingAccount) {
+        emailAccountId = existingAccount.id
+        console.log(`[AutoGenerate] Using existing email account: ${emailAccountId}`)
+      } else {
+        // Create new trial email account
+        const [newAccount] = await db
+          .insert(userEmailAccounts)
+          .values({
+            userId,
+            workspaceId,
+            emailAddress: userEmail,
+            apiKey: "TRIAL_PREVIEW",
+            isVerified: false,
+            isDefault: true,
+            status: "inactive",
+          })
+          .returning({ id: userEmailAccounts.id })
+
+        if (!newAccount) {
+          console.error("[AutoGenerate] Failed to create email account")
+          return
+        }
+        emailAccountId = newAccount.id
+        console.log(`[AutoGenerate] Created trial email account: ${emailAccountId}`)
+      }
+
       const previewCount = await generatePreviewEmailsForSequence(
         workspaceId,
-        trialEmailAccountId,
+        emailAccountId,
         userEmail,
         sequence.id,
         createdSteps,

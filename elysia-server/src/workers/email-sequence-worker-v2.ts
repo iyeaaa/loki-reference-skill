@@ -1,8 +1,9 @@
 /**
  * Email Sequence Worker V2
  *
- * This worker processes pending sequence step executions with proper generationSource checking.
- * It enforces the use of workflowGeneratedEmails for AI-generated content.
+ * This worker processes pending sequence step executions.
+ * It checks for pre-generated drafts in the emails table (status="draft"),
+ * and falls back to template variable replacement if no draft exists.
  */
 
 import { and, eq } from "drizzle-orm"
@@ -12,7 +13,6 @@ import { emails } from "../db/schema/emails"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { sequenceEnrollments } from "../db/schema/sequences"
-import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
 import { emailService } from "../services/email.service"
 import * as leadService from "../services/lead.service"
 import * as sequenceService from "../services/sequence.service"
@@ -41,7 +41,6 @@ async function sendSequenceEmail(execution: {
   stepId: string
   workspaceId: string
   userId: string | null
-  generationSource: "ai" | "manual" | "template" // IMPORTANT: This field determines the source
   attachments?: Array<{ filename: string; type: string; content: string }> | null
 }): Promise<EmailSendResult> {
   try {
@@ -50,9 +49,8 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         leadId: execution.leadId,
         leadCompanyName: execution.leadCompanyName,
-        generationSource: execution.generationSource,
       },
-      "🔍 [STEP-WORKER-V2] Processing email with generation source",
+      "🔍 [STEP-WORKER-V2] Processing email",
     )
 
     // Get lead's primary email and contact name
@@ -154,87 +152,59 @@ async function sendSequenceEmail(execution: {
     )
 
     // ====================================
-    // CRITICAL: CHECK GENERATION SOURCE
-    // ====================================
-    // generationSource values:
-    // - "ai": MUST use pre-generated content from workflowGeneratedEmails
-    // - "manual": Use template from sequenceSteps with variable replacement
-    // - "template": Same as manual - use template with variable replacement
+    // CHECK FOR EXISTING DRAFT IN EMAILS TABLE
     // ====================================
     let personalizedSubject: string
     let personalizedBodyText: string | null
     let personalizedBodyHtml: string | null
+    let existingDraftId: string | null = null
 
-    if (execution.generationSource === "ai") {
-      // AI MODE: MUST use workflowGeneratedEmails
+    // Step 1: Check for existing draft in emails table
+    const [existingDraft] = await db
+      .select({
+        id: emails.id,
+        subject: emails.subject,
+        bodyText: emails.bodyText,
+        bodyHtml: emails.bodyHtml,
+      })
+      .from(emails)
+      .where(
+        and(
+          eq(emails.sequenceId, execution.sequenceId),
+          eq(emails.stepId, execution.stepId),
+          eq(emails.leadId, execution.leadId),
+          eq(emails.status, "draft"),
+        ),
+      )
+      .limit(1)
+
+    if (existingDraft) {
+      // Use pre-generated draft from emails table
+      personalizedSubject = existingDraft.subject || execution.emailSubject
+      personalizedBodyText = existingDraft.bodyText
+      personalizedBodyHtml = existingDraft.bodyHtml
+      existingDraftId = existingDraft.id
+
       logger.info(
         {
           executionId: execution.executionId,
+          draftId: existingDraft.id,
+          sequenceId: execution.sequenceId,
           stepId: execution.stepId,
           leadId: execution.leadId,
         },
-        "🤖 [STEP-WORKER-V2] AI mode detected - fetching from workflowGeneratedEmails",
-      )
-
-      const [preDraft] = await db
-        .select({
-          id: workflowGeneratedEmails.id,
-          subject: workflowGeneratedEmails.subject,
-          bodyText: workflowGeneratedEmails.bodyText,
-          bodyHtml: workflowGeneratedEmails.bodyHtml,
-          status: workflowGeneratedEmails.status,
-          generationMode: workflowGeneratedEmails.generationMode,
-        })
-        .from(workflowGeneratedEmails)
-        .where(
-          and(
-            eq(workflowGeneratedEmails.sequenceId, execution.sequenceId),
-            eq(workflowGeneratedEmails.nodeId, execution.stepId), // nodeId = stepId for sequences
-            eq(workflowGeneratedEmails.leadId, execution.leadId),
-          ),
-        )
-        .limit(1)
-
-      if (!preDraft || (preDraft.status !== "generated" && preDraft.status !== "edited")) {
-        // CRITICAL ERROR: AI-generated email MUST have a draft
-        logger.error(
-          {
-            executionId: execution.executionId,
-            stepId: execution.stepId,
-            leadId: execution.leadId,
-            draftFound: !!preDraft,
-            draftStatus: preDraft?.status,
-          },
-          "❌ [STEP-WORKER-V2] AI draft not found or not ready - cannot proceed",
-        )
-        return {
-          success: false,
-          error: `AI-generated email draft not found or not ready (status: ${preDraft?.status || "missing"})`,
-        }
-      }
-
-      // Use the AI-generated content
-      personalizedSubject = preDraft.subject
-      personalizedBodyText = preDraft.bodyText
-      personalizedBodyHtml = preDraft.bodyHtml
-
-      logger.info(
-        {
-          executionId: execution.executionId,
-          draftId: preDraft.id,
-          generationMode: preDraft.generationMode,
-          status: preDraft.status,
-        },
-        "✅ [STEP-WORKER-V2] Using AI-generated draft",
+        "📝 [STEP-WORKER-V2] Using existing draft from emails table",
       )
     } else {
-      // MANUAL or TEMPLATE MODE: Use template with variable replacement
+      // No draft found - fall back to template variable replacement
       logger.info(
         {
           executionId: execution.executionId,
-          generationSource: execution.generationSource,
+          sequenceId: execution.sequenceId,
+          stepId: execution.stepId,
+          leadId: execution.leadId,
         },
-        "📝 [STEP-WORKER-V2] Manual/Template mode - using template with variable replacement",
+        "🔄 [STEP-WORKER-V2] No draft found, using template with variable replacement",
       )
 
       // Prepare lead context for variable replacement
@@ -392,7 +362,7 @@ async function sendSequenceEmail(execution: {
         stepOrder: execution.stepOrder,
         isFirstEmail,
         hasThreading: !!inReplyTo,
-        generationSource: execution.generationSource,
+        usedDraft: !!existingDraftId,
       },
       "📤 [STEP-WORKER-V2] Sending email via EmailService",
     )
@@ -454,8 +424,8 @@ async function sendSequenceEmail(execution: {
       }
     }
 
-    const sendgridMessageId = sendResult.sendgridMessageId
-    const messageId = sendResult.messageId // RFC 2822 Message-ID
+    const sendgridMessageId = sendResult.sendgridMessageId || sendResult.nylasMessageId
+    const messageId = sendResult.messageId || sendResult.nylasMessageId // RFC 2822 Message-ID
 
     logger.info(
       {
@@ -486,66 +456,110 @@ async function sendSequenceEmail(execution: {
     // Determine threadId for this email record
     const threadId = isFirstEmail ? messageId : enrollment.firstThreadId
 
-    // Create email record in database with personalized content
-    const [emailRecord] = await db
-      .insert(emails)
-      .values({
-        workspaceId: execution.workspaceId,
-        userEmailAccountId: execution.emailAccountId,
-        leadId: execution.leadId,
-        sequenceId: execution.sequenceId,
-        stepId: execution.stepId,
-        direction: "outbound",
-        fromEmail: emailAccount.emailAddress,
-        toEmail: leadContact.email,
-        subject: personalizedSubject,
-        bodyText: personalizedBodyText || undefined,
-        bodyHtml: personalizedBodyHtml || undefined,
-        status: "sent",
-        sendgridMessageId,
-        messageId,
-        threadId,
-        inReplyTo: inReplyTo || undefined,
-        sentAt: new Date(),
-        // Denormalized fields for performance
-        leadName: lead.companyName || undefined,
-        leadEmail: leadContact.email,
-        sequenceName: execution.sequenceName,
-      })
-      .returning({
-        id: emails.id,
-        sendgridMessageId: emails.sendgridMessageId,
-        threadId: emails.threadId,
-      })
+    let emailRecordId: string
 
-    if (!emailRecord) {
-      logger.error(
-        { executionId: execution.executionId, sendgridMessageId },
-        "❌ [STEP-WORKER-V2] Failed to create email record in database",
-      )
-      return {
-        success: false,
-        error: "Failed to create email record in database",
+    if (existingDraftId) {
+      // Update existing draft to sent status
+      const updatedEmails = await db
+        .update(emails)
+        .set({
+          status: "sent",
+          sendgridMessageId,
+          messageId,
+          threadId,
+          inReplyTo: inReplyTo || undefined,
+          sentAt: new Date(),
+          updatedAt: new Date(),
+          // Update denormalized fields
+          leadName: lead.companyName || undefined,
+          leadEmail: leadContact.email,
+          sequenceName: execution.sequenceName,
+        })
+        .where(eq(emails.id, existingDraftId))
+        .returning({ id: emails.id })
+
+      const updatedEmail = updatedEmails[0]
+      if (!updatedEmail) {
+        logger.error(
+          { executionId: execution.executionId, draftId: existingDraftId },
+          "❌ [STEP-WORKER-V2] Failed to update draft in database",
+        )
+        return {
+          success: false,
+          error: "Failed to update draft in database",
+        }
       }
-    }
 
-    logger.info(
-      {
-        executionId: execution.executionId,
-        emailId: emailRecord.id,
-        sendgridMessageId,
-        storedMessageId: emailRecord.sendgridMessageId,
-        threadId: emailRecord.threadId,
-        isFirstEmail,
-        generationSource: execution.generationSource,
-      },
-      "✅ [STEP-WORKER-V2] Created email record in database",
-    )
+      emailRecordId = updatedEmail.id
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          emailId: emailRecordId,
+          sendgridMessageId,
+          threadId,
+          isFirstEmail,
+        },
+        "✅ [STEP-WORKER-V2] Updated draft to sent in database",
+      )
+    } else {
+      // Create new email record in database
+      const [emailRecord] = await db
+        .insert(emails)
+        .values({
+          workspaceId: execution.workspaceId,
+          userEmailAccountId: execution.emailAccountId,
+          leadId: execution.leadId,
+          sequenceId: execution.sequenceId,
+          stepId: execution.stepId,
+          direction: "outbound",
+          fromEmail: emailAccount.emailAddress,
+          toEmail: leadContact.email,
+          subject: personalizedSubject,
+          bodyText: personalizedBodyText || undefined,
+          bodyHtml: personalizedBodyHtml || undefined,
+          status: "sent",
+          sendgridMessageId,
+          messageId,
+          threadId,
+          inReplyTo: inReplyTo || undefined,
+          sentAt: new Date(),
+          // Denormalized fields for performance
+          leadName: lead.companyName || undefined,
+          leadEmail: leadContact.email,
+          sequenceName: execution.sequenceName,
+        })
+        .returning({ id: emails.id })
+
+      if (!emailRecord) {
+        logger.error(
+          { executionId: execution.executionId, sendgridMessageId },
+          "❌ [STEP-WORKER-V2] Failed to create email record in database",
+        )
+        return {
+          success: false,
+          error: "Failed to create email record in database",
+        }
+      }
+
+      emailRecordId = emailRecord.id
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          emailId: emailRecordId,
+          sendgridMessageId,
+          threadId,
+          isFirstEmail,
+        },
+        "✅ [STEP-WORKER-V2] Created email record in database",
+      )
+    }
 
     return {
       success: true,
       messageId: sendgridMessageId,
-      emailRecordId: emailRecord.id,
+      emailRecordId,
     }
   } catch (error: unknown) {
     logger.error(
@@ -567,7 +581,7 @@ async function _processSequenceEmails() {
   try {
     logger.debug("🔍 [STEP-WORKER-V2] Checking for pending step executions")
 
-    // Get pending step executions (includes generationSource field)
+    // Get pending step executions
     const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
@@ -585,7 +599,6 @@ async function _processSequenceEmails() {
           leadCompanyName: e.leadCompanyName,
           scheduledAt: e.scheduledAt,
           stepOrder: e.stepOrder,
-          generationSource: e.generationSource,
         })),
       },
       "📬 [STEP-WORKER-V2] Processing pending emails",
@@ -593,7 +606,6 @@ async function _processSequenceEmails() {
 
     let successCount = 0
     let failureCount = 0
-    let aiDraftMissingCount = 0
 
     // Process each execution
     for (const execution of pendingExecutions) {
@@ -607,12 +619,11 @@ async function _processSequenceEmails() {
           stepOrder: execution.stepOrder,
           scheduledAt: execution.scheduledAt,
           emailSubject: execution.emailSubject,
-          generationSource: execution.generationSource,
         },
         "📧 [STEP-WORKER-V2] Processing execution",
       )
 
-      // Send email with generation source awareness
+      // Send email (checks for draft first, falls back to template)
       const result = await sendSequenceEmail(execution)
 
       if (result.success) {
@@ -658,26 +669,10 @@ async function _processSequenceEmails() {
             sendgridMessageId: result.messageId,
             leadCompanyName: execution.leadCompanyName,
             stepOrder: execution.stepOrder,
-            generationSource: execution.generationSource,
           },
           "✅ [STEP-WORKER-V2] Email sent successfully",
         )
       } else {
-        // Check if failure was due to missing AI draft
-        if (result.error?.includes("AI-generated email draft not found")) {
-          aiDraftMissingCount++
-          logger.error(
-            {
-              executionId: execution.executionId,
-              error: result.error,
-              leadCompanyName: execution.leadCompanyName,
-              stepOrder: execution.stepOrder,
-              generationSource: execution.generationSource,
-            },
-            "🚨 [STEP-WORKER-V2] AI draft missing - critical error",
-          )
-        }
-
         // Update execution status to 'failed'
         await sequenceService.updateStepExecutionStatus(
           execution.executionId,
@@ -703,19 +698,9 @@ async function _processSequenceEmails() {
         total: pendingExecutions.length,
         successCount,
         failureCount,
-        aiDraftMissingCount,
       },
       "🎯 [STEP-WORKER-V2] Finished processing emails",
     )
-
-    if (aiDraftMissingCount > 0) {
-      logger.error(
-        {
-          aiDraftMissingCount,
-        },
-        "🚨 [STEP-WORKER-V2] CRITICAL: AI drafts were missing for some emails",
-      )
-    }
   } catch (error) {
     logger.error({ err: error }, "💥 [STEP-WORKER-V2] Error in processSequenceEmails")
   }
@@ -723,7 +708,7 @@ async function _processSequenceEmails() {
 
 // Run worker every minute
 export function startEmailSequenceWorker() {
-  logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started with generationSource checking")
+  logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started")
 
   // Run immediately
   _processSequenceEmails()

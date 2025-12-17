@@ -25,6 +25,7 @@ type RepliedEmailsListProps = {
   filterPriority?: string[]
   dateFrom?: string
   dateTo?: string
+  direction?: "inbound" | "outbound" | "all"
 }
 
 export function RepliedEmailsList({
@@ -44,6 +45,7 @@ export function RepliedEmailsList({
   filterPriority = [],
   dateFrom,
   dateTo,
+  direction = "all",
 }: RepliedEmailsListProps) {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
@@ -71,6 +73,7 @@ export function RepliedEmailsList({
       priority: filterPriority.length > 0 ? filterPriority.join(",") : undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
+      direction,
     }),
     [
       workspaceId,
@@ -85,6 +88,7 @@ export function RepliedEmailsList({
       filterPriority,
       dateFrom,
       dateTo,
+      direction,
     ],
   )
 

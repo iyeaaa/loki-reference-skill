@@ -1132,6 +1132,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const priorityFilter = query.priority
       const dateFrom = query.dateFrom
       const dateTo = query.dateTo
+      const directionFilter = query.direction || "inbound" // default to inbound for backwards compatibility
 
       if (!workspaceId) {
         return {
@@ -1159,8 +1160,12 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         },
       })
 
-      // Step 1: Find threadIds that have at least one inbound message (replies)
-      const inboundConditions = [eq(emails.direction, "inbound")]
+      // Step 1: Find threadIds based on direction filter
+      // "inbound" = received replies, "outbound" = sent emails, "all" = both
+      const inboundConditions: ReturnType<typeof eq>[] = []
+      if (directionFilter !== "all") {
+        inboundConditions.push(eq(emails.direction, directionFilter as "inbound" | "outbound"))
+      }
 
       if (workspaceId !== "all") {
         inboundConditions.push(eq(emails.workspaceId, workspaceId))
@@ -1173,7 +1178,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       if (query.isUnread === "true") {
         inboundConditions.push(eq(emails.isRead, false))
       }
-
       // Build the query for finding replied threads
       // Handle filters by building the appropriate query
       type RepliedThreadId =
@@ -1285,6 +1289,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .where(and(...inboundConditions))
           .as("matched_emails")
 
+        console.info("matchedEmailsSubquery", matchedEmailsSubquery)
+
         repliedThreadIds = await db
           .select({
             threadId: matchedEmailsSubquery.threadId,
@@ -1293,6 +1299,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           })
           .from(matchedEmailsSubquery)
           .where(eq(matchedEmailsSubquery.rowNum, 1))
+        console.info("repliedThreadIds", repliedThreadIds)
       } else {
         // Build query without join (for Important/Unread filters)
         // Show ALL inbound emails, not just those with replies
@@ -1300,6 +1307,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .selectDistinct({ threadId: emails.threadId })
           .from(emails)
           .where(and(...inboundConditions))
+        console.log("repliedThreadIds", repliedThreadIds)
       }
 
       const threadIdsList = repliedThreadIds
@@ -1321,6 +1329,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       })
 
       if (threadIdsList.length === 0) {
+        console.log("[REPLIED-EMAILS] No threads with replies found")
         return {
           data: [],
           total: 0,
@@ -1334,6 +1343,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
 
       if (workspaceId !== "all") {
         conditions.push(eq(emails.workspaceId, workspaceId))
+      }
+
+      // Apply direction filter to final results (not just thread selection)
+      if (directionFilter !== "all") {
+        conditions.push(eq(emails.direction, directionFilter as "inbound" | "outbound"))
       }
 
       if (statusFilter && statusFilter !== "all") {
@@ -1429,6 +1443,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .limit(limit)
         .offset(offset)
         .as("threads")
+      console.info("threadsQuery", threadsQuery)
 
       // Get full email details for first email in each thread + reply intent/sentiment
       const threadEmails = await db
@@ -1525,6 +1540,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             : // Otherwise, show the first email of each thread
               eq(emails.createdAt, threadsQuery.firstCreatedAt),
         )
+      console.info("threadEmails", threadEmails)
 
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread emails fetched",
@@ -1756,6 +1772,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         priority: t.Optional(t.String()), // Priority filter (comma-separated: "high,medium,low")
         dateFrom: t.Optional(t.String()), // Date range start (ISO 8601 format)
         dateTo: t.Optional(t.String()), // Date range end (ISO 8601 format)
+        direction: t.Optional(t.String()), // Direction filter: "inbound" (replies), "outbound" (sent), "all" (both). Default: "inbound"
       }),
     },
   )

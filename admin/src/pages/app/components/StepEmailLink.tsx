@@ -37,11 +37,11 @@ export function StepEmailLink() {
   const {
     data: emailAccount,
     isLoading: isLoadingEmailAccounts,
-    isRefetchError,
-    error: emailAccountError,
+    // isRefetchError,
+    // error: emailAccountError,
   } = useEmailAccountByWorkspaceAndUser(workspace?.id || "", userId, !!workspace?.id && !!userId)
 
-  console.log(isRefetchError, emailAccountError)
+  // console.log(isRefetchError, emailAccountError)
 
   const handleConnect = async () => {
     setIsLoading(true)

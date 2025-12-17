@@ -3,15491 +3,19041 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = {
-  "/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getIndex"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/health/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/health/api/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getHealthApiHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/sse-test/stream": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiSse-testStream"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/sse-test/info": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiSse-testInfo"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/webhook/inbound": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiWebhookInbound"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/webhook/inbound-store": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiWebhookInbound-store"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/webhook/sendgrid-events": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiWebhookSendgrid-events"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/ai/email-draft": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiAiEmail-draft"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/ai/generate-followup": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiAiGenerate-followup"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/ai/generate-summary": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiAiGenerate-summary"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/ask": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiChatbotAsk"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/history/{conversationId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiChatbotHistoryByConversationId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/confirm": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiChatbotConfirm"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/conversations": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiChatbotConversations"]
-    put?: never
-    post: operations["postApiChatbotConversations"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/conversations/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiChatbotConversationsById"]
-    options?: never
-    head?: never
-    patch: operations["patchApiChatbotConversationsById"]
-    trace?: never
-  }
-  "/api/chatbot/conversations/{id}/generate-title": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiChatbotConversationsByIdGenerate-title"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/login": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthLogin"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/signup": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthSignup"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/register-email": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthRegister-email"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/verify": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthVerify"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/refresh": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthRefresh"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/admin-check": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AuthAdmin-check"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/profile": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1AuthProfile"]
-    trace?: never
-  }
-  "/api/v1/auth/google": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AuthGoogle"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/google/callback": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthGoogleCallback"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/google/verify": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthGoogleVerify"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/departments/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Departments"]
-    put?: never
-    post: operations["postApiV1Departments"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/departments/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1DepartmentsById"]
-    put: operations["putApiV1DepartmentsById"]
-    post?: never
-    delete: operations["deleteApiV1DepartmentsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/all": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersAll"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersById"]
-    put: operations["putApiV1UsersById"]
-    post?: never
-    delete: operations["deleteApiV1UsersById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Users"]
-    put?: never
-    post: operations["postApiV1Users"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/email/{email}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersEmailByEmail"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/assignable": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersAssignable"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/check/{email}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1UsersCheckByEmail"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/users/{id}/password": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1UsersByIdPassword"]
-    trace?: never
-  }
-  "/api/v1/users/{id}/login": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1UsersByIdLogin"]
-    trace?: never
-  }
-  "/api/v1/admin/users/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminUsersBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/users/bulk/role": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminUsersBulkRole"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/users/bulk/department": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminUsersBulkDepartment"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WorkspacesSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WorkspacesById"]
-    put: operations["putApiV1WorkspacesById"]
-    post?: never
-    delete: operations["deleteApiV1WorkspacesById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Workspaces"]
-    put?: never
-    post: operations["postApiV1Workspaces"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/enrich": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1WorkspacesByIdEnrich"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/enrichAndStrategize": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1WorkspacesByIdEnrichAndStrategize"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/owner/{ownerId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WorkspacesOwnerByOwnerId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/members": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WorkspacesByIdMembers"]
-    put?: never
-    post: operations["postApiV1WorkspacesByIdMembers"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/members/{memberId}/role": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1WorkspacesByIdMembersByMemberIdRole"]
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/members/{memberId}/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1WorkspacesByIdMembersByMemberIdStatus"]
-    trace?: never
-  }
-  "/api/v1/workspaces/{id}/members/{memberId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1WorkspacesByIdMembersByMemberId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspaces/user/{userId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WorkspacesUserByUserId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminWorkspacesBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/transfer": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminWorkspacesByIdTransfer"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/products": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdProducts"]
-    put?: never
-    post: operations["postApiV1AdminWorkspacesByIdProducts"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/products/{productId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdProductsByProductId"]
-    put: operations["putApiV1AdminWorkspacesByIdProductsByProductId"]
-    post?: never
-    delete: operations["deleteApiV1AdminWorkspacesByIdProductsByProductId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/with-products": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdWith-products"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsById"]
-    put: operations["putApiV1Customer-groupsById"]
-    post?: never
-    delete: operations["deleteApiV1Customer-groupsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groups"]
-    put?: never
-    post: operations["postApiV1Customer-groups"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/workspace/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsWorkspaceByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/{id}/members": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsByIdMembers"]
-    put?: never
-    post: operations["postApiV1Customer-groupsByIdMembers"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/{id}/members/{leadId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1Customer-groupsByIdMembersByLeadId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/lead/{leadId}/groups": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsLeadByLeadIdGroups"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/customer-groups/{id}/members-with-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Customer-groupsByIdMembers-with-emails"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/customer-groups/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminCustomer-groupsBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/customer-groups/{id}/members/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminCustomer-groupsByIdMembersBulk"]
-    delete: operations["deleteApiV1AdminCustomer-groupsByIdMembersBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/stats": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get dashboard statistics
-     * @description Returns statistics for all 3 dashboard columns: leads, emails, and open rate
-     */
-    get: operations["getApiV1DashboardStats"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/trends/leads": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get lead trends
-     * @description Returns daily lead counts for the specified date range
-     */
-    get: operations["getApiV1DashboardTrendsLeads"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/trends/emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get email trends
-     * @description Returns daily email counts for the specified date range
-     */
-    get: operations["getApiV1DashboardTrendsEmails"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/trends/opens": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get open rate trends
-     * @description Returns daily open rates for the specified date range
-     */
-    get: operations["getApiV1DashboardTrendsOpens"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/notifications/lead-discovery": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get lead discovery notifications
-     * @description Returns recent lead discovery (webset) activities
-     */
-    get: operations["getApiV1DashboardNotificationsLead-discovery"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/notifications/campaigns": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get campaign notifications
-     * @description Returns recent campaign (sequence) activities
-     */
-    get: operations["getApiV1DashboardNotificationsCampaigns"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/dashboard/notifications/replies": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get reply notifications
-     * @description Returns recent email replies with sentiment analysis
-     */
-    get: operations["getApiV1DashboardNotificationsReplies"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsById"]
-    put: operations["putApiV1Email-accountsById"]
-    post?: never
-    delete: operations["deleteApiV1Email-accountsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accounts"]
-    put?: never
-    post: operations["postApiV1Email-accounts"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/workspace/{workspaceId}/user/{userId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/workspace/{workspaceId}/active": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdActive"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/workspace/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsWorkspaceByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/user/{userId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-accountsUserByUserId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/set-default": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdSet-default"]
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/sent-count": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdSent-count"]
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/reset-daily": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdReset-daily"]
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/reset-monthly": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdReset-monthly"]
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/error": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdError"]
-    trace?: never
-  }
-  "/api/v1/email-accounts/{id}/sync": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-accountsByIdSync"]
-    trace?: never
-  }
-  "/api/v1/admin/email-accounts/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminEmail-accountsBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-signatures/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-signatures"]
-    put?: never
-    post: operations["postApiV1Email-signatures"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-signatures/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-signaturesById"]
-    put: operations["putApiV1Email-signaturesById"]
-    post?: never
-    delete: operations["deleteApiV1Email-signaturesById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-signatures/default": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-signaturesDefault"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-signatures/{id}/set-default": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-signaturesByIdSet-default"]
-    trace?: never
-  }
-  "/api/v1/email-templates/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/workspace/{workspaceId}/categories": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdCategories"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/workspace/{workspaceId}/shared": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdShared"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesById"]
-    put: operations["putApiV1Email-templatesById"]
-    post?: never
-    delete: operations["deleteApiV1Email-templatesById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templates"]
-    put?: never
-    post: operations["postApiV1Email-templates"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/workspace/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesWorkspaceByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-templates/workspace/{workspaceId}/category/{category}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdCategoryByCategory"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/email-templates/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminEmail-templatesBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/email-templates/bulk/category": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminEmail-templatesBulkCategory"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/email-templates/bulk/shared": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminEmail-templatesBulkShared"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/stats/today-sent": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsStatsToday-sent"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/stats/avg-open-rate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsStatsAvg-open-rate"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/stats/recent-sequences": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsStatsRecent-sequences"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/stats/scheduled-followups": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsStatsScheduled-followups"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/stats/buyer-response-rate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsStatsBuyer-response-rate"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/send": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1EmailsSend"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/search-replied": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsSearch-replied"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/thread/{threadId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsThreadByThreadId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/{id}/attachments/{attachmentIndex}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsByIdAttachmentsByAttachmentIndex"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsById"]
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1EmailsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1Emails"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/{id}/intent": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1EmailsByIdIntent"]
-    trace?: never
-  }
-  "/api/v1/emails/{id}/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1EmailsByIdStatus"]
-    trace?: never
-  }
-  "/api/v1/emails/{id}/events": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsByIdEvents"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/webhook": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1EmailsWebhook"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/emails/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminEmailsBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/emails/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminEmailsBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bulk-emails/send": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1Bulk-emailsSend"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/stats/by-intent": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-repliesStatsBy-intent"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-replies"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Email-repliesById"]
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1Email-repliesById"]
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesById"]
-    trace?: never
-  }
-  "/api/v1/email-replies/{id}/read": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesByIdRead"]
-    trace?: never
-  }
-  "/api/v1/email-replies/{id}/unread": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesByIdUnread"]
-    trace?: never
-  }
-  "/api/v1/email-replies/bulk/read": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1Email-repliesBulkRead"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/bulk/unread": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1Email-repliesBulkUnread"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/{id}/reclassify": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1Email-repliesByIdReclassify"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1Email-repliesBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/thread/{threadId}/important": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesThreadByThreadIdImportant"]
-    trace?: never
-  }
-  "/api/v1/email-replies/thread/{threadId}/read": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesThreadByThreadIdRead"]
-    trace?: never
-  }
-  "/api/v1/leads/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Search leads with advanced filtering
-     * @description Search and filter leads with support for column-specific filters, sorting, pagination, and date ranges. Filters parameter accepts JSON array of filter objects with field, operator, and value properties. Supported operators: equals, notEquals, contains, startsWith, endsWith, gt, lt, gte, lte, between, in, notIn, isEmpty, isNotEmpty. Example: [{"field":"leadScore","operator":"gt","value":80},{"field":"country","operator":"in","value":["USA","Canada"]}]
-     */
-    get: operations["getApiV1LeadsSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/leads/status/{status}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1LeadsStatusByStatus"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/leads/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1LeadsById"]
-    put: operations["putApiV1LeadsById"]
-    post?: never
-    delete: operations["deleteApiV1LeadsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/leads/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Leads"]
-    put?: never
-    post: operations["postApiV1Leads"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/leads/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * JSON 형식으로 리드 일괄 생성
-     * @description JSON 배열로 여러 리드를 일괄 생성합니다. 중복 이메일 방지: (1) 요청 데이터 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵됩니다. 응답에는 생성된 리드 목록, 중복 이메일 상세정보(email, existingLeadId, companyName, existingCompanyName, customerGroupIds, type), 통계(total, created, skipped)가 포함됩니다. 중복 감지 시 기존 리드의 회사명과 소속 고객 그룹 정보도 함께 반환됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있습니다.
-     */
-    post: operations["postApiV1LeadsBulk"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/leads/workspace/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1LeadsWorkspaceByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminLeadsBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminLeadsBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/bulk/business-type": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminLeadsBulkBusiness-type"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/contacts": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdContacts"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/social-media": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdSocial-media"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/products": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdProducts"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/business-sectors": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdBusiness-sectors"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/product-categories": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdProduct-categories"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/{id}/industry-types": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsByIdIndustry-types"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/download/csv": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsDownloadCsv"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/download/csv/selected": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminLeadsDownloadCsvSelected"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/leads/filter-options/{field}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminLeadsFilter-optionsByField"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesById"]
-    put: operations["putApiV1SequencesById"]
-    post?: never
-    delete: operations["deleteApiV1SequencesById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Sequences"]
-    put?: never
-    post: operations["postApiV1Sequences"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/copy": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdCopy"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/generate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdGenerate"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/activate-step-based": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdActivate-step-based"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/workspace/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesWorkspaceByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/steps": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdSteps"]
-    put?: never
-    post: operations["postApiV1SequencesByIdSteps"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/steps/{stepId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1SequencesByIdStepsByStepId"]
-    post?: never
-    delete: operations["deleteApiV1SequencesByIdStepsByStepId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/enrollments": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdEnrollments"]
-    put?: never
-    post: operations["postApiV1SequencesByIdEnrollments"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/enrollments/{enrollmentId}/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1SequencesByIdEnrollmentsByEnrollmentIdStatus"]
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/enrollments/{enrollmentId}/step-executions": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/stats/overall": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesStatsOverall"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/metrics": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdMetrics"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/enrollments/{enrollmentId}/metrics": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesEnrollmentsByEnrollmentIdMetrics"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/generate-template": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesGenerate-template"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/bulk/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminSequencesBulkStatus"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminSequencesBulk"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/{id}/enrollments/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminSequencesByIdEnrollmentsBulk"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/{id}/enrollments/bulk-with-scheduling": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminSequencesByIdEnrollmentsBulk-with-scheduling"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/enrollments/bulk/unenroll": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminSequencesEnrollmentsBulkUnenroll"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/step-executions/pending": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminSequencesStep-executionsPending"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/sequences/step-executions/{executionId}/status": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1AdminSequencesStep-executionsByExecutionIdStatus"]
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdNodesByNodeIdGenerated-emails"]
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1SequencesByIdNodesByNodeIdGenerated-emails"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/generate-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdNodesByNodeIdGenerate-emails"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails/{emailId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"]
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"]
-    options?: never
-    head?: never
-    patch: operations["patchApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"]
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails/{emailId}/regenerate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailIdRegenerate"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/generation-progress": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdNodesByNodeIdGeneration-progress"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/nodes/{nodeId}/stats": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdNodesByNodeIdStats"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/workflow-enrollments": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesByIdWorkflow-enrollments"]
-    put?: never
-    post: operations["postApiV1SequencesByIdWorkflow-enrollments"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/workflow-enrollments/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdWorkflow-enrollmentsBulk"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/{id}/workflow-enrollments/{enrollmentId}/execute": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdWorkflow-enrollmentsByEnrollmentIdExecute"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logsSearch"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/recent": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logsRecent"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/entity/{entityType}/{entityId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logsEntityByEntityTypeByEntityId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/user/{userId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logsUserByUserId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logsById"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/activity-logs/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Activity-logs"]
-    put?: never
-    post: operations["postApiV1Activity-logs"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/lead-import/upload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Excel 또는 CSV 파일로 리드 일괄 임포트 (SSE)
-     * @description Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다.
-     *
-     *     **워크스페이스 기준 중복 처리**: (1) Website URL 중복: 워크스페이스 내에 동일한 URL이 존재하면 리드 전체가 스킵됩니다. (2) 이메일 중복: 파일 내부의 중복 이메일과 워크스페이스 내 기존 DB의 중복 이메일이 자동으로 감지되어 제외되지만, 리드 자체는 생성됩니다. 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.
-     */
-    post: operations["postApiV1AdminLead-importUpload"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/lead-import/sheet-names": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Excel 또는 CSV 파일의 시트 이름 목록 조회
-     * @description Excel 파일을 업로드하여 포함된 시트 이름 목록을 조회합니다. CSV 파일의 경우 빈 배열이 반환됩니다.
-     */
-    post: operations["postApiV1AdminLead-importSheet-names"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/lead-import/preview": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Excel 또는 CSV 파일 데이터 미리보기
-     * @description Excel(.xlsx, .xls) 또는 CSV(.csv) 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 20행을 샘플링하여 AI 분석 결과도 함께 제공합니다. CSV 파일의 경우 인코딩을 자동 감지하여 UTF-8로 변환합니다.
-     */
-    post: operations["postApiV1AdminLead-importPreview"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/openai-api-keys/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminOpenai-api-keysByWorkspaceId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/openai-api-keys/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminOpenai-api-keys"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/openai-api-keys/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1AdminOpenai-api-keysById"]
-    post?: never
-    delete: operations["deleteApiV1AdminOpenai-api-keysById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/openai-api-keys/reorder": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminOpenai-api-keysReorder"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/lead-discovery/analyze": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * 단일 웹사이트 URL 분석 (SSE 스트리밍)
-     * @description 단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.
-     */
-    post: operations["postApiV1AdminWeb-extractionLead-discoveryAnalyze"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/analyze": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * 웹데추용 단일 웹사이트 URL 분석
-     * @description 단일 웹사이트 URL을 분석하여 정형화된 회사 정보 및 연락처를 JSON으로 반환합니다.
-     */
-    post: operations["postApiV1AdminWeb-extractionAnalyze"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/upload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Excel 또는 CSV 파일로 웹 데이터 추출 (SSE)
-     * @description Excel 또는 CSV 파일을 업로드하여 웹사이트에서 회사 정보 및 연락처를 추출합니다. 실시간 진행상황을 SSE로 전송합니다.
-     */
-    post: operations["postApiV1AdminWeb-extractionUpload"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/results/{jobId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWeb-extractionResultsByJobId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/results/{jobId}/json": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWeb-extractionResultsByJobIdJson"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/web-extraction/cleanup/{jobId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminWeb-extractionCleanupByJobId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Websets"]
-    put?: never
-    post: operations["postApiV1Websets"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WebsetsById"]
-    put: operations["putApiV1WebsetsById"]
-    post?: never
-    delete: operations["deleteApiV1WebsetsById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/{id}/rows": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1WebsetsByIdRows"]
-    put?: never
-    post: operations["postApiV1WebsetsByIdRows"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/{id}/rows/{rowId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put: operations["putApiV1WebsetsByIdRowsByRowId"]
-    post?: never
-    delete: operations["deleteApiV1WebsetsByIdRowsByRowId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/{id}/run": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1WebsetsByIdRun"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/websets/criteria": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1WebsetsCriteria"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/upload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchUpload"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchSearch"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/stores": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminGemini-searchStores"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/files/{fileId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminGemini-searchFilesByFileId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/estimate-cost": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchEstimate-cost"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/drive/import-url": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchDriveImport-url"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/stores/all": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminGemini-searchStoresAll"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Search BigQuery with natural language
-     * @description Convert natural language query to SQL and execute against BigQuery
-     */
-    post: operations["postApiV1BigquerySearch"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/add-to-group": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Add BigQuery search results to customer group */
-    post: operations["postApiV1BigqueryAdd-to-group"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Health check for BigQuery service */
-    get: operations["getApiV1BigqueryHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-enrichment/enrich": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Enrich lead with company info and emails
-     * @description Fetch company information and emails using Hunter.io and Jina Reader
-     */
-    post: operations["postApiV1Lead-enrichmentEnrich"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-enrichment/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Check enrichment service status */
-    get: operations["getApiV1Lead-enrichmentHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/auth": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get Nylas OAuth URL
-     * @description Generate OAuth authorization URL for Google email integration via Nylas
-     */
-    get: operations["getApiV1NylasAuth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/callback": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Nylas OAuth Callback
-     * @description OAuth redirect handler - exchange authorization code for Nylas grant
-     */
-    get: operations["getApiV1NylasCallback"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/grant/{grantId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get Grant Info
-     * @description Get information about a connected email account
-     */
-    get: operations["getApiV1NylasGrantByGrantId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/grant/{accountId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    /**
-     * Disconnect Email Account
-     * @description Disconnect/delete a connected email account
-     */
-    delete: operations["deleteApiV1NylasGrantByAccountId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/setup-connector": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Setup Google Connector
-     * @description One-time setup to create Google OAuth connector in Nylas
-     */
-    post: operations["postApiV1NylasSetup-connector"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/nylas/webhook": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Nylas Webhook
-     * @description Receive webhook events for email tracking (opens, clicks, thread replies)
-     */
-    post: operations["postApiV1NylasWebhook"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Health check for Lead Discovery service */
-    get: operations["getApiV1Lead-discoveryHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Search for leads using natural language or website URL
-     * @description Streams search progress via SSE. Automatically detects basic (website) or advanced (direct search) mode.
-     */
-    post: operations["postApiV1Lead-discoverySearch"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/select": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Resume search with user's buyer selection
-     * @description Called after user selects a buyer recommendation from the interrupt.
-     */
-    post: operations["postApiV1Lead-discoverySelect"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/session/{sessionId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get session state
-     * @description Retrieve the current state of a lead discovery session.
-     */
-    get: operations["getApiV1Lead-discoverySessionBySessionId"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/sessions": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    /**
-     * Clear all sessions
-     * @description Admin endpoint to clear all lead discovery sessions.
-     */
-    delete: operations["deleteApiV1Lead-discoverySessions"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-discovery/score": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Calculate fit scores for leads
-     * @description AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.
-     */
-    post: operations["postApiV1Lead-discoveryScore"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sales-strategies/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Sales-strategiesById"]
-    put: operations["putApiV1Sales-strategiesById"]
-    post?: never
-    delete: operations["deleteApiV1Sales-strategiesById"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sales-strategies/": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Sales-strategies"]
-    put?: never
-    post: operations["postApiV1Sales-strategies"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspace-sales-strategies/{workspaceId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1Workspace-sales-strategiesByWorkspaceId"]
-    put?: never
-    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceId"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspace-sales-strategies/{workspaceId}/link/{salesStrategyId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspace-sales-strategies/{workspaceId}/find-and-link": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/workspace-sales-strategies/{workspaceId}/link/{linkId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
+export interface paths {
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getIndex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHealthApiHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sse-test/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiSse-testStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sse-test/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiSse-testInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhook/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookInbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhook/inbound-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookInbound-store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhook/sendgrid-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookSendgrid-events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/email-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiAiEmail-draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/generate-followup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiAiGenerate-followup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/generate-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiAiGenerate-summary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chatbot/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiChatbotAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chatbot/history/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiChatbotHistoryByConversationId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chatbot/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiChatbotConfirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chatbot/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiChatbotConversations"];
+        put?: never;
+        post: operations["postApiChatbotConversations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chatbot/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiChatbotConversationsById"];
+        options?: never;
+        head?: never;
+        patch: operations["patchApiChatbotConversationsById"];
+        trace?: never;
+    };
+    "/api/chatbot/conversations/{id}/generate-title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiChatbotConversationsByIdGenerate-title"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthSignup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthRegister-email"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthRefresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/admin-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AuthAdmin-check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1AuthProfile"];
+        trace?: never;
+    };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AuthGoogle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthGoogleCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthGoogleVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account/deletion-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AuthAccountDeletion-check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AuthAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Departments"];
+        put?: never;
+        post: operations["postApiV1Departments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1DepartmentsById"];
+        put: operations["putApiV1DepartmentsById"];
+        post?: never;
+        delete: operations["deleteApiV1DepartmentsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersById"];
+        put: operations["putApiV1UsersById"];
+        post?: never;
+        delete: operations["deleteApiV1UsersById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Users"];
+        put?: never;
+        post: operations["postApiV1Users"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/email/{email}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersEmailByEmail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/assignable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersAssignable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/check/{email}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersCheckByEmail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1UsersByIdPassword"];
+        trace?: never;
+    };
+    "/api/v1/users/{id}/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1UsersByIdLogin"];
+        trace?: never;
+    };
+    "/api/v1/users/{id}/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1UsersByIdOnboarding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/onboarding/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1UsersByIdOnboardingStep"];
+        trace?: never;
+    };
+    "/api/v1/users/{id}/onboarding/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1UsersByIdOnboardingComplete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/onboarding/survey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1UsersByIdOnboardingSurvey"];
+        trace?: never;
+    };
+    "/api/v1/admin/users/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminUsersBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/bulk/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminUsersBulkRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/bulk/department": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminUsersBulkDepartment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/iam-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminUsersByIdIam-roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/sync-iam-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminUsersByIdSync-iam-roles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WorkspacesSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WorkspacesById"];
+        put: operations["putApiV1WorkspacesById"];
+        post?: never;
+        delete: operations["deleteApiV1WorkspacesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Workspaces"];
+        put?: never;
+        post: operations["postApiV1Workspaces"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1WorkspacesByIdEnrich"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/enrichAndStrategize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1WorkspacesByIdEnrichAndStrategize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/owner/{ownerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WorkspacesOwnerByOwnerId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WorkspacesByIdMembers"];
+        put?: never;
+        post: operations["postApiV1WorkspacesByIdMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/members/{memberId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1WorkspacesByIdMembersByMemberIdRole"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/members/{memberId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1WorkspacesByIdMembersByMemberIdStatus"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{id}/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1WorkspacesByIdMembersByMemberId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/user/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WorkspacesUserByUserId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminWorkspacesBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminWorkspacesByIdTransfer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminWorkspacesByIdProducts"];
+        put?: never;
+        post: operations["postApiV1AdminWorkspacesByIdProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminWorkspacesByIdProductsByProductId"];
+        put: operations["putApiV1AdminWorkspacesByIdProductsByProductId"];
+        post?: never;
+        delete: operations["deleteApiV1AdminWorkspacesByIdProductsByProductId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/with-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminWorkspacesByIdWith-products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsById"];
+        put: operations["putApiV1Customer-groupsById"];
+        post?: never;
+        delete: operations["deleteApiV1Customer-groupsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groups"];
+        put?: never;
+        post: operations["postApiV1Customer-groups"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsByIdMembers"];
+        put?: never;
+        post: operations["postApiV1Customer-groupsByIdMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/{id}/members/{leadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1Customer-groupsByIdMembersByLeadId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/lead/{leadId}/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsLeadByLeadIdGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customer-groups/{id}/members-with-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Customer-groupsByIdMembers-with-emails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/customer-groups/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminCustomer-groupsBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/customer-groups/{id}/members/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminCustomer-groupsByIdMembersBulk"];
+        delete: operations["deleteApiV1AdminCustomer-groupsByIdMembersBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get dashboard statistics
+         * @description Returns statistics for all 3 dashboard columns: leads, emails, and open rate
+         */
+        get: operations["getApiV1DashboardStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/trends/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get lead trends
+         * @description Returns daily lead counts for the specified date range
+         */
+        get: operations["getApiV1DashboardTrendsLeads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/trends/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get email trends
+         * @description Returns daily email counts for the specified date range
+         */
+        get: operations["getApiV1DashboardTrendsEmails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/trends/opens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get open rate trends
+         * @description Returns daily open rates for the specified date range
+         */
+        get: operations["getApiV1DashboardTrendsOpens"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/notifications/lead-discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get lead discovery notifications
+         * @description Returns recent lead discovery (webset) activities
+         */
+        get: operations["getApiV1DashboardNotificationsLead-discovery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/notifications/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get campaign notifications
+         * @description Returns recent campaign (sequence) activities
+         */
+        get: operations["getApiV1DashboardNotificationsCampaigns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/notifications/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get reply notifications
+         * @description Returns recent email replies with sentiment analysis
+         */
+        get: operations["getApiV1DashboardNotificationsReplies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsById"];
+        put: operations["putApiV1Email-accountsById"];
+        post?: never;
+        delete: operations["deleteApiV1Email-accountsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accounts"];
+        put?: never;
+        post: operations["postApiV1Email-accounts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/workspace/{workspaceId}/user/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/workspace/{workspaceId}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdActive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/user/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-accountsUserByUserId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/set-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdSet-default"];
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/sent-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdSent-count"];
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/reset-daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdReset-daily"];
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/reset-monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdReset-monthly"];
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/error": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdError"];
+        trace?: never;
+    };
+    "/api/v1/email-accounts/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-accountsByIdSync"];
+        trace?: never;
+    };
+    "/api/v1/admin/email-accounts/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminEmail-accountsBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-signatures/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-signatures"];
+        put?: never;
+        post: operations["postApiV1Email-signatures"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-signatures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-signaturesById"];
+        put: operations["putApiV1Email-signaturesById"];
+        post?: never;
+        delete: operations["deleteApiV1Email-signaturesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-signatures/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-signaturesDefault"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-signatures/{id}/set-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-signaturesByIdSet-default"];
+        trace?: never;
+    };
+    "/api/v1/email-templates/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/workspace/{workspaceId}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/workspace/{workspaceId}/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdShared"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesById"];
+        put: operations["putApiV1Email-templatesById"];
+        post?: never;
+        delete: operations["deleteApiV1Email-templatesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templates"];
+        put?: never;
+        post: operations["postApiV1Email-templates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-templates/workspace/{workspaceId}/category/{category}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-templatesWorkspaceByWorkspaceIdCategoryByCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminEmail-templatesBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/bulk/category": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminEmail-templatesBulkCategory"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/bulk/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminEmail-templatesBulkShared"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/send-nylas-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1EmailsSend-nylas-test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/stats/today-sent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsStatsToday-sent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/stats/avg-open-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsStatsAvg-open-rate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/stats/recent-sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsStatsRecent-sequences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/stats/scheduled-followups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsStatsScheduled-followups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/stats/buyer-response-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsStatsBuyer-response-rate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1EmailsSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/search-replied": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsSearch-replied"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/thread/{threadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsThreadByThreadId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/{id}/attachments/{attachmentIndex}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsByIdAttachmentsByAttachmentIndex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsById"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1EmailsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Emails"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/{id}/intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1EmailsByIdIntent"];
+        trace?: never;
+    };
+    "/api/v1/emails/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1EmailsByIdStatus"];
+        trace?: never;
+    };
+    "/api/v1/emails/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1EmailsByIdEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/emails/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1EmailsWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/emails/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminEmailsBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/emails/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminEmailsBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bulk-emails/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bulk-emailsSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/stats/by-intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-repliesStatsBy-intent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-replies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Email-repliesById"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1Email-repliesById"];
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-repliesById"];
+        trace?: never;
+    };
+    "/api/v1/email-replies/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-repliesByIdRead"];
+        trace?: never;
+    };
+    "/api/v1/email-replies/{id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-repliesByIdUnread"];
+        trace?: never;
+    };
+    "/api/v1/email-replies/bulk/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1Email-repliesBulkRead"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/bulk/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1Email-repliesBulkUnread"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/{id}/reclassify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Email-repliesByIdReclassify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1Email-repliesBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-replies/thread/{threadId}/important": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-repliesThreadByThreadIdImportant"];
+        trace?: never;
+    };
+    "/api/v1/email-replies/thread/{threadId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1Email-repliesThreadByThreadIdRead"];
+        trace?: never;
+    };
+    "/api/v1/leads/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search leads with advanced filtering
+         * @description Search and filter leads with support for column-specific filters, sorting, pagination, and date ranges. Filters parameter accepts JSON array of filter objects with field, operator, and value properties. Supported operators: equals, notEquals, contains, startsWith, endsWith, gt, lt, gte, lte, between, in, notIn, isEmpty, isNotEmpty. Example: [{"field":"leadScore","operator":"gt","value":80},{"field":"country","operator":"in","value":["USA","Canada"]}]
+         */
+        get: operations["getApiV1LeadsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/status/{status}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1LeadsStatusByStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1LeadsById"];
+        put: operations["putApiV1LeadsById"];
+        post?: never;
+        delete: operations["deleteApiV1LeadsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Leads"];
+        put?: never;
+        post: operations["postApiV1Leads"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * JSON 형식으로 리드 일괄 생성
+         * @description JSON 배열로 여러 리드를 일괄 생성합니다. 중복 이메일 방지: (1) 요청 데이터 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵됩니다. 응답에는 생성된 리드 목록, 중복 이메일 상세정보(email, existingLeadId, companyName, existingCompanyName, customerGroupIds, type), 통계(total, created, skipped)가 포함됩니다. 중복 감지 시 기존 리드의 회사명과 소속 고객 그룹 정보도 함께 반환됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있습니다.
+         */
+        post: operations["postApiV1LeadsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leads/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1LeadsWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminLeadsBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminLeadsBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/bulk/business-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminLeadsBulkBusiness-type"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdContacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/social-media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdSocial-media"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/business-sectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdBusiness-sectors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/product-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdProduct-categories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/{id}/industry-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsByIdIndustry-types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/download/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsDownloadCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/download/csv/selected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminLeadsDownloadCsvSelected"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/leads/filter-options/{field}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminLeadsFilter-optionsByField"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesById"];
+        put: operations["putApiV1SequencesById"];
+        post?: never;
+        delete: operations["deleteApiV1SequencesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Sequences"];
+        put?: never;
+        post: operations["postApiV1Sequences"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdCopy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdGenerate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/activate-step-based": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdActivate-step-based"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdSteps"];
+        put?: never;
+        post: operations["postApiV1SequencesByIdSteps"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/steps/{stepId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1SequencesByIdStepsByStepId"];
+        post?: never;
+        delete: operations["deleteApiV1SequencesByIdStepsByStepId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdEnrollments"];
+        put?: never;
+        post: operations["postApiV1SequencesByIdEnrollments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/enrollments/{enrollmentId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1SequencesByIdEnrollmentsByEnrollmentIdStatus"];
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/enrollments/{enrollmentId}/step-executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/stats/overall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesStatsOverall"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/enrollments/{enrollmentId}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesEnrollmentsByEnrollmentIdMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/generate-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesGenerate-template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/bulk/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminSequencesBulkStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminSequencesBulk"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/{id}/enrollments/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminSequencesByIdEnrollmentsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/{id}/enrollments/bulk-with-scheduling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminSequencesByIdEnrollmentsBulk-with-scheduling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/enrollments/bulk/unenroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminSequencesEnrollmentsBulkUnenroll"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/step-executions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminSequencesStep-executionsPending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sequences/step-executions/{executionId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1AdminSequencesStep-executionsByExecutionIdStatus"];
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdNodesByNodeIdGenerated-emails"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1SequencesByIdNodesByNodeIdGenerated-emails"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/generate-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdNodesByNodeIdGenerate-emails"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails/{emailId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"];
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId"];
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/generated-emails/{emailId}/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailIdRegenerate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/generation-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdNodesByNodeIdGeneration-progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/nodes/{nodeId}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdNodesByNodeIdStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/workflow-enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1SequencesByIdWorkflow-enrollments"];
+        put?: never;
+        post: operations["postApiV1SequencesByIdWorkflow-enrollments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/workflow-enrollments/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdWorkflow-enrollmentsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sequences/{id}/workflow-enrollments/{enrollmentId}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1SequencesByIdWorkflow-enrollmentsByEnrollmentIdExecute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logsRecent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/entity/{entityType}/{entityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logsEntityByEntityTypeByEntityId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/user/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logsUserByUserId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logsById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity-logs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Activity-logs"];
+        put?: never;
+        post: operations["postApiV1Activity-logs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/lead-import/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Excel 또는 CSV 파일로 리드 일괄 임포트 (SSE)
+         * @description Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다.
+         *
+         *     **워크스페이스 기준 중복 처리**: (1) Website URL 중복: 워크스페이스 내에 동일한 URL이 존재하면 리드 전체가 스킵됩니다. (2) 이메일 중복: 파일 내부의 중복 이메일과 워크스페이스 내 기존 DB의 중복 이메일이 자동으로 감지되어 제외되지만, 리드 자체는 생성됩니다. 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.
+         */
+        post: operations["postApiV1AdminLead-importUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/lead-import/sheet-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Excel 또는 CSV 파일의 시트 이름 목록 조회
+         * @description Excel 파일을 업로드하여 포함된 시트 이름 목록을 조회합니다. CSV 파일의 경우 빈 배열이 반환됩니다.
+         */
+        post: operations["postApiV1AdminLead-importSheet-names"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/lead-import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Excel 또는 CSV 파일 데이터 미리보기
+         * @description Excel(.xlsx, .xls) 또는 CSV(.csv) 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 20행을 샘플링하여 AI 분석 결과도 함께 제공합니다. CSV 파일의 경우 인코딩을 자동 감지하여 UTF-8로 변환합니다.
+         */
+        post: operations["postApiV1AdminLead-importPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/openai-api-keys/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminOpenai-api-keysByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/openai-api-keys/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminOpenai-api-keys"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/openai-api-keys/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1AdminOpenai-api-keysById"];
+        post?: never;
+        delete: operations["deleteApiV1AdminOpenai-api-keysById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/openai-api-keys/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminOpenai-api-keysReorder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/lead-discovery/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 단일 웹사이트 URL 분석 (SSE 스트리밍)
+         * @description 단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.
+         */
+        post: operations["postApiV1AdminWeb-extractionLead-discoveryAnalyze"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 웹데추용 단일 웹사이트 URL 분석
+         * @description 단일 웹사이트 URL을 분석하여 정형화된 회사 정보 및 연락처를 JSON으로 반환합니다.
+         */
+        post: operations["postApiV1AdminWeb-extractionAnalyze"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Excel 또는 CSV 파일로 웹 데이터 추출 (SSE)
+         * @description Excel 또는 CSV 파일을 업로드하여 웹사이트에서 회사 정보 및 연락처를 추출합니다. 실시간 진행상황을 SSE로 전송합니다.
+         */
+        post: operations["postApiV1AdminWeb-extractionUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/results/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminWeb-extractionResultsByJobId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/results/{jobId}/json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminWeb-extractionResultsByJobIdJson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/web-extraction/cleanup/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminWeb-extractionCleanupByJobId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Websets"];
+        put?: never;
+        post: operations["postApiV1Websets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WebsetsById"];
+        put: operations["putApiV1WebsetsById"];
+        post?: never;
+        delete: operations["deleteApiV1WebsetsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/{id}/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1WebsetsByIdRows"];
+        put?: never;
+        post: operations["postApiV1WebsetsByIdRows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/{id}/rows/{rowId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1WebsetsByIdRowsByRowId"];
+        post?: never;
+        delete: operations["deleteApiV1WebsetsByIdRowsByRowId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1WebsetsByIdRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/websets/criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1WebsetsCriteria"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminGemini-searchUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminGemini-searchSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminGemini-searchStores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/files/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminGemini-searchFilesByFileId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/estimate-cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminGemini-searchEstimate-cost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/drive/import-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AdminGemini-searchDriveImport-url"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/gemini-search/stores/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1AdminGemini-searchStoresAll"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bigquery/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search BigQuery with natural language
+         * @description Convert natural language query to SQL and execute against BigQuery
+         */
+        post: operations["postApiV1BigquerySearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bigquery/add-to-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add BigQuery search results to customer group */
+        post: operations["postApiV1BigqueryAdd-to-group"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bigquery/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check for BigQuery service */
+        get: operations["getApiV1BigqueryHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-enrichment/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enrich lead with company info and emails
+         * @description Fetch company information and emails using Hunter.io and Jina Reader
+         */
+        post: operations["postApiV1Lead-enrichmentEnrich"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-enrichment/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check enrichment service status */
+        get: operations["getApiV1Lead-enrichmentHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Nylas OAuth URL
+         * @description Generate OAuth authorization URL for Google email integration via Nylas
+         */
+        get: operations["getApiV1NylasAuth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nylas OAuth Callback
+         * @description OAuth redirect handler - exchange authorization code for Nylas grant
+         */
+        get: operations["getApiV1NylasCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/grant/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grant Info
+         * @description Get information about a connected email account
+         */
+        get: operations["getApiV1NylasGrantByGrantId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/grant/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Email Account
+         * @description Disconnect/delete a connected email account
+         */
+        delete: operations["deleteApiV1NylasGrantByAccountId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/setup-connector": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Setup Google Connector
+         * @description One-time setup to create Google OAuth connector in Nylas
+         */
+        post: operations["postApiV1NylasSetup-connector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/nylas/api/v1/nylas/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1NylasApiV1NylasWebhooks"];
+        put?: never;
+        /**
+         * Nylas Webhook
+         * @description Receive webhook events for email tracking (opens, clicks, thread replies)
+         */
+        post: operations["postApiV1NylasApiV1NylasWebhooks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check for Lead Discovery service */
+        get: operations["getApiV1Lead-discoveryHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search for leads using natural language or website URL
+         * @description Streams search progress via SSE. Automatically detects basic (website) or advanced (direct search) mode.
+         */
+        post: operations["postApiV1Lead-discoverySearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/select": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume search with user's buyer selection
+         * @description Called after user selects a buyer recommendation from the interrupt.
+         */
+        post: operations["postApiV1Lead-discoverySelect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/clarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume search with clarification answers
+         * @description Called after user answers clarification questions from the interrupt.
+         */
+        post: operations["postApiV1Lead-discoveryClarify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/session/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get session state
+         * @description Retrieve the current state of a lead discovery session.
+         */
+        get: operations["getApiV1Lead-discoverySessionBySessionId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/more": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get more search results
+         * @description Fetch additional results from a previous search. Results are cached for 10 minutes after the initial search.
+         */
+        post: operations["postApiV1Lead-discoveryMore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear all sessions
+         * @description Admin endpoint to clear all lead discovery sessions.
+         */
+        delete: operations["deleteApiV1Lead-discoverySessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate fit scores for leads
+         * @description AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.
+         */
+        post: operations["postApiV1Lead-discoveryScore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simple lead enrichment (env API key only)
+         * @description Enrich a single lead using environment variable API key. Separate from LangGraph-based discovery.
+         */
+        post: operations["postApiV1Lead-discoveryEnrich"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales-strategies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Sales-strategiesById"];
+        put: operations["putApiV1Sales-strategiesById"];
+        post?: never;
+        delete: operations["deleteApiV1Sales-strategiesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales-strategies/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Sales-strategies"];
+        put?: never;
+        post: operations["postApiV1Sales-strategies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace-sales-strategies/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Workspace-sales-strategiesByWorkspaceId"];
+        put: operations["putApiV1Workspace-sales-strategiesByWorkspaceId"];
+        post: operations["postApiV1Workspace-sales-strategiesByWorkspaceId"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace-sales-strategies/{workspaceId}/link/{salesStrategyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace-sales-strategies/{workspaceId}/find-and-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace-sales-strategies/{workspaceId}/link/{linkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/products/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingProducts"];
+        put?: never;
+        post: operations["postApiV1BillingProducts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingProductsById"];
+        put: operations["putApiV1BillingProductsById"];
+        post?: never;
+        delete: operations["deleteApiV1BillingProductsById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/plans/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingPlans"];
+        put?: never;
+        post: operations["postApiV1BillingPlans"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingPlansById"];
+        put: operations["putApiV1BillingPlansById"];
+        post?: never;
+        delete: operations["deleteApiV1BillingPlansById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingSubscriptions"];
+        put?: never;
+        post: operations["postApiV1BillingSubscriptions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingSubscriptionsById"];
+        put: operations["putApiV1BillingSubscriptionsById"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1BillingSubscriptionsByIdCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscriptions/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingSubscriptionsByIdHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/customers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/customers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1BillingCustomersById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/policies/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamPolicies"];
+        put?: never;
+        post: operations["postApiV1IamPolicies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/policies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamPoliciesById"];
+        put: operations["putApiV1IamPoliciesById"];
+        post?: never;
+        delete: operations["deleteApiV1IamPoliciesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/policies/{id}/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamPoliciesByIdStatements"];
+        put?: never;
+        post: operations["postApiV1IamPoliciesByIdStatements"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/policies/{id}/statements/{statementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["putApiV1IamPoliciesByIdStatementsByStatementId"];
+        post?: never;
+        delete: operations["deleteApiV1IamPoliciesByIdStatementsByStatementId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamRoles"];
+        put?: never;
+        post: operations["postApiV1IamRoles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamRolesById"];
+        put: operations["putApiV1IamRolesById"];
+        post?: never;
+        delete: operations["deleteApiV1IamRolesById"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/{id}/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamRolesByIdPolicies"];
+        put?: never;
+        post: operations["postApiV1IamRolesByIdPolicies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/{id}/policies/{policyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1IamRolesByIdPoliciesByPolicyId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamRolesByIdMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/members/{memberId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamMembersByMemberIdRoles"];
+        put?: never;
+        post: operations["postApiV1IamMembersByMemberIdRoles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/members/{memberId}/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1IamMembersByMemberIdRolesByRoleId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/members/{memberId}/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamMembersByMemberIdPolicies"];
+        put?: never;
+        post: operations["postApiV1IamMembersByMemberIdPolicies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/members/{memberId}/policies/{policyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1IamMembersByMemberIdPoliciesByPolicyId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/tier-boundaries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamTier-boundaries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/tier-boundaries/{tier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamTier-boundariesByTier"];
+        put: operations["putApiV1IamTier-boundariesByTier"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/audit-logs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamAudit-logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/audit-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamAudit-logsById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/my-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1IamMy-permissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/check-permission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1IamCheck-permission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1OnboardingWorkspaceByWorkspaceId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/survey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/step1/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdStep1Complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/step2/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdStep2Complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/step3/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdStep3Complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/step4/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdStep4Complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdComplete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1OnboardingWorkspaceByWorkspaceIdStep"];
+        trace?: never;
+    };
+    "/api/v1/onboarding/incomplete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1OnboardingIncomplete"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1OnboardingStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testQueues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testQueuesTest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testJobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/jobs/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testJobsBulk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testJobsByJobId"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1Bullmq-testJobsByJobId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/jobs/{jobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testJobsByJobIdRetry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues/test/clean": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testQueuesTestClean"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues/test/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testQueuesTestPause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues/test/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testQueuesTestResume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/queues/test/drain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testQueuesTestDrain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/worker/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testWorkerStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/worker/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1Bullmq-testWorkerStop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/worker/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testWorkerStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bullmq-test/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Bullmq-testStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/job-logs/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminJob-logsSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/job-logs/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminJob-logsStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/job-logs/queues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminJob-logsQueues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/job-logs/error-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminJob-logsError-codes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/job-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AdminJob-logsById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
-export type webhooks = Record<string, never>
-export type components = {
-  schemas: never
-  responses: never
-  parameters: never
-  requestBodies: never
-  headers: never
-  pathItems: never
+export type webhooks = Record<string, never>;
+export interface components {
+    schemas: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
-export type $defs = Record<string, never>
-export type operations = {
-  getIndex: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiHealth: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getHealth: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getHealthApiHealth: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiSse-testStream": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiSse-testInfo": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiWebhookInbound: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiWebhookInbound-store": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiWebhookSendgrid-events": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiAiEmail-draft": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          fromEmail: string
-          subject?: string
-          content: string
-        }
-        "multipart/form-data": {
-          fromEmail: string
-          subject?: string
-          content: string
-        }
-        "text/plain": {
-          fromEmail: string
-          subject?: string
-          content: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiAiGenerate-followup": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          threadId: string
-          workspaceId?: string
-        }
-        "multipart/form-data": {
-          threadId: string
-          workspaceId?: string
-        }
-        "text/plain": {
-          threadId: string
-          workspaceId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiAiGenerate-summary": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-        "multipart/form-data": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-        "text/plain": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiChatbotAsk: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          question: string
-          workspaceId: string
-          userId?: string
-          conversationId?: string
-          locale?: string
-          messages?: {
-            role: "user" | "assistant"
-            content: string
-            timestamp?: unknown
-            metadata?: unknown
-            attachment?: {
-              fileName: string
-              fileSize: number
-              fileType: string
-              content?: string
-            }
-          }[]
-        }
-        "multipart/form-data": {
-          question: string
-          workspaceId: string
-          userId?: string
-          conversationId?: string
-          locale?: string
-          messages?: {
-            role: "user" | "assistant"
-            content: string
-            timestamp?: unknown
-            metadata?: unknown
-            attachment?: {
-              fileName: string
-              fileSize: number
-              fileType: string
-              content?: string
-            }
-          }[]
-        }
-        "text/plain": {
-          question: string
-          workspaceId: string
-          userId?: string
-          conversationId?: string
-          locale?: string
-          messages?: {
-            role: "user" | "assistant"
-            content: string
-            timestamp?: unknown
-            metadata?: unknown
-            attachment?: {
-              fileName: string
-              fileSize: number
-              fileType: string
-              content?: string
-            }
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiChatbotHistoryByConversationId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        conversationId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiChatbotConfirm: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          conversationId: string
-          confirmed: boolean
-        }
-        "multipart/form-data": {
-          conversationId: string
-          confirmed: boolean
-        }
-        "text/plain": {
-          conversationId: string
-          confirmed: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiChatbotConversations: {
-    parameters: {
-      query: {
-        workspaceId: string
-        userId: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiChatbotConversations: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-        "multipart/form-data": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-        "text/plain": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiChatbotConversationsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiChatbotConversationsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          title: string
-        }
-        "multipart/form-data": {
-          title: string
-        }
-        "text/plain": {
-          title: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiChatbotConversationsByIdGenerate-title": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          firstMessage: string
-          locale?: string
-        }
-        "multipart/form-data": {
-          firstMessage: string
-          locale?: string
-        }
-        "text/plain": {
-          firstMessage: string
-          locale?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthLogin: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: email */
-          email: string
-          password: string
-        }
-        "multipart/form-data": {
-          /** Format: email */
-          email: string
-          password: string
-        }
-        "text/plain": {
-          /** Format: email */
-          email: string
-          password: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthSignup: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          username: string
-          /** Format: email */
-          email: string
-          password: string
-        }
-        "multipart/form-data": {
-          username: string
-          /** Format: email */
-          email: string
-          password: string
-        }
-        "text/plain": {
-          username: string
-          /** Format: email */
-          email: string
-          password: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AuthRegister-email": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: email */
-          email: string
-          username?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-        "multipart/form-data": {
-          /** Format: email */
-          email: string
-          username?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-        "text/plain": {
-          /** Format: email */
-          email: string
-          username?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthVerify: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthRefresh: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AuthAdmin-check": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1AuthProfile: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          username: string
-          /** Format: email */
-          email: string
-          employeeId?: string
-          profilePicture?: (string | null) | null
-        }
-        "multipart/form-data": {
-          username: string
-          /** Format: email */
-          email: string
-          employeeId?: string
-          profilePicture?: (string | null) | null
-        }
-        "text/plain": {
-          username: string
-          /** Format: email */
-          email: string
-          employeeId?: string
-          profilePicture?: (string | null) | null
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AuthGoogle: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthGoogleCallback: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          code: string
-          state?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-        "multipart/form-data": {
-          code: string
-          state?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-        "text/plain": {
-          code: string
-          state?: string
-          industry?: string
-          target?: string
-          country?: string
-          experience?: string
-          lang?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthGoogleVerify: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          idToken: string
-        }
-        "multipart/form-data": {
-          idToken: string
-        }
-        "text/plain": {
-          idToken: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Departments: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Departments: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-        "multipart/form-data": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-        "text/plain": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DepartmentsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1DepartmentsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-        "multipart/form-data": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-        "text/plain": {
-          name: string
-          code: string
-          description?: string
-          isActive?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1DepartmentsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersAll: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersSearch: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        role?: string
-        isActive?: string
-        search?: string
-        departmentIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1UsersById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          username: string
-          /** Format: email */
-          email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-          isActive: boolean
-          departmentId?: (string | null) | null
-          employeeId?: (string | null) | null
-        }
-        "multipart/form-data": {
-          username: string
-          /** Format: email */
-          email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-          isActive: boolean
-          departmentId?: (string | null) | null
-          employeeId?: (string | null) | null
-        }
-        "text/plain": {
-          username: string
-          /** Format: email */
-          email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-          isActive: boolean
-          departmentId?: (string | null) | null
-          employeeId?: (string | null) | null
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1UsersById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Users: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Users: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          username: string
-          /** Format: email */
-          email: string
-          passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
-          isActive?: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
-        }
-        "multipart/form-data": {
-          username: string
-          /** Format: email */
-          email: string
-          passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
-          isActive?: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
-        }
-        "text/plain": {
-          username: string
-          /** Format: email */
-          email: string
-          passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
-          isActive?: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersEmailByEmail: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        email: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersAssignable: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1UsersCheckByEmail: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        email: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1UsersByIdPassword: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          passwordHash: string
-        }
-        "multipart/form-data": {
-          passwordHash: string
-        }
-        "text/plain": {
-          passwordHash: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1UsersByIdLogin: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminUsersBulkStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          userIds: string[]
-          isActive: boolean
-        }
-        "multipart/form-data": {
-          userIds: string[]
-          isActive: boolean
-        }
-        "text/plain": {
-          userIds: string[]
-          isActive: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminUsersBulkRole: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-        }
-        "multipart/form-data": {
-          userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-        }
-        "text/plain": {
-          userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminUsersBulkDepartment: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          userIds: string[]
-          /** Format: uuid */
-          departmentId: string
-        }
-        "multipart/form-data": {
-          userIds: string[]
-          /** Format: uuid */
-          departmentId: string
-        }
-        "text/plain": {
-          userIds: string[]
-          /** Format: uuid */
-          departmentId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1WorkspacesSearch: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        isActive?: string
-        search?: string
-        ownerIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1WorkspacesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1WorkspacesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId?: string
-          isActive: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-        "multipart/form-data": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId?: string
-          isActive: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-        "text/plain": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId?: string
-          isActive: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1WorkspacesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Workspaces: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Workspaces: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId: string
-          isActive?: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-        "multipart/form-data": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId: string
-          isActive?: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-        "text/plain": {
-          name: string
-          description?: string
-          /** Format: uuid */
-          ownerId: string
-          isActive?: boolean
-          companyName?: string
-          companyWebsite?: string
-          companyPhone?: string
-          industry?: string
-          companySize?: string
-          companyAddress?: string
-          companyDescription?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1WorkspacesByIdEnrich: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          websiteUrl: string
-        }
-        "multipart/form-data": {
-          websiteUrl: string
-        }
-        "text/plain": {
-          websiteUrl: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1WorkspacesByIdEnrichAndStrategize: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          websiteUrl: string
-        }
-        "multipart/form-data": {
-          websiteUrl: string
-        }
-        "text/plain": {
-          websiteUrl: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1WorkspacesOwnerByOwnerId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        ownerId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1WorkspacesByIdMembers: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1WorkspacesByIdMembers: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          userId: string
-          role?: "owner" | "admin" | "member" | "viewer"
-          /** Format: uuid */
-          invitedBy?: string
-          status?: "active" | "inactive" | "removed"
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          userId: string
-          role?: "owner" | "admin" | "member" | "viewer"
-          /** Format: uuid */
-          invitedBy?: string
-          status?: "active" | "inactive" | "removed"
-        }
-        "text/plain": {
-          /** Format: uuid */
-          userId: string
-          role?: "owner" | "admin" | "member" | "viewer"
-          /** Format: uuid */
-          invitedBy?: string
-          status?: "active" | "inactive" | "removed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1WorkspacesByIdMembersByMemberIdRole: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        memberId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          role: "owner" | "admin" | "member" | "viewer"
-        }
-        "multipart/form-data": {
-          role: "owner" | "admin" | "member" | "viewer"
-        }
-        "text/plain": {
-          role: "owner" | "admin" | "member" | "viewer"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1WorkspacesByIdMembersByMemberIdStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        memberId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          status: "active" | "inactive" | "removed"
-        }
-        "multipart/form-data": {
-          status: "active" | "inactive" | "removed"
-        }
-        "text/plain": {
-          status: "active" | "inactive" | "removed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1WorkspacesByIdMembersByMemberId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        memberId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1WorkspacesUserByUserId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        userId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminWorkspacesBulkStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceIds: string[]
-          isActive: boolean
-        }
-        "multipart/form-data": {
-          workspaceIds: string[]
-          isActive: boolean
-        }
-        "text/plain": {
-          workspaceIds: string[]
-          isActive: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminWorkspacesByIdTransfer: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          newOwnerId: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          newOwnerId: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          newOwnerId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminWorkspacesByIdProducts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AdminWorkspacesByIdProducts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "multipart/form-data": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "text/plain": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "multipart/form-data": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "text/plain": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminWorkspacesByIdWith-products": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsSearch": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        isDynamic?: string
-        search?: string
-        workspaceIds?: string
-        createdByIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Customer-groupsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic: boolean
-        }
-        "multipart/form-data": {
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic: boolean
-        }
-        "text/plain": {
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Customer-groupsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groups": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Customer-groups": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic?: boolean
-          /** Format: uuid */
-          createdBy?: string
-          csvData?: {
-            companyName: string
-            foundCompanyName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic?: boolean
-          /** Format: uuid */
-          createdBy?: string
-          csvData?: {
-            companyName: string
-            foundCompanyName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          criteria?: unknown
-          isDynamic?: boolean
-          /** Format: uuid */
-          createdBy?: string
-          csvData?: {
-            companyName: string
-            foundCompanyName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsWorkspaceByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsByIdMembers": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Customer-groupsByIdMembers": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          addedBy?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          addedBy?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          addedBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Customer-groupsByIdMembersByLeadId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        leadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsLeadByLeadIdGroups": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        leadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Customer-groupsByIdMembers-with-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1AdminCustomer-groupsBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          groupIds: string[]
-        }
-        "multipart/form-data": {
-          groupIds: string[]
-        }
-        "text/plain": {
-          groupIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminCustomer-groupsByIdMembersBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-          /** Format: uuid */
-          addedBy?: string
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-          /** Format: uuid */
-          addedBy?: string
-        }
-        "text/plain": {
-          leadIds: string[]
-          /** Format: uuid */
-          addedBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1AdminCustomer-groupsByIdMembersBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-        }
-        "text/plain": {
-          leadIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardStats: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardTrendsLeads: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardTrendsEmails: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardTrendsOpens: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1DashboardNotificationsLead-discovery": {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-        limit?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardNotificationsCampaigns: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-        limit?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1DashboardNotificationsReplies: {
-    parameters: {
-      query?: {
-        startDate?: string
-        endDate?: string
-        workspaceId?: string
-        limit?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsSearch": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        status?: string
-        isVerified?: string
-        isDefault?: string
-        search?: string
-        userIds?: string
-        workspaceIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Email-accountsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified: boolean
-          isDefault: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "multipart/form-data": {
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified: boolean
-          isDefault: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "text/plain": {
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified: boolean
-          isDefault: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Email-accountsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accounts": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Email-accounts": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified?: boolean
-          isDefault?: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified?: boolean
-          isDefault?: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "text/plain": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: email */
-          emailAddress: string
-          displayName?: string
-          apiKey: string
-          sendgridVerifiedSenderId?: string
-          isVerified?: boolean
-          isDefault?: boolean
-          dailyLimit?: number
-          monthlyLimit?: number
-          status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-        userId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsWorkspaceByWorkspaceIdActive": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsWorkspaceByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-accountsUserByUserId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        userId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdSet-default": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          userId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdSent-count": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdReset-daily": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdReset-monthly": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdError": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          errorMessage: string
-        }
-        "multipart/form-data": {
-          errorMessage: string
-        }
-        "text/plain": {
-          errorMessage: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-accountsByIdSync": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1AdminEmail-accountsBulkStatus": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          accountIds: string[]
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "multipart/form-data": {
-          accountIds: string[]
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-        "text/plain": {
-          accountIds: string[]
-          status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-signatures": {
-    parameters: {
-      query?: {
-        includeInactive?: boolean
-        userId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Email-signatures": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-        userId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          signatureHtml: string
-          signatureText: string
-          isActive?: boolean
-        }
-        "multipart/form-data": {
-          name: string
-          signatureHtml: string
-          signatureText: string
-          isActive?: boolean
-        }
-        "text/plain": {
-          name: string
-          signatureHtml: string
-          signatureText: string
-          isActive?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-signaturesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Email-signaturesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          signatureHtml?: string
-          signatureText?: string
-          isActive?: boolean
-        }
-        "multipart/form-data": {
-          name?: string
-          signatureHtml?: string
-          signatureText?: string
-          isActive?: boolean
-        }
-        "text/plain": {
-          name?: string
-          signatureHtml?: string
-          signatureText?: string
-          isActive?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Email-signaturesById": {
-    parameters: {
-      query?: {
-        hardDelete?: boolean
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-signaturesDefault": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-signaturesByIdSet-default": {
-    parameters: {
-      query?: {
-        userId?: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesSearch": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        isShared?: string
-        search?: string
-        category?: string
-        workspaceIds?: string
-        createdByIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesWorkspaceByWorkspaceIdCategories": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesWorkspaceByWorkspaceIdShared": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Email-templatesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared: boolean
-        }
-        "multipart/form-data": {
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared: boolean
-        }
-        "text/plain": {
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Email-templatesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templates": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Email-templates": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared?: boolean
-          /** Format: uuid */
-          createdBy?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared?: boolean
-          /** Format: uuid */
-          createdBy?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string | null
-          subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
-          variables?: unknown
-          category?: string | null
-          isShared?: boolean
-          /** Format: uuid */
-          createdBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesWorkspaceByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-templatesWorkspaceByWorkspaceIdCategoryByCategory": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-        category: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1AdminEmail-templatesBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          templateIds: string[]
-        }
-        "multipart/form-data": {
-          templateIds: string[]
-        }
-        "text/plain": {
-          templateIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1AdminEmail-templatesBulkCategory": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          templateIds: string[]
-          category: string
-        }
-        "multipart/form-data": {
-          templateIds: string[]
-          category: string
-        }
-        "text/plain": {
-          templateIds: string[]
-          category: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1AdminEmail-templatesBulkShared": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          templateIds: string[]
-          isShared: boolean
-        }
-        "multipart/form-data": {
-          templateIds: string[]
-          isShared: boolean
-        }
-        "text/plain": {
-          templateIds: string[]
-          isShared: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsStatsToday-sent": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsStatsAvg-open-rate": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsStatsRecent-sequences": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-        limit?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsStatsScheduled-followups": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsStatsBuyer-response-rate": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1EmailsSend: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: email */
-          toEmail: string
-          subject: string
-          bodyText?: string
-          bodyHtml?: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          fromName?: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          /** Format: email */
-          replyTo?: string
-          inReplyTo?: string
-          references?: string[] | string
-          scheduledAt?: string
-          includeSignature?: boolean | string
-          /** @default Files */
-          files?: string[]
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-        }
-        "multipart/form-data": {
-          /** Format: email */
-          toEmail: string
-          subject: string
-          bodyText?: string
-          bodyHtml?: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          fromName?: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          /** Format: email */
-          replyTo?: string
-          inReplyTo?: string
-          references?: string[] | string
-          scheduledAt?: string
-          includeSignature?: boolean | string
-          /** @default Files */
-          files?: string[]
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-        }
-        "text/plain": {
-          /** Format: email */
-          toEmail: string
-          subject: string
-          bodyText?: string
-          bodyHtml?: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          fromName?: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          /** Format: email */
-          replyTo?: string
-          inReplyTo?: string
-          references?: string[] | string
-          scheduledAt?: string
-          includeSignature?: boolean | string
-          /** @default Files */
-          files?: string[]
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsSearch: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        status?: string
-        direction?: string
-        workspaceId?: string
-        leadId?: string
-        sequenceId?: string
-        search?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1EmailsSearch-replied": {
-    parameters: {
-      query: {
-        workspaceId: string
-        limit?: string
-        offset?: string
-        status?: string
-        leadId?: string
-        sequenceId?: string
-        search?: string
-        intent?: string
-        isImportant?: string
-        isUnread?: string
-        sentiment?: string
-        category?: string
-        priority?: string
-        dateFrom?: string
-        dateTo?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsThreadByThreadId: {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path: {
-        threadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsByIdAttachmentsByAttachmentIndex: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        attachmentIndex: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1EmailsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Emails: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          direction: "outbound" | "inbound"
-          /** Format: email */
-          fromEmail: string
-          /** Format: email */
-          toEmail: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-          status?:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-          scheduledAt?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          direction: "outbound" | "inbound"
-          /** Format: email */
-          fromEmail: string
-          /** Format: email */
-          toEmail: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-          status?:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-          scheduledAt?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          leadId?: string
-          /** Format: uuid */
-          sequenceId?: string
-          /** Format: uuid */
-          stepId?: string
-          direction: "outbound" | "inbound"
-          /** Format: email */
-          fromEmail: string
-          /** Format: email */
-          toEmail: string
-          ccEmails?: string[]
-          bccEmails?: string[]
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-          status?:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-          scheduledAt?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1EmailsByIdIntent: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "multipart/form-data": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "text/plain": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1EmailsByIdStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-        "multipart/form-data": {
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-        "text/plain": {
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsByIdEvents: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1EmailsWebhook: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminEmailsBulkStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          emailIds: string[]
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-        "multipart/form-data": {
-          emailIds: string[]
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-        "text/plain": {
-          emailIds: string[]
-          status:
-            | "draft"
-            | "scheduled"
-            | "queued"
-            | "sent"
-            | "delivered"
-            | "opened"
-            | "clicked"
-            | "replied"
-            | "bounced"
-            | "failed"
-            | "spam"
-            | "unsubscribed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1AdminEmailsBulk: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          emailIds: string[]
-        }
-        "multipart/form-data": {
-          emailIds: string[]
-        }
-        "text/plain": {
-          emailIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Bulk-emailsSend": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-          emails: {
-            /** Format: email */
-            fromEmail: string
-            /** Format: email */
-            toEmail: string
-            subject: string
-            bodyText?: string
-            bodyHtml?: string
-            fromName?: string
-          }[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-          emails: {
-            /** Format: email */
-            fromEmail: string
-            /** Format: email */
-            toEmail: string
-            subject: string
-            bodyText?: string
-            bodyHtml?: string
-            fromName?: string
-          }[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          /** Format: uuid */
-          userId: string
-          emails: {
-            /** Format: email */
-            fromEmail: string
-            /** Format: email */
-            toEmail: string
-            subject: string
-            bodyText?: string
-            bodyHtml?: string
-            fromName?: string
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-repliesStatsBy-intent": {
-    parameters: {
-      query: {
-        workspaceId: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-replies": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        workspaceId?: string
-        isRead?: string
-        sentiment?: string
-        search?: string
-        emailAccountId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Email-repliesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Email-repliesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "multipart/form-data": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "text/plain": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesByIdRead": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesByIdUnread": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Email-repliesBulkRead": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          replyIds: string[]
-        }
-        "multipart/form-data": {
-          replyIds: string[]
-        }
-        "text/plain": {
-          replyIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Email-repliesBulkUnread": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          replyIds: string[]
-        }
-        "multipart/form-data": {
-          replyIds: string[]
-        }
-        "text/plain": {
-          replyIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Email-repliesByIdReclassify": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Email-repliesBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          replyIds: string[]
-        }
-        "multipart/form-data": {
-          replyIds: string[]
-        }
-        "text/plain": {
-          replyIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesThreadByThreadIdImportant": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        threadId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          isImportant: boolean
-        }
-        "multipart/form-data": {
-          isImportant: boolean
-        }
-        "text/plain": {
-          isImportant: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesThreadByThreadIdRead": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        threadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1LeadsSearch: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        leadStatus?: string
-        businessType?: string
-        country?: string
-        city?: string
-        search?: string
-        searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
-        workspaceIds?: string
-        createdByIds?: string
-        customerGroupId?: string
-        filters?: string
-        sortField?: string
-        sortOrder?: "asc" | "desc"
-        createdAfter?: string
-        createdBefore?: string
-        updatedAfter?: string
-        updatedBefore?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                workspaceName: string
-                companyName?: (string | null) | null
-                foundCompanyName?: (string | null) | null
-                contactName?: (string | null) | null
-                websiteUrl?: (string | null) | null
-                finalUrl?: (string | null) | null
-                httpStatus?: (number | null) | null
-                nameUrlMatch?: (boolean | null) | null
-                businessType?: (string | null) | null
-                isBusinessTypeMatched?: (boolean | null) | null
-                description?: (string | null) | null
-                address?: (string | null) | null
-                country?: (string | null) | null
-                city?: (string | null) | null
-                state?: (string | null) | null
-                foundedYear?: (number | null) | null
-                employeeCount?: (string | null) | null
-                leadSource?: (string | null) | null
-                leadStatus?:
-                  | "new"
-                  | "contacted"
-                  | "qualified"
-                  | "unqualified"
-                  | "converted"
-                  | "lost"
-                  | "unsubscribed"
-                  | null
-                leadScore?: (number | null) | null
-                notes?: (string | null) | null
-                crawlTimeSeconds?: (string | null) | null
-                gptTimeSeconds?: (string | null) | null
-                collectedAt?: (string | null) | null
-                errorMessage?: (string | null) | null
-                createdBy?: (string | null) | null
-                createdByUsername?: (string | null) | null
-                createdByEmail?: (string | null) | null
-                createdAt: string
-                updatedAt: string
-                lastContactedAt?: (string | null) | null
-                contacts: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  contactType: "phone" | "email" | "fax" | "other"
-                  contactValue: string
-                  contactName?: (string | null) | null
-                  label?: (string | null) | null
-                  isPrimary: boolean
-                  isVerified: boolean
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                socialMedia: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  platform: "facebook" | "instagram" | "twitter" | "linkedin"
-                  url: string
-                  username?: (string | null) | null
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                products: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  productName: string
-                  description?: (string | null) | null
-                  createdAt: string
-                }[]
-                businessSectors: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  sectorName: string
-                  createdAt: string
-                }[]
-                productCategories: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  categoryName: string
-                  createdAt: string
-                }[]
-                industryTypes: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  industryName: string
-                  createdAt: string
-                }[]
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                workspaceName: string
-                companyName?: (string | null) | null
-                foundCompanyName?: (string | null) | null
-                contactName?: (string | null) | null
-                websiteUrl?: (string | null) | null
-                finalUrl?: (string | null) | null
-                httpStatus?: (number | null) | null
-                nameUrlMatch?: (boolean | null) | null
-                businessType?: (string | null) | null
-                isBusinessTypeMatched?: (boolean | null) | null
-                description?: (string | null) | null
-                address?: (string | null) | null
-                country?: (string | null) | null
-                city?: (string | null) | null
-                state?: (string | null) | null
-                foundedYear?: (number | null) | null
-                employeeCount?: (string | null) | null
-                leadSource?: (string | null) | null
-                leadStatus?:
-                  | "new"
-                  | "contacted"
-                  | "qualified"
-                  | "unqualified"
-                  | "converted"
-                  | "lost"
-                  | "unsubscribed"
-                  | null
-                leadScore?: (number | null) | null
-                notes?: (string | null) | null
-                crawlTimeSeconds?: (string | null) | null
-                gptTimeSeconds?: (string | null) | null
-                collectedAt?: (string | null) | null
-                errorMessage?: (string | null) | null
-                createdBy?: (string | null) | null
-                createdByUsername?: (string | null) | null
-                createdByEmail?: (string | null) | null
-                createdAt: string
-                updatedAt: string
-                lastContactedAt?: (string | null) | null
-                contacts: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  contactType: "phone" | "email" | "fax" | "other"
-                  contactValue: string
-                  contactName?: (string | null) | null
-                  label?: (string | null) | null
-                  isPrimary: boolean
-                  isVerified: boolean
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                socialMedia: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  platform: "facebook" | "instagram" | "twitter" | "linkedin"
-                  url: string
-                  username?: (string | null) | null
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                products: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  productName: string
-                  description?: (string | null) | null
-                  createdAt: string
-                }[]
-                businessSectors: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  sectorName: string
-                  createdAt: string
-                }[]
-                productCategories: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  categoryName: string
-                  createdAt: string
-                }[]
-                industryTypes: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  industryName: string
-                  createdAt: string
-                }[]
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                workspaceName: string
-                companyName?: (string | null) | null
-                foundCompanyName?: (string | null) | null
-                contactName?: (string | null) | null
-                websiteUrl?: (string | null) | null
-                finalUrl?: (string | null) | null
-                httpStatus?: (number | null) | null
-                nameUrlMatch?: (boolean | null) | null
-                businessType?: (string | null) | null
-                isBusinessTypeMatched?: (boolean | null) | null
-                description?: (string | null) | null
-                address?: (string | null) | null
-                country?: (string | null) | null
-                city?: (string | null) | null
-                state?: (string | null) | null
-                foundedYear?: (number | null) | null
-                employeeCount?: (string | null) | null
-                leadSource?: (string | null) | null
-                leadStatus?:
-                  | "new"
-                  | "contacted"
-                  | "qualified"
-                  | "unqualified"
-                  | "converted"
-                  | "lost"
-                  | "unsubscribed"
-                  | null
-                leadScore?: (number | null) | null
-                notes?: (string | null) | null
-                crawlTimeSeconds?: (string | null) | null
-                gptTimeSeconds?: (string | null) | null
-                collectedAt?: (string | null) | null
-                errorMessage?: (string | null) | null
-                createdBy?: (string | null) | null
-                createdByUsername?: (string | null) | null
-                createdByEmail?: (string | null) | null
-                createdAt: string
-                updatedAt: string
-                lastContactedAt?: (string | null) | null
-                contacts: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  contactType: "phone" | "email" | "fax" | "other"
-                  contactValue: string
-                  contactName?: (string | null) | null
-                  label?: (string | null) | null
-                  isPrimary: boolean
-                  isVerified: boolean
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                socialMedia: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  platform: "facebook" | "instagram" | "twitter" | "linkedin"
-                  url: string
-                  username?: (string | null) | null
-                  createdAt: string
-                  updatedAt: string
-                }[]
-                products: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  productName: string
-                  description?: (string | null) | null
-                  createdAt: string
-                }[]
-                businessSectors: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  sectorName: string
-                  createdAt: string
-                }[]
-                productCategories: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  categoryName: string
-                  createdAt: string
-                }[]
-                industryTypes: {
-                  /** Format: uuid */
-                  id: string
-                  /** Format: uuid */
-                  leadId: string
-                  industryName: string
-                  createdAt: string
-                }[]
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  getApiV1LeadsStatusByStatus: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        status:
-          | "new"
-          | "contacted"
-          | "qualified"
-          | "unqualified"
-          | "converted"
-          | "lost"
-          | "unsubscribed"
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1LeadsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1LeadsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-        "multipart/form-data": {
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-        "text/plain": {
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1LeadsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Leads: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Leads: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          crawlTimeSeconds?: string
-          gptTimeSeconds?: string
-          collectedAt?: string
-          errorMessage?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          crawlTimeSeconds?: string
-          gptTimeSeconds?: string
-          collectedAt?: string
-          errorMessage?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          companyName?: string
-          foundCompanyName?: string
-          contactName?: string
-          websiteUrl?: string
-          finalUrl?: string
-          httpStatus?: number
-          nameUrlMatch?: boolean
-          businessType?: string
-          isBusinessTypeMatched?: boolean
-          description?: string
-          address?: string
-          country?: string
-          city?: string
-          state?: string
-          foundedYear?: number
-          employeeCount?: string
-          leadSource?: string
-          leadStatus?:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-          leadScore?: number
-          notes?: string
-          crawlTimeSeconds?: string
-          gptTimeSeconds?: string
-          collectedAt?: string
-          errorMessage?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          contacts?: {
-            contactType: "phone" | "email" | "fax" | "other"
-            contactValue: string
-            label?: string | null
-            isPrimary?: boolean
-          }[]
-          socialMedia?: {
-            platform: "facebook" | "instagram" | "twitter" | "linkedin"
-            url: string
-            username?: string | null
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1LeadsBulk: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          leads: {
-            companyName: string
-            foundCompanyName?: string
-            contactName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          leads: {
-            companyName: string
-            foundCompanyName?: string
-            contactName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          leads: {
-            companyName: string
-            foundCompanyName?: string
-            contactName?: string
-            businessType?: string
-            websiteUrl?: string
-            description?: string
-            employeeCount?: string
-            foundedYear?: number
-            country?: string
-            city?: string
-            state?: string
-            address?: string
-            leadSource?: string
-            leadStatus?: string
-            leadScore?: number
-            notes?: string
-            primaryEmail?: string
-            primaryPhone?: string
-            secondaryEmail?: string
-            secondaryPhone?: string
-          }[]
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            leads: {
-              /** Format: uuid */
-              id: string
-              companyName: string | null
-              foundCompanyName: string | null
-              businessType: string | null
-              websiteUrl: string | null
-              description: string | null
-              country: string | null
-              city: string | null
-              leadStatus: string | null
-              leadScore: number | null
-              createdBy: string | null
-              createdAt: Record<string, never> | string | number
-            }[]
-            duplicateEmails: {
-              email: string
-              existingLeadId: string
-              companyName: string
-              existingCompanyName?: string
-              customerGroupIds?: string[]
-              type: "database" | "csv"
-            }[]
-            stats: {
-              total: number
-              created: number
-              skipped: number
-            }
-          }
-          "multipart/form-data": {
-            leads: {
-              /** Format: uuid */
-              id: string
-              companyName: string | null
-              foundCompanyName: string | null
-              businessType: string | null
-              websiteUrl: string | null
-              description: string | null
-              country: string | null
-              city: string | null
-              leadStatus: string | null
-              leadScore: number | null
-              createdBy: string | null
-              createdAt: Record<string, never> | string | number
-            }[]
-            duplicateEmails: {
-              email: string
-              existingLeadId: string
-              companyName: string
-              existingCompanyName?: string
-              customerGroupIds?: string[]
-              type: "database" | "csv"
-            }[]
-            stats: {
-              total: number
-              created: number
-              skipped: number
-            }
-          }
-          "text/plain": {
-            leads: {
-              /** Format: uuid */
-              id: string
-              companyName: string | null
-              foundCompanyName: string | null
-              businessType: string | null
-              websiteUrl: string | null
-              description: string | null
-              country: string | null
-              city: string | null
-              leadStatus: string | null
-              leadScore: number | null
-              createdBy: string | null
-              createdAt: Record<string, never> | string | number
-            }[]
-            duplicateEmails: {
-              email: string
-              existingLeadId: string
-              companyName: string
-              existingCompanyName?: string
-              customerGroupIds?: string[]
-              type: "database" | "csv"
-            }[]
-            stats: {
-              total: number
-              created: number
-              skipped: number
-            }
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            error: string
-            message: string
-          }
-          "multipart/form-data": {
-            error: string
-            message: string
-          }
-          "text/plain": {
-            error: string
-            message: string
-          }
-        }
-      }
-    }
-  }
-  getApiV1LeadsWorkspaceByWorkspaceId: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminLeadsBulkStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-          leadStatus:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-          leadStatus:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-        }
-        "text/plain": {
-          leadIds: string[]
-          leadStatus:
-            | "new"
-            | "contacted"
-            | "qualified"
-            | "unqualified"
-            | "converted"
-            | "lost"
-            | "unsubscribed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1AdminLeadsBulk: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-        }
-        "text/plain": {
-          leadIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1AdminLeadsBulkBusiness-type": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-          businessType: string
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-          businessType: string
-        }
-        "text/plain": {
-          leadIds: string[]
-          businessType: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminLeadsByIdContacts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminLeadsByIdSocial-media": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminLeadsByIdProducts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminLeadsByIdBusiness-sectors": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminLeadsByIdProduct-categories": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminLeadsByIdIndustry-types": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminLeadsDownloadCsv: {
-    parameters: {
-      query?: {
-        leadStatus?: string
-        businessType?: string
-        country?: string
-        city?: string
-        search?: string
-        searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
-        workspaceIds?: string
-        customerGroupId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AdminLeadsDownloadCsvSelected: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-        }
-        "text/plain": {
-          leadIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminLeadsFilter-optionsByField": {
-    parameters: {
-      query?: {
-        workspaceId?: string
-        customerGroupId?: string
-      }
-      header?: never
-      path: {
-        field: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            data: {
-              field: string
-              options: {
-                value: string
-                label: string
-                count: number
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            data: {
-              field: string
-              options: {
-                value: string
-                label: string
-                count: number
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            data: {
-              field: string
-              options: {
-                value: string
-                label: string
-                count: number
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  getApiV1SequencesSearch: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        status?: string
-        search?: string
-        workspaceIds?: string
-        createdByIds?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1SequencesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-        "multipart/form-data": {
-          name?: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-        "text/plain": {
-          name?: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1SequencesById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Sequences: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1Sequences: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          name: string
-          description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
-          workflowData?: string
-          /** Format: uuid */
-          createdBy?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1SequencesByIdCopy: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-          /** Format: uuid */
-          createdBy?: string
-        }
-        "multipart/form-data": {
-          name?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-          /** Format: uuid */
-          createdBy?: string
-        }
-        "text/plain": {
-          name?: string
-          /** Format: uuid */
-          customerGroupId?: string
-          selectedLeadIds?: string[]
-          /** Format: uuid */
-          createdBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1SequencesByIdGenerate: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          userEmailAccountId?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          userEmailAccountId?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          userEmailAccountId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdActivate-step-based": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesWorkspaceByWorkspaceId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesByIdSteps: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1SequencesByIdSteps: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-        "multipart/form-data": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-        "text/plain": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1SequencesByIdStepsByStepId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        stepId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-        "multipart/form-data": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-        "text/plain": {
-          stepOrder: number | string
-          delayDays: number | string
-          scheduledHour?: number | string
-          scheduledMinute?: number | string
-          timezone?: string
-          emailSubject: string
-          emailBodyText?: string
-          emailBodyHtml?: string
-          /** Format: uuid */
-          emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
-          /** @default Files */
-          files?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1SequencesByIdStepsByStepId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        stepId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesByIdEnrollments: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        companyName?: string
-        opened?: string
-        clicked?: string
-        replied?: string
-        delivered?: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1SequencesByIdEnrollments: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-          status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-          status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-        "text/plain": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-          status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1SequencesByIdEnrollmentsByEnrollmentIdStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        enrollmentId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-        "multipart/form-data": {
-          status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-        "text/plain": {
-          status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        enrollmentId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesStatsOverall: {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesByIdMetrics: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesEnrollmentsByEnrollmentIdMetrics: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        enrollmentId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesGenerate-template": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          country: string
-          prompt: string
-          model?: string
-          temperature?: number
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          country: string
-          prompt: string
-          model?: string
-          temperature?: number
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          country: string
-          prompt: string
-          model?: string
-          temperature?: number
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminSequencesBulkStatus: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          sequenceIds: string[]
-          status: "draft" | "active" | "paused" | "archived"
-        }
-        "multipart/form-data": {
-          sequenceIds: string[]
-          status: "draft" | "active" | "paused" | "archived"
-        }
-        "text/plain": {
-          sequenceIds: string[]
-          status: "draft" | "active" | "paused" | "archived"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1AdminSequencesBulk: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          sequenceIds: string[]
-        }
-        "multipart/form-data": {
-          sequenceIds: string[]
-        }
-        "text/plain": {
-          sequenceIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AdminSequencesByIdEnrollmentsBulk: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "text/plain": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminSequencesByIdEnrollmentsBulk-with-scheduling": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "multipart/form-data": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "text/plain": {
-          leadIds: string[]
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminSequencesEnrollmentsBulkUnenroll: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          enrollmentIds: string[]
-        }
-        "multipart/form-data": {
-          enrollmentIds: string[]
-        }
-        "text/plain": {
-          enrollmentIds: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminSequencesStep-executionsPending": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1AdminSequencesStep-executionsByExecutionIdStatus": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        executionId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          status: "sent" | "failed" | "skipped"
-          errorMessage?: string
-          /** Format: uuid */
-          emailId?: string
-        }
-        "multipart/form-data": {
-          status: "sent" | "failed" | "skipped"
-          errorMessage?: string
-          /** Format: uuid */
-          emailId?: string
-        }
-        "text/plain": {
-          status: "sent" | "failed" | "skipped"
-          errorMessage?: string
-          /** Format: uuid */
-          emailId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1SequencesByIdNodesByNodeIdGenerated-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1SequencesByIdNodesByNodeIdGenerated-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdNodesByNodeIdGenerate-emails": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          mode: "template" | "ai" | "manual"
-          aiPrompt?: string
-          aiModel?: string
-          templateSubject?: string
-          templateBody?: string
-          templateBodyHtml?: string
-          incremental?: boolean
-        }
-        "multipart/form-data": {
-          mode: "template" | "ai" | "manual"
-          aiPrompt?: string
-          aiModel?: string
-          templateSubject?: string
-          templateBody?: string
-          templateBodyHtml?: string
-          incremental?: boolean
-        }
-        "text/plain": {
-          mode: "template" | "ai" | "manual"
-          aiPrompt?: string
-          aiModel?: string
-          templateSubject?: string
-          templateBody?: string
-          templateBodyHtml?: string
-          incremental?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-        emailId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-        emailId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-        emailId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-        }
-        "multipart/form-data": {
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-        }
-        "text/plain": {
-          subject?: string
-          bodyText?: string
-          bodyHtml?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailIdRegenerate": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-        emailId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1SequencesByIdNodesByNodeIdGeneration-progress": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesByIdNodesByNodeIdStats: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        nodeId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1SequencesByIdWorkflow-enrollments": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdWorkflow-enrollments": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          leadId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdWorkflow-enrollmentsBulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          customerGroupId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          customerGroupId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          customerGroupId: string
-          /** Format: uuid */
-          userEmailAccountId: string
-          /** Format: uuid */
-          enrolledBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1SequencesByIdWorkflow-enrollmentsByEnrollmentIdExecute": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        enrollmentId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logsSearch": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-        entityType?: string
-        action?: string
-        search?: string
-        workspaceIds?: string
-        userIds?: string
-        startDate?: string
-        endDate?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logsRecent": {
-    parameters: {
-      query?: {
-        limit?: string
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logsEntityByEntityTypeByEntityId": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        entityType: string
-        entityId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logsUserByUserId": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        userId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logsById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Activity-logs": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Activity-logs": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          userId?: string | null
-          entityType: string
-          /** Format: uuid */
-          entityId: string
-          action: string
-          details?: unknown
-          ipAddress?: string | null
-          userAgent?: string | null
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          userId?: string | null
-          entityType: string
-          /** Format: uuid */
-          entityId: string
-          action: string
-          details?: unknown
-          ipAddress?: string | null
-          userAgent?: string | null
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          userId?: string | null
-          entityType: string
-          /** Format: uuid */
-          entityId: string
-          action: string
-          details?: unknown
-          ipAddress?: string | null
-          userAgent?: string | null
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminLead-importUpload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          sheetName?: string
-          customerGroupId?: string
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          sheetName?: string
-          customerGroupId?: string
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          sheetName?: string
-          customerGroupId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminLead-importSheet-names": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminLead-importPreview": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          sheetName?: string
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          sheetName?: string
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          sheetName?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminOpenai-api-keysByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminOpenai-api-keys": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceId: string
-          name: string
-          apiKey: string
-          orderIndex?: number
-        }
-        "multipart/form-data": {
-          workspaceId: string
-          name: string
-          apiKey: string
-          orderIndex?: number
-        }
-        "text/plain": {
-          workspaceId: string
-          name: string
-          apiKey: string
-          orderIndex?: number
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1AdminOpenai-api-keysById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceId: string
-          name?: string
-          apiKey?: string
-          orderIndex?: number
-          isActive?: boolean
-        }
-        "multipart/form-data": {
-          workspaceId: string
-          name?: string
-          apiKey?: string
-          orderIndex?: number
-          isActive?: boolean
-        }
-        "text/plain": {
-          workspaceId: string
-          name?: string
-          apiKey?: string
-          orderIndex?: number
-          isActive?: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1AdminOpenai-api-keysById": {
-    parameters: {
-      query: {
-        workspaceId: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminOpenai-api-keysReorder": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceId: string
-          keyOrder: {
-            id: string
-            orderIndex: number
-          }[]
-        }
-        "multipart/form-data": {
-          workspaceId: string
-          keyOrder: {
-            id: string
-            orderIndex: number
-          }[]
-        }
-        "text/plain": {
-          workspaceId: string
-          keyOrder: {
-            id: string
-            orderIndex: number
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminWeb-extractionLead-discoveryAnalyze": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          websiteUrl: string
-          workspaceId: string
-        }
-        "multipart/form-data": {
-          websiteUrl: string
-          workspaceId: string
-        }
-        "text/plain": {
-          websiteUrl: string
-          workspaceId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminWeb-extractionAnalyze": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          websiteUrl: string
-          workspaceId: string
-          searchCriteria?: string[]
-        }
-        "multipart/form-data": {
-          websiteUrl: string
-          workspaceId: string
-          searchCriteria?: string[]
-        }
-        "text/plain": {
-          websiteUrl: string
-          workspaceId: string
-          searchCriteria?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1AdminWeb-extractionUpload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          searchCriteria?: string | string[]
-          config?: {
-            maxConcurrent?: number
-            timeoutSeconds?: number
-            gptTimeout?: number
-            crawlDepth?: number
-            deduplicateByUrl?: boolean
-            expandEmailsToRows?: boolean
-            randomDelayMin?: number
-            randomDelayMax?: number
-          }
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          searchCriteria?: string | string[]
-          config?: {
-            maxConcurrent?: number
-            timeoutSeconds?: number
-            gptTimeout?: number
-            crawlDepth?: number
-            deduplicateByUrl?: boolean
-            expandEmailsToRows?: boolean
-            randomDelayMin?: number
-            randomDelayMax?: number
-          }
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          workspaceId: string
-          searchCriteria?: string | string[]
-          config?: {
-            maxConcurrent?: number
-            timeoutSeconds?: number
-            gptTimeout?: number
-            crawlDepth?: number
-            deduplicateByUrl?: boolean
-            expandEmailsToRows?: boolean
-            randomDelayMin?: number
-            randomDelayMax?: number
-          }
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminWeb-extractionResultsByJobId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        jobId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminWeb-extractionResultsByJobIdJson": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        jobId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1AdminWeb-extractionCleanupByJobId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        jobId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1Websets: {
-    parameters: {
-      query: {
-        workspaceId: string
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                title?: (string | null) | null
-                query: string
-                criterias?: (string[] | null) | null
-                targetValidatedRows?: (number | null) | null
-                createdAt: string
-                updatedAt: string
-                workspaceName?: (string | null) | null
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                title?: (string | null) | null
-                query: string
-                criterias?: (string[] | null) | null
-                targetValidatedRows?: (number | null) | null
-                createdAt: string
-                updatedAt: string
-                workspaceName?: (string | null) | null
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              data: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                workspaceId: string
-                title?: (string | null) | null
-                query: string
-                criterias?: (string[] | null) | null
-                targetValidatedRows?: (number | null) | null
-                createdAt: string
-                updatedAt: string
-                workspaceName?: (string | null) | null
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1Websets: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          title?: string
-          query: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          title?: string
-          query: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          title?: string
-          query: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  getApiV1WebsetsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  putApiV1WebsetsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          title?: string
-          query?: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-        "multipart/form-data": {
-          title?: string
-          query?: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-        "text/plain": {
-          title?: string
-          query?: string
-          criterias?: string[]
-          targetValidatedRows?: number
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              workspaceId: string
-              title?: (string | null) | null
-              query: string
-              criterias?: (string[] | null) | null
-              targetValidatedRows?: (number | null) | null
-              createdAt: string
-              updatedAt: string
-              workspaceName?: (string | null) | null
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  deleteApiV1WebsetsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  getApiV1WebsetsByIdRows: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rows: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                websetId: string
-                data: {
-                  [key: string]: unknown
-                }
-                criteriaAnswers?: (boolean[] | null) | null
-                createdAt: string
-                updatedAt: string
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rows: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                websetId: string
-                data: {
-                  [key: string]: unknown
-                }
-                criteriaAnswers?: (boolean[] | null) | null
-                createdAt: string
-                updatedAt: string
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rows: {
-                /** Format: uuid */
-                id: string
-                /** Format: uuid */
-                websetId: string
-                data: {
-                  [key: string]: unknown
-                }
-                criteriaAnswers?: (boolean[] | null) | null
-                createdAt: string
-                updatedAt: string
-              }[]
-              total: number
-              limit: number
-              offset: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1WebsetsByIdRows: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          data: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-        "multipart/form-data": {
-          data: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-        "text/plain": {
-          data: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  putApiV1WebsetsByIdRowsByRowId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        rowId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          data?: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-        "multipart/form-data": {
-          data?: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-        "text/plain": {
-          data?: {
-            [key: string]: unknown
-          }
-          criteriaAnswers?: boolean[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              websetId: string
-              data: {
-                [key: string]: unknown
-              }
-              criteriaAnswers?: (boolean[] | null) | null
-              createdAt: string
-              updatedAt: string
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  deleteApiV1WebsetsByIdRowsByRowId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        rowId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1WebsetsByIdRun: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              websetId: string
-              iterationCount: number
-              targetValidatedRows: number | null
-              currentValidatedRows: number
-              rowsWithoutValidation: number
-              targetSatisfied: boolean
-              totalCompaniesSearched: number
-              totalRowsAdded: number
-              totalRowsValidated: number
-              totalValidationErrors: number
-              status: string
-              message: string
-              success: boolean
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              websetId: string
-              iterationCount: number
-              targetValidatedRows: number | null
-              currentValidatedRows: number
-              rowsWithoutValidation: number
-              targetSatisfied: boolean
-              totalCompaniesSearched: number
-              totalRowsAdded: number
-              totalRowsValidated: number
-              totalValidationErrors: number
-              status: string
-              message: string
-              success: boolean
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              websetId: string
-              iterationCount: number
-              targetValidatedRows: number | null
-              currentValidatedRows: number
-              rowsWithoutValidation: number
-              targetSatisfied: boolean
-              totalCompaniesSearched: number
-              totalRowsAdded: number
-              totalRowsValidated: number
-              totalValidationErrors: number
-              status: string
-              message: string
-              success: boolean
-            }
-            timestamp: string
-          }
-        }
-      }
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1WebsetsCriteria: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          query: string
-        }
-        "multipart/form-data": {
-          query: string
-        }
-        "text/plain": {
-          query: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rewrittenQuery: string
-              validationCriteria: string[]
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rewrittenQuery: string
-              validationCriteria: string[]
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              rewrittenQuery: string
-              validationCriteria: string[]
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchUpload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchSearch": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "getApiV1AdminGemini-searchStores": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "deleteApiV1AdminGemini-searchFilesByFileId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        fileId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchEstimate-cost": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-        "multipart/form-data": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-        "text/plain": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchDriveImport-url": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "deleteApiV1AdminGemini-searchStoresAll": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1BigquerySearch: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-        "multipart/form-data": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-        "text/plain": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1BigqueryAdd-to-group": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: (string | null) | null
-            firstName?: (string | null) | null
-            lastName?: (string | null) | null
-            companyName?: (string | null) | null
-            phone?: (string | null) | null
-            country?: (string | null) | null
-            city?: (string | null) | null
-            industry?: (string | null) | null
-            webAddress?: (string | null) | null
-          }[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: (string | null) | null
-            firstName?: (string | null) | null
-            lastName?: (string | null) | null
-            companyName?: (string | null) | null
-            phone?: (string | null) | null
-            country?: (string | null) | null
-            city?: (string | null) | null
-            industry?: (string | null) | null
-            webAddress?: (string | null) | null
-          }[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: (string | null) | null
-            firstName?: (string | null) | null
-            lastName?: (string | null) | null
-            companyName?: (string | null) | null
-            phone?: (string | null) | null
-            country?: (string | null) | null
-            city?: (string | null) | null
-            industry?: (string | null) | null
-            webAddress?: (string | null) | null
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1BigqueryHealth: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Lead-enrichmentEnrich": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-        "multipart/form-data": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-        "text/plain": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Lead-enrichmentHealth": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1NylasAuth: {
-    parameters: {
-      query?: {
-        state?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1NylasCallback: {
-    parameters: {
-      query: {
-        code: string
-        workspaceId?: string
-        state?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1NylasGrantByGrantId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        grantId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1NylasGrantByAccountId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        accountId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1NylasSetup-connector": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1NylasWebhook: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Lead-discoveryHealth": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Lead-discoverySearch": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Search query or website URL */
-          query: string
-          /** Format: uuid */
-          workspaceId: string
-          sessionId?: string
-          locale?: string
-        }
-        "multipart/form-data": {
-          /** @description Search query or website URL */
-          query: string
-          /** Format: uuid */
-          workspaceId: string
-          sessionId?: string
-          locale?: string
-        }
-        "text/plain": {
-          /** @description Search query or website URL */
-          query: string
-          /** Format: uuid */
-          workspaceId: string
-          sessionId?: string
-          locale?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Lead-discoverySelect": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Session ID from the search request */
-          sessionId: string
-          /** @description ID of the selected recommendation */
-          selectedRecommendationId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-        "multipart/form-data": {
-          /** @description Session ID from the search request */
-          sessionId: string
-          /** @description ID of the selected recommendation */
-          selectedRecommendationId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-        "text/plain": {
-          /** @description Session ID from the search request */
-          sessionId: string
-          /** @description ID of the selected recommendation */
-          selectedRecommendationId: string
-          /** Format: uuid */
-          workspaceId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Lead-discoverySessionBySessionId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        sessionId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Lead-discoverySessions": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Lead-discoveryScore": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          leads: {
-            id: string
-            company_name?: (string | null) | null
-            email?: (string | null) | null
-            phone?: (string | null) | null
-            web_address?: (string | null) | null
-            country?: (string | null) | null
-            industry?: (string | null) | null
-            sub_industry?: (string | null) | null
-            employee?: (string | null) | null
-            revenue?: (string | null) | null
-            title?: (string | null) | null
-          }[]
-          websiteAnalysis: {
-            companyName?: string
-            description?: string
-            industry?: string
-            products?: string[]
-            targetMarkets?: string[]
-            businessModel?: string
-          }
-          selectedTarget: {
-            country: string
-            industry: string
-          }
-        }
-        "multipart/form-data": {
-          leads: {
-            id: string
-            company_name?: (string | null) | null
-            email?: (string | null) | null
-            phone?: (string | null) | null
-            web_address?: (string | null) | null
-            country?: (string | null) | null
-            industry?: (string | null) | null
-            sub_industry?: (string | null) | null
-            employee?: (string | null) | null
-            revenue?: (string | null) | null
-            title?: (string | null) | null
-          }[]
-          websiteAnalysis: {
-            companyName?: string
-            description?: string
-            industry?: string
-            products?: string[]
-            targetMarkets?: string[]
-            businessModel?: string
-          }
-          selectedTarget: {
-            country: string
-            industry: string
-          }
-        }
-        "text/plain": {
-          leads: {
-            id: string
-            company_name?: (string | null) | null
-            email?: (string | null) | null
-            phone?: (string | null) | null
-            web_address?: (string | null) | null
-            country?: (string | null) | null
-            industry?: (string | null) | null
-            sub_industry?: (string | null) | null
-            employee?: (string | null) | null
-            revenue?: (string | null) | null
-            title?: (string | null) | null
-          }[]
-          websiteAnalysis: {
-            companyName?: string
-            description?: string
-            industry?: string
-            products?: string[]
-            targetMarkets?: string[]
-            businessModel?: string
-          }
-          selectedTarget: {
-            country: string
-            industry: string
-          }
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Sales-strategiesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "putApiV1Sales-strategiesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          industry?:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target?: "b2b" | "b2c" | "both"
-          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience?: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "multipart/form-data": {
-          industry?:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target?: "b2b" | "b2c" | "both"
-          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience?: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "text/plain": {
-          industry?:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target?: "b2b" | "b2c" | "both"
-          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience?: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Sales-strategiesById": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Sales-strategies": {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Sales-strategies": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "multipart/form-data": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "text/plain": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Workspace-sales-strategiesByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Workspace-sales-strategiesByWorkspaceId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "multipart/form-data": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-        "text/plain": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-          rindaSolution?: unknown
-          strategies?: unknown
-          proofPoints?: unknown
-          emailBenchmarks?: unknown
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-        salesStrategyId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-        }
-        "multipart/form-data": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-        }
-        "text/plain": {
-          industry:
-            | "manufacturing"
-            | "it_saas"
-            | "beauty"
-            | "food"
-            | "fashion"
-            | "electronics"
-            | "healthcare"
-            | "guitar"
-          target: "b2b" | "b2c" | "both"
-          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
-          experience: "none" | "some" | "experienced"
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        workspaceId: string
-        linkId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
+export type $defs = Record<string, never>;
+export interface operations {
+    getIndex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getHealthApiHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiSse-testStream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiSse-testInfo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiWebhookInbound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiWebhookInbound-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiWebhookSendgrid-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiAiEmail-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    fromEmail: string;
+                    subject?: string;
+                    content: string;
+                };
+                "multipart/form-data": {
+                    fromEmail: string;
+                    subject?: string;
+                    content: string;
+                };
+                "text/plain": {
+                    fromEmail: string;
+                    subject?: string;
+                    content: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiAiGenerate-followup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    threadId: string;
+                    workspaceId?: string;
+                };
+                "multipart/form-data": {
+                    threadId: string;
+                    workspaceId?: string;
+                };
+                "text/plain": {
+                    threadId: string;
+                    workspaceId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiAiGenerate-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    threadId: string;
+                    workspaceId?: string;
+                    language?: string;
+                };
+                "multipart/form-data": {
+                    threadId: string;
+                    workspaceId?: string;
+                    language?: string;
+                };
+                "text/plain": {
+                    threadId: string;
+                    workspaceId?: string;
+                    language?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiChatbotAsk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    question: string;
+                    workspaceId: string;
+                    userId?: string;
+                    conversationId?: string;
+                    locale?: string;
+                    messages?: {
+                        role: "user" | "assistant";
+                        content: string;
+                        timestamp?: unknown;
+                        metadata?: unknown;
+                        attachment?: {
+                            fileName: string;
+                            fileSize: number;
+                            fileType: string;
+                            content?: string;
+                        };
+                    }[];
+                };
+                "multipart/form-data": {
+                    question: string;
+                    workspaceId: string;
+                    userId?: string;
+                    conversationId?: string;
+                    locale?: string;
+                    messages?: {
+                        role: "user" | "assistant";
+                        content: string;
+                        timestamp?: unknown;
+                        metadata?: unknown;
+                        attachment?: {
+                            fileName: string;
+                            fileSize: number;
+                            fileType: string;
+                            content?: string;
+                        };
+                    }[];
+                };
+                "text/plain": {
+                    question: string;
+                    workspaceId: string;
+                    userId?: string;
+                    conversationId?: string;
+                    locale?: string;
+                    messages?: {
+                        role: "user" | "assistant";
+                        content: string;
+                        timestamp?: unknown;
+                        metadata?: unknown;
+                        attachment?: {
+                            fileName: string;
+                            fileSize: number;
+                            fileType: string;
+                            content?: string;
+                        };
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiChatbotHistoryByConversationId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiChatbotConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    conversationId: string;
+                    confirmed: boolean;
+                };
+                "multipart/form-data": {
+                    conversationId: string;
+                    confirmed: boolean;
+                };
+                "text/plain": {
+                    conversationId: string;
+                    confirmed: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiChatbotConversations: {
+        parameters: {
+            query: {
+                workspaceId: string;
+                userId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiChatbotConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId: string;
+                    userId: string;
+                    title?: string;
+                };
+                "multipart/form-data": {
+                    workspaceId: string;
+                    userId: string;
+                    title?: string;
+                };
+                "text/plain": {
+                    workspaceId: string;
+                    userId: string;
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiChatbotConversationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiChatbotConversationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+                "multipart/form-data": {
+                    title: string;
+                };
+                "text/plain": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiChatbotConversationsByIdGenerate-title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    firstMessage: string;
+                    locale?: string;
+                };
+                "multipart/form-data": {
+                    firstMessage: string;
+                    locale?: string;
+                };
+                "text/plain": {
+                    firstMessage: string;
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+                "text/plain": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthSignup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+                "multipart/form-data": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+                "text/plain": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AuthRegister-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    username?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    email: string;
+                    username?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "text/plain": {
+                    /** Format: email */
+                    email: string;
+                    username?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthRefresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AuthAdmin-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1AuthProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    employeeId?: string;
+                    profilePicture?: (string | null) | null;
+                };
+                "multipart/form-data": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    employeeId?: string;
+                    profilePicture?: (string | null) | null;
+                };
+                "text/plain": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    employeeId?: string;
+                    profilePicture?: (string | null) | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AuthGoogle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthGoogleCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    state?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "multipart/form-data": {
+                    code: string;
+                    state?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "text/plain": {
+                    code: string;
+                    state?: string;
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthGoogleVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idToken: string;
+                };
+                "multipart/form-data": {
+                    idToken: string;
+                };
+                "text/plain": {
+                    idToken: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AuthAccountDeletion-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1AuthAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Departments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Departments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DepartmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1DepartmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    code: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1DepartmentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersSearch: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                role?: string;
+                isActive?: string;
+                search?: string;
+                departmentIds?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1UsersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    userRole: "user" | "admin";
+                    isActive: boolean;
+                    departmentId?: (string | null) | null;
+                    employeeId?: (string | null) | null;
+                };
+                "multipart/form-data": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    userRole: "user" | "admin";
+                    isActive: boolean;
+                    departmentId?: (string | null) | null;
+                    employeeId?: (string | null) | null;
+                };
+                "text/plain": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    userRole: "user" | "admin";
+                    isActive: boolean;
+                    departmentId?: (string | null) | null;
+                    employeeId?: (string | null) | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1UsersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Users: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Users: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    passwordHash?: string;
+                    userRole?: "user" | "admin";
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    departmentId: string;
+                    employeeId: string;
+                };
+                "multipart/form-data": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    passwordHash?: string;
+                    userRole?: "user" | "admin";
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    departmentId: string;
+                    employeeId: string;
+                };
+                "text/plain": {
+                    username: string;
+                    /** Format: email */
+                    email: string;
+                    passwordHash?: string;
+                    userRole?: "user" | "admin";
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    departmentId: string;
+                    employeeId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersEmailByEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersAssignable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersCheckByEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                email: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1UsersByIdPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    passwordHash: string;
+                };
+                "multipart/form-data": {
+                    passwordHash: string;
+                };
+                "text/plain": {
+                    passwordHash: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1UsersByIdLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UsersByIdOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1UsersByIdOnboardingStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    step: number;
+                };
+                "multipart/form-data": {
+                    step: number;
+                };
+                "text/plain": {
+                    step: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1UsersByIdOnboardingComplete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1UsersByIdOnboardingSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "multipart/form-data": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+                "text/plain": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminUsersBulkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userIds: string[];
+                    isActive: boolean;
+                };
+                "multipart/form-data": {
+                    userIds: string[];
+                    isActive: boolean;
+                };
+                "text/plain": {
+                    userIds: string[];
+                    isActive: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminUsersBulkRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userIds: string[];
+                    userRole: "user" | "admin";
+                };
+                "multipart/form-data": {
+                    userIds: string[];
+                    userRole: "user" | "admin";
+                };
+                "text/plain": {
+                    userIds: string[];
+                    userRole: "user" | "admin";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminUsersBulkDepartment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userIds: string[];
+                    /** Format: uuid */
+                    departmentId: string;
+                };
+                "multipart/form-data": {
+                    userIds: string[];
+                    /** Format: uuid */
+                    departmentId: string;
+                };
+                "text/plain": {
+                    userIds: string[];
+                    /** Format: uuid */
+                    departmentId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminUsersByIdIam-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminUsersByIdSync-iam-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action: "promote" | "demote";
+                };
+                "multipart/form-data": {
+                    action: "promote" | "demote";
+                };
+                "text/plain": {
+                    action: "promote" | "demote";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1WorkspacesSearch: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                isActive?: string;
+                search?: string;
+                ownerIds?: string;
+                userId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1WorkspacesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1WorkspacesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1WorkspacesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Workspaces: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Workspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: string;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1WorkspacesByIdEnrich: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    websiteUrl: string;
+                };
+                "multipart/form-data": {
+                    websiteUrl: string;
+                };
+                "text/plain": {
+                    websiteUrl: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1WorkspacesByIdEnrichAndStrategize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    websiteUrl: string;
+                };
+                "multipart/form-data": {
+                    websiteUrl: string;
+                };
+                "text/plain": {
+                    websiteUrl: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1WorkspacesOwnerByOwnerId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ownerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1WorkspacesByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1WorkspacesByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId: string;
+                    role?: "owner" | "admin" | "member" | "viewer";
+                    /** Format: uuid */
+                    invitedBy?: string;
+                    status?: "active" | "inactive" | "removed";
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId: string;
+                    role?: "owner" | "admin" | "member" | "viewer";
+                    /** Format: uuid */
+                    invitedBy?: string;
+                    status?: "active" | "inactive" | "removed";
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId: string;
+                    role?: "owner" | "admin" | "member" | "viewer";
+                    /** Format: uuid */
+                    invitedBy?: string;
+                    status?: "active" | "inactive" | "removed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1WorkspacesByIdMembersByMemberIdRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    role: "owner" | "admin" | "member" | "viewer";
+                };
+                "multipart/form-data": {
+                    role: "owner" | "admin" | "member" | "viewer";
+                };
+                "text/plain": {
+                    role: "owner" | "admin" | "member" | "viewer";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1WorkspacesByIdMembersByMemberIdStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status: "active" | "inactive" | "removed";
+                };
+                "multipart/form-data": {
+                    status: "active" | "inactive" | "removed";
+                };
+                "text/plain": {
+                    status: "active" | "inactive" | "removed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1WorkspacesByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1WorkspacesUserByUserId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminWorkspacesBulkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceIds: string[];
+                    isActive: boolean;
+                };
+                "multipart/form-data": {
+                    workspaceIds: string[];
+                    isActive: boolean;
+                };
+                "text/plain": {
+                    workspaceIds: string[];
+                    isActive: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminWorkspacesByIdTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    newOwnerId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    newOwnerId: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    newOwnerId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AdminWorkspacesByIdProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AdminWorkspacesByIdProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AdminWorkspacesByIdProductsByProductId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminWorkspacesByIdProductsByProductId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    category?: string;
+                    features?: string[];
+                    priceRange?: string;
+                    targetAudience?: string;
+                    imageUrl?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1AdminWorkspacesByIdProductsByProductId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminWorkspacesByIdWith-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsSearch": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                isDynamic?: string;
+                search?: string;
+                workspaceIds?: string;
+                createdByIds?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Customer-groupsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Customer-groupsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groups": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Customer-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    csvData?: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    csvData?: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    criteria?: unknown;
+                    isDynamic?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    csvData?: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsWorkspaceByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsByIdMembers": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Customer-groupsByIdMembers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Customer-groupsByIdMembersByLeadId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsLeadByLeadIdGroups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Customer-groupsByIdMembers-with-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1AdminCustomer-groupsBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    groupIds: string[];
+                };
+                "multipart/form-data": {
+                    groupIds: string[];
+                };
+                "text/plain": {
+                    groupIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminCustomer-groupsByIdMembersBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+                "text/plain": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    addedBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1AdminCustomer-groupsByIdMembersBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                };
+                "text/plain": {
+                    leadIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardStats: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardTrendsLeads: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardTrendsEmails: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardTrendsOpens: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1DashboardNotificationsLead-discovery": {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardNotificationsCampaigns: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardNotificationsReplies: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+                workspaceId?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsSearch": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                status?: string;
+                isVerified?: string;
+                isDefault?: string;
+                search?: string;
+                userIds?: string;
+                workspaceIds?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Email-accountsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified: boolean;
+                    isDefault: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified: boolean;
+                    isDefault: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "text/plain": {
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified: boolean;
+                    isDefault: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Email-accountsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accounts": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Email-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified?: boolean;
+                    isDefault?: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status?: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified?: boolean;
+                    isDefault?: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status?: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: email */
+                    emailAddress: string;
+                    displayName?: string;
+                    apiKey: string;
+                    sendgridVerifiedSenderId?: string;
+                    isVerified?: boolean;
+                    isDefault?: boolean;
+                    dailyLimit?: number;
+                    monthlyLimit?: number;
+                    status?: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsWorkspaceByWorkspaceIdActive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsWorkspaceByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-accountsUserByUserId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdSet-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdSent-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdReset-daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdReset-monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdError": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    errorMessage: string;
+                };
+                "multipart/form-data": {
+                    errorMessage: string;
+                };
+                "text/plain": {
+                    errorMessage: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-accountsByIdSync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1AdminEmail-accountsBulkStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    accountIds: string[];
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "multipart/form-data": {
+                    accountIds: string[];
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+                "text/plain": {
+                    accountIds: string[];
+                    status: "active" | "inactive" | "error" | "rate_limited" | "suspended";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-signatures": {
+        parameters: {
+            query?: {
+                includeInactive?: boolean;
+                userId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Email-signatures": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                userId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    signatureHtml: string;
+                    signatureText: string;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    signatureHtml: string;
+                    signatureText: string;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    signatureHtml: string;
+                    signatureText: string;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-signaturesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Email-signaturesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    signatureHtml?: string;
+                    signatureText?: string;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    signatureHtml?: string;
+                    signatureText?: string;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    name?: string;
+                    signatureHtml?: string;
+                    signatureText?: string;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Email-signaturesById": {
+        parameters: {
+            query?: {
+                hardDelete?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-signaturesDefault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-signaturesByIdSet-default": {
+        parameters: {
+            query?: {
+                userId?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesSearch": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                isShared?: string;
+                search?: string;
+                category?: string;
+                workspaceIds?: string;
+                createdByIds?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesWorkspaceByWorkspaceIdCategories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesWorkspaceByWorkspaceIdShared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Email-templatesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared: boolean;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared: boolean;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Email-templatesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templates": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Email-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string | null;
+                    subject: string;
+                    bodyText?: string | null;
+                    bodyHtml?: string | null;
+                    variables?: unknown;
+                    category?: string | null;
+                    isShared?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesWorkspaceByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-templatesWorkspaceByWorkspaceIdCategoryByCategory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                category: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1AdminEmail-templatesBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    templateIds: string[];
+                };
+                "multipart/form-data": {
+                    templateIds: string[];
+                };
+                "text/plain": {
+                    templateIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1AdminEmail-templatesBulkCategory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    templateIds: string[];
+                    category: string;
+                };
+                "multipart/form-data": {
+                    templateIds: string[];
+                    category: string;
+                };
+                "text/plain": {
+                    templateIds: string[];
+                    category: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1AdminEmail-templatesBulkShared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    templateIds: string[];
+                    isShared: boolean;
+                };
+                "multipart/form-data": {
+                    templateIds: string[];
+                    isShared: boolean;
+                };
+                "text/plain": {
+                    templateIds: string[];
+                    isShared: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1EmailsSend-nylas-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    grantId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    grantId: string;
+                };
+                "text/plain": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    grantId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsStatsToday-sent": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsStatsAvg-open-rate": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsStatsRecent-sequences": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsStatsScheduled-followups": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsStatsBuyer-response-rate": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1EmailsSend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    fromName?: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    /** Format: email */
+                    replyTo?: string;
+                    inReplyTo?: string;
+                    references?: string[] | string;
+                    scheduledAt?: string;
+                    includeSignature?: boolean | string;
+                    /** @default Files */
+                    files?: string[];
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    fromName?: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    /** Format: email */
+                    replyTo?: string;
+                    inReplyTo?: string;
+                    references?: string[] | string;
+                    scheduledAt?: string;
+                    includeSignature?: boolean | string;
+                    /** @default Files */
+                    files?: string[];
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                };
+                "text/plain": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    fromName?: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    /** Format: email */
+                    replyTo?: string;
+                    inReplyTo?: string;
+                    references?: string[] | string;
+                    scheduledAt?: string;
+                    includeSignature?: boolean | string;
+                    /** @default Files */
+                    files?: string[];
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1EmailsSearch: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                status?: string;
+                direction?: string;
+                workspaceId?: string;
+                leadId?: string;
+                sequenceId?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1EmailsSearch-replied": {
+        parameters: {
+            query: {
+                workspaceId: string;
+                limit?: string;
+                offset?: string;
+                status?: string;
+                leadId?: string;
+                sequenceId?: string;
+                search?: string;
+                intent?: string;
+                isImportant?: string;
+                isUnread?: string;
+                sentiment?: string;
+                category?: string;
+                priority?: string;
+                dateFrom?: string;
+                dateTo?: string;
+                direction?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1EmailsThreadByThreadId: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1EmailsByIdAttachmentsByAttachmentIndex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                attachmentIndex: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1EmailsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1EmailsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Emails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    direction: "outbound" | "inbound";
+                    /** Format: email */
+                    fromEmail: string;
+                    /** Format: email */
+                    toEmail: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    status?: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                    scheduledAt?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    direction: "outbound" | "inbound";
+                    /** Format: email */
+                    fromEmail: string;
+                    /** Format: email */
+                    toEmail: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    status?: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                    scheduledAt?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    leadId?: string;
+                    /** Format: uuid */
+                    sequenceId?: string;
+                    /** Format: uuid */
+                    stepId?: string;
+                    direction: "outbound" | "inbound";
+                    /** Format: email */
+                    fromEmail: string;
+                    /** Format: email */
+                    toEmail: string;
+                    ccEmails?: string[];
+                    bccEmails?: string[];
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                    status?: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                    scheduledAt?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1EmailsByIdIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+                "multipart/form-data": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+                "text/plain": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1EmailsByIdStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+                "multipart/form-data": {
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+                "text/plain": {
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1EmailsByIdEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1EmailsWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminEmailsBulkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    emailIds: string[];
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+                "multipart/form-data": {
+                    emailIds: string[];
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+                "text/plain": {
+                    emailIds: string[];
+                    status: "draft" | "scheduled" | "queued" | "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced" | "failed" | "spam" | "unsubscribed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1AdminEmailsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    emailIds: string[];
+                };
+                "multipart/form-data": {
+                    emailIds: string[];
+                };
+                "text/plain": {
+                    emailIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bulk-emailsSend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                    emails: {
+                        /** Format: email */
+                        fromEmail: string;
+                        /** Format: email */
+                        toEmail: string;
+                        subject: string;
+                        bodyText?: string;
+                        bodyHtml?: string;
+                        fromName?: string;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                    emails: {
+                        /** Format: email */
+                        fromEmail: string;
+                        /** Format: email */
+                        toEmail: string;
+                        subject: string;
+                        bodyText?: string;
+                        bodyHtml?: string;
+                        fromName?: string;
+                    }[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    userId: string;
+                    emails: {
+                        /** Format: email */
+                        fromEmail: string;
+                        /** Format: email */
+                        toEmail: string;
+                        subject: string;
+                        bodyText?: string;
+                        bodyHtml?: string;
+                        fromName?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-repliesStatsBy-intent": {
+        parameters: {
+            query: {
+                workspaceId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-replies": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                workspaceId?: string;
+                isRead?: string;
+                sentiment?: string;
+                search?: string;
+                emailAccountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Email-repliesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Email-repliesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-repliesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+                "multipart/form-data": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+                "text/plain": {
+                    intent?: "meeting_request" | "question" | "objection" | "out_of_office" | "not_interested" | "positive_interest" | "neutral" | null;
+                    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-repliesByIdRead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-repliesByIdUnread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Email-repliesBulkRead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    replyIds: string[];
+                };
+                "multipart/form-data": {
+                    replyIds: string[];
+                };
+                "text/plain": {
+                    replyIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Email-repliesBulkUnread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    replyIds: string[];
+                };
+                "multipart/form-data": {
+                    replyIds: string[];
+                };
+                "text/plain": {
+                    replyIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Email-repliesByIdReclassify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Email-repliesBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    replyIds: string[];
+                };
+                "multipart/form-data": {
+                    replyIds: string[];
+                };
+                "text/plain": {
+                    replyIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-repliesThreadByThreadIdImportant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    isImportant: boolean;
+                };
+                "multipart/form-data": {
+                    isImportant: boolean;
+                };
+                "text/plain": {
+                    isImportant: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1Email-repliesThreadByThreadIdRead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1LeadsSearch: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                leadStatus?: string;
+                businessType?: string;
+                country?: string;
+                city?: string;
+                search?: string;
+                searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category";
+                workspaceIds?: string;
+                createdByIds?: string;
+                customerGroupId?: string;
+                filters?: string;
+                sortField?: string;
+                sortOrder?: "asc" | "desc";
+                createdAfter?: string;
+                createdBefore?: string;
+                updatedAfter?: string;
+                updatedBefore?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                workspaceName: string;
+                                companyName?: (string | null) | null;
+                                foundCompanyName?: (string | null) | null;
+                                contactName?: (string | null) | null;
+                                websiteUrl?: (string | null) | null;
+                                finalUrl?: (string | null) | null;
+                                httpStatus?: (number | null) | null;
+                                nameUrlMatch?: (boolean | null) | null;
+                                businessType?: (string | null) | null;
+                                isBusinessTypeMatched?: (boolean | null) | null;
+                                description?: (string | null) | null;
+                                address?: (string | null) | null;
+                                country?: (string | null) | null;
+                                city?: (string | null) | null;
+                                state?: (string | null) | null;
+                                foundedYear?: (number | null) | null;
+                                employeeCount?: (string | null) | null;
+                                leadSource?: (string | null) | null;
+                                leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed" | null;
+                                leadScore?: (number | null) | null;
+                                notes?: (string | null) | null;
+                                crawlTimeSeconds?: (string | null) | null;
+                                gptTimeSeconds?: (string | null) | null;
+                                collectedAt?: (string | null) | null;
+                                errorMessage?: (string | null) | null;
+                                createdBy?: (string | null) | null;
+                                createdByUsername?: (string | null) | null;
+                                createdByEmail?: (string | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                lastContactedAt?: (string | null) | null;
+                                contacts: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    contactType: "phone" | "email" | "fax" | "other";
+                                    contactValue: string;
+                                    contactName?: (string | null) | null;
+                                    label?: (string | null) | null;
+                                    isPrimary: boolean;
+                                    isVerified: boolean;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                socialMedia: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                                    url: string;
+                                    username?: (string | null) | null;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                products: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    productName: string;
+                                    description?: (string | null) | null;
+                                    createdAt: string;
+                                }[];
+                                businessSectors: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    sectorName: string;
+                                    createdAt: string;
+                                }[];
+                                productCategories: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    categoryName: string;
+                                    createdAt: string;
+                                }[];
+                                industryTypes: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    industryName: string;
+                                    createdAt: string;
+                                }[];
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                workspaceName: string;
+                                companyName?: (string | null) | null;
+                                foundCompanyName?: (string | null) | null;
+                                contactName?: (string | null) | null;
+                                websiteUrl?: (string | null) | null;
+                                finalUrl?: (string | null) | null;
+                                httpStatus?: (number | null) | null;
+                                nameUrlMatch?: (boolean | null) | null;
+                                businessType?: (string | null) | null;
+                                isBusinessTypeMatched?: (boolean | null) | null;
+                                description?: (string | null) | null;
+                                address?: (string | null) | null;
+                                country?: (string | null) | null;
+                                city?: (string | null) | null;
+                                state?: (string | null) | null;
+                                foundedYear?: (number | null) | null;
+                                employeeCount?: (string | null) | null;
+                                leadSource?: (string | null) | null;
+                                leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed" | null;
+                                leadScore?: (number | null) | null;
+                                notes?: (string | null) | null;
+                                crawlTimeSeconds?: (string | null) | null;
+                                gptTimeSeconds?: (string | null) | null;
+                                collectedAt?: (string | null) | null;
+                                errorMessage?: (string | null) | null;
+                                createdBy?: (string | null) | null;
+                                createdByUsername?: (string | null) | null;
+                                createdByEmail?: (string | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                lastContactedAt?: (string | null) | null;
+                                contacts: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    contactType: "phone" | "email" | "fax" | "other";
+                                    contactValue: string;
+                                    contactName?: (string | null) | null;
+                                    label?: (string | null) | null;
+                                    isPrimary: boolean;
+                                    isVerified: boolean;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                socialMedia: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                                    url: string;
+                                    username?: (string | null) | null;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                products: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    productName: string;
+                                    description?: (string | null) | null;
+                                    createdAt: string;
+                                }[];
+                                businessSectors: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    sectorName: string;
+                                    createdAt: string;
+                                }[];
+                                productCategories: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    categoryName: string;
+                                    createdAt: string;
+                                }[];
+                                industryTypes: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    industryName: string;
+                                    createdAt: string;
+                                }[];
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                workspaceName: string;
+                                companyName?: (string | null) | null;
+                                foundCompanyName?: (string | null) | null;
+                                contactName?: (string | null) | null;
+                                websiteUrl?: (string | null) | null;
+                                finalUrl?: (string | null) | null;
+                                httpStatus?: (number | null) | null;
+                                nameUrlMatch?: (boolean | null) | null;
+                                businessType?: (string | null) | null;
+                                isBusinessTypeMatched?: (boolean | null) | null;
+                                description?: (string | null) | null;
+                                address?: (string | null) | null;
+                                country?: (string | null) | null;
+                                city?: (string | null) | null;
+                                state?: (string | null) | null;
+                                foundedYear?: (number | null) | null;
+                                employeeCount?: (string | null) | null;
+                                leadSource?: (string | null) | null;
+                                leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed" | null;
+                                leadScore?: (number | null) | null;
+                                notes?: (string | null) | null;
+                                crawlTimeSeconds?: (string | null) | null;
+                                gptTimeSeconds?: (string | null) | null;
+                                collectedAt?: (string | null) | null;
+                                errorMessage?: (string | null) | null;
+                                createdBy?: (string | null) | null;
+                                createdByUsername?: (string | null) | null;
+                                createdByEmail?: (string | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                lastContactedAt?: (string | null) | null;
+                                contacts: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    contactType: "phone" | "email" | "fax" | "other";
+                                    contactValue: string;
+                                    contactName?: (string | null) | null;
+                                    label?: (string | null) | null;
+                                    isPrimary: boolean;
+                                    isVerified: boolean;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                socialMedia: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                                    url: string;
+                                    username?: (string | null) | null;
+                                    createdAt: string;
+                                    updatedAt: string;
+                                }[];
+                                products: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    productName: string;
+                                    description?: (string | null) | null;
+                                    createdAt: string;
+                                }[];
+                                businessSectors: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    sectorName: string;
+                                    createdAt: string;
+                                }[];
+                                productCategories: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    categoryName: string;
+                                    createdAt: string;
+                                }[];
+                                industryTypes: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    leadId: string;
+                                    industryName: string;
+                                    createdAt: string;
+                                }[];
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1LeadsStatusByStatus: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                status: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1LeadsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1LeadsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+                "multipart/form-data": {
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+                "text/plain": {
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1LeadsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Leads: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Leads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    crawlTimeSeconds?: string;
+                    gptTimeSeconds?: string;
+                    collectedAt?: string;
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    crawlTimeSeconds?: string;
+                    gptTimeSeconds?: string;
+                    collectedAt?: string;
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    companyName?: string;
+                    foundCompanyName?: string;
+                    contactName?: string;
+                    websiteUrl?: string;
+                    finalUrl?: string;
+                    httpStatus?: number;
+                    nameUrlMatch?: boolean;
+                    businessType?: string;
+                    isBusinessTypeMatched?: boolean;
+                    description?: string;
+                    address?: string;
+                    country?: string;
+                    city?: string;
+                    state?: string;
+                    foundedYear?: number;
+                    employeeCount?: string;
+                    leadSource?: string;
+                    leadStatus?: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                    leadScore?: number;
+                    notes?: string;
+                    crawlTimeSeconds?: string;
+                    gptTimeSeconds?: string;
+                    collectedAt?: string;
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    contacts?: {
+                        contactType: "phone" | "email" | "fax" | "other";
+                        contactValue: string;
+                        label?: string | null;
+                        isPrimary?: boolean;
+                    }[];
+                    socialMedia?: {
+                        platform: "facebook" | "instagram" | "twitter" | "linkedin";
+                        url: string;
+                        username?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1LeadsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    leads: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        contactName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    leads: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        contactName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    leads: {
+                        companyName: string;
+                        foundCompanyName?: string;
+                        contactName?: string;
+                        businessType?: string;
+                        websiteUrl?: string;
+                        description?: string;
+                        employeeCount?: string;
+                        foundedYear?: number;
+                        country?: string;
+                        city?: string;
+                        state?: string;
+                        address?: string;
+                        leadSource?: string;
+                        leadStatus?: string;
+                        leadScore?: number;
+                        notes?: string;
+                        primaryEmail?: string;
+                        primaryPhone?: string;
+                        secondaryEmail?: string;
+                        secondaryPhone?: string;
+                    }[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        leads: {
+                            /** Format: uuid */
+                            id: string;
+                            companyName: string | null;
+                            foundCompanyName: string | null;
+                            businessType: string | null;
+                            websiteUrl: string | null;
+                            description: string | null;
+                            country: string | null;
+                            city: string | null;
+                            leadStatus: string | null;
+                            leadScore: number | null;
+                            createdBy: string | null;
+                            createdAt: Record<string, never> | string | number;
+                        }[];
+                        duplicateEmails: {
+                            email: string;
+                            existingLeadId: string;
+                            companyName: string;
+                            existingCompanyName?: string;
+                            customerGroupIds?: string[];
+                            type: "database" | "csv";
+                        }[];
+                        stats: {
+                            total: number;
+                            created: number;
+                            skipped: number;
+                        };
+                    };
+                    "multipart/form-data": {
+                        leads: {
+                            /** Format: uuid */
+                            id: string;
+                            companyName: string | null;
+                            foundCompanyName: string | null;
+                            businessType: string | null;
+                            websiteUrl: string | null;
+                            description: string | null;
+                            country: string | null;
+                            city: string | null;
+                            leadStatus: string | null;
+                            leadScore: number | null;
+                            createdBy: string | null;
+                            createdAt: Record<string, never> | string | number;
+                        }[];
+                        duplicateEmails: {
+                            email: string;
+                            existingLeadId: string;
+                            companyName: string;
+                            existingCompanyName?: string;
+                            customerGroupIds?: string[];
+                            type: "database" | "csv";
+                        }[];
+                        stats: {
+                            total: number;
+                            created: number;
+                            skipped: number;
+                        };
+                    };
+                    "text/plain": {
+                        leads: {
+                            /** Format: uuid */
+                            id: string;
+                            companyName: string | null;
+                            foundCompanyName: string | null;
+                            businessType: string | null;
+                            websiteUrl: string | null;
+                            description: string | null;
+                            country: string | null;
+                            city: string | null;
+                            leadStatus: string | null;
+                            leadScore: number | null;
+                            createdBy: string | null;
+                            createdAt: Record<string, never> | string | number;
+                        }[];
+                        duplicateEmails: {
+                            email: string;
+                            existingLeadId: string;
+                            companyName: string;
+                            existingCompanyName?: string;
+                            customerGroupIds?: string[];
+                            type: "database" | "csv";
+                        }[];
+                        stats: {
+                            total: number;
+                            created: number;
+                            skipped: number;
+                        };
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        error: string;
+                        message: string;
+                    };
+                    "text/plain": {
+                        error: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1LeadsWorkspaceByWorkspaceId: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminLeadsBulkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                    leadStatus: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                    leadStatus: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                };
+                "text/plain": {
+                    leadIds: string[];
+                    leadStatus: "new" | "contacted" | "qualified" | "unqualified" | "converted" | "lost" | "unsubscribed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1AdminLeadsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                };
+                "text/plain": {
+                    leadIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1AdminLeadsBulkBusiness-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                    businessType: string;
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                    businessType: string;
+                };
+                "text/plain": {
+                    leadIds: string[];
+                    businessType: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AdminLeadsByIdContacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminLeadsByIdSocial-media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AdminLeadsByIdProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminLeadsByIdBusiness-sectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminLeadsByIdProduct-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminLeadsByIdIndustry-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AdminLeadsDownloadCsv: {
+        parameters: {
+            query?: {
+                leadStatus?: string;
+                businessType?: string;
+                country?: string;
+                city?: string;
+                search?: string;
+                searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category";
+                workspaceIds?: string;
+                customerGroupId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AdminLeadsDownloadCsvSelected: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                };
+                "text/plain": {
+                    leadIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminLeadsFilter-optionsByField": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                customerGroupId?: string;
+            };
+            header?: never;
+            path: {
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        data: {
+                            field: string;
+                            options: {
+                                value: string;
+                                label: string;
+                                count: number;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        data: {
+                            field: string;
+                            options: {
+                                value: string;
+                                label: string;
+                                count: number;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        data: {
+                            field: string;
+                            options: {
+                                value: string;
+                                label: string;
+                                count: number;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1SequencesSearch: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                status?: string;
+                search?: string;
+                workspaceIds?: string;
+                createdByIds?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1SequencesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1SequencesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Sequences: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Sequences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    memo?: string;
+                    status?: "draft" | "ready" | "active" | "paused" | "archived";
+                    workflowData?: string;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1SequencesByIdCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    selectedLeadIds?: string[];
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1SequencesByIdGenerate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userEmailAccountId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userEmailAccountId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userEmailAccountId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdActivate-step-based": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesWorkspaceByWorkspaceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesByIdSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1SequencesByIdSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+                "multipart/form-data": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+                "text/plain": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1SequencesByIdStepsByStepId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                stepId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+                "multipart/form-data": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+                "text/plain": {
+                    stepOrder: number | string;
+                    delayDays: number | string;
+                    scheduledHour?: number | string;
+                    scheduledMinute?: number | string;
+                    timezone?: string;
+                    emailSubject: string;
+                    emailBodyText?: string;
+                    emailBodyHtml?: string;
+                    /** Format: uuid */
+                    emailTemplateId?: string;
+                    generationSource?: "template" | "ai" | "manual";
+                    /** @default Files */
+                    files?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1SequencesByIdStepsByStepId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                stepId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesByIdEnrollments: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                companyName?: string;
+                opened?: string;
+                clicked?: string;
+                replied?: string;
+                delivered?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1SequencesByIdEnrollments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                    status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                    status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                    status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1SequencesByIdEnrollmentsByEnrollmentIdStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                enrollmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+                "multipart/form-data": {
+                    status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+                "text/plain": {
+                    status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                enrollmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesStatsOverall: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesByIdMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesEnrollmentsByEnrollmentIdMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enrollmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesGenerate-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    country: string;
+                    prompt: string;
+                    model?: string;
+                    temperature?: number;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    country: string;
+                    prompt: string;
+                    model?: string;
+                    temperature?: number;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    country: string;
+                    prompt: string;
+                    model?: string;
+                    temperature?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminSequencesBulkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sequenceIds: string[];
+                    status: "draft" | "active" | "paused" | "archived";
+                };
+                "multipart/form-data": {
+                    sequenceIds: string[];
+                    status: "draft" | "active" | "paused" | "archived";
+                };
+                "text/plain": {
+                    sequenceIds: string[];
+                    status: "draft" | "active" | "paused" | "archived";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1AdminSequencesBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sequenceIds: string[];
+                };
+                "multipart/form-data": {
+                    sequenceIds: string[];
+                };
+                "text/plain": {
+                    sequenceIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AdminSequencesByIdEnrollmentsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "text/plain": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminSequencesByIdEnrollmentsBulk-with-scheduling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "multipart/form-data": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "text/plain": {
+                    leadIds: string[];
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1AdminSequencesEnrollmentsBulkUnenroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enrollmentIds: string[];
+                };
+                "multipart/form-data": {
+                    enrollmentIds: string[];
+                };
+                "text/plain": {
+                    enrollmentIds: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminSequencesStep-executionsPending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1AdminSequencesStep-executionsByExecutionIdStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                executionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status: "sent" | "failed" | "skipped";
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    emailId?: string;
+                };
+                "multipart/form-data": {
+                    status: "sent" | "failed" | "skipped";
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    emailId?: string;
+                };
+                "text/plain": {
+                    status: "sent" | "failed" | "skipped";
+                    errorMessage?: string;
+                    /** Format: uuid */
+                    emailId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1SequencesByIdNodesByNodeIdGenerated-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1SequencesByIdNodesByNodeIdGenerated-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdNodesByNodeIdGenerate-emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    mode: "template" | "ai" | "manual";
+                    aiPrompt?: string;
+                    aiModel?: string;
+                    templateSubject?: string;
+                    templateBody?: string;
+                    templateBodyHtml?: string;
+                    incremental?: boolean;
+                };
+                "multipart/form-data": {
+                    mode: "template" | "ai" | "manual";
+                    aiPrompt?: string;
+                    aiModel?: string;
+                    templateSubject?: string;
+                    templateBody?: string;
+                    templateBodyHtml?: string;
+                    incremental?: boolean;
+                };
+                "text/plain": {
+                    mode: "template" | "ai" | "manual";
+                    aiPrompt?: string;
+                    aiModel?: string;
+                    templateSubject?: string;
+                    templateBody?: string;
+                    templateBodyHtml?: string;
+                    incremental?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                };
+                "multipart/form-data": {
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                };
+                "text/plain": {
+                    subject?: string;
+                    bodyText?: string;
+                    bodyHtml?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdNodesByNodeIdGenerated-emailsByEmailIdRegenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1SequencesByIdNodesByNodeIdGeneration-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1SequencesByIdNodesByNodeIdStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1SequencesByIdWorkflow-enrollments": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdWorkflow-enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    leadId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdWorkflow-enrollmentsBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    customerGroupId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    customerGroupId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    customerGroupId: string;
+                    /** Format: uuid */
+                    userEmailAccountId: string;
+                    /** Format: uuid */
+                    enrolledBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1SequencesByIdWorkflow-enrollmentsByEnrollmentIdExecute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                enrollmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logsSearch": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                entityType?: string;
+                action?: string;
+                search?: string;
+                workspaceIds?: string;
+                userIds?: string;
+                startDate?: string;
+                endDate?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logsRecent": {
+        parameters: {
+            query?: {
+                limit?: string;
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logsEntityByEntityTypeByEntityId": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                entityType: string;
+                entityId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logsUserByUserId": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Activity-logs": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Activity-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    userId?: string | null;
+                    entityType: string;
+                    /** Format: uuid */
+                    entityId: string;
+                    action: string;
+                    details?: unknown;
+                    ipAddress?: string | null;
+                    userAgent?: string | null;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    userId?: string | null;
+                    entityType: string;
+                    /** Format: uuid */
+                    entityId: string;
+                    action: string;
+                    details?: unknown;
+                    ipAddress?: string | null;
+                    userAgent?: string | null;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    userId?: string | null;
+                    entityType: string;
+                    /** Format: uuid */
+                    entityId: string;
+                    action: string;
+                    details?: unknown;
+                    ipAddress?: string | null;
+                    userAgent?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminLead-importUpload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    sheetName?: string;
+                    customerGroupId?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    sheetName?: string;
+                    customerGroupId?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    sheetName?: string;
+                    customerGroupId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminLead-importSheet-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminLead-importPreview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheetName?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheetName?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    sheetName?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminOpenai-api-keysByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminOpenai-api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId: string;
+                    name: string;
+                    apiKey: string;
+                    orderIndex?: number;
+                };
+                "multipart/form-data": {
+                    workspaceId: string;
+                    name: string;
+                    apiKey: string;
+                    orderIndex?: number;
+                };
+                "text/plain": {
+                    workspaceId: string;
+                    name: string;
+                    apiKey: string;
+                    orderIndex?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1AdminOpenai-api-keysById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId: string;
+                    name?: string;
+                    apiKey?: string;
+                    orderIndex?: number;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    workspaceId: string;
+                    name?: string;
+                    apiKey?: string;
+                    orderIndex?: number;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    workspaceId: string;
+                    name?: string;
+                    apiKey?: string;
+                    orderIndex?: number;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1AdminOpenai-api-keysById": {
+        parameters: {
+            query: {
+                workspaceId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminOpenai-api-keysReorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId: string;
+                    keyOrder: {
+                        id: string;
+                        orderIndex: number;
+                    }[];
+                };
+                "multipart/form-data": {
+                    workspaceId: string;
+                    keyOrder: {
+                        id: string;
+                        orderIndex: number;
+                    }[];
+                };
+                "text/plain": {
+                    workspaceId: string;
+                    keyOrder: {
+                        id: string;
+                        orderIndex: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminWeb-extractionLead-discoveryAnalyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+                "multipart/form-data": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+                "text/plain": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminWeb-extractionAnalyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                    searchCriteria?: string[];
+                };
+                "multipart/form-data": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                    searchCriteria?: string[];
+                };
+                "text/plain": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                    searchCriteria?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1AdminWeb-extractionUpload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    searchCriteria?: string | string[];
+                    config?: {
+                        maxConcurrent?: number;
+                        timeoutSeconds?: number;
+                        gptTimeout?: number;
+                        crawlDepth?: number;
+                        deduplicateByUrl?: boolean;
+                        expandEmailsToRows?: boolean;
+                        randomDelayMin?: number;
+                        randomDelayMax?: number;
+                    };
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    searchCriteria?: string | string[];
+                    config?: {
+                        maxConcurrent?: number;
+                        timeoutSeconds?: number;
+                        gptTimeout?: number;
+                        crawlDepth?: number;
+                        deduplicateByUrl?: boolean;
+                        expandEmailsToRows?: boolean;
+                        randomDelayMin?: number;
+                        randomDelayMax?: number;
+                    };
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    workspaceId: string;
+                    searchCriteria?: string | string[];
+                    config?: {
+                        maxConcurrent?: number;
+                        timeoutSeconds?: number;
+                        gptTimeout?: number;
+                        crawlDepth?: number;
+                        deduplicateByUrl?: boolean;
+                        expandEmailsToRows?: boolean;
+                        randomDelayMin?: number;
+                        randomDelayMax?: number;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminWeb-extractionResultsByJobId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminWeb-extractionResultsByJobIdJson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1AdminWeb-extractionCleanupByJobId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Websets: {
+        parameters: {
+            query: {
+                workspaceId: string;
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                title?: (string | null) | null;
+                                query: string;
+                                criterias?: (string[] | null) | null;
+                                targetValidatedRows?: (number | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                workspaceName?: (string | null) | null;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                title?: (string | null) | null;
+                                query: string;
+                                criterias?: (string[] | null) | null;
+                                targetValidatedRows?: (number | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                workspaceName?: (string | null) | null;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                workspaceId: string;
+                                title?: (string | null) | null;
+                                query: string;
+                                criterias?: (string[] | null) | null;
+                                targetValidatedRows?: (number | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                                workspaceName?: (string | null) | null;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1Websets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    title?: string;
+                    query: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    title?: string;
+                    query: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    title?: string;
+                    query: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1WebsetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    putApiV1WebsetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    query?: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+                "multipart/form-data": {
+                    title?: string;
+                    query?: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+                "text/plain": {
+                    title?: string;
+                    query?: string;
+                    criterias?: string[];
+                    targetValidatedRows?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            workspaceId: string;
+                            title?: (string | null) | null;
+                            query: string;
+                            criterias?: (string[] | null) | null;
+                            targetValidatedRows?: (number | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            workspaceName?: (string | null) | null;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1WebsetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    getApiV1WebsetsByIdRows: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rows: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                websetId: string;
+                                data: {
+                                    [key: string]: unknown;
+                                };
+                                criteriaAnswers?: (boolean[] | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rows: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                websetId: string;
+                                data: {
+                                    [key: string]: unknown;
+                                };
+                                criteriaAnswers?: (boolean[] | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rows: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                websetId: string;
+                                data: {
+                                    [key: string]: unknown;
+                                };
+                                criteriaAnswers?: (boolean[] | null) | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            }[];
+                            total: number;
+                            limit: number;
+                            offset: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1WebsetsByIdRows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    data: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+                "multipart/form-data": {
+                    data: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+                "text/plain": {
+                    data: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    putApiV1WebsetsByIdRowsByRowId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                rowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+                "multipart/form-data": {
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+                "text/plain": {
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                    criteriaAnswers?: boolean[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            websetId: string;
+                            data: {
+                                [key: string]: unknown;
+                            };
+                            criteriaAnswers?: (boolean[] | null) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteApiV1WebsetsByIdRowsByRowId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                rowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1WebsetsByIdRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            websetId: string;
+                            iterationCount: number;
+                            targetValidatedRows: number | null;
+                            currentValidatedRows: number;
+                            rowsWithoutValidation: number;
+                            targetSatisfied: boolean;
+                            totalCompaniesSearched: number;
+                            totalRowsAdded: number;
+                            totalRowsValidated: number;
+                            totalValidationErrors: number;
+                            status: string;
+                            message: string;
+                            success: boolean;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            websetId: string;
+                            iterationCount: number;
+                            targetValidatedRows: number | null;
+                            currentValidatedRows: number;
+                            rowsWithoutValidation: number;
+                            targetSatisfied: boolean;
+                            totalCompaniesSearched: number;
+                            totalRowsAdded: number;
+                            totalRowsValidated: number;
+                            totalValidationErrors: number;
+                            status: string;
+                            message: string;
+                            success: boolean;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            websetId: string;
+                            iterationCount: number;
+                            targetValidatedRows: number | null;
+                            currentValidatedRows: number;
+                            rowsWithoutValidation: number;
+                            targetSatisfied: boolean;
+                            totalCompaniesSearched: number;
+                            totalRowsAdded: number;
+                            totalRowsValidated: number;
+                            totalValidationErrors: number;
+                            status: string;
+                            message: string;
+                            success: boolean;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1WebsetsCriteria: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    query: string;
+                };
+                "multipart/form-data": {
+                    query: string;
+                };
+                "text/plain": {
+                    query: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rewrittenQuery: string;
+                            validationCriteria: string[];
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rewrittenQuery: string;
+                            validationCriteria: string[];
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            rewrittenQuery: string;
+                            validationCriteria: string[];
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "postApiV1AdminGemini-searchUpload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    storeName?: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    storeName?: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    storeName?: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "postApiV1AdminGemini-searchSearch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    query: string;
+                    filters?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        dbVersion?: string;
+                    };
+                    limit?: number;
+                    storeNames?: string[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    query: string;
+                    filters?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        dbVersion?: string;
+                    };
+                    limit?: number;
+                    storeNames?: string[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    query: string;
+                    filters?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        dbVersion?: string;
+                    };
+                    limit?: number;
+                    storeNames?: string[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            query: string;
+                            results: {
+                                [key: string]: string | number | boolean | null | Record<string, never>;
+                            }[];
+                            totalResults: number;
+                            explanation?: string;
+                            processingTime: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            query: string;
+                            results: {
+                                [key: string]: string | number | boolean | null | Record<string, never>;
+                            }[];
+                            totalResults: number;
+                            explanation?: string;
+                            processingTime: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            query: string;
+                            results: {
+                                [key: string]: string | number | boolean | null | Record<string, never>;
+                            }[];
+                            totalResults: number;
+                            explanation?: string;
+                            processingTime: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "getApiV1AdminGemini-searchStores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            stores: {
+                                name: string;
+                                displayName: string;
+                                fileCount: number;
+                                createTime: string;
+                                updateTime: string;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            stores: {
+                                name: string;
+                                displayName: string;
+                                fileCount: number;
+                                createTime: string;
+                                updateTime: string;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            stores: {
+                                name: string;
+                                displayName: string;
+                                fileCount: number;
+                                createTime: string;
+                                updateTime: string;
+                            }[];
+                            total: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "deleteApiV1AdminGemini-searchFilesByFileId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: null;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "postApiV1AdminGemini-searchEstimate-cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    csvSizeBytes: number;
+                    expectedSearchesPerMonth: number;
+                };
+                "multipart/form-data": {
+                    csvSizeBytes: number;
+                    expectedSearchesPerMonth: number;
+                };
+                "text/plain": {
+                    csvSizeBytes: number;
+                    expectedSearchesPerMonth: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            indexingCost: number;
+                            monthlyCost: number;
+                            costPerSearch: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            indexingCost: number;
+                            monthlyCost: number;
+                            costPerSearch: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            indexingCost: number;
+                            monthlyCost: number;
+                            costPerSearch: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "postApiV1AdminGemini-searchDriveImport-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    driveUrl: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    driveUrl: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    driveUrl: string;
+                    metadata?: {
+                        country?: string;
+                        region?: string;
+                        vertical?: string;
+                        source?: string;
+                        dbVersion?: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            storeName: string;
+                            fileName: string;
+                            fileId: string;
+                            totalRows: number;
+                            message: string;
+                            metadata?: {
+                                [key: string]: string;
+                            };
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    "deleteApiV1AdminGemini-searchStoresAll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            deletedCount: number;
+                        };
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            deletedCount: number;
+                        };
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        code: string;
+                        message: string;
+                        data: {
+                            success: boolean;
+                            deletedCount: number;
+                        };
+                        timestamp: string;
+                    };
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        code: string;
+                        message: string;
+                        timestamp: string;
+                    };
+                };
+            };
+        };
+    };
+    postApiV1BigquerySearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Natural language search query */
+                    query: string;
+                    dataDictionary: {
+                        tableName: string;
+                        columns: string[];
+                        industries: string[];
+                        countries: string[];
+                        employeeRanges: string[];
+                        revenueRanges: string[];
+                    };
+                };
+                "multipart/form-data": {
+                    /** @description Natural language search query */
+                    query: string;
+                    dataDictionary: {
+                        tableName: string;
+                        columns: string[];
+                        industries: string[];
+                        countries: string[];
+                        employeeRanges: string[];
+                        revenueRanges: string[];
+                    };
+                };
+                "text/plain": {
+                    /** @description Natural language search query */
+                    query: string;
+                    dataDictionary: {
+                        tableName: string;
+                        columns: string[];
+                        industries: string[];
+                        countries: string[];
+                        employeeRanges: string[];
+                        revenueRanges: string[];
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1BigqueryAdd-to-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    groupId: string;
+                    leads: {
+                        email?: (string | null) | null;
+                        firstName?: (string | null) | null;
+                        lastName?: (string | null) | null;
+                        companyName?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        country?: (string | null) | null;
+                        city?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        webAddress?: (string | null) | null;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    groupId: string;
+                    leads: {
+                        email?: (string | null) | null;
+                        firstName?: (string | null) | null;
+                        lastName?: (string | null) | null;
+                        companyName?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        country?: (string | null) | null;
+                        city?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        webAddress?: (string | null) | null;
+                    }[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    groupId: string;
+                    leads: {
+                        email?: (string | null) | null;
+                        firstName?: (string | null) | null;
+                        lastName?: (string | null) | null;
+                        companyName?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        country?: (string | null) | null;
+                        city?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        webAddress?: (string | null) | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BigqueryHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-enrichmentEnrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Company website URL */
+                    webAddress: string;
+                    /** @description Company name */
+                    companyName: string;
+                };
+                "multipart/form-data": {
+                    /** @description Company website URL */
+                    webAddress: string;
+                    /** @description Company name */
+                    companyName: string;
+                };
+                "text/plain": {
+                    /** @description Company website URL */
+                    webAddress: string;
+                    /** @description Company name */
+                    companyName: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Lead-enrichmentHealth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NylasAuth: {
+        parameters: {
+            query?: {
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NylasCallback: {
+        parameters: {
+            query: {
+                code: string;
+                workspaceId?: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NylasGrantByGrantId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1NylasGrantByAccountId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1NylasSetup-connector": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NylasApiV1NylasWebhooks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1NylasApiV1NylasWebhooks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Lead-discoveryHealth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoverySearch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Search query or website URL */
+                    query: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    sessionId?: string;
+                    locale?: string;
+                };
+                "multipart/form-data": {
+                    /** @description Search query or website URL */
+                    query: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    sessionId?: string;
+                    locale?: string;
+                };
+                "text/plain": {
+                    /** @description Search query or website URL */
+                    query: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                    sessionId?: string;
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoverySelect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description ID of the selected recommendation */
+                    selectedRecommendationId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "multipart/form-data": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description ID of the selected recommendation */
+                    selectedRecommendationId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "text/plain": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description ID of the selected recommendation */
+                    selectedRecommendationId: string;
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoveryClarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description Map of field names to selected values */
+                    answers: {
+                        [key: string]: string;
+                    };
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "multipart/form-data": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description Map of field names to selected values */
+                    answers: {
+                        [key: string]: string;
+                    };
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+                "text/plain": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /** @description Map of field names to selected values */
+                    answers: {
+                        [key: string]: string;
+                    };
+                    /** Format: uuid */
+                    workspaceId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Lead-discoverySessionBySessionId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoveryMore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /**
+                     * @description Starting offset (default: 100)
+                     * @default 100
+                     */
+                    offset?: number;
+                    /**
+                     * @description Number of results to fetch (default: 100)
+                     * @default 100
+                     */
+                    limit?: number;
+                };
+                "multipart/form-data": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /**
+                     * @description Starting offset (default: 100)
+                     * @default 100
+                     */
+                    offset?: number;
+                    /**
+                     * @description Number of results to fetch (default: 100)
+                     * @default 100
+                     */
+                    limit?: number;
+                };
+                "text/plain": {
+                    /** @description Session ID from the search request */
+                    sessionId: string;
+                    /**
+                     * @description Starting offset (default: 100)
+                     * @default 100
+                     */
+                    offset?: number;
+                    /**
+                     * @description Number of results to fetch (default: 100)
+                     * @default 100
+                     */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Lead-discoverySessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoveryScore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    leads: {
+                        id: string;
+                        company_name?: (string | null) | null;
+                        email?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        web_address?: (string | null) | null;
+                        country?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        sub_industry?: (string | null) | null;
+                        employee?: (string | null) | null;
+                        revenue?: (string | null) | null;
+                        title?: (string | null) | null;
+                    }[];
+                    websiteAnalysis: {
+                        companyName?: string;
+                        description?: string;
+                        industry?: string;
+                        products?: string[];
+                        targetMarkets?: string[];
+                        businessModel?: string;
+                    };
+                    selectedTarget: {
+                        country: string;
+                        industry: string;
+                    };
+                    userQuery?: string;
+                };
+                "multipart/form-data": {
+                    leads: {
+                        id: string;
+                        company_name?: (string | null) | null;
+                        email?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        web_address?: (string | null) | null;
+                        country?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        sub_industry?: (string | null) | null;
+                        employee?: (string | null) | null;
+                        revenue?: (string | null) | null;
+                        title?: (string | null) | null;
+                    }[];
+                    websiteAnalysis: {
+                        companyName?: string;
+                        description?: string;
+                        industry?: string;
+                        products?: string[];
+                        targetMarkets?: string[];
+                        businessModel?: string;
+                    };
+                    selectedTarget: {
+                        country: string;
+                        industry: string;
+                    };
+                    userQuery?: string;
+                };
+                "text/plain": {
+                    leads: {
+                        id: string;
+                        company_name?: (string | null) | null;
+                        email?: (string | null) | null;
+                        phone?: (string | null) | null;
+                        web_address?: (string | null) | null;
+                        country?: (string | null) | null;
+                        industry?: (string | null) | null;
+                        sub_industry?: (string | null) | null;
+                        employee?: (string | null) | null;
+                        revenue?: (string | null) | null;
+                        title?: (string | null) | null;
+                    }[];
+                    websiteAnalysis: {
+                        companyName?: string;
+                        description?: string;
+                        industry?: string;
+                        products?: string[];
+                        targetMarkets?: string[];
+                        businessModel?: string;
+                    };
+                    selectedTarget: {
+                        country: string;
+                        industry: string;
+                    };
+                    userQuery?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoveryEnrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+                "multipart/form-data": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+                "text/plain": {
+                    websiteUrl: string;
+                    workspaceId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Sales-strategiesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Sales-strategiesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry?: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target?: "b2b" | "b2c" | "both";
+                    country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience?: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "multipart/form-data": {
+                    industry?: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target?: "b2b" | "b2c" | "both";
+                    country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience?: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "text/plain": {
+                    industry?: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target?: "b2b" | "b2c" | "both";
+                    country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience?: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Sales-strategiesById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Sales-strategies": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Sales-strategies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "multipart/form-data": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "text/plain": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Workspace-sales-strategiesByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1Workspace-sales-strategiesByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    websiteUrl?: string;
+                };
+                "multipart/form-data": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    websiteUrl?: string;
+                };
+                "text/plain": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    websiteUrl?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Workspace-sales-strategiesByWorkspaceId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "multipart/form-data": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+                "text/plain": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                    rindaSolution?: unknown;
+                    strategies?: unknown;
+                    proofPoints?: unknown;
+                    emailBenchmarks?: unknown;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                salesStrategyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                };
+                "multipart/form-data": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                };
+                "text/plain": {
+                    industry: "manufacturing" | "it_saas" | "beauty" | "food" | "fashion" | "electronics" | "healthcare" | "guitar";
+                    target: "b2b" | "b2c" | "both";
+                    country: "jp" | "us" | "sea" | "eu" | "cn" | "ae";
+                    experience: "none" | "some" | "experienced";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                linkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingProducts: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                tier?: string;
+                isActive?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1BillingProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    tier: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+                "multipart/form-data": {
+                    name: string;
+                    description?: string;
+                    tier: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+                "text/plain": {
+                    name: string;
+                    description?: string;
+                    tier: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingProductsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1BillingProductsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    tier?: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    tier?: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    tier?: "trial" | "basic" | "pro" | "enterprise";
+                    features?: string[];
+                    isActive?: boolean;
+                    displayOrder?: number;
+                    externalProductId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1BillingProductsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingPlans: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                productId?: string;
+                planType?: string;
+                isActive?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1BillingPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    productId: string;
+                    name: string;
+                    description?: string;
+                    currency?: string;
+                    amount: number;
+                    planType: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    productId: string;
+                    name: string;
+                    description?: string;
+                    currency?: string;
+                    amount: number;
+                    planType: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    productId: string;
+                    name: string;
+                    description?: string;
+                    currency?: string;
+                    amount: number;
+                    planType: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingPlansById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1BillingPlansById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    currency?: string;
+                    amount?: number;
+                    planType?: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    currency?: string;
+                    amount?: number;
+                    planType?: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    currency?: string;
+                    amount?: number;
+                    planType?: "one_time" | "recurring";
+                    billingInterval?: "day" | "week" | "month" | "year";
+                    intervalCount?: number;
+                    trialDays?: number;
+                    isActive?: boolean;
+                    isDefault?: boolean;
+                    featuresOverride?: string[];
+                    externalPlanId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1BillingPlansById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingSubscriptions: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                workspaceId?: string;
+                status?: string;
+                statuses?: string;
+                tier?: string;
+                isPrimary?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1BillingSubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    customerId: string;
+                    /** Format: uuid */
+                    planId: string;
+                    isPrimary?: boolean;
+                    quantity?: number;
+                    trialDays?: number;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    customerId: string;
+                    /** Format: uuid */
+                    planId: string;
+                    isPrimary?: boolean;
+                    quantity?: number;
+                    trialDays?: number;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    /** Format: uuid */
+                    customerId: string;
+                    /** Format: uuid */
+                    planId: string;
+                    isPrimary?: boolean;
+                    quantity?: number;
+                    trialDays?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingSubscriptionsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1BillingSubscriptionsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    planId?: string;
+                    status?: "trialing" | "active" | "canceled" | "incomplete" | "incomplete_expired" | "past_due" | "unpaid" | "paused";
+                    cancelAtPeriodEnd?: boolean;
+                    quantity?: number;
+                    cancelReason?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    planId?: string;
+                    status?: "trialing" | "active" | "canceled" | "incomplete" | "incomplete_expired" | "past_due" | "unpaid" | "paused";
+                    cancelAtPeriodEnd?: boolean;
+                    quantity?: number;
+                    cancelReason?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    planId?: string;
+                    status?: "trialing" | "active" | "canceled" | "incomplete" | "incomplete_expired" | "past_due" | "unpaid" | "paused";
+                    cancelAtPeriodEnd?: boolean;
+                    quantity?: number;
+                    cancelReason?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1BillingSubscriptionsByIdCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+                "multipart/form-data": {
+                    reason?: string;
+                };
+                "text/plain": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingSubscriptionsByIdHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingCustomers: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1BillingCustomersById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamPolicies: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                workspaceId?: string;
+                isManaged?: string;
+                isActive?: string;
+                search?: string;
+                filterForWorkspace?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId?: string;
+                    name: string;
+                    description?: string;
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    statements?: {
+                        sid?: string;
+                        effect: "allow" | "deny";
+                        resources: string[];
+                        actions: string[];
+                        conditions?: Record<string, never>;
+                        priority?: number;
+                    }[];
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId?: string;
+                    name: string;
+                    description?: string;
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    statements?: {
+                        sid?: string;
+                        effect: "allow" | "deny";
+                        resources: string[];
+                        actions: string[];
+                        conditions?: Record<string, never>;
+                        priority?: number;
+                    }[];
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId?: string;
+                    name: string;
+                    description?: string;
+                    isActive?: boolean;
+                    /** Format: uuid */
+                    createdBy?: string;
+                    statements?: {
+                        sid?: string;
+                        effect: "allow" | "deny";
+                        resources: string[];
+                        actions: string[];
+                        conditions?: Record<string, never>;
+                        priority?: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamPoliciesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1IamPoliciesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    isActive?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamPoliciesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamPoliciesByIdStatements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamPoliciesByIdStatements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sid?: string;
+                    effect: "allow" | "deny";
+                    resources: string[];
+                    actions: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+                "multipart/form-data": {
+                    sid?: string;
+                    effect: "allow" | "deny";
+                    resources: string[];
+                    actions: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+                "text/plain": {
+                    sid?: string;
+                    effect: "allow" | "deny";
+                    resources: string[];
+                    actions: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1IamPoliciesByIdStatementsByStatementId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                statementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sid?: string;
+                    effect?: "allow" | "deny";
+                    resources?: string[];
+                    actions?: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+                "multipart/form-data": {
+                    sid?: string;
+                    effect?: "allow" | "deny";
+                    resources?: string[];
+                    actions?: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+                "text/plain": {
+                    sid?: string;
+                    effect?: "allow" | "deny";
+                    resources?: string[];
+                    actions?: string[];
+                    conditions?: Record<string, never>;
+                    priority?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamPoliciesByIdStatementsByStatementId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                statementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamRoles: {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                workspaceId?: string;
+                isSystem?: string;
+                isDefault?: string;
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    workspaceId: string;
+                    name: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                    /** Format: uuid */
+                    createdBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamRolesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putApiV1IamRolesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    isDefault?: boolean;
+                    priority?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamRolesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamRolesByIdPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamRolesByIdPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamRolesByIdPoliciesByPolicyId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamRolesByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamMembersByMemberIdRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamMembersByMemberIdRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    roleId: string;
+                    /** Format: uuid */
+                    grantedBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    roleId: string;
+                    /** Format: uuid */
+                    grantedBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    roleId: string;
+                    /** Format: uuid */
+                    grantedBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamMembersByMemberIdRolesByRoleId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+                roleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1IamMembersByMemberIdPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1IamMembersByMemberIdPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    policyId: string;
+                    /** Format: uuid */
+                    attachedBy?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1IamMembersByMemberIdPoliciesByPolicyId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1IamTier-boundaries": {
+        parameters: {
+            query?: {
+                tier?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1IamTier-boundariesByTier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tier: "trial" | "basic" | "pro" | "enterprise";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "putApiV1IamTier-boundariesByTier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tier: "trial" | "basic" | "pro" | "enterprise";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    policyId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    policyId: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    policyId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1IamAudit-logs": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                workspaceId?: string;
+                userId?: string;
+                action?: string;
+                targetType?: string;
+                startDate?: string;
+                endDate?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1IamAudit-logsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1IamMy-permissions": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1IamCheck-permission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId: string;
+                    resource: string;
+                    action: string;
+                };
+                "multipart/form-data": {
+                    workspaceId: string;
+                    resource: string;
+                    action: string;
+                };
+                "text/plain": {
+                    workspaceId: string;
+                    resource: string;
+                    action: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1OnboardingWorkspaceByWorkspaceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdSurvey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    industry?: string;
+                    target?: string;
+                    country?: string;
+                    experience?: string;
+                    lang?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdStep1Complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdStep2Complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    selectedLeadIds: string[];
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    selectedLeadIds: string[];
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    selectedLeadIds: string[];
+                    /** Format: uuid */
+                    customerGroupId?: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdStep3Complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    sequenceId: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    sequenceId: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    sequenceId: string;
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdStep4Complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdComplete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1OnboardingWorkspaceByWorkspaceIdStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    step: number;
+                };
+                "multipart/form-data": {
+                    step: number;
+                };
+                "text/plain": {
+                    step: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1OnboardingIncomplete: {
+        parameters: {
+            query?: {
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1OnboardingStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1OnboardingWorkspaceByWorkspaceIdReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testHealth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testQueues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testQueuesTest": {
+        parameters: {
+            query?: {
+                page?: string;
+                limit?: string;
+                status?: string;
+                search?: string;
+                sortBy?: string;
+                sortOrder?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testJobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    message: string;
+                    jobName?: string;
+                    scheduleDelay?: number;
+                    processingDelay?: number;
+                    shouldFail?: boolean;
+                    priority?: number;
+                    attempts?: number;
+                    customData?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "multipart/form-data": {
+                    message: string;
+                    jobName?: string;
+                    scheduleDelay?: number;
+                    processingDelay?: number;
+                    shouldFail?: boolean;
+                    priority?: number;
+                    attempts?: number;
+                    customData?: {
+                        [key: string]: unknown;
+                    };
+                };
+                "text/plain": {
+                    message: string;
+                    jobName?: string;
+                    scheduleDelay?: number;
+                    processingDelay?: number;
+                    shouldFail?: boolean;
+                    priority?: number;
+                    attempts?: number;
+                    customData?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testJobsBulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    jobs: {
+                        message: string;
+                        jobName?: string;
+                        scheduleDelay?: number;
+                        processingDelay?: number;
+                        shouldFail?: boolean;
+                        priority?: number;
+                        customData?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+                "multipart/form-data": {
+                    jobs: {
+                        message: string;
+                        jobName?: string;
+                        scheduleDelay?: number;
+                        processingDelay?: number;
+                        shouldFail?: boolean;
+                        priority?: number;
+                        customData?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+                "text/plain": {
+                    jobs: {
+                        message: string;
+                        jobName?: string;
+                        scheduleDelay?: number;
+                        processingDelay?: number;
+                        shouldFail?: boolean;
+                        priority?: number;
+                        customData?: {
+                            [key: string]: unknown;
+                        };
+                    }[];
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testJobsByJobId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "deleteApiV1Bullmq-testJobsByJobId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testJobsByJobIdRetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testQueuesTestClean": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    grace?: number;
+                    limit?: number;
+                };
+                "multipart/form-data": {
+                    grace?: number;
+                    limit?: number;
+                };
+                "text/plain": {
+                    grace?: number;
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testQueuesTestPause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testQueuesTestResume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testQueuesTestDrain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testWorkerStart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Bullmq-testWorkerStop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testWorkerStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Bullmq-testStream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminJob-logsSearch": {
+        parameters: {
+            query?: {
+                limit?: string;
+                offset?: string;
+                queueName?: string;
+                status?: string;
+                startDate?: string;
+                endDate?: string;
+                search?: string;
+                errorCode?: string;
+                workerName?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminJob-logsStats": {
+        parameters: {
+            query?: {
+                hours?: string;
+                queueName?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminJob-logsQueues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminJob-logsError-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1AdminJob-logsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
 }

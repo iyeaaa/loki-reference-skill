@@ -328,6 +328,7 @@ export const emailsApi = {
     priority?: string
     dateFrom?: string
     dateTo?: string
+    direction?: "inbound" | "outbound" | "all" // "inbound" (replies), "outbound" (sent), "all" (both)
   }) => {
     const searchParams = new URLSearchParams()
 
@@ -374,6 +375,9 @@ export const emailsApi = {
     }
     if (params.dateTo) {
       searchParams.append("dateTo", params.dateTo)
+    }
+    if (params.direction) {
+      searchParams.append("direction", params.direction)
     }
 
     const query = searchParams.toString()

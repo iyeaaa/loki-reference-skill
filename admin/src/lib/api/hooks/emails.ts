@@ -284,6 +284,7 @@ export type RepliedEmailsParams = {
   priority?: string
   dateFrom?: string // ISO 8601 date string
   dateTo?: string // ISO 8601 date string
+  direction?: "inbound" | "outbound" | "all" // "inbound" (replies), "outbound" (sent), "all" (both)
 }
 
 export function useRepliedEmails(params: RepliedEmailsParams) {

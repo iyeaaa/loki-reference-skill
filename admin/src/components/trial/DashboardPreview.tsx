@@ -1,7 +1,10 @@
 import { motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import { shouldReduceMotion, staggerItemVariants } from "@/lib/animations"
 
 export function DashboardPreview() {
+  const { t } = useTranslation("translation")
+
   return (
     <motion.div
       className="w-full rounded-xl bg-white p-5 shadow-lg sm:p-7"
@@ -32,21 +35,21 @@ export function DashboardPreview() {
           variants={shouldReduceMotion() ? {} : staggerItemVariants}
         >
           <div className="mb-2 font-bold text-3xl text-gray-900">847</div>
-          <div className="text-gray-600 text-sm">발굴 바이어</div>
+          <div className="text-gray-600 text-sm">{t("trial.preview.discoveredBuyers")}</div>
         </motion.div>
         <motion.div
           className="rounded-lg bg-gray-100 p-5 text-center"
           variants={shouldReduceMotion() ? {} : staggerItemVariants}
         >
           <div className="mb-2 font-bold text-3xl text-gray-900">156</div>
-          <div className="text-gray-600 text-sm">연락 완료</div>
+          <div className="text-gray-600 text-sm">{t("trial.preview.contacted")}</div>
         </motion.div>
         <motion.div
           className="rounded-lg bg-blue-100 p-5 text-center"
           variants={shouldReduceMotion() ? {} : staggerItemVariants}
         >
           <div className="mb-2 font-bold text-3xl text-blue-600">12</div>
-          <div className="text-gray-600 text-sm">관심 표현</div>
+          <div className="text-gray-600 text-sm">{t("trial.preview.interested")}</div>
         </motion.div>
       </div>
 
@@ -60,9 +63,11 @@ export function DashboardPreview() {
             <div className="mr-3 flex h-7 w-7 items-center justify-center rounded bg-green-500">
               <span className="font-bold text-sm text-white">VN</span>
             </div>
-            <span className="font-medium text-base text-gray-900">베트남 바이어 답변</span>
+            <span className="font-medium text-base text-gray-900">
+              {t("trial.preview.buyerResponse")}
+            </span>
           </div>
-          <div className="text-gray-500 text-sm">2m</div>
+          <div className="text-gray-500 text-sm">{t("trial.preview.timeAgo")}</div>
         </div>
       </motion.div>
     </motion.div>

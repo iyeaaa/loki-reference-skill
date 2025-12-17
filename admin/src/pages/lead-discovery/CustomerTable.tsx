@@ -358,15 +358,22 @@ function RowIndexCell({
   rowIndex,
   isSelected,
   onToggle,
+  companyName,
 }: {
   rowIndex: number
   isSelected: boolean
   onToggle: (value: boolean) => void
+  companyName?: string
 }) {
+  const label = companyName
+    ? `${rowIndex}번 행 ${companyName} ${isSelected ? "선택됨" : "선택 안됨"}`
+    : `${rowIndex}번 행 ${isSelected ? "선택됨" : "선택 안됨"}`
+
   return (
     <div className="group/row relative flex h-full w-full items-center justify-center">
       {/* 행 번호 - 선택 안됨 & hover 아닐 때 표시 */}
       <span
+        aria-hidden="true"
         className={cn(
           "text-muted-foreground text-xs tabular-nums",
           "group-hover/row:hidden",
@@ -377,11 +384,7 @@ function RowIndexCell({
       </span>
       {/* 체크박스 - hover 또는 선택 시 표시 */}
       <div className={cn("hidden group-hover/row:block", isSelected && "!block")}>
-        <Checkbox
-          aria-label={`Select row ${rowIndex}`}
-          checked={isSelected}
-          onCheckedChange={onToggle}
-        />
+        <Checkbox aria-label={label} checked={isSelected} onCheckedChange={onToggle} />
       </div>
     </div>
   )
@@ -845,6 +848,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           const sortedIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id) + 1
           return (
             <RowIndexCell
+              companyName={row.original.company_name}
               isSelected={row.getIsSelected()}
               onToggle={(value) => row.toggleSelected(!!value)}
               rowIndex={sortedIndex}
@@ -1252,6 +1256,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         <div className="flex flex-1 items-center gap-2">
           {/* 전체화면 토글 버튼 */}
           <Button
+            aria-label={isFullscreen ? "전체화면 종료" : "전체화면으로 보기"}
+            aria-pressed={isFullscreen}
             className="h-8 w-8 shrink-0"
             onClick={onToggleFullscreen}
             size="icon"
@@ -1261,18 +1267,23 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
           <div className="relative w-[240px]">
-            <Filter className="-translate-y-1/2 absolute top-1/2 left-2 h-4 w-4 text-muted-foreground" />
+            <Filter
+              aria-hidden="true"
+              className="-translate-y-1/2 absolute top-1/2 left-2 h-4 w-4 text-muted-foreground"
+            />
             <Input
+              aria-label="테이블 검색"
               className="h-8 pl-8 text-sm"
               onChange={(event) => setGlobalFilter(event.target.value)}
               placeholder="회사, 산업, 이메일 검색"
+              type="search"
               value={globalFilter}
             />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-8 gap-1" size="sm" variant="outline">
-                <Columns3 className="h-4 w-4" />열 설정
+              <Button aria-label="테이블 열 설정" className="h-8 gap-1" size="sm" variant="outline">
+                <Columns3 aria-hidden="true" className="h-4 w-4" />열 설정
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
@@ -1323,19 +1334,29 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                 </SelectContent>
               </Select>
               <Button
+                aria-label={
+                  isAddingToGroup
+                    ? "고객그룹에 추가 중..."
+                    : `선택한 ${Object.keys(rowSelection).length}개 리드를 고객그룹에 추가`
+                }
                 className="h-8 gap-1"
                 disabled={isAddingToGroup || !selectedGroupId || customerGroups.length === 0}
                 onClick={handleAddToGroup}
                 size="sm"
               >
                 {isAddingToGroup ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                 ) : (
-                  <UserPlus className="h-4 w-4" />
+                  <UserPlus aria-hidden="true" className="h-4 w-4" />
                 )}
                 추가
               </Button>
               <Button
+                aria-label={
+                  isEnriching
+                    ? `Enrichment 진행 중 ${enrichProgress.current}/${enrichProgress.total}`
+                    : `선택한 ${Object.keys(rowSelection).length}개 리드 정보 보강하기`
+                }
                 className="h-8 gap-1"
                 disabled={isEnriching}
                 onClick={handleEnrichment}
@@ -1344,14 +1365,16 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
               >
                 {isEnriching ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {enrichProgress.total > 0
-                      ? `${enrichProgress.current}/${enrichProgress.total}`
-                      : "..."}
+                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                    <span aria-live="polite">
+                      {enrichProgress.total > 0
+                        ? `${enrichProgress.current}/${enrichProgress.total}`
+                        : "..."}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles aria-hidden="true" className="h-4 w-4" />
                     Enrich
                   </>
                 )}
@@ -1359,15 +1382,21 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </>
           )}
 
-          <span className="text-muted-foreground text-sm">
+          <span aria-live="polite" className="text-muted-foreground text-sm" role="status">
+            <span className="sr-only">검색 결과:</span>
             {table.getFilteredRowModel().rows.length} results
           </span>
         </div>
       </div>
 
       {/* 테이블 */}
-      <div className="min-h-0 flex-1 overflow-scroll rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3">
-        <Table className="border-collapse">
+      <div
+        aria-label="잠재 고객 목록"
+        className="min-h-0 flex-1 overflow-scroll rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3"
+        role="region"
+        tabIndex={0}
+      >
+        <Table aria-label="잠재 고객 테이블" className="border-collapse">
           <TableHeader className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
@@ -1466,6 +1495,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       {streamingState.hasMore && streamingState.sessionId && (
         <div className="flex items-center justify-center border-t bg-muted/30 p-4">
           <Button
+            aria-label={
+              isLoadingMore
+                ? "데이터를 가져오는 중입니다"
+                : `추가 데이터 가져오기 (현재 ${customers.length}개 / 전체 ${streamingState.totalAvailable || 0}개)`
+            }
             className="gap-2"
             disabled={isLoadingMore}
             onClick={handleLoadMore}
@@ -1474,13 +1508,13 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           >
             {isLoadingMore ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                가져오는 중...
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                <span aria-live="polite">가져오는 중...</span>
               </>
             ) : (
               <>
                 데이터 더 가져오기
-                <span className="text-muted-foreground">
+                <span aria-hidden="true" className="text-muted-foreground">
                   ({customers.length} / {streamingState.totalAvailable || 0})
                 </span>
               </>
@@ -1491,12 +1525,21 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
       {/* 푸터 - 선택 정보 */}
       {Object.keys(rowSelection).length > 0 && (
-        <div className="flex items-center justify-between border-t bg-muted/50 p-4">
+        <div
+          aria-live="polite"
+          className="flex items-center justify-between border-t bg-muted/50 p-4"
+          role="status"
+        >
           <span className="text-muted-foreground text-sm">
             {Object.keys(rowSelection).length} of {table.getFilteredRowModel().rows.length} row(s)
             selected.
           </span>
-          <Button onClick={() => setRowSelection({})} size="sm" variant="outline">
+          <Button
+            aria-label="선택 항목 모두 해제"
+            onClick={() => setRowSelection({})}
+            size="sm"
+            variant="outline"
+          >
             Clear selection
           </Button>
         </div>

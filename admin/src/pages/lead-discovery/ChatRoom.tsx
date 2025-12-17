@@ -1110,29 +1110,55 @@ export function ChatRoom() {
 
                 {/* 모드 전환 탭 */}
                 <div className="flex justify-center">
-                  <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
+                  <div
+                    aria-label="검색 모드 선택"
+                    className="inline-flex rounded-lg border border-border bg-muted/30 p-1"
+                    role="tablist"
+                  >
                     <button
+                      aria-controls="website-search-panel"
+                      aria-selected={searchMode === "website"}
                       className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
                         searchMode === "website"
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      id="website-tab"
                       onClick={() => setSearchMode("website")}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode(searchMode === "website" ? "detailed" : "website")
+                        }
+                      }}
+                      role="tab"
+                      tabIndex={searchMode === "website" ? 0 : -1}
                       type="button"
                     >
-                      <Globe className="h-4 w-4" />
+                      <Globe aria-hidden="true" className="h-4 w-4" />
                       웹사이트로 시작
                     </button>
                     <button
+                      aria-controls="detailed-search-panel"
+                      aria-selected={searchMode === "detailed"}
                       className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
                         searchMode === "detailed"
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      id="detailed-tab"
                       onClick={() => setSearchMode("detailed")}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode(searchMode === "website" ? "detailed" : "website")
+                        }
+                      }}
+                      role="tab"
+                      tabIndex={searchMode === "detailed" ? 0 : -1}
                       type="button"
                     >
-                      <SlidersHorizontal className="h-4 w-4" />
+                      <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
                       조건으로 찾기
                     </button>
                   </div>
@@ -1142,9 +1168,21 @@ export function ChatRoom() {
                 <div className="w-full">
                   {searchMode === "website" ? (
                     // 웹사이트 모드: 기존 텍스트 입력
-                    <form className="space-y-2" onSubmit={handleSubmit}>
+                    <form
+                      aria-label="웹사이트 분석 폼"
+                      aria-labelledby="website-tab"
+                      className="space-y-2"
+                      id="website-search-panel"
+                      onSubmit={handleSubmit}
+                      role="tabpanel"
+                    >
                       <div className="overflow-hidden rounded-2xl border bg-background">
                         <textarea
+                          aria-describedby="website-input-hint"
+                          aria-invalid={
+                            input.trim() && !isValidWebsiteUrl(input) ? "true" : undefined
+                          }
+                          aria-label="분석할 웹사이트 주소 입력"
                           className="min-h-[72px] w-full resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isSearching}
                           onChange={(e) => setInput(e.target.value)}
@@ -1161,26 +1199,31 @@ export function ChatRoom() {
                         />
                         <div className="flex items-center justify-end px-4 pb-3">
                           <Button
+                            aria-label={isSearching ? "분석 중..." : "웹사이트 분석 시작"}
                             className="gap-2"
                             disabled={isSearching || !isInputValid()}
                             size="sm"
                             type="submit"
                           >
                             {isSearching ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                             ) : (
                               <>
                                 분석 시작
-                                <ArrowRight className="h-4 w-4" />
+                                <ArrowRight aria-hidden="true" className="h-4 w-4" />
                               </>
                             )}
                           </Button>
                         </div>
                       </div>
                       {/* 유효성 에러 메시지 */}
-                      <div className="mt-1.5 min-h-[22px] px-1">
+                      <div className="mt-1.5 min-h-[22px] px-1" id="website-input-hint">
                         {input.trim() && !isValidWebsiteUrl(input) && (
-                          <div className="text-red-500 text-sm dark:text-red-400">
+                          <div
+                            aria-live="polite"
+                            className="text-red-500 text-sm dark:text-red-400"
+                            role="alert"
+                          >
                             웹사이트 주소를 확인해주세요 (예: https://www.example.com)
                           </div>
                         )}
@@ -1188,7 +1231,12 @@ export function ChatRoom() {
                     </form>
                   ) : (
                     // 조건 검색 모드: 드롭다운 폼
-                    <div className="rounded-2xl border bg-background p-5">
+                    <div
+                      aria-labelledby="detailed-tab"
+                      className="rounded-2xl border bg-background p-5"
+                      id="detailed-search-panel"
+                      role="tabpanel"
+                    >
                       <FilterSearchForm
                         disabled={isSearching}
                         isLoading={isSearching}
@@ -1614,10 +1662,13 @@ export function ChatRoom() {
         {/* 입력 영역 - 하단 고정 (메시지가 있거나 검색 중일 때 표시) */}
         {(messages.length > 0 || isSearching) && (
           <div className="shrink-0 border-t bg-background p-3">
-            <form className="space-y-2" onSubmit={handleSubmit}>
+            <form aria-label="리드 검색 폼" className="space-y-2" onSubmit={handleSubmit}>
               <div className="overflow-hidden rounded-2xl border border-border/50 bg-muted/50">
                 {/* 1행: Textarea */}
                 <textarea
+                  aria-label={
+                    searchMode === "website" ? "분석할 웹사이트 주소 입력" : "검색 조건 입력"
+                  }
                   className="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 pt-3 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isSearching}
                   onChange={(e) => setInput(e.target.value)}
@@ -1642,20 +1693,21 @@ export function ChatRoom() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
+                        aria-label={`검색 모드 변경: 현재 ${searchMode === "website" ? "웹사이트" : "조건 검색"} 모드`}
                         className="h-8 gap-1.5 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
                         size="sm"
                         type="button"
                         variant="ghost"
                       >
                         {searchMode === "website" ? (
-                          <Globe className="h-4 w-4" />
+                          <Globe aria-hidden="true" className="h-4 w-4" />
                         ) : (
-                          <SlidersHorizontal className="h-4 w-4" />
+                          <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
                         )}
                         <span className="font-medium text-xs">
                           {searchMode === "website" ? "웹사이트" : "조건 검색"}
                         </span>
-                        <ChevronDown className="h-3 w-3 opacity-50" />
+                        <ChevronDown aria-hidden="true" className="h-3 w-3 opacity-50" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-[260px]">
@@ -1694,15 +1746,16 @@ export function ChatRoom() {
 
                   {/* 우측: 제출 버튼 */}
                   <Button
+                    aria-label={isSearching ? "검색 중..." : "검색 시작"}
                     className="h-8 w-8 rounded-full"
                     disabled={isSearching || !isInputValid()}
                     size="icon"
                     type="submit"
                   >
                     {isSearching ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                     ) : (
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight aria-hidden="true" className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
@@ -1711,7 +1764,11 @@ export function ChatRoom() {
               {/* 유효성 에러 메시지 - 공간 항상 확보 */}
               <div className="mt-1.5 min-h-[22px] px-1">
                 {searchMode === "website" && input.trim() && !isValidWebsiteUrl(input) && (
-                  <div className="text-red-500 text-sm dark:text-red-400">
+                  <div
+                    aria-live="polite"
+                    className="text-red-500 text-sm dark:text-red-400"
+                    role="alert"
+                  >
                     웹사이트 주소를 확인해주세요 (예: https://www.example.com)
                   </div>
                 )}

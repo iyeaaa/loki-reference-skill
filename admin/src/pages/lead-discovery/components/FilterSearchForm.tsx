@@ -96,19 +96,23 @@ export function FilterSearchForm({
   }, [])
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form aria-label="조건 검색 폼" className="space-y-5" onSubmit={handleSubmit}>
       {/* 자연어 입력 */}
       <div className="space-y-2">
-        <Label className="font-medium text-foreground text-sm">자연어로 검색</Label>
+        <Label className="font-medium text-foreground text-sm" htmlFor="free-text-search">
+          자연어로 검색
+        </Label>
         <textarea
+          aria-describedby="free-text-hint"
           className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           disabled={disabled}
+          id="free-text-search"
           onChange={(e) => setFreeText(e.target.value)}
           placeholder="예: 화장품 유통업체"
           rows={2}
           value={freeText}
         />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-xs" id="free-text-hint">
           직접 입력하거나, 아래 드롭다운으로 조건을 선택하세요
         </p>
       </div>
@@ -203,6 +207,7 @@ export function FilterSearchForm({
       {/* 버튼 */}
       <div className="flex items-center gap-2 pt-2">
         <Button
+          aria-label="검색 조건 초기화"
           className="gap-1.5"
           disabled={disabled || isLoading}
           onClick={handleReset}
@@ -210,19 +215,24 @@ export function FilterSearchForm({
           type="button"
           variant="outline"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
           초기화
         </Button>
-        <Button className="flex-1 gap-2" disabled={!isValid || disabled || isLoading} type="submit">
+        <Button
+          aria-label={isLoading ? "바이어 검색 중..." : "선택한 조건으로 바이어 찾기"}
+          className="flex-1 gap-2"
+          disabled={!isValid || disabled || isLoading}
+          type="submit"
+        >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              검색 중...
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              <span aria-live="polite">검색 중...</span>
             </>
           ) : (
             <>
               바이어 찾기
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </>
           )}
         </Button>

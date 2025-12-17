@@ -516,13 +516,42 @@ export function LeadDiscoveryProgress({
 
   const isAnalyzing = status === "analyzing"
 
+  // 현재 진행 단계 계산 (접근성용)
+  const completedSteps = visibleNodes.filter(
+    (nodeKey) => getNodeStatus(NODE_CONFIG[nodeKey]?.order ?? 0, status) === "completed",
+  ).length
+  const totalSteps = visibleNodes.length
+  const progressPercent = Math.round((completedSteps / totalSteps) * 100)
+
   return (
-    <div className={cn("space-y-3", className)}>
+    <div
+      aria-busy={status !== "complete"}
+      aria-label="리드 검색 진행 상태"
+      className={cn("space-y-3", className)}
+      role="region"
+    >
+      {/* 스크린 리더용 진행 상태 안내 (aria-live) */}
+      <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">
+        {status === "complete"
+          ? "리드 검색이 완료되었습니다."
+          : `리드 검색 진행 중: ${NODE_CONFIG[status]?.name || "처리 중"}. ${completedSteps}/${totalSteps} 단계 완료.`}
+      </div>
+
       {/* 현재 진행 메시지 */}
-      <div className="flex items-center gap-2.5">
+      <div aria-hidden="true" className="flex items-center gap-2.5">
         <StarSpinner size={20} />
         <span className="font-medium text-foreground text-sm">{message || "처리 중..."}</span>
       </div>
+
+      {/* 진행률 표시 (시각적으로 숨김, 스크린 리더용) */}
+      <div
+        aria-label={`진행률 ${progressPercent}%`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progressPercent}
+        className="sr-only"
+        role="progressbar"
+      />
 
       {/* 단계 표시 - 세로 배치 (애니메이션 적용) */}
       <div className="ml-1 flex flex-col gap-0">

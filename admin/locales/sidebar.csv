@@ -12,7 +12,7 @@ menu.leadManagement,고객 관리,Lead Management
 menu.campaign,캠페인,Campaign
 menu.followupSequenceManagement,팔로우업 시퀀스 관리,Follow-up Sequence Management
 menu.emailTemplateManagement,이메일 템플릿 관리,Email Template Management
-menu.reply,답장,Reply
+menu.reply,메일함,Mailbox
 menu.replyManagement,답장 관리,Reply Management
 menu.settings,설정,Settings
 menu.systemManagement,시스템 관리,System Management

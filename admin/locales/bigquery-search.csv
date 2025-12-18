@@ -69,4 +69,4 @@ lead.industry,산업,Industry
 lead.employees,직원수,Employees
 tooltip.viewCompanyInfo,회사 정보 조회,View company info
 tooltip.noWebsite,웹사이트 주소 없음,No website address
-table.allEmails,[NO TRANSLATION] bigquery-search.table.allEmails,[NO TRANSLATION] bigquery-search.table.allEmails
+table.allEmails,전체 이메일,All Emails

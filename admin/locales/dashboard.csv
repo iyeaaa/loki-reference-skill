@@ -93,15 +93,15 @@ preset.thisYear,올해,This Year
 preset.selectPeriod,기간 선택,Select Period
 preset.title,기간 프리셋,Date Presets
 preset.maxPeriodExceeded,기간은 {{maxDays}}일 이하로 선택할 수 있습니다,The period must be {{maxDays}} days or less
-preset.maxPeriodError,[NO TRANSLATION] dashboard.preset.maxPeriodError,[NO TRANSLATION] dashboard.preset.maxPeriodError
+preset.maxPeriodError,기간은 {{maxDays}}일 이하로 선택해주세요,Please select a period of {{maxDays}} days or less
 welcome,{{userName}}님 환영합니다,Welcome {{userName}}
 dashboard,{{workspaceName}} 대시보드,{{workspaceName}} Dashboard
 allWorkspace,전체 워크스페이스,All Workspaces
-allWorkspaces,[NO TRANSLATION] dashboard.allWorkspaces,[NO TRANSLATION] dashboard.allWorkspaces
+allWorkspaces,전체 워크스페이스,All Workspaces
 stats.totalCustomers,총 고객수,Total Customers
 stats.totalEmails,총 발송 수,Total Emails
 stats.openRate,오픈 대비 응답률,Open vs Response Rate
-totalCustomers,[NO TRANSLATION] dashboard.totalCustomers,[NO TRANSLATION] dashboard.totalCustomers
+totalCustomers,총 고객수,Total Customers
 trends.leads.title,리드 추가 트렌드,Lead Addition Trend
 trends.leads.description,일별 추가된 리드 수,Daily Added Leads
 trends.emails.title,이메일 발송 트렌드,Email Sending Trend
@@ -136,7 +136,7 @@ notifications.reply.title,답장 알림,Reply Notifications
 notifications.reply.viewMore,더보기,View More
 notifications.reply.noContent,내용 없음,No Content
 notifications.reply.noSubject,제목 없음,No Subject
-stats.leads.title,[NO TRANSLATION] dashboard.stats.leads.title,[NO TRANSLATION] dashboard.stats.leads.title
+stats.leads.title,리드 현황,Lead Status
 notifications.campaign.active,활성,Active
 notifications.campaign.archived,보관됨,Archived
 notifications.campaign.completed,완료,Completed

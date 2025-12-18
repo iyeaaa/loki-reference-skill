@@ -138,6 +138,6 @@ dashboard.openedAt,읽은 시간,Opened At
 dashboard.opens,열람,Opens
 dashboard.sentAt,발송 시간,Sent At
 dashboard.sequence,시퀀스,Sequence
-dashboard.selectWorkspace,[NO TRANSLATION] app.dashboard.selectWorkspace,[NO TRANSLATION] app.dashboard.selectWorkspace
-dashboard.selectWorkspaceDesc,[NO TRANSLATION] app.dashboard.selectWorkspaceDesc,[NO TRANSLATION] app.dashboard.selectWorkspaceDesc
-dashboard.loadingStrategies,[NO TRANSLATION] app.dashboard.loadingStrategies,[NO TRANSLATION] app.dashboard.loadingStrategies
+dashboard.selectWorkspace,워크스페이스를 선택해주세요,Please select a workspace
+dashboard.selectWorkspaceDesc,대시보드를 보려면 워크스페이스를 선택하세요,Select a workspace to view dashboard
+dashboard.loadingStrategies,전략을 불러오는 중...,Loading strategies...

@@ -1,9 +1,9 @@
 key,ko,en
-button.generate,[NO TRANSLATION] aiSummary.button.generate,[NO TRANSLATION] aiSummary.button.generate
-button.regenerate,[NO TRANSLATION] aiSummary.button.regenerate,[NO TRANSLATION] aiSummary.button.regenerate
-button.tryAgain,[NO TRANSLATION] aiSummary.button.tryAgain,[NO TRANSLATION] aiSummary.button.tryAgain
-error.message,[NO TRANSLATION] aiSummary.error.message,[NO TRANSLATION] aiSummary.error.message
-error.title,[NO TRANSLATION] aiSummary.error.title,[NO TRANSLATION] aiSummary.error.title
-loading,[NO TRANSLATION] aiSummary.loading,[NO TRANSLATION] aiSummary.loading
-success,[NO TRANSLATION] aiSummary.success,[NO TRANSLATION] aiSummary.success
-title,[NO TRANSLATION] aiSummary.title,[NO TRANSLATION] aiSummary.title
+button.generate,요약 생성,Generate Summary
+button.regenerate,다시 생성,Regenerate
+button.tryAgain,다시 시도,Try Again
+error.message,요약 생성 중 오류가 발생했습니다,An error occurred while generating summary
+error.title,오류,Error
+loading,요약 생성 중...,Generating summary...
+success,요약이 생성되었습니다,Summary generated
+title,AI 요약,AI Summary

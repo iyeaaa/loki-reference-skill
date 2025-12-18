@@ -1,6 +1,6 @@
 key,ko,en
-loadError,[NO TRANSLATION] thread.loadError,[NO TRANSLATION] thread.loadError
-loading,[NO TRANSLATION] thread.loading,[NO TRANSLATION] thread.loading
-noMessages,[NO TRANSLATION] thread.noMessages,[NO TRANSLATION] thread.noMessages
-noSubject,[NO TRANSLATION] thread.noSubject,[NO TRANSLATION] thread.noSubject
-replyButton,[NO TRANSLATION] thread.replyButton,[NO TRANSLATION] thread.replyButton
+loadError,스레드를 불러오는데 실패했습니다,Failed to load thread
+loading,로딩 중...,Loading...
+noMessages,메시지가 없습니다,No messages
+noSubject,(제목 없음),(No subject)
+replyButton,답장,Reply

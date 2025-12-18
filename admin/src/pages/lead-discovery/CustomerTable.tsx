@@ -575,6 +575,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   // API 호출 중 여부 추적
   const isCalculatingRef = useRef(false)
 
+  // FitScore 계산용 AbortController
+  const fitScoreAbortControllerRef = useRef<AbortController | null>(null)
+
   // 더 가져오기 핸들러
   const handleLoadMore = useCallback(async () => {
     if (!streamingState.sessionId || isLoadingMore) {
@@ -680,6 +683,10 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       signatureByLeadId.set(c.id, makeFitScoreSignature(c))
     }
 
+    // 이전 요청 취소 및 새 AbortController 생성
+    fitScoreAbortControllerRef.current?.abort()
+    fitScoreAbortControllerRef.current = new AbortController()
+
     // API 호출
     // "원하는 조건으로 찾기" 모드에서는 selectedTarget 정보를 판매자 정보로 사용
     const hasWebsiteAnalysis = !!streamingState.analysisSummary
@@ -729,10 +736,16 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           setFitScoreLoading({ isLoading: false, progress: 0 })
           isCalculatingRef.current = false
         },
+        signal: fitScoreAbortControllerRef.current.signal,
       },
       streamingState.userQuery, // 사용자 검색 쿼리 전달
       workspaceId, // 워크스페이스 단위 캐시 분리
     )
+
+    // cleanup: 컴포넌트 언마운트 또는 의존성 변경 시 진행 중인 요청 취소
+    return () => {
+      fitScoreAbortControllerRef.current?.abort()
+    }
   }, [
     customers,
     selectedTarget,

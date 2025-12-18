@@ -240,6 +240,10 @@ export function ChatRoom() {
 
   // 새 검색 핸들러 - 모든 상태 초기화
   const handleNewSearch = useCallback(() => {
+    // 진행 중인 요청 취소
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+
     resetAll()
     setStreamingState(initialStreamingState)
     setInput("")
@@ -251,6 +255,20 @@ export function ChatRoom() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // AbortController ref for SSE request cancellation
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Enrichment용 별도 AbortController ref (메인 검색과 분리)
+  const enrichmentAbortControllerRef = useRef<AbortController | null>(null)
+
+  // 컴포넌트 언마운트 시 진행 중인 요청 취소
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort()
+      enrichmentAbortControllerRef.current?.abort()
+    },
+    [],
+  )
 
   // 워크스페이스
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace()
@@ -330,6 +348,10 @@ export function ChatRoom() {
     startBulkEnrichment(leadsToEnrich.length)
     startEnrichment(leadsToEnrich.map((c) => c.id))
 
+    // 이전 enrichment 요청 취소 및 새 AbortController 생성
+    enrichmentAbortControllerRef.current?.abort()
+    enrichmentAbortControllerRef.current = new AbortController()
+
     await enrichLeads(
       leadsToEnrich.map((c) => ({
         id: c.id,
@@ -369,6 +391,7 @@ export function ChatRoom() {
         onComplete: () => {
           finishBulkEnrichment()
         },
+        signal: enrichmentAbortControllerRef.current.signal,
       },
     )
   }, [
@@ -650,10 +673,15 @@ export function ChatRoom() {
         userQuery: query,
       })
 
+      // 이전 요청 취소 및 새 AbortController 생성
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
       // LangGraph API 호출
       searchMutation.mutate({
         query,
         workspaceId,
+        signal: abortControllerRef.current.signal,
       })
     }
 
@@ -837,10 +865,15 @@ export function ChatRoom() {
     clearError()
     setStreamingState(initialStreamingState)
 
+    // 이전 요청 취소 및 새 AbortController 생성
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = new AbortController()
+
     // 마지막 쿼리로 다시 검색
     searchMutation.mutate({
       query: lastQuery.query,
       workspaceId: lastQuery.workspaceId,
+      signal: abortControllerRef.current.signal,
     })
   }, [lastQuery, clearError, searchMutation, setStreamingState])
 
@@ -1017,11 +1050,16 @@ export function ChatRoom() {
         subIndustry: rec.subIndustry,
       })
 
+      // 이전 요청 취소 및 새 AbortController 생성
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
       // 선택 API 호출
       selectMutation.mutate({
         sessionId: streamingState.sessionId,
         selectedRecommendationId: rec.id,
         workspaceId: selectedWorkspace.id,
+        signal: abortControllerRef.current.signal,
       })
     },
     [
@@ -1078,11 +1116,16 @@ export function ChatRoom() {
         progress: 40,
       }))
 
+      // 이전 요청 취소 및 새 AbortController 생성
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
       // Clarify API 호출
       clarifyMutation.mutate({
         sessionId: streamingState.sessionId,
         answers,
         workspaceId: selectedWorkspace.id,
+        signal: abortControllerRef.current.signal,
       })
     },
     [selectedWorkspace, streamingState.sessionId, addMessage, clarifyMutation, setStreamingState],
@@ -1148,10 +1191,15 @@ export function ChatRoom() {
         userQuery: query,
       })
 
+      // 이전 요청 취소 및 새 AbortController 생성
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
       // LangGraph API 호출
       searchMutation.mutate({
         query,
         workspaceId: selectedWorkspace.id,
+        signal: abortControllerRef.current.signal,
       })
     },
     [
@@ -1246,10 +1294,15 @@ export function ChatRoom() {
         userQuery: userInput, // 검색 쿼리 저장 (FitScore 계산용)
       })
 
+      // 이전 요청 취소 및 새 AbortController 생성
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
       // LangGraph API 호출
       searchMutation.mutate({
         query: userInput,
         workspaceId: selectedWorkspace.id,
+        signal: abortControllerRef.current.signal,
       })
     },
     [

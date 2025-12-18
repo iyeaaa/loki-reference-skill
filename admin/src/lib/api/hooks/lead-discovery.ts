@@ -92,12 +92,14 @@ type SearchRequest = {
   query: string
   workspaceId: string
   locale?: string
+  signal?: AbortSignal
 }
 
 type SelectRequest = {
   sessionId: string
   selectedRecommendationId: string
   workspaceId: string
+  signal?: AbortSignal
 }
 
 const BASE_URL = API_BASE_URL
@@ -181,10 +183,20 @@ async function processSSEStream(
   response: Response,
   options: UseLeadDiscoveryMutationOptions,
   sessionIdRef: { current: string | undefined },
+  signal?: AbortSignal,
 ): Promise<LeadDiscoveryEventData | null> {
   const reader = response.body?.getReader()
   if (!reader) {
     throw new Error("스트림을 읽을 수 없습니다")
+  }
+
+  // AbortSignal이 있으면 abort 시 reader를 취소
+  if (signal) {
+    signal.addEventListener("abort", () => {
+      reader.cancel().catch(() => {
+        // 이미 취소된 경우 무시
+      })
+    })
   }
 
   const decoder = new TextDecoder()
@@ -552,6 +564,7 @@ export function useLeadDiscoveryMutation(options: UseLeadDiscoveryMutationOption
             workspaceId: request.workspaceId,
             locale: request.locale || "ko",
           }),
+          signal: request.signal,
         })
 
         log.response("HTTP Response", { status: response.status, ok: response.ok })
@@ -562,8 +575,13 @@ export function useLeadDiscoveryMutation(options: UseLeadDiscoveryMutationOption
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
-        return processSSEStream(response, options, sessionIdRef)
+        return processSSEStream(response, options, sessionIdRef, request.signal)
       } catch (error) {
+        // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
+        if (error instanceof Error && error.name === "AbortError") {
+          log.info("Search aborted by user")
+          return null
+        }
         log.error("Fetch failed", error)
         // options.onError 호출하여 UI에 에러 표시
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -607,6 +625,7 @@ export function useLeadDiscoverySelectMutation(options: UseLeadDiscoveryMutation
             selectedRecommendationId: request.selectedRecommendationId,
             workspaceId: request.workspaceId,
           }),
+          signal: request.signal,
         })
 
         log.response("HTTP Response", { status: response.status, ok: response.ok })
@@ -617,8 +636,13 @@ export function useLeadDiscoverySelectMutation(options: UseLeadDiscoveryMutation
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
-        return processSSEStream(response, options, sessionIdRef)
+        return processSSEStream(response, options, sessionIdRef, request.signal)
       } catch (error) {
+        // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
+        if (error instanceof Error && error.name === "AbortError") {
+          log.info("Select aborted by user")
+          return null
+        }
         log.error("Select fetch failed", error)
         // options.onError 호출하여 UI에 에러 표시
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -636,6 +660,7 @@ type ClarifyRequest = {
   sessionId: string
   answers: Record<string, string>
   workspaceId: string
+  signal?: AbortSignal
 }
 
 /**
@@ -669,6 +694,7 @@ export function useLeadDiscoveryClarifyMutation(options: UseLeadDiscoveryMutatio
             answers: request.answers,
             workspaceId: request.workspaceId,
           }),
+          signal: request.signal,
         })
 
         log.response("HTTP Response", { status: response.status, ok: response.ok })
@@ -679,8 +705,13 @@ export function useLeadDiscoveryClarifyMutation(options: UseLeadDiscoveryMutatio
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
 
-        return processSSEStream(response, options, sessionIdRef)
+        return processSSEStream(response, options, sessionIdRef, request.signal)
       } catch (error) {
+        // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
+        if (error instanceof Error && error.name === "AbortError") {
+          log.info("Clarify aborted by user")
+          return null
+        }
         log.error("Clarify fetch failed", error)
         // options.onError 호출하여 UI에 에러 표시
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -728,6 +759,7 @@ export type FitScoreCallbackOptions = {
   onProgress?: (progress: number) => void
   onComplete?: (totalProcessed: number) => void
   onError?: (error: string) => void
+  signal?: AbortSignal
 }
 
 type FitScoreWorkerOutgoingMessage =
@@ -754,6 +786,8 @@ export async function calculateFitScores(
   userQuery?: string, // 사용자 검색 쿼리 추가
   workspaceId?: string, // 워크스페이스 단위 캐시 분리(옵션)
 ): Promise<void> {
+  const { signal } = callbacks
+
   // Web Worker가 있으면 메인 스레드 UI 블로킹을 줄이기 위해 Worker로 실행
   try {
     const worker = new Worker(new URL("../../workers/fit-score.worker.ts", import.meta.url), {
@@ -765,7 +799,21 @@ export async function calculateFitScores(
         worker.terminate()
       }
 
+      // AbortSignal이 있으면 abort 시 worker를 종료
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          log.info("FitScore worker aborted by user")
+          cleanup()
+          resolve()
+        })
+      }
+
       worker.onmessage = (event: MessageEvent<FitScoreWorkerOutgoingMessage>) => {
+        // 이미 abort된 경우 무시
+        if (signal?.aborted) {
+          return
+        }
+
         const msg = event.data
         switch (msg.type) {
           case "score":
@@ -834,6 +882,7 @@ export async function calculateFitScores(
         userQuery, // 검색 쿼리 전달
         workspaceId, // 워크스페이스 단위 캐시 분리
       }),
+      signal,
     })
 
     if (!response.ok) {
@@ -843,6 +892,15 @@ export async function calculateFitScores(
     const reader = response.body?.getReader()
     if (!reader) {
       throw new Error("스트림을 읽을 수 없습니다")
+    }
+
+    // AbortSignal이 있으면 abort 시 reader를 취소
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        reader.cancel().catch(() => {
+          // 이미 취소된 경우 무시
+        })
+      })
     }
 
     const decoder = new TextDecoder()
@@ -884,6 +942,11 @@ export async function calculateFitScores(
 
     log.response("FitScore complete", { leadCount: leads.length })
   } catch (error) {
+    // AbortError는 정상적인 취소이므로 에러로 처리하지 않음
+    if (error instanceof Error && error.name === "AbortError") {
+      log.info("FitScore aborted by user")
+      return
+    }
     log.error("FitScore failed", error)
     callbacks.onError?.(error instanceof Error ? error.message : "적합도 계산 실패")
   }
@@ -1058,11 +1121,13 @@ export const enrichLeads = async (
     onResult?: (leadId: string, result: EnrichmentResult) => void
     onError?: (leadId: string, error: string) => void
     onComplete?: () => void
+    signal?: AbortSignal
   },
 ): Promise<void> => {
   const total = leads.length
   let completed = 0
   const concurrency = 20 // 동시 처리 개수
+  const { signal } = callbacks
 
   log.info("Starting enrichment with p-limit", { total, workspaceId, concurrency })
 
@@ -1071,12 +1136,22 @@ export const enrichLeads = async (
 
   // 각 리드 처리 함수
   const processLead = async (lead: { id: string; webAddress: string; companyName: string }) => {
+    // abort된 경우 즉시 반환
+    if (signal?.aborted) {
+      return
+    }
+
     try {
       // 처리 시작 알림
       callbacks.onProgress?.(completed, total, lead.companyName)
 
       // API 호출
       const response = await enrichLead(lead.webAddress, lead.companyName, workspaceId)
+
+      // abort된 경우 결과 처리하지 않음
+      if (signal?.aborted) {
+        return
+      }
 
       // 결과 처리
       if (response.success && response.data) {
@@ -1087,14 +1162,22 @@ export const enrichLeads = async (
         log.info("Enrichment failed", { leadId: lead.id, error: response.error })
       }
     } catch (error) {
+      // abort된 경우 에러 처리하지 않음
+      if (signal?.aborted) {
+        return
+      }
       const errorMsg = error instanceof Error ? error.message : "Failed to enrich"
       callbacks.onError?.(lead.id, errorMsg)
       log.error("Enrichment exception", { leadId: lead.id, error })
-    } finally {
-      // 완료 카운트 증가 및 진행 상황 업데이트
-      completed++
-      callbacks.onProgress?.(completed, total, lead.companyName)
     }
+
+    // abort된 경우 진행 상황 업데이트하지 않음
+    if (signal?.aborted) {
+      return
+    }
+    // 완료 카운트 증가 및 진행 상황 업데이트
+    completed++
+    callbacks.onProgress?.(completed, total, lead.companyName)
   }
 
   // p-limit을 사용하여 모든 리드를 동시성 제어와 함께 처리
@@ -1102,6 +1185,12 @@ export const enrichLeads = async (
 
   // 모든 Promise 완료 대기 (에러가 있어도 모두 실행)
   await Promise.allSettled(promises)
+
+  // abort된 경우 완료 콜백 호출하지 않음
+  if (signal?.aborted) {
+    log.info("Enrichment aborted by user", { total, completed })
+    return
+  }
 
   // 완료 콜백
   callbacks.onProgress?.(completed, total, "")

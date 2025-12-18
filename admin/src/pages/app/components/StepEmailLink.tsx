@@ -63,8 +63,8 @@ export function StepEmailLink() {
   }
 
   const handleNextStep = () => {
-    // Go to step 4 (confirmation)
-    setSearchParams({ step: "4" })
+    // Go to step 5 (confirmation)
+    setSearchParams({ step: "5" })
   }
 
   // Auto-skip to next step if email account is already linked (not TRIAL_PREVIEW)
@@ -75,7 +75,7 @@ export function StepEmailLink() {
       console.log("[StepEmailLink] Email account already linked, auto-advancing to next step")
       // Small delay to show the success state briefly
       const timer = setTimeout(() => {
-        setSearchParams({ step: "4" })
+        setSearchParams({ step: "5" })
       }, 800)
 
       return () => clearTimeout(timer)

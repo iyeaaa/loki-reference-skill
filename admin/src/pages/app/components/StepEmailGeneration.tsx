@@ -107,7 +107,7 @@ export function StepEmailGeneration() {
   }, [isGenerationComplete, isLoadingEmails, refetchEmails, emails.length])
 
   const handleNext = () => {
-    setSearchParams({ step: "3" })
+    setSearchParams({ step: "4" })
   }
 
   // Calculate display values

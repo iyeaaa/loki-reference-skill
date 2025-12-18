@@ -17,6 +17,7 @@ import { StepCompanyInfo } from "./components/StepCompanyInfo"
 import { StepConfirmation } from "./components/StepConfirmation"
 import { StepEmailGeneration } from "./components/StepEmailGeneration"
 import { StepEmailLink } from "./components/StepEmailLink"
+import { StepLeadCheck } from "./components/StepLeadCheck"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -317,10 +318,12 @@ export default function CompanyInformation() {
       case 1:
         return <StepCompanyInfo />
       case 2:
-        return <StepEmailGeneration />
+        return <StepLeadCheck />
       case 3:
-        return <StepEmailLink />
+        return <StepEmailGeneration />
       case 4:
+        return <StepEmailLink />
+      case 5:
         return <StepConfirmation />
       default:
         return <StepCompanyInfo />

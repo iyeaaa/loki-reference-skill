@@ -635,6 +635,36 @@ export const COUNTRY_NAMES: Record<string, string> = {
   ae: "United Arab Emirates",
 }
 
+// Country name → language for email translation
+// Used to generate emails in the lead's native language
+export const COUNTRY_TO_LANGUAGE: Record<string, string> = {
+  Japan: "Japanese",
+  "United States": "English",
+  "United Kingdom": "English",
+  China: "Chinese",
+  "South Korea": "Korean",
+  Korea: "Korean",
+  Germany: "German",
+  France: "French",
+  Spain: "Spanish",
+  Italy: "Italian",
+  Netherlands: "Dutch",
+  Singapore: "English",
+  "United Arab Emirates": "English",
+  India: "English",
+  Australia: "English",
+  Canada: "English",
+  Brazil: "Portuguese",
+  Mexico: "Spanish",
+  Taiwan: "Chinese",
+  "Hong Kong": "Chinese",
+  Vietnam: "Vietnamese",
+  Thailand: "Thai",
+  Indonesia: "Indonesian",
+  Malaysia: "English",
+  Philippines: "English",
+}
+
 // Industry code → English keywords for BigQuery LIKE search
 // Apollo uses free-form industry text - these keywords will match via LIKE
 export const INDUSTRY_NAMES: Record<string, string> = {
@@ -673,12 +703,15 @@ function replaceVariables(
  * Each lead's emails are staggered by 1 minute to avoid sending all at once
  * Example: Lead 1 at 10:00, Lead 2 at 10:01, Lead 3 at 10:02, etc.
  *
+ * NEW: Emails are now translated to the lead's native language based on their country
+ *
  * @param workspaceId - Workspace ID (required for emails table)
  * @param userEmailAccountId - Trial email account ID (created for trial users)
  * @param fromEmail - The from email address (user's email)
  * @param sequenceId - Sequence ID
  * @param stepTemplates - Array of step templates with delayDays
  * @param leadDetails - Array of lead details including contactEmail
+ * @param baseLanguage - The original language of the templates (default: from survey country)
  * @returns Number of emails created
  */
 export async function generatePreviewEmailsForSequence(
@@ -703,11 +736,23 @@ export async function generatePreviewEmailsForSequence(
     country?: string | null
     businessType?: string | null
   }>,
+  baseLanguage?: string,
 ): Promise<number> {
   const emailsToCreate = []
+  const aiService = getAITemplateGenerationService()
 
   // Base time for scheduling (now + 2 minutes for immediate sending)
   const baseTime = new Date(Date.now() + 2 * 60 * 1000)
+
+  // Cache for translated templates by language
+  // Key: `${stepOrder}-${language}`, Value: translated template
+  const translationCache = new Map<
+    string,
+    { subject: string; bodyText: string; bodyHtml: string | null }
+  >()
+
+  // Determine the base language from the first template or default to Korean
+  const originalLanguage = baseLanguage || "Korean"
 
   for (let leadIndex = 0; leadIndex < leadDetails.length; leadIndex++) {
     const lead = leadDetails[leadIndex]
@@ -716,11 +761,59 @@ export async function generatePreviewEmailsForSequence(
     // Stagger each lead by 1 minute
     const leadOffset = leadIndex * 60 * 1000 // 1 minute per lead
 
+    // Determine the target language based on lead's country
+    const leadCountry = lead.country || ""
+    const targetLanguage = COUNTRY_TO_LANGUAGE[leadCountry] || "English"
+
+    // Check if translation is needed
+    const needsTranslation = targetLanguage !== originalLanguage && targetLanguage !== "English"
+
     for (const step of stepTemplates) {
+      let subject = step.emailSubject
+      let bodyText = step.emailBodyText
+      let bodyHtml = step.emailBodyHtml
+
+      // Translate if needed (and cache the result)
+      if (needsTranslation) {
+        const cacheKey = `${step.stepOrder}-${targetLanguage}`
+        let translated = translationCache.get(cacheKey)
+
+        if (!translated) {
+          console.log(
+            `[PreviewEmails] Translating step ${step.stepOrder} to ${targetLanguage} for lead ${lead.companyName}`,
+          )
+          try {
+            const translatedTemplate = await aiService.translateEmailTemplate({
+              subject: step.emailSubject,
+              bodyText: step.emailBodyText,
+              bodyHtml: step.emailBodyHtml,
+              targetLanguage,
+            })
+            translated = {
+              subject: translatedTemplate.subject,
+              bodyText: translatedTemplate.bodyText,
+              bodyHtml: translatedTemplate.bodyHtml,
+            }
+            translationCache.set(cacheKey, translated)
+          } catch (error) {
+            console.error(`[PreviewEmails] Translation failed, using original:`, error)
+            translated = {
+              subject: step.emailSubject,
+              bodyText: step.emailBodyText,
+              bodyHtml: step.emailBodyHtml,
+            }
+          }
+        }
+
+        subject = translated.subject
+        bodyText = translated.bodyText
+        bodyHtml = translated.bodyHtml
+      }
+
       // Replace placeholders with lead data
-      const subject = replaceVariables(step.emailSubject, lead)
-      const bodyText = replaceVariables(step.emailBodyText, lead)
-      const bodyHtml = step.emailBodyHtml ? replaceVariables(step.emailBodyHtml, lead) : null
+      subject = replaceVariables(subject, lead)
+      bodyText = replaceVariables(bodyText, lead)
+      bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead) : null
 
       // Calculate scheduled time: base + lead offset + delay days
       const scheduledAt = new Date(
@@ -1468,6 +1561,10 @@ export async function autoGenerateOnboarding(
         console.log(`[AutoGenerate] Created trial email account: ${emailAccountId}`)
       }
 
+      // Determine the base language from the survey country
+      const surveyCountryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
+      const baseLanguage = COUNTRY_TO_LANGUAGE[surveyCountryName] || "English"
+
       const previewCount = await generatePreviewEmailsForSequence(
         workspaceId,
         emailAccountId,
@@ -1475,6 +1572,7 @@ export async function autoGenerateOnboarding(
         sequence.id,
         createdSteps,
         leadDetailsWithEmail,
+        baseLanguage,
       )
       console.log(
         `[AutoGenerate] Generated ${previewCount} preview emails (${leadDetails.length} leads × ${createdSteps.length} steps)`,

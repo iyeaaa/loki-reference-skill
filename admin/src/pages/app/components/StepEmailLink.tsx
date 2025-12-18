@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -67,20 +67,8 @@ export function StepEmailLink() {
     setSearchParams({ step: "5" })
   }
 
-  // Auto-skip to next step if email account is already linked (not TRIAL_PREVIEW)
-  useEffect(() => {
-    const isTrialPreviewAccount = emailAccount?.apiKey === "TRIAL_PREVIEW"
-
-    if (emailAccount && !isTrialPreviewAccount && !isLoadingWorkspaces && !isLoadingEmailAccounts) {
-      console.log("[StepEmailLink] Email account already linked, auto-advancing to next step")
-      // Small delay to show the success state briefly
-      const timer = setTimeout(() => {
-        setSearchParams({ step: "5" })
-      }, 800)
-
-      return () => clearTimeout(timer)
-    }
-  }, [emailAccount, isLoadingWorkspaces, isLoadingEmailAccounts, setSearchParams])
+  // 자동 이동 제거 - 사용자가 이메일 연동 결과를 확인하고 직접 다음 단계 버튼을 클릭하도록 변경
+  // (이전: 이메일 연동 후 자동으로 다음 단계로 이동했으나, 사용자가 확인할 시간 필요)
 
   // Loading state
   if (isLoadingWorkspaces || isLoadingEmailAccounts) {

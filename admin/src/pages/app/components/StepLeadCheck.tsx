@@ -97,18 +97,8 @@ export function StepLeadCheck() {
     return () => clearTimeout(timeoutId)
   }, [viewState])
 
-  // 완료 후 자동으로 다음 단계로 이동
-  useEffect(() => {
-    if (viewState !== "complete") {
-      return
-    }
-
-    const timer = setTimeout(() => {
-      setSearchParams({ step: "3" })
-    }, 2000)
-
-    return () => clearTimeout(timer)
-  }, [viewState, setSearchParams])
+  // 완료 후 사용자가 직접 다음 단계 버튼을 클릭하도록 변경
+  // (자동 이동 제거 - 사용자가 결과를 확인할 시간 필요)
 
   const handleComplete = () => {
     setSearchParams({ step: "3" })

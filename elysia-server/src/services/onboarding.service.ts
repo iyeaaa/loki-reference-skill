@@ -677,6 +677,7 @@ export const INDUSTRY_NAMES: Record<string, string> = {
 
 /**
  * Replace template variables with lead data
+ * Handles language-appropriate fallbacks based on template language
  */
 function replaceVariables(
   template: string,
@@ -687,13 +688,50 @@ function replaceVariables(
     country?: string | null
   },
 ): string {
-  return template
-    .replace(/\{\{companyName\}\}/g, lead.companyName || "귀사")
-    .replace(/\{\{회사명\}\}/g, lead.companyName || "귀사")
-    .replace(/\{\{contactName\}\}/g, lead.contactName || "담당자")
-    .replace(/\{\{담당자명\}\}/g, lead.contactName || "담당자")
+  // Detect if template is primarily Korean or English
+  const koreanCharCount = (template.match(/[\u3131-\uD79D]/g) || []).length
+  const isKorean = koreanCharCount > 10
+
+  // Language-appropriate fallbacks
+  const companyFallback = isKorean ? "귀사" : "your company"
+  // For contact name: if missing, remove the greeting entirely or use appropriate fallback
+  const hasContactName = lead.contactName && lead.contactName.trim().length > 0
+
+  let result = template
+    // English variable names (new)
+    .replace(/\{\{company_name\}\}/gi, lead.companyName || companyFallback)
+    // Korean/legacy variable names
+    .replace(/\{\{companyName\}\}/g, lead.companyName || companyFallback)
+    .replace(/\{\{회사명\}\}/g, lead.companyName || companyFallback)
     .replace(/\{\{website\}\}/g, lead.websiteUrl || "")
     .replace(/\{\{country\}\}/g, lead.country || "")
+
+  // Handle contact name with language-appropriate greeting
+  if (hasContactName && lead.contactName) {
+    const contactName = lead.contactName
+    result = result
+      .replace(/\{\{contact_name\}\}/gi, contactName)
+      .replace(/\{\{contactName\}\}/g, contactName)
+      .replace(/\{\{담당자명\}\}/g, contactName)
+  } else {
+    // Remove awkward greetings when no contact name
+    // "Hi {{contact_name}}," -> "Hi there," (English) or "안녕하세요," (Korean)
+    result = result
+      .replace(/Hi \{\{contact_name\}\},?/gi, "Hi there,")
+      .replace(/Hello \{\{contact_name\}\},?/gi, "Hello,")
+      .replace(/Dear \{\{contact_name\}\},?/gi, "Hello,")
+      .replace(/Hi \{\{담당자명\}\},?/gi, "Hi there,")
+      .replace(/Hello \{\{담당자명\}\},?/gi, "Hello,")
+      .replace(/Dear \{\{담당자명\}\},?/gi, "Hello,")
+      .replace(/\{\{담당자명\}\}님,?/g, "")
+      .replace(/안녕하세요 \{\{담당자명\}\}님,?/g, "안녕하세요,")
+      // Fallback for any remaining
+      .replace(/\{\{contact_name\}\}/gi, "")
+      .replace(/\{\{contactName\}\}/g, "")
+      .replace(/\{\{담당자명\}\}/g, "")
+  }
+
+  return result
 }
 
 /**
@@ -1381,9 +1419,18 @@ export async function autoGenerateOnboarding(
         : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
 
       try {
+        // Use companyName and companyDescription if available, fallback to workspace name/description
+        // Filter out default values like "기본 워크스페이스" that don't provide useful context
+        const effectiveDescription =
+          workspace.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
+            ? workspace.companyDescription
+            : workspace.description && workspace.description !== "기본 워크스페이스"
+              ? workspace.description
+              : undefined
+
         const template = await aiService.generateEmailTemplate({
-          workspaceName: workspace.name,
-          workspaceDescription: workspace.description || undefined,
+          workspaceName: workspace.companyName || workspace.name,
+          workspaceDescription: effectiveDescription,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,
         })

@@ -19,6 +19,8 @@ import { useCompleteStep1, useOnboardingProgress } from "@/lib/api/hooks/onboard
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 type SalesStrategyData = {
+  companyName: string
+  companyDescription: string
   industry: string
   target: string
   country: string
@@ -76,6 +78,8 @@ export function StepCompanyInfo() {
 
   // Form state for editing
   const [editedData, setEditedData] = useState<SalesStrategyData>({
+    companyName: "",
+    companyDescription: "",
     industry: "",
     target: "",
     country: "",
@@ -106,7 +110,7 @@ export function StepCompanyInfo() {
 
   console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
 
-  // Fetch sales strategy data
+  // Fetch sales strategy data and workspace company info
   useEffect(() => {
     async function fetchSalesStrategy() {
       console.log("[StepCompanyInfo] 5. fetchSalesStrategy called, workspace?.id:", workspace?.id)
@@ -119,24 +123,45 @@ export function StepCompanyInfo() {
 
       try {
         setIsLoading(true)
-        console.log("[StepCompanyInfo] 7. Fetching sales strategy from API...")
-        const response = await apiFetch<{
-          data: SalesStrategyData
-        }>(`/api/v1/workspace-sales-strategies/${workspace.id}`)
 
-        console.log(
-          "[StepCompanyInfo] 8. ✅ Sales strategy fetched:",
-          JSON.stringify(response.data, null, 2),
-        )
-        setSalesStrategy(response.data)
-        setEditedData({
-          ...response.data,
-          websiteUrl: response.data.websiteUrl || "",
-        })
+        // Fetch both sales strategy and workspace data in parallel
+        console.log("[StepCompanyInfo] 7. Fetching sales strategy and workspace data...")
+        const [strategyResponse, workspaceResponse] = await Promise.all([
+          apiFetch<{ data: SalesStrategyData }>(
+            `/api/v1/workspace-sales-strategies/${workspace.id}`,
+          ).catch(() => null),
+          apiFetch<{ data: { companyName?: string; companyDescription?: string } }>(
+            `/api/v1/workspaces/${workspace.id}`,
+          ).catch(() => null),
+        ])
+
+        const strategyData = strategyResponse?.data
+        const workspaceData = workspaceResponse?.data
+
+        console.log("[StepCompanyInfo] 8. ✅ Data fetched:", { strategyData, workspaceData })
+
+        if (strategyData) {
+          const mergedData: SalesStrategyData = {
+            ...strategyData,
+            companyName: workspaceData?.companyName || strategyData.companyName || "",
+            companyDescription:
+              workspaceData?.companyDescription || strategyData.companyDescription || "",
+            websiteUrl: strategyData.websiteUrl || "",
+          }
+          setSalesStrategy(mergedData)
+          setEditedData(mergedData)
+        } else {
+          // 데이터가 없으면 workspace 정보로 초기화하고 수정 모드로 시작
+          setEditedData((prev) => ({
+            ...prev,
+            companyName: workspaceData?.companyName || "",
+            companyDescription: workspaceData?.companyDescription || "",
+          }))
+          console.log("[StepCompanyInfo] 10. Setting isEditing=true due to no strategy data")
+          setIsEditing(true)
+        }
       } catch (error) {
-        console.error("[StepCompanyInfo] 9. ❌ Failed to fetch sales strategy:", error)
-        // 데이터가 없으면 자동으로 수정 모드(입력 폼)로 시작
-        console.log("[StepCompanyInfo] 10. Setting isEditing=true due to fetch error")
+        console.error("[StepCompanyInfo] 9. ❌ Failed to fetch data:", error)
         setIsEditing(true)
       } finally {
         setIsLoading(false)
@@ -155,6 +180,8 @@ export function StepCompanyInfo() {
     if (salesStrategy) {
       setEditedData({
         ...salesStrategy,
+        companyName: salesStrategy.companyName || "",
+        companyDescription: salesStrategy.companyDescription || "",
         websiteUrl: salesStrategy.websiteUrl || "",
       })
     }
@@ -171,18 +198,40 @@ export function StepCompanyInfo() {
       return
     }
 
-    // 필수 필드 검증
+    // 필수 필드 검증 (companyName, companyDescription 추가)
     if (
-      !(editedData.industry && editedData.target && editedData.country && editedData.experience)
+      !(
+        editedData.companyName &&
+        editedData.companyDescription &&
+        editedData.industry &&
+        editedData.target &&
+        editedData.country &&
+        editedData.experience
+      )
     ) {
       console.log("[StepCompanyInfo] ❌ Missing required fields")
-      toast.error(isKorean ? "모든 필드를 입력해주세요" : "Please fill in all fields")
+      toast.error(isKorean ? "모든 필수 필드를 입력해주세요" : "Please fill in all required fields")
       return
     }
 
     setIsSaving(true)
     try {
-      // 1. onboarding_progress.survey_data 저장
+      // 1. workspace 업데이트 (companyName, companyDescription, companyWebsite)
+      console.log(`[StepCompanyInfo] 📤 Updating workspace at /api/v1/workspaces/${workspace.id}`)
+      const workspacePayload = {
+        companyName: editedData.companyName,
+        companyDescription: editedData.companyDescription,
+        companyWebsite: editedData.websiteUrl || null,
+      }
+      console.log("[StepCompanyInfo] Workspace payload:", JSON.stringify(workspacePayload, null, 2))
+
+      await apiFetch(`/api/v1/workspaces/${workspace.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(workspacePayload),
+      })
+      console.log("[StepCompanyInfo] ✅ Workspace updated")
+
+      // 2. onboarding_progress.survey_data 저장
       console.log(
         `[StepCompanyInfo] 📤 Saving survey data to /api/v1/onboarding/workspace/${workspace.id}/survey`,
       )
@@ -202,13 +251,19 @@ export function StepCompanyInfo() {
       })
       console.log("[StepCompanyInfo] ✅ Survey data saved:", surveyResponse)
 
-      // 2. workspace_sales_strategies 업데이트 (websiteUrl 포함)
+      // 3. workspace_sales_strategies 업데이트 (websiteUrl 포함)
       console.log(
         `[StepCompanyInfo] 📤 Updating sales strategy at /api/v1/workspace-sales-strategies/${workspace.id}`,
       )
       const salesResponse = await apiFetch(`/api/v1/workspace-sales-strategies/${workspace.id}`, {
         method: "PUT",
-        body: JSON.stringify(editedData),
+        body: JSON.stringify({
+          industry: editedData.industry,
+          target: editedData.target,
+          country: editedData.country,
+          experience: editedData.experience,
+          websiteUrl: editedData.websiteUrl,
+        }),
       })
       console.log("[StepCompanyInfo] ✅ Sales strategy updated:", salesResponse)
 
@@ -318,6 +373,61 @@ export function StepCompanyInfo() {
             // Edit mode
             <>
               <div className="space-y-4">
+                {/* Company Name - Toss style */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                    {isKorean ? "회사명" : "Company Name"}
+                    <span className="font-normal text-blue-500 text-xs">
+                      {isKorean ? "필수" : "Required"}
+                    </span>
+                  </Label>
+                  <Input
+                    className="h-12 text-base"
+                    onChange={(e) =>
+                      setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
+                    }
+                    placeholder={isKorean ? "린다 코스메틱" : "Rinda Cosmetics"}
+                    value={editedData.companyName}
+                  />
+                  <p className="text-gray-500 text-sm">
+                    {isKorean
+                      ? "바이어가 처음 보게 될 이름이에요"
+                      : "The first thing buyers will see"}
+                  </p>
+                </div>
+
+                {/* Company Description - Toss style */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                    {isKorean ? "우리 회사를 소개해주세요" : "Tell us about your company"}
+                    <span className="font-normal text-blue-500 text-xs">
+                      {isKorean ? "필수" : "Required"}
+                    </span>
+                  </Label>
+                  <textarea
+                    className="flex w-full resize-y rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    onChange={(e) =>
+                      setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
+                    }
+                    placeholder={
+                      isKorean
+                        ? "예: 천연 성분 기반 K-뷰티 스킨케어 브랜드입니다.\n\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건 제품, 20년 OEM 경험\n현재 일본, 동남아 시장에 수출 중이며 중동 시장 진출을 준비하고 있습니다."
+                        : "e.g., Natural K-beauty skincare brand.\n\nMain products: Vitamin C serum, Hyaluronic acid cream\nStrengths: FDA certified, Vegan products, 20 years OEM experience\nCurrently exporting to Japan and SEA, preparing to enter Middle East."
+                    }
+                    rows={5}
+                    style={{ minHeight: "140px", maxHeight: "300px" }}
+                    value={editedData.companyDescription}
+                  />
+                  <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
+                    <span className="text-blue-500">💡</span>
+                    <p className="text-blue-700 text-sm">
+                      {isKorean
+                        ? "구체적으로 작성할수록 AI가 바이어 맞춤형 이메일을 정확하게 작성해요. 주력 제품, 강점, 목표 시장을 포함해 주세요."
+                        : "The more specific, the better. Include main products, strengths, and target markets."}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Website URL */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2" htmlFor={websiteUrlId}>
@@ -450,6 +560,32 @@ export function StepCompanyInfo() {
             // Display mode
             <>
               <div className="space-y-4">
+                {/* Company Name */}
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-700 text-sm">
+                      🏢 {isKorean ? "회사명" : "Company Name"}
+                    </div>
+                    <div className="mt-1 font-semibold text-base text-gray-900">
+                      {salesStrategy.companyName || (isKorean ? "미입력" : "Not entered")}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Company Description */}
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-700 text-sm">
+                      📝 {isKorean ? "회사 소개" : "Company Description"}
+                    </div>
+                    <div className="mt-1 font-semibold text-base text-gray-900">
+                      {salesStrategy.companyDescription || (isKorean ? "미입력" : "Not entered")}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Website URL */}
                 <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-600" />

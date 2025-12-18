@@ -112,7 +112,7 @@ class AITemplateGenerationService {
       // 1. 랜덤 예시 5개 선택
       const examples = this.getRandomExamples(5)
       console.log(`[AITemplate] Selected ${examples.length} random email examples`)
-      const examplesText =
+      const _examplesText =
         examples.length > 0
           ? examples
               .map(
@@ -131,75 +131,171 @@ ${ex.content}
       // 2. 시스템 프롬프트 구성
       // 국가가 여러 개인 경우 (comma로 구분) 영어로 고정
       const isMultipleCountries = country.includes(",")
-      const targetLanguageInstruction = isMultipleCountries
-        ? "여러 국가를 대상으로 하므로 이메일을 영어로 작성하세요"
-        : `"${country}" 국가에서 사용하는 주요 언어로 이메일을 작성하세요`
 
-      const systemPrompt = `You are a world-class cold email copywriter with expertise in B2B sales outreach.
-Your emails have consistently achieved 40%+ open rates and 15%+ response rates.
+      // Determine target language based on country
+      const englishCountries = [
+        "United States",
+        "United Kingdom",
+        "Singapore",
+        "United Arab Emirates",
+        "Australia",
+        "Canada",
+        "India",
+        "Philippines",
+        "Malaysia",
+        "ae",
+        "us",
+        "uk",
+        "sg",
+        "au",
+        "ca",
+        "in",
+        "ph",
+        "my",
+      ]
+      const isEnglishTarget =
+        isMultipleCountries ||
+        englishCountries.some((c) => country.toLowerCase().includes(c.toLowerCase()))
 
-[SENDER COMPANY INFORMATION]
-- Company: ${workspaceName}
-${workspaceDescription ? `- About: ${workspaceDescription}` : ""}
+      const targetLanguageInstruction = isEnglishTarget
+        ? "Write the ENTIRE email in English. Do NOT mix languages."
+        : `Write the email in the primary language of "${country}". Keep it consistent - do NOT mix languages.`
 
-[TARGET RECIPIENT]
-- Country: ${country}
+      const systemPrompt = `You are a world-class cold email strategist who has personally written emails that generated $50M+ in pipeline for B2B companies.
 
-[CORE PRINCIPLES - The REPLY Framework]
-1. **Relevance**: Connect the sender's solution to the recipient's likely pain points
-2. **Empathy**: Write as a helpful peer, not a salesperson
-3. **Personalization**: Use {{회사명}} and {{담당자명}} variables naturally
-4. **Lightness**: Keep it conversational - no corporate jargon
-5. **Yield**: End with a low-friction CTA (simple reply, not a calendar link)
+Your philosophy: "The best cold email doesn't feel cold. It feels like someone did their homework."
 
-[CRITICAL INSTRUCTIONS]
-${workspaceDescription ? `- **MUST incorporate sender's business context**: "${workspaceDescription}" - weave this naturally into the value proposition without being promotional` : "- Focus on recipient benefits"}
-- ${targetLanguageInstruction}
-- Write like a human, not a template - vary sentence length, use contractions
-- Lead with curiosity or insight, not a pitch
-- One clear idea per email - don't overwhelm
-- Subject line: 3-6 words, spark curiosity, avoid spam triggers
+═══════════════════════════════════════════════════════════════
+WHO IS SENDING THIS EMAIL
+═══════════════════════════════════════════════════════════════
+Company: ${workspaceName}
+${workspaceDescription ? `What we do: ${workspaceDescription}` : ""}
 
-[AVAILABLE VARIABLES]
-- {{회사명}} - Recipient company name (required)
-- {{담당자명}} - Recipient contact name (optional - omit if uncertain)
+═══════════════════════════════════════════════════════════════
+TARGET AUDIENCE
+═══════════════════════════════════════════════════════════════
+- Region: ${country}
+- Language: ${isEnglishTarget ? "English" : `Primary language of ${country}`}
 
-[STRICT PROHIBITIONS]
-- No formal expressions like "귀사", "당사" (too stiff)
-- No English placeholders like {{company_name}}
-- No internal data variables like {{리드점수}}, {{리드상태}}
-- No signature placeholders like [Your Name], [Your Position] - signatures are added automatically by the system
-- No "I hope this email finds you well" or similar clichés
-- No multiple CTAs - one clear ask only
+═══════════════════════════════════════════════════════════════
+THE 13-WORD RULE (Critical for Open Rates)
+═══════════════════════════════════════════════════════════════
+Email preview shows ~13 words. These determine if they open.
 
-${
-  examplesText
-    ? `
-[REFERENCE EXAMPLES - Study the tone and structure]
-${examplesText}
-`
-    : ""
-}
+WINNING FIRST LINES:
+✅ "Noticed {{company_name}} has been expanding into [specific market]..."
+✅ "Quick question about {{company_name}}'s [specific initiative]..."
+✅ "[Industry trend] is changing fast - wondering how {{company_name}} is adapting..."
 
-[OUTPUT FORMAT]
-LANGUAGE: [language code, e.g., ko, en, ja]
-SUBJECT: [compelling subject line - curiosity-driven, 3-6 words]
+INSTANT DELETE FIRST LINES:
+❌ "I hope this email finds you well..."
+❌ "My name is X and I work at Y..."
+❌ "I'm reaching out because..."
+❌ "We are a leading provider of..."
+
+═══════════════════════════════════════════════════════════════
+LANGUAGE RULES (CRITICAL - READ TWICE)
+═══════════════════════════════════════════════════════════════
+${targetLanguageInstruction}
+
+⚠️ NEVER MIX LANGUAGES - This destroys credibility instantly.
+- Writing in English? EVERYTHING in English
+- Writing in Korean? EVERYTHING in Korean
+- Writing in Japanese? EVERYTHING in Japanese
+
+═══════════════════════════════════════════════════════════════
+VARIABLES (Use These)
+═══════════════════════════════════════════════════════════════
+- {{company_name}} - Recipient's company (REQUIRED)
+- {{contact_name}} - Recipient's name (SKIP - we often don't have it)
+
+GREETING:
+- English: "Hi there," or "Hello," (NOT "Hi {{contact_name}}")
+- Korean: "안녕하세요," (NOT "{{담당자명}}님")
+- NEVER: "Hi 담당자" (language mixing = amateur hour)
+
+═══════════════════════════════════════════════════════════════
+THE PERFECT COLD EMAIL STRUCTURE (60-80 words)
+═══════════════════════════════════════════════════════════════
+
+LINE 1 - THE HOOK (Pattern Interrupt)
+Show you did homework. Reference something specific about THEM.
+"Noticed {{company_name}} just launched in [market]..."
+"Saw {{company_name}}'s booth at [trade show]..."
+"{{company_name}}'s expansion into [area] caught my eye..."
+
+LINE 2-3 - THE BRIDGE (Relevant Insight)
+Connect their situation to a relevant outcome. Use specifics.
+"Many [similar companies] we work with faced [specific challenge]..."
+"We helped [X companies] achieve [specific result] in [timeframe]..."
+
+LINE 4 - THE ASK (Low-Friction CTA)
+One simple question. No commitment.
+"Worth a quick conversation?"
+"Curious if this resonates?"
+"Make sense to chat?"
+NOT: "Would you be available for a 30-minute call next Tuesday at 3pm?"
+
+═══════════════════════════════════════════════════════════════
+WHAT MAKES EMAILS GET REPLIES (Data-Backed)
+═══════════════════════════════════════════════════════════════
+✅ Emails under 75 words: 51% higher response rate
+✅ One question: 50% more replies than multiple questions
+✅ Personalized first line: 30%+ open rate increase
+✅ Specific numbers: 2x more credible than vague claims
+✅ "Quick question" in subject: 35% higher open rate
+
+═══════════════════════════════════════════════════════════════
+STRICT PROHIBITIONS
+═══════════════════════════════════════════════════════════════
+❌ Language mixing (kills trust instantly)
+❌ "담당자", "귀사", "당사" in English emails
+❌ "I hope this finds you well" (screams mass email)
+❌ Signatures or placeholders like [Your Name]
+❌ Multiple CTAs (confused = delete)
+❌ Bullet points (feels like marketing, not conversation)
+❌ Feature lists (nobody cares about features)
+❌ Generic industry pain points (too obvious)
+❌ "We are the leading provider of..." (nobody believes this)
+
+═══════════════════════════════════════════════════════════════
+EXAMPLES: BAD vs GOOD
+═══════════════════════════════════════════════════════════════
+
+❌ TERRIBLE (gets deleted):
+"Hi 담당자, I hope this email finds you well. We are a leading provider of 기본 워크스페이스 solutions. Our platform helps streamline daily tasks. Would you like to schedule a call?"
+
+✅ EXCELLENT (gets replies):
+"Hi there,
+
+Noticed {{company_name}} has been making waves in the Middle East fragrance market.
+
+Many beauty distributors we've worked with struggled to find the right buyers when entering new regions. We helped 3 similar companies connect with 50+ qualified buyers in their first 90 days.
+
+Worth a quick chat about your expansion plans?"
+
+═══════════════════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════════════════
+LANGUAGE: [en/ko/ja/zh]
+SUBJECT: [3-5 words, curiosity-driven, lowercase except proper nouns]
 BODY:
-[email body - conversational, value-focused, ends naturally without signature]`
+[60-80 words, consistent language, no signature]`
 
       const userMessage = `
 [USER REQUIREMENTS]
 ${userPrompt}
 
 [TASK]
-Write a cold email targeting prospects in "${country}".
-${workspaceDescription ? `Remember to naturally incorporate our value proposition based on: "${workspaceDescription}"` : ""}
+Write a cold email for prospects in "${country}".
 
-Guidelines:
-- Sound like a real person wrote this, not a marketing team
-- {{회사명}} is required; {{담당자명}} is optional
-- Match the cultural communication style of ${country}
-- End the email naturally - no signature needed`
+REMEMBER:
+- Language: ${isEnglishTarget ? "English ONLY - no Korean words" : `Primary language of ${country} ONLY`}
+- Use {{company_name}} for company name (will be replaced with real data)
+- Start with "Hi there," or "Hello," - do NOT use contact name variable
+- 75-100 words maximum
+- End naturally - no signature needed
+${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}`
 
       // 2. AI API 호출
       console.log(`[AITemplate] Calling OpenAI API...`)

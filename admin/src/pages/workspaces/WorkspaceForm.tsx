@@ -108,6 +108,9 @@ export function WorkspaceForm({
               placeholder={t("settings.workspaces.form.clientNamePlaceholder")}
               value={formData.companyName}
             />
+            <p className="text-muted-foreground text-sm">
+              {t("settings.workspaces.form.clientNameHint")}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

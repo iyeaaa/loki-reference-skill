@@ -73,6 +73,7 @@ workspaces.form.save,저장,Save
 workspaces.form.cancel,취소,Cancel
 workspaces.form.workspaceNamePlaceholder,워크스페이스 이름을 입력하세요,Enter workspace name
 workspaces.form.clientNamePlaceholder,고객사 이름을 입력하세요,Enter client name
+workspaces.form.clientNameHint,영어로 입력해 주세요.,Please enter in English.
 workspaces.form.descriptionPlaceholder,워크스페이스에 대한 설명을 입력하세요,Enter a description of the workspace
 workspaces.form.selectOwner,소유자 선택,Select owner
 workspaces.form.searchUsers,사용자 검색...,Search users...

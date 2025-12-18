@@ -1263,6 +1263,64 @@ export async function updateWorkspace(
   return updatedWorkspace
 }
 
+// PartialUpdateWorkspace - for PATCH requests with optional fields
+export async function partialUpdateWorkspace(
+  id: string,
+  data: {
+    name?: string
+    description?: string
+    ownerId?: string
+    isActive?: boolean
+    companyName?: string
+    companyWebsite?: string | null
+    companyPhone?: string
+    industry?: string
+    companySize?: string
+    companyAddress?: string
+    companyDescription?: string
+  },
+) {
+  // Build update object with only provided fields
+  const updateData: Record<string, unknown> = {
+    updatedAt: new Date(),
+  }
+
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.ownerId !== undefined) updateData.ownerId = data.ownerId
+  if (data.isActive !== undefined) updateData.isActive = data.isActive
+  if (data.companyName !== undefined) updateData.companyName = data.companyName
+  if (data.companyWebsite !== undefined) updateData.companyWebsite = data.companyWebsite
+  if (data.companyPhone !== undefined) updateData.companyPhone = data.companyPhone
+  if (data.industry !== undefined) updateData.industry = data.industry
+  if (data.companySize !== undefined) updateData.companySize = data.companySize
+  if (data.companyAddress !== undefined) updateData.companyAddress = data.companyAddress
+  if (data.companyDescription !== undefined) updateData.companyDescription = data.companyDescription
+
+  const [updatedWorkspace] = await db
+    .update(workspaces)
+    .set(updateData)
+    .where(eq(workspaces.id, id))
+    .returning({
+      id: workspaces.id,
+      name: workspaces.name,
+      description: workspaces.description,
+      ownerId: workspaces.ownerId,
+      companyName: workspaces.companyName,
+      companyWebsite: workspaces.companyWebsite,
+      companyPhone: workspaces.companyPhone,
+      industry: workspaces.industry,
+      companySize: workspaces.companySize,
+      companyAddress: workspaces.companyAddress,
+      companyDescription: workspaces.companyDescription,
+      isActive: workspaces.isActive,
+      createdAt: workspaces.createdAt,
+      updatedAt: workspaces.updatedAt,
+    })
+
+  return updatedWorkspace
+}
+
 // DeleteWorkspace :exec
 export async function deleteWorkspace(id: string, options?: { forceDelete?: boolean }) {
   const forceDelete = options?.forceDelete ?? false

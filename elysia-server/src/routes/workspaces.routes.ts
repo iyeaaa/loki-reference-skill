@@ -31,6 +31,21 @@ const updateWorkspaceSchema = t.Object({
   companyDescription: t.Optional(t.String()),
 })
 
+// Partial update schema for PATCH requests
+const partialUpdateWorkspaceSchema = t.Object({
+  name: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+  description: t.Optional(t.String()),
+  ownerId: t.Optional(t.String({ format: "uuid" })),
+  isActive: t.Optional(t.Boolean()),
+  companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyWebsite: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
+  companyPhone: t.Optional(t.String({ maxLength: 50 })),
+  industry: t.Optional(t.String({ maxLength: 100 })),
+  companySize: t.Optional(t.String({ maxLength: 50 })),
+  companyAddress: t.Optional(t.String()),
+  companyDescription: t.Optional(t.String()),
+})
+
 const _workspaceMemberSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
   userId: t.String({ format: "uuid" }),
@@ -146,6 +161,25 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         id: t.String({ format: "uuid" }),
       }),
       body: updateWorkspaceSchema,
+    },
+  )
+
+  // Partial update workspace (PATCH)
+  .patch(
+    "/:id",
+    async ({ params: { id }, body, set }) => {
+      const workspace = await workspaceService.partialUpdateWorkspace(id, body)
+      if (!workspace) {
+        set.status = 404
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return workspace
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: partialUpdateWorkspaceSchema,
     },
   )
 

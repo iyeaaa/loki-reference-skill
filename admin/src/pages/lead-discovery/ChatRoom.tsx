@@ -13,8 +13,9 @@ import {
   ChevronDown,
   FolderPlus,
   Globe,
+  Keyboard,
   Loader2,
-  SlidersHorizontal,
+  MousePointerClick,
   Sparkles,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -167,6 +168,33 @@ export function ChatRoom() {
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
+
+  const searchModeCopy: Record<SearchMode, { title: string; subtitle: string }> = {
+    website: {
+      title: "우리 회사 웹사이트 주소만 입력하세요",
+      subtitle: "알아서 분석하고, 최적의 리드를 찾아드릴게요",
+    },
+    criteria_input: {
+      title: "찾고 싶은 바이어 조건을 한 문장으로 적어주세요",
+      subtitle: "조건이 대략 정리돼 있는 분께 추천해요 (예: “미국 헬스케어 51-200명”)",
+    },
+    criteria_click: {
+      title: "필요한 조건을 클릭해서 선택하세요",
+      subtitle: "조건을 정확히 정하고 싶은 분께 추천해요 — 클릭만으로 빠르게 검색할 수 있어요",
+    },
+  }
+
+  const tabButtonClass = useCallback(
+    (isActive: boolean) =>
+      cn(
+        "flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        isActive
+          ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/30 hover:bg-primary/90"
+          : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+      ),
+    [],
+  )
 
   // 에러 상태 (에러 처리 및 복구)
   const setError = useSetAtom(setErrorAtom)
@@ -1274,34 +1302,12 @@ export function ChatRoom() {
 
                 {/* 카피라이팅 - 모드에 따라 다른 문구 */}
                 <div className="space-y-2 text-center">
-                  {searchMode === "website" ? (
-                    <>
-                      <p className="font-medium text-foreground/90 text-lg">
-                        우리 회사 웹사이트 주소만 입력하세요
-                      </p>
-                      <p className="text-base text-muted-foreground leading-relaxed">
-                        AI가 우리 제품에 관심 있을 바이어를 찾아드려요
-                      </p>
-                    </>
-                  ) : searchMode === "criteria_input" ? (
-                    <>
-                      <p className="font-medium text-foreground/90 text-lg">
-                        원하는 조건을 자연어로 입력하세요
-                      </p>
-                      <p className="text-base text-muted-foreground leading-relaxed">
-                        “미국 헬스케어 51-200명”처럼 입력하면 자동으로 조건을 해석해요
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-medium text-foreground/90 text-lg">
-                        원하는 조건을 클릭해서 선택하세요
-                      </p>
-                      <p className="text-base text-muted-foreground leading-relaxed">
-                        웹사이트/자연어 없이도 조건 선택만으로 검색할 수 있어요
-                      </p>
-                    </>
-                  )}
+                  <p className="font-medium text-foreground/90 text-lg">
+                    {searchModeCopy[searchMode].title}
+                  </p>
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    {searchModeCopy[searchMode].subtitle}
+                  </p>
                 </div>
 
                 {/* 모드 전환 탭 */}
@@ -1314,11 +1320,7 @@ export function ChatRoom() {
                     <button
                       aria-controls="website-search-panel"
                       aria-selected={searchMode === "website"}
-                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
-                        searchMode === "website"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={tabButtonClass(searchMode === "website")}
                       id="website-tab"
                       onClick={() => setSearchMode("website")}
                       onKeyDown={(e) => {
@@ -1341,11 +1343,7 @@ export function ChatRoom() {
                     <button
                       aria-controls="criteria-input-panel"
                       aria-selected={searchMode === "criteria_input"}
-                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
-                        searchMode === "criteria_input"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={tabButtonClass(searchMode === "criteria_input")}
                       id="criteria-input-tab"
                       onClick={() => setSearchMode("criteria_input")}
                       onKeyDown={(e) => {
@@ -1362,17 +1360,13 @@ export function ChatRoom() {
                       tabIndex={searchMode === "criteria_input" ? 0 : -1}
                       type="button"
                     >
-                      <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                      <Keyboard aria-hidden="true" className="h-4 w-4" />
                       입력해서 찾기
                     </button>
                     <button
                       aria-controls="criteria-click-panel"
                       aria-selected={searchMode === "criteria_click"}
-                      className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium text-sm transition-colors ${
-                        searchMode === "criteria_click"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={tabButtonClass(searchMode === "criteria_click")}
                       id="criteria-click-tab"
                       onClick={() => setSearchMode("criteria_click")}
                       onKeyDown={(e) => {
@@ -1389,7 +1383,7 @@ export function ChatRoom() {
                       tabIndex={searchMode === "criteria_click" ? 0 : -1}
                       type="button"
                     >
-                      <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                      <MousePointerClick aria-hidden="true" className="h-4 w-4" />
                       클릭하여 찾기
                     </button>
                   </div>
@@ -1967,8 +1961,10 @@ export function ChatRoom() {
                     >
                       {searchMode === "website" ? (
                         <Globe aria-hidden="true" className="h-4 w-4" />
+                      ) : searchMode === "criteria_input" ? (
+                        <Keyboard aria-hidden="true" className="h-4 w-4" />
                       ) : (
-                        <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+                        <MousePointerClick aria-hidden="true" className="h-4 w-4" />
                       )}
                       <span className="font-medium text-xs">
                         {searchMode === "website"
@@ -2001,7 +1997,7 @@ export function ChatRoom() {
                       onClick={() => setSearchMode("criteria_input")}
                     >
                       <div className="flex w-full items-center gap-2">
-                        <SlidersHorizontal className="h-4 w-4" />
+                        <Keyboard className="h-4 w-4" />
                         <span className="font-medium">입력해서 찾기</span>
                         {searchMode === "criteria_input" && (
                           <Check className="ml-auto h-4 w-4 text-primary" />
@@ -2016,7 +2012,7 @@ export function ChatRoom() {
                       onClick={() => setSearchMode("criteria_click")}
                     >
                       <div className="flex w-full items-center gap-2">
-                        <SlidersHorizontal className="h-4 w-4" />
+                        <MousePointerClick className="h-4 w-4" />
                         <span className="font-medium">클릭하여 찾기</span>
                         {searchMode === "criteria_click" && (
                           <Check className="ml-auto h-4 w-4 text-primary" />

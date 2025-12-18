@@ -17,7 +17,7 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
     { number: 2, label: t("app.onboarding.step2.label", "리드 확인") },
     { number: 3, label: t("app.onboarding.step3.label", "이메일 생성") },
     { number: 4, label: t("app.onboarding.step4.label", "이메일 연동") },
-    { number: 5, label: t("app.onboarding.step5.label", "실행") },
+    { number: 5, label: t("app.onboarding.step5.label", "캠페인 실행") },
   ]
 
   const handleGoBack = () => {
@@ -27,7 +27,7 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
   }
 
   return (
-    <div className="mx-auto mb-8 flex max-w-2xl items-center justify-between">
+    <div className="mx-auto mb-8 max-w-2xl">
       {/* Stepper */}
       <div className="flex items-center justify-center gap-0">
         {steps.map((step, index) => {
@@ -67,18 +67,18 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
         })}
       </div>
 
-      {/* Back button - only show on step 2+ */}
-      {currentStep > 1 ? (
-        <button
-          className="ml-4 flex items-center gap-1 text-gray-500 text-sm hover:text-gray-700"
-          onClick={handleGoBack}
-          type="button"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("app.onboarding.back", "before")}
-        </button>
-      ) : (
-        <div className="w-20" /> // Placeholder to keep stepper centered
+      {/* Back button - only show on step 2+, positioned below stepper */}
+      {currentStep > 1 && (
+        <div className="mt-4 flex justify-start">
+          <button
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-gray-500 text-sm transition-colors hover:bg-gray-100 hover:text-gray-700"
+            onClick={handleGoBack}
+            type="button"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t("app.onboarding.back", "이전")}
+          </button>
+        </div>
       )}
     </div>
   )

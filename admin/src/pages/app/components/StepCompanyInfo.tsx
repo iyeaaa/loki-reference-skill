@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Edit3, Globe, Save, Settings, X } from "lucide-react"
+import { ArrowRight, Globe, Loader2, Settings } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -68,9 +68,7 @@ export function StepCompanyInfo() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [, setSearchParams] = useSearchParams()
-  const [salesStrategy, setSalesStrategy] = useState<SalesStrategyData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   // Generate unique IDs for form fields
@@ -148,21 +146,17 @@ export function StepCompanyInfo() {
               workspaceData?.companyDescription || strategyData.companyDescription || "",
             websiteUrl: strategyData.websiteUrl || "",
           }
-          setSalesStrategy(mergedData)
           setEditedData(mergedData)
         } else {
-          // 데이터가 없으면 workspace 정보로 초기화하고 수정 모드로 시작
+          // 데이터가 없으면 workspace 정보로 초기화
           setEditedData((prev) => ({
             ...prev,
             companyName: workspaceData?.companyName || "",
             companyDescription: workspaceData?.companyDescription || "",
           }))
-          console.log("[StepCompanyInfo] 10. Setting isEditing=true due to no strategy data")
-          setIsEditing(true)
         }
       } catch (error) {
         console.error("[StepCompanyInfo] 9. ❌ Failed to fetch data:", error)
-        setIsEditing(true)
       } finally {
         setIsLoading(false)
       }
@@ -171,24 +165,7 @@ export function StepCompanyInfo() {
     fetchSalesStrategy()
   }, [workspace?.id])
 
-  const handleEdit = () => {
-    setIsEditing(true)
-  }
-
-  const handleCancel = () => {
-    // Reset to original data
-    if (salesStrategy) {
-      setEditedData({
-        ...salesStrategy,
-        companyName: salesStrategy.companyName || "",
-        companyDescription: salesStrategy.companyDescription || "",
-        websiteUrl: salesStrategy.websiteUrl || "",
-      })
-    }
-    setIsEditing(false)
-  }
-
-  const handleSave = async () => {
+  const handleSaveAndNext = async () => {
     console.log("[StepCompanyInfo] handleSave called")
     console.log("[StepCompanyInfo] workspace?.id:", workspace?.id)
     console.log("[StepCompanyInfo] editedData:", JSON.stringify(editedData, null, 2))
@@ -267,38 +244,21 @@ export function StepCompanyInfo() {
       })
       console.log("[StepCompanyInfo] ✅ Sales strategy updated:", salesResponse)
 
-      setSalesStrategy(editedData)
-      setIsEditing(false)
-      toast.success(isKorean ? "저장되었습니다" : "Saved successfully")
+      // DB에 Step 1 완료 기록
+      try {
+        await completeStep1Mutation.mutateAsync({ workspaceId: workspace.id, userId })
+      } catch (error) {
+        console.error("Failed to complete step 1:", error)
+      }
+
+      // 다음 단계로 이동
+      setSearchParams({ step: "2" })
     } catch (error) {
       console.error("[StepCompanyInfo] ❌ Failed to save:", error)
       toast.error(isKorean ? "저장에 실패했습니다" : "Failed to save")
     } finally {
       setIsSaving(false)
     }
-  }
-
-  const handleNext = async () => {
-    // DB에 Step 1 완료 기록
-    if (workspace?.id) {
-      try {
-        await completeStep1Mutation.mutateAsync({ workspaceId: workspace.id, userId })
-      } catch (error) {
-        console.error("Failed to complete step 1:", error)
-      }
-    }
-    setSearchParams({ step: "2" })
-  }
-
-  const getLabel = (
-    options: Array<{ value: string; ko: string; en: string }>,
-    value: string,
-  ): string => {
-    const option = options.find((opt) => opt.value === value)
-    if (!option) {
-      return value
-    }
-    return isKorean ? option.ko : option.en
   }
 
   // Show loading spinner
@@ -350,333 +310,185 @@ export function StepCompanyInfo() {
   return (
     <div className="mx-auto max-w-2xl">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl">
-              {isKorean ? "정보 입력" : "Enter Information"}
-            </CardTitle>
-            <p className="mt-1 text-gray-600 text-sm">
-              {isKorean
-                ? "온보딩에서 입력하신 정보를 확인하고 수정할 수 있습니다"
-                : "Review and edit the information you entered during onboarding"}
-            </p>
-          </div>
-          {salesStrategy && !isEditing && (
-            <Button onClick={handleEdit} size="sm" variant="outline">
-              <Edit3 className="mr-2 h-4 w-4" />
-              {isKorean ? "수정" : "Edit"}
-            </Button>
-          )}
+        <CardHeader>
+          <CardTitle className="text-2xl">{isKorean ? "정보 입력" : "Enter Information"}</CardTitle>
+          <p className="mt-1 text-gray-600 text-sm">
+            {isKorean
+              ? "AI가 맞춤형 이메일을 작성할 수 있도록 회사 정보를 입력해주세요"
+              : "Enter your company information so AI can write personalized emails"}
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {isEditing ? (
-            // Edit mode
-            <>
-              <div className="space-y-4">
-                {/* Company Name - Toss style */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                    {isKorean ? "회사명" : "Company Name"}
-                    <span className="font-normal text-blue-500 text-xs">
-                      {isKorean ? "필수" : "Required"}
-                    </span>
-                  </Label>
-                  <Input
-                    className="h-12 text-base"
-                    onChange={(e) =>
-                      setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
-                    }
-                    placeholder={isKorean ? "린다 코스메틱" : "Rinda Cosmetics"}
-                    value={editedData.companyName}
-                  />
-                  <p className="text-gray-500 text-sm">
-                    {isKorean
-                      ? "바이어가 처음 보게 될 이름이에요"
-                      : "The first thing buyers will see"}
-                  </p>
-                </div>
-
-                {/* Company Description - Toss style */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                    {isKorean ? "우리 회사를 소개해주세요" : "Tell us about your company"}
-                    <span className="font-normal text-blue-500 text-xs">
-                      {isKorean ? "필수" : "Required"}
-                    </span>
-                  </Label>
-                  <textarea
-                    className="flex w-full resize-y rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    onChange={(e) =>
-                      setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
-                    }
-                    placeholder={
-                      isKorean
-                        ? "예: 천연 성분 기반 K-뷰티 스킨케어 브랜드입니다.\n\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건 제품, 20년 OEM 경험\n현재 일본, 동남아 시장에 수출 중이며 중동 시장 진출을 준비하고 있습니다."
-                        : "e.g., Natural K-beauty skincare brand.\n\nMain products: Vitamin C serum, Hyaluronic acid cream\nStrengths: FDA certified, Vegan products, 20 years OEM experience\nCurrently exporting to Japan and SEA, preparing to enter Middle East."
-                    }
-                    rows={5}
-                    style={{ minHeight: "140px", maxHeight: "300px" }}
-                    value={editedData.companyDescription}
-                  />
-                  <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
-                    <span className="text-blue-500">💡</span>
-                    <p className="text-blue-700 text-sm">
-                      {isKorean
-                        ? "구체적으로 작성할수록 AI가 바이어 맞춤형 이메일을 정확하게 작성해요. 주력 제품, 강점, 목표 시장을 포함해 주세요."
-                        : "The more specific, the better. Include main products, strengths, and target markets."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Website URL */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2" htmlFor={websiteUrlId}>
-                    <Globe className="h-4 w-4" />
-                    {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
-                    <span className="font-normal text-gray-400 text-sm">
-                      {isKorean ? "(선택사항)" : "(Optional)"}
-                    </span>
-                  </Label>
-                  <Input
-                    id={websiteUrlId}
-                    onChange={(e) =>
-                      setEditedData((prev) => ({ ...prev, websiteUrl: e.target.value }))
-                    }
-                    placeholder="https://example.com"
-                    type="url"
-                    value={editedData.websiteUrl}
-                  />
-                  <p className="text-gray-500 text-xs">
-                    {isKorean
-                      ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다 (건너뛰기 가능)"
-                      : "Enter your website for more accurate lead discovery (can be skipped)"}
-                  </p>
-                </div>
-
-                {/* Industry */}
-                <div className="space-y-2">
-                  <Label>{isKorean ? "산업군" : "Industry"}</Label>
-                  <Select
-                    onValueChange={(value) =>
-                      setEditedData((prev) => ({ ...prev, industry: value }))
-                    }
-                    value={editedData.industry}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isKorean ? "산업군 선택" : "Select industry"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDUSTRY_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {isKorean ? opt.ko : opt.en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Target Customer */}
-                <div className="space-y-2">
-                  <Label>{isKorean ? "타겟 고객" : "Target Customer"}</Label>
-                  <Select
-                    onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
-                    value={editedData.target}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isKorean ? "타겟 고객 선택" : "Select target"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TARGET_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {isKorean ? opt.ko : opt.en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Target Country */}
-                <div className="space-y-2">
-                  <Label>{isKorean ? "희망 진출 국가" : "Target Country"}</Label>
-                  <Select
-                    onValueChange={(value) =>
-                      setEditedData((prev) => ({ ...prev, country: value }))
-                    }
-                    value={editedData.country}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isKorean ? "국가 선택" : "Select country"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COUNTRY_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {isKorean ? opt.ko : opt.en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Export Experience */}
-                <div className="space-y-2">
-                  <Label>{isKorean ? "수출 경험" : "Export Experience"}</Label>
-                  <Select
-                    onValueChange={(value) =>
-                      setEditedData((prev) => ({ ...prev, experience: value }))
-                    }
-                    value={editedData.experience}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isKorean ? "경험 선택" : "Select experience"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EXPERIENCE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {isKorean ? opt.ko : opt.en}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Edit action buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button disabled={isSaving} onClick={handleCancel} variant="outline">
-                  <X className="mr-2 h-4 w-4" />
-                  {isKorean ? "취소" : "Cancel"}
-                </Button>
-                <Button disabled={isSaving} onClick={handleSave}>
-                  {isSaving ? (
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-white border-b-2" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  {isKorean ? "저장" : "Save"}
-                </Button>
-              </div>
-            </>
-          ) : salesStrategy ? (
-            // Display mode
-            <>
-              <div className="space-y-4">
-                {/* Company Name */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      🏢 {isKorean ? "회사명" : "Company Name"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {salesStrategy.companyName || (isKorean ? "미입력" : "Not entered")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Company Description */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      📝 {isKorean ? "회사 소개" : "Company Description"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {salesStrategy.companyDescription || (isKorean ? "미입력" : "Not entered")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Website URL */}
-                <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      {isKorean ? "회사 웹사이트" : "Company Website"}
-                      <span className="ml-1 font-normal text-gray-400">
-                        {isKorean ? "(선택사항)" : "(Optional)"}
-                      </span>
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {editedData.websiteUrl || (isKorean ? "미입력" : "Not entered")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Industry */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      {isKorean ? "산업군" : "Industry"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {getLabel(INDUSTRY_OPTIONS, salesStrategy.industry)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Target Customer */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      {isKorean ? "타겟 고객" : "Target Customer"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {getLabel(TARGET_OPTIONS, salesStrategy.target)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Target Country */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      {isKorean ? "희망 진출 국가" : "Target Country"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {getLabel(COUNTRY_OPTIONS, salesStrategy.country)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Export Experience */}
-                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">
-                      {isKorean ? "수출 경험" : "Export Experience"}
-                    </div>
-                    <div className="mt-1 font-semibold text-base text-gray-900">
-                      {getLabel(EXPERIENCE_OPTIONS, salesStrategy.experience)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Next Button */}
-              <div className="flex justify-end pt-4">
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
-                  {t("app.onboarding.step1.nextButton", "다음 단계")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          ) : (
-            // No data found
-            <div className="py-8 text-center">
-              <p className="mb-4 text-gray-600">
-                {isKorean
-                  ? "설문 정보를 찾을 수 없습니다. 계속 진행하시겠습니까?"
-                  : "Survey information not found. Would you like to continue?"}
+          <div className="space-y-4">
+            {/* Company Name - Toss style */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                {isKorean ? "회사명" : "Company Name"}
+                <span className="font-normal text-blue-500 text-xs">
+                  {isKorean ? "필수" : "Required"}
+                </span>
+              </Label>
+              <Input
+                className="h-12 text-base"
+                onChange={(e) =>
+                  setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
+                }
+                placeholder={isKorean ? "린다 코스메틱" : "Rinda Cosmetics"}
+                value={editedData.companyName}
+              />
+              <p className="text-gray-500 text-sm">
+                {isKorean ? "바이어가 처음 보게 될 이름이에요" : "The first thing buyers will see"}
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
-                {t("app.onboarding.step1.nextButton", "다음 단계")}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
-          )}
+
+            {/* Company Description - Toss style */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                {isKorean ? "우리 회사를 소개해주세요" : "Tell us about your company"}
+                <span className="font-normal text-blue-500 text-xs">
+                  {isKorean ? "필수" : "Required"}
+                </span>
+              </Label>
+              <textarea
+                className="flex w-full resize-y rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onChange={(e) =>
+                  setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
+                }
+                placeholder={
+                  isKorean
+                    ? "예: 천연 성분 기반 K-뷰티 스킨케어 브랜드입니다.\n\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건 제품, 20년 OEM 경험\n현재 일본, 동남아 시장에 수출 중이며 중동 시장 진출을 준비하고 있습니다."
+                    : "e.g., Natural K-beauty skincare brand.\n\nMain products: Vitamin C serum, Hyaluronic acid cream\nStrengths: FDA certified, Vegan products, 20 years OEM experience\nCurrently exporting to Japan and SEA, preparing to enter Middle East."
+                }
+                rows={5}
+                style={{ minHeight: "140px", maxHeight: "300px" }}
+                value={editedData.companyDescription}
+              />
+              <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
+                <span className="text-blue-500">💡</span>
+                <p className="text-blue-700 text-sm">
+                  {isKorean
+                    ? "구체적으로 작성할수록 AI가 바이어 맞춤형 이메일을 정확하게 작성해요. 주력 제품, 강점, 목표 시장을 포함해 주세요."
+                    : "The more specific, the better. Include main products, strengths, and target markets."}
+                </p>
+              </div>
+            </div>
+
+            {/* Website URL */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2" htmlFor={websiteUrlId}>
+                <Globe className="h-4 w-4" />
+                {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
+                <span className="font-normal text-gray-400 text-sm">
+                  {isKorean ? "(선택사항)" : "(Optional)"}
+                </span>
+              </Label>
+              <Input
+                id={websiteUrlId}
+                onChange={(e) => setEditedData((prev) => ({ ...prev, websiteUrl: e.target.value }))}
+                placeholder="https://example.com"
+                type="url"
+                value={editedData.websiteUrl}
+              />
+              <p className="text-gray-500 text-xs">
+                {isKorean
+                  ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다 (건너뛰기 가능)"
+                  : "Enter your website for more accurate lead discovery (can be skipped)"}
+              </p>
+            </div>
+
+            {/* Industry */}
+            <div className="space-y-2">
+              <Label>{isKorean ? "산업군" : "Industry"}</Label>
+              <Select
+                onValueChange={(value) => setEditedData((prev) => ({ ...prev, industry: value }))}
+                value={editedData.industry}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isKorean ? "산업군 선택" : "Select industry"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {isKorean ? opt.ko : opt.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Target Customer */}
+            <div className="space-y-2">
+              <Label>{isKorean ? "타겟 고객" : "Target Customer"}</Label>
+              <Select
+                onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
+                value={editedData.target}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isKorean ? "타겟 고객 선택" : "Select target"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {TARGET_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {isKorean ? opt.ko : opt.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Target Country */}
+            <div className="space-y-2">
+              <Label>{isKorean ? "희망 진출 국가" : "Target Country"}</Label>
+              <Select
+                onValueChange={(value) => setEditedData((prev) => ({ ...prev, country: value }))}
+                value={editedData.country}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isKorean ? "국가 선택" : "Select country"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {isKorean ? opt.ko : opt.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Export Experience */}
+            <div className="space-y-2">
+              <Label>{isKorean ? "수출 경험" : "Export Experience"}</Label>
+              <Select
+                onValueChange={(value) => setEditedData((prev) => ({ ...prev, experience: value }))}
+                value={editedData.experience}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isKorean ? "경험 선택" : "Select experience"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPERIENCE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {isKorean ? opt.ko : opt.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Next Button */}
+          <div className="flex justify-end pt-4">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={isSaving}
+              onClick={handleSaveAndNext}
+            >
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t("app.onboarding.step1.nextButton", "다음 단계")}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

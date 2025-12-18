@@ -15,7 +15,7 @@ onboarding.step1.label,정보 입력,Enter Info
 onboarding.step2.label,리드 확인,Lead Check
 onboarding.step3.label,이메일 생성,Email Generation
 onboarding.step4.label,이메일 연동,Email Integration
-onboarding.step5.label,실행,Execution
+onboarding.step5.label,캠페인 실행,Launch Campaign
 onboarding.step1.title,이메일 계정을 연동해주세요,Please link your email account
 onboarding.step1.description,RINDA가 바이어에게 이메일을 보내고 답장을 관리할 수 있어요,RINDA can send emails to buyers and manage replies
 onboarding.step1.googleButton,Google 계정으로 연동하기,Link with Google account
@@ -31,7 +31,7 @@ onboarding.step1.deleteAccount,계정 삭제,Delete account
 onboarding.step1.deleteConfirm,이 이메일 계정을 삭제하시겠습니까?,Are you sure you want to delete this email account?
 onboarding.step1.deleting,삭제 중...,Deleting...
 onboarding.step3.placeholder,전략 선택 - 준비 중,Strategy selection - Coming soon
-onboarding.back,이전,Before
+onboarding.back,이전,Previous
 onboarding.step2.title,회사 정보를 알려주세요,Please tell me your company information
 onboarding.step2.description,RINDA가 맞춤형 영업 메시지를 작성하는 데 사용합니다.,RINDA uses it to create customized sales messages.
 onboarding.step2.websiteLabel,웹사이트 주소,Website address

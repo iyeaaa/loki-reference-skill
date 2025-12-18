@@ -914,7 +914,7 @@ async function discoverLeadsForOnboarding(
 
     // Collect all enriched leads with valid emails
     const enrichedLeadsWithEmails = Array.from(uniqueLeadsByWebsite.values())
-      .filter((lead) => {
+      .filter((lead): lead is typeof lead & { enriched: NonNullable<typeof lead.enriched> } => {
         if (!lead.enriched?.primaryEmail) return false
         const email = lead.enriched.primaryEmail.toLowerCase()
         // Filter out generic no-reply addresses
@@ -923,7 +923,7 @@ async function discoverLeadsForOnboarding(
         if (email.startsWith("abuse@")) return false
         return true
       })
-      .map((lead) => lead.enriched!)
+      .map((lead) => lead.enriched)
 
     console.log(
       `[LeadDiscovery] Total enriched leads with valid emails: ${enrichedLeadsWithEmails.length}`,

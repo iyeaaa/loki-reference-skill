@@ -44,8 +44,8 @@ services:
       - ./elysia-server/.env
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres          # Docker 네트워크 내 호스트명으로 오버라이드
-      - REDIS_HOST=redis          # Docker 네트워크 내 호스트명으로 오버라이드
+      - DB_HOST=postgres # Docker 네트워크 내 호스트명으로 오버라이드
+      - REDIS_HOST=redis # Docker 네트워크 내 호스트명으로 오버라이드
     networks:
       - app-network
 
@@ -55,7 +55,7 @@ services:
       context: ./elysia-server
       dockerfile: Dockerfile.worker
     ports:
-      - "3010:3010"  # Health check endpoint
+      - "3010:3010" # Health check endpoint
     depends_on:
       - redis
       - postgres
@@ -63,13 +63,13 @@ services:
       - ./elysia-server/.env
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres          # Docker 네트워크 내 호스트명으로 오버라이드
-      - REDIS_HOST=redis          # Docker 네트워크 내 호스트명으로 오버라이드
-      - HEALTH_PORT=3010          # Health server port
+      - DB_HOST=postgres # Docker 네트워크 내 호스트명으로 오버라이드
+      - REDIS_HOST=redis # Docker 네트워크 내 호스트명으로 오버라이드
+      - HEALTH_PORT=3010 # Health server port
       # BullMQ Worker Performance Tuning
-      - BULLMQ_CONCURRENCY=20     # 동시 처리 job 개수
-      - BULLMQ_RATE_LIMIT_MAX=50  # 초당 최대 처리 개수
-      - BULLMQ_RATE_LIMIT_DURATION=1000  # Rate limit 기간 (ms)
+      - BULLMQ_CONCURRENCY=20 # 동시 처리 job 개수
+      - BULLMQ_RATE_LIMIT_MAX=50 # 초당 최대 처리 개수
+      - BULLMQ_RATE_LIMIT_DURATION=1000 # Rate limit 기간 (ms)
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3010/readyz"]
       interval: 30s
@@ -80,10 +80,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: "2.0"
           memory: 2G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
     networks:
       - app-network
@@ -108,10 +108,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: "2.0"
           memory: 1G
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
     networks:
       - app-network
@@ -137,10 +137,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 768M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
     networks:
       - app-network
@@ -165,12 +165,58 @@ services:
     networks:
       - app-network
 
+  # PostgreSQL Automated Backup Service
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:17
+    depends_on:
+      - postgres
+    env_file:
+      - ./elysia-server/.env
+    environment:
+      # Database connection
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_EXTRA_OPTS: "--format=custom --compress=6 --no-owner --no-privileges"
+      # Backup schedule - 배포마다 백업되므로 자동 백업은 하루 2회로 축소
+      SCHEDULE: "0 3,15 * * *" # 03:00, 15:00 (하루 2회)
+      # Retention policy - 배포 백업과 별도로 관리
+      BACKUP_KEEP_DAYS: 3 # 일간 백업 3일 보관
+      BACKUP_KEEP_WEEKS: 4 # 주간 백업 4주 보관
+      BACKUP_KEEP_MONTHS: 2 # 월간 백업 2개월 보관
+      # Health check
+      HEALTHCHECK_PORT: 8080
+      # Webhook notification (optional - uncomment if needed)
+      # WEBHOOK_URL: https://hooks.slack.com/services/xxx
+    volumes:
+      - postgres_backup:/backups
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "postgres", "-U", "postgres"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   postgres_data:
+    driver: local
+  postgres_backup:
     driver: local
   redis_data:
     driver: local

@@ -4,6 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { useUsers } from "@/lib/api/hooks/users"
 import type { User, UserRole, UsersParams } from "@/lib/api/types/user"
 import { formatRelativeTime } from "@/lib/date-utils"
@@ -124,134 +132,81 @@ export function UsersTableWithPagination({
     <>
       {/* Users Table */}
       <div className="rounded-md border">
-        <div
-          className="overflow-x-auto overflow-y-visible"
-          style={{
-            scrollbarGutter: "stable",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-          <table className="w-full" style={{ tableLayout: "auto" }}>
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th
-                  className="sticky left-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
+        <Table className="table-fixed">
+          <colgroup>
+            <col className="w-[40px]" />
+            <col className="w-[15%] min-w-[120px]" />
+            <col className="w-[25%] min-w-[200px]" />
+            <col className="w-[80px]" />
+            <col className="w-[80px]" />
+            <col className="w-[100px]" />
+            <col className="w-[100px]" />
+            <col className="w-[60px]" />
+          </colgroup>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="text-center">
+                <Checkbox
+                  checked={users.length > 0 && selectedUsers.length === users.length}
+                  onCheckedChange={handleToggleAll}
+                />
+              </TableHead>
+              <TableHead>사용자명</TableHead>
+              <TableHead>이메일</TableHead>
+              <TableHead>역할</TableHead>
+              <TableHead>상태</TableHead>
+              <TableHead>최근로그인</TableHead>
+              <TableHead>생성일</TableHead>
+              <TableHead className="text-center">편집</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="text-center">
                   <Checkbox
-                    checked={users.length > 0 && selectedUsers.length === users.length}
-                    onCheckedChange={handleToggleAll}
+                    checked={selectedUsers.includes(user.id)}
+                    onCheckedChange={() => onToggleUser(user.id)}
                   />
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ minWidth: "100px" }}
-                >
-                  사용자명
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ minWidth: "200px" }}
-                >
-                  이메일
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  역할
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  상태
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  최근로그인
-                </th>
-                <th
-                  className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  생성일
-                </th>
-                <th
-                  className="sticky right-0 z-10 bg-gray-50 p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:bg-gray-700 dark:text-gray-400"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  편집
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-              {users.map((user) => (
-                <tr
-                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                  key={user.id}
-                >
-                  <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
-                    <Checkbox
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={() => onToggleUser(user.id)}
-                    />
-                  </td>
-                  <td
-                    className="p-2 font-medium text-gray-900 text-sm dark:text-gray-100"
-                    style={{
-                      maxWidth: "200px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={user.username}
-                  >
+                </TableCell>
+                <TableCell>
+                  <div className="line-clamp-3 break-words font-medium" title={user.username}>
                     {user.username}
-                  </td>
-                  <td
-                    className="p-2 text-gray-900 text-sm dark:text-gray-100"
-                    style={{
-                      maxWidth: "300px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={user.email}
-                  >
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="line-clamp-3 break-all text-muted-foreground" title={user.email}>
                     {user.email}
-                  </td>
-                  <td className="whitespace-nowrap p-2 text-sm">
-                    <Badge className="text-xs" variant={getRoleBadgeVariant()}>
-                      {getRoleText(user.userRole)}
-                    </Badge>
-                  </td>
-                  <td className="whitespace-nowrap p-2 text-sm">
-                    <Badge variant="outline">{user.isActive ? "활성" : "비활성"}</Badge>
-                  </td>
-                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
-                    {formatRelativeTime(user.lastLoginAt || null)}
-                  </td>
-                  <td className="whitespace-nowrap p-2 text-gray-500 text-xs dark:text-gray-400">
-                    {formatRelativeTime(user.createdAt)}
-                  </td>
-                  <td className="sticky right-0 z-10 whitespace-nowrap bg-white p-2 text-sm dark:bg-gray-800">
-                    <Button
-                      className="h-8 px-3 text-xs"
-                      onClick={() => onEditUser(user)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge className="text-xs" variant={getRoleBadgeVariant()}>
+                    {getRoleText(user.userRole)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{user.isActive ? "활성" : "비활성"}</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs">
+                  {formatRelativeTime(user.lastLoginAt || null)}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs">
+                  {formatRelativeTime(user.createdAt)}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    className="h-8 w-8 p-0"
+                    onClick={() => onEditUser(user)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination */}

@@ -304,7 +304,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
               console.log("[Auth] 🚀 Queuing auto-generate onboarding job...")
               try {
                 const job = await onboardingGenerationQueue.add(
-                  "auto-generate-onboarding" as any,
+                  "auto-generate-onboarding",
                   {
                     workspaceId: workspace.id,
                     userId: newUser.id,
@@ -597,7 +597,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 console.log("[Auth/Google] 🚀 Queuing auto-generate onboarding job...")
                 try {
                   const job = await onboardingGenerationQueue.add(
-                    "auto-generate-onboarding" as any,
+                    "auto-generate-onboarding",
                     {
                       workspaceId: workspace.id,
                       userId: user.id,
@@ -812,7 +812,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 console.log("[Auth/Nylas] 🚀 Queuing auto-generate onboarding job...")
                 try {
                   const job = await onboardingGenerationQueue.add(
-                    "auto-generate-onboarding" as any,
+                    "auto-generate-onboarding",
                     {
                       workspaceId: workspace.id,
                       userId: user.id,

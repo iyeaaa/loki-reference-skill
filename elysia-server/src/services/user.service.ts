@@ -1,10 +1,10 @@
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emails } from "../db/schema/emails"
+import { emailReplies, emails } from "../db/schema/emails"
 import { iamMemberRoles } from "../db/schema/iam"
 import { departments, users } from "../db/schema/users"
-import { workspaceMembers } from "../db/schema/workspaces"
+import { workspaceMembers, workspaces } from "../db/schema/workspaces"
 import { createDefaultRolesForWorkspace, syncMemberRoleToIamRole } from "../db/seed-iam"
 import logger from "../utils/logger"
 import { deleteGrant } from "./nylas.service"
@@ -154,41 +154,89 @@ export async function deleteUser(id: string) {
   await db.delete(users).where(eq(users.id, id))
 }
 
-// SoftDeleteUser :exec
-// ユーザーアカウントのソフト削除手順:
-// 1. すべてのNylasグラント（メール接続）を取り消し - トランザクション外で実行
-// 2. IAMロール割り当てを削除（ワークスペースメンバー削除前に実行必須）
-// 3. すべてのワークスペースメンバーシップを削除
-// 4. GDPR準拠のため個人データを匿名化
-// 5. isActiveをfalseに設定
+// HardDeleteUser :exec
+// 사용자 계정 완전 삭제 절차 (GDPR 완전 준수):
+// Phase 1: 외부 서비스 정리 (트랜잭션 외부)
+//   - Nylas 그랜트 취소
+// Phase 2: 소유한 워크스페이스 데이터 삭제 (트랜잭션 내부)
+//   - emails, email_replies (RESTRICT 제약으로 명시적 삭제 필요)
+//   - workspaces 삭제 시 CASCADE로 자동 삭제되는 데이터:
+//     leads, sequences, customer_groups, websets, iam_*, activity_logs,
+//     subscriptions, onboarding_progress, openai_api_keys, workspace_products,
+//     workspace_sales_strategies, email_templates, workspace_members 등
+// Phase 3: 사용자 연결 데이터 삭제 (트랜잭션 내부)
+//   - IAM 역할, 워크스페이스 멤버십, 이메일 계정
+// Phase 4: RESTRICT FK 참조 NULL 처리 (트랜잭션 내부)
+//   - createdBy, enrolledBy, addedBy 등 nullable FK 컬럼들
+// Phase 5: 사용자 완전 삭제 (트랜잭션 내부)
+//   - users 테이블에서 완전 삭제
+//   - CASCADE로 billing_customers, user_signature_preferences 자동 삭제
 export async function softDeleteUser(id: string) {
-  const timestamp = Date.now()
-  const anonymizedEmail = `deleted_${timestamp}_${id.slice(0, 8)}@deleted.local`
-  const anonymizedUsername = `deleted_user_${timestamp}`
+  logger.info({ userId: id }, "Starting hard delete user process")
 
-  logger.info({ userId: id }, "Starting soft delete user process")
+  // ============================================================================
+  // Phase 1: 외부 서비스 정리 (트랜잭션 외부 - 외부 API 호출)
+  // ============================================================================
 
-  // 1. このユーザーのメールアカウントのすべてのNylasグラントを取り消し（トランザクション外 - 外部API呼び出し）
-  const emailAccounts = await db
-    .select({
-      id: userEmailAccounts.id,
-      apiKey: userEmailAccounts.apiKey,
-      emailAddress: userEmailAccounts.emailAddress,
-      workspaceId: userEmailAccounts.workspaceId,
-    })
-    .from(userEmailAccounts)
-    .where(eq(userEmailAccounts.userId, id))
+  // 1-1. 사용자가 소유한 워크스페이스 조회
+  const ownedWorkspaces = await db
+    .select({ id: workspaces.id, name: workspaces.name })
+    .from(workspaces)
+    .where(eq(workspaces.ownerId, id))
+
+  const ownedWorkspaceIds = ownedWorkspaces.map((w) => w.id)
 
   logger.info(
-    { userId: id, emailAccountCount: emailAccounts.length },
+    { userId: id, ownedWorkspaceCount: ownedWorkspaces.length },
+    "Found owned workspaces for user deletion",
+  )
+
+  // 1-2. 소유한 워크스페이스의 모든 이메일 계정 + 사용자 본인의 이메일 계정 조회
+  let allEmailAccounts: {
+    id: string
+    apiKey: string | null
+    emailAddress: string
+    workspaceId: string
+  }[] = []
+
+  if (ownedWorkspaceIds.length > 0) {
+    allEmailAccounts = await db
+      .select({
+        id: userEmailAccounts.id,
+        apiKey: userEmailAccounts.apiKey,
+        emailAddress: userEmailAccounts.emailAddress,
+        workspaceId: userEmailAccounts.workspaceId,
+      })
+      .from(userEmailAccounts)
+      .where(
+        sql`workspace_id IN (${sql.join(
+          ownedWorkspaceIds.map((wid) => sql`${wid}`),
+          sql`, `,
+        )}) OR user_id = ${id}`,
+      )
+  } else {
+    allEmailAccounts = await db
+      .select({
+        id: userEmailAccounts.id,
+        apiKey: userEmailAccounts.apiKey,
+        emailAddress: userEmailAccounts.emailAddress,
+        workspaceId: userEmailAccounts.workspaceId,
+      })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.userId, id))
+  }
+
+  logger.info(
+    { userId: id, emailAccountCount: allEmailAccounts.length },
     "Found email accounts for user deletion",
   )
 
+  // 1-3. Nylas 그랜트 취소
   let nylasGrantsDeleted = 0
   let nylasGrantsFailed = 0
 
-  for (const account of emailAccounts) {
-    // NylasのgrantIdの場合のみ取り消し（"SG"で始まるSendGrid APIキーは除外）
+  for (const account of allEmailAccounts) {
+    // Nylas grantId인 경우만 취소 ("SG"로 시작하는 SendGrid API 키 제외)
     if (account.apiKey && !account.apiKey.startsWith("SG")) {
       try {
         await deleteGrant(account.apiKey)
@@ -204,7 +252,7 @@ export async function softDeleteUser(id: string) {
         )
       } catch (error) {
         nylasGrantsFailed++
-        // ログ出力のみで失敗させない - グラントが既に無効な可能性あり
+        // 로그만 출력하고 실패시키지 않음 - 그랜트가 이미 무효할 수 있음
         logger.warn(
           {
             err: error,
@@ -222,16 +270,86 @@ export async function softDeleteUser(id: string) {
   logger.info(
     {
       userId: id,
-      totalEmailAccounts: emailAccounts.length,
+      totalEmailAccounts: allEmailAccounts.length,
       nylasGrantsDeleted,
       nylasGrantsFailed,
     },
     "Completed Nylas grant deletion process",
   )
 
-  // 2-5. データベース操作をトランザクション内で実行
+  // ============================================================================
+  // Phase 2-5: 데이터베이스 작업 (트랜잭션 내부)
+  // ============================================================================
   await db.transaction(async (tx) => {
-    // 2. 削除前にワークスペースメンバーIDを取得（IAMロールクリーンアップに必要）
+    // ============================================================================
+    // Phase 2: 소유한 워크스페이스 데이터 삭제
+    // ============================================================================
+
+    if (ownedWorkspaceIds.length > 0) {
+      logger.info(
+        { userId: id, workspaceIds: ownedWorkspaceIds },
+        "Deleting owned workspace data (RESTRICT constraint tables first)",
+      )
+
+      // 2-1. emails 테이블 삭제 (RESTRICT 제약 - 명시적 삭제 필요)
+      // email_events는 CASCADE로 자동 삭제됨
+      const deletedEmails = await tx
+        .delete(emails)
+        .where(
+          sql`workspace_id IN (${sql.join(
+            ownedWorkspaceIds.map((wid) => sql`${wid}`),
+            sql`, `,
+          )})`,
+        )
+        .returning({ id: emails.id })
+      logger.info(
+        { userId: id, deletedEmailsCount: deletedEmails.length },
+        "Deleted emails from owned workspaces",
+      )
+
+      // 2-2. email_replies 테이블 삭제 (RESTRICT 제약 - 명시적 삭제 필요)
+      await tx.delete(emailReplies).where(
+        sql`workspace_id IN (${sql.join(
+          ownedWorkspaceIds.map((wid) => sql`${wid}`),
+          sql`, `,
+        )})`,
+      )
+      logger.info({ userId: id }, "Deleted email_replies from owned workspaces")
+
+      // 2-3. workspaces 삭제 (CASCADE로 다음 테이블들 자동 삭제)
+      // - leads (-> lead_contacts, lead_products, lead_social_media, lead_business_sectors,
+      //          lead_product_categories, lead_industry_types CASCADE)
+      // - sequences (-> sequence_steps, sequence_enrollments -> sequence_step_executions CASCADE)
+      // - customer_groups (-> customer_group_members CASCADE)
+      // - websets (-> webset_rows CASCADE)
+      // - chat_conversations (-> chat_messages CASCADE)
+      // - workspace_members (-> iam_member_roles, iam_member_policies CASCADE)
+      // - iam_policies (-> iam_policy_statements, iam_role_policies, iam_member_policies CASCADE)
+      // - iam_workspace_roles (-> iam_role_policies, iam_member_roles CASCADE)
+      // - activity_logs
+      // - subscriptions (-> subscription_history CASCADE)
+      // - onboarding_progress
+      // - openai_api_keys
+      // - workspace_products
+      // - workspace_sales_strategies
+      // - email_templates
+      // - email_signatures (SET NULL)
+      // - user_email_accounts
+      const deletedWorkspaces = await tx
+        .delete(workspaces)
+        .where(eq(workspaces.ownerId, id))
+        .returning({ id: workspaces.id })
+      logger.info(
+        { userId: id, deletedWorkspacesCount: deletedWorkspaces.length },
+        "Deleted owned workspaces (CASCADE deletes related data)",
+      )
+    }
+
+    // ============================================================================
+    // Phase 3: 사용자 연결 데이터 삭제 (다른 워크스페이스의 멤버십)
+    // ============================================================================
+
+    // 3-1. 멤버십 ID 조회 (다른 사람 워크스페이스의 멤버십)
     const memberIds = await tx
       .select({ id: workspaceMembers.id, workspaceId: workspaceMembers.workspaceId })
       .from(workspaceMembers)
@@ -239,10 +357,10 @@ export async function softDeleteUser(id: string) {
 
     logger.info(
       { userId: id, membershipCount: memberIds.length },
-      "Found workspace memberships for user",
+      "Found remaining workspace memberships for user",
     )
 
-    // 3. すべてのIAMロール割り当てを削除（ワークスペースメンバー削除前に実行必須）
+    // 3-2. IAM 역할 할당 삭제 (workspace_members 삭제 전 필요)
     if (memberIds.length > 0) {
       const memberIdList = memberIds.map((m) => m.id)
       await tx.delete(iamMemberRoles).where(
@@ -254,19 +372,18 @@ export async function softDeleteUser(id: string) {
       logger.info({ userId: id, memberCount: memberIds.length }, "Deleted IAM role assignments")
     }
 
-    // 4. すべてのワークスペースメンバーシップを削除
+    // 3-3. 워크스페이스 멤버십 삭제
     await tx.delete(workspaceMembers).where(eq(workspaceMembers.userId, id))
     logger.info({ userId: id, membershipCount: memberIds.length }, "Deleted workspace memberships")
 
-    // 5. ユーザーのメールアカウントIDを取得
-    const userEmailAccountIds = await tx
+    // 3-4. 사용자의 남은 이메일 계정에서 보낸 이메일 삭제 (다른 워크스페이스)
+    const remainingEmailAccountIds = await tx
       .select({ id: userEmailAccounts.id })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.userId, id))
 
-    // 6. これらのメールアカウントから送信されたすべてのメールを削除（FK制約のため先に削除）
-    if (userEmailAccountIds.length > 0) {
-      const accountIds = userEmailAccountIds.map((acc) => acc.id)
+    if (remainingEmailAccountIds.length > 0) {
+      const accountIds = remainingEmailAccountIds.map((acc) => acc.id)
       const deletedEmails = await tx
         .delete(emails)
         .where(
@@ -278,12 +395,11 @@ export async function softDeleteUser(id: string) {
         .returning({ id: emails.id })
       logger.info(
         { userId: id, deletedEmailsCount: deletedEmails.length },
-        "Deleted emails for user email accounts",
+        "Deleted emails for remaining user email accounts",
       )
     }
 
-    // 7. すべてのユーザーメールアカウントを削除
-    // 注意: Soft deleteなのでcascadeが作動しない。明示的に削除が必要
+    // 3-5. 사용자 이메일 계정 삭제
     const deletedEmailAccounts = await tx
       .delete(userEmailAccounts)
       .where(eq(userEmailAccounts.userId, id))
@@ -293,120 +409,133 @@ export async function softDeleteUser(id: string) {
       "Deleted user email accounts",
     )
 
-    // 6. ユーザーをソフト削除して匿名化
-    // Google OAuth 연결 (oauthId)도 null로 설정하여 완전히 연결 해제
-    await tx
-      .update(users)
-      .set({
-        isActive: false,
-        email: anonymizedEmail,
-        username: anonymizedUsername,
-        passwordHash: null,
-        profilePicture: null,
-        oauthId: null, // Google OAuth 연결 해제
-        employeeId: null,
-        departmentId: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
+    // ============================================================================
+    // Phase 4: RESTRICT FK 참조 NULL 처리
+    // users.id를 참조하는 nullable FK 컬럼들을 NULL로 설정
+    // (onDelete 옵션이 없는 FK는 기본적으로 RESTRICT)
+    // ============================================================================
 
-    logger.info(
-      { userId: id, anonymizedEmail, anonymizedUsername },
-      "User anonymized and soft deleted successfully",
+    // sequences.createdBy
+    await tx.execute(sql`UPDATE sequences SET created_by = NULL WHERE created_by = ${id}`)
+
+    // sequence_enrollments.enrolledBy
+    await tx.execute(
+      sql`UPDATE sequence_enrollments SET enrolled_by = NULL WHERE enrolled_by = ${id}`,
     )
+
+    // leads.createdBy
+    await tx.execute(sql`UPDATE leads SET created_by = NULL WHERE created_by = ${id}`)
+
+    // customer_groups.createdBy
+    await tx.execute(sql`UPDATE customer_groups SET created_by = NULL WHERE created_by = ${id}`)
+
+    // customer_group_members.addedBy
+    await tx.execute(sql`UPDATE customer_group_members SET added_by = NULL WHERE added_by = ${id}`)
+
+    // email_templates.createdBy
+    await tx.execute(sql`UPDATE email_templates SET created_by = NULL WHERE created_by = ${id}`)
+
+    // email_replies.assignedTo
+    await tx.execute(sql`UPDATE email_replies SET assigned_to = NULL WHERE assigned_to = ${id}`)
+
+    // iam_policies.createdBy
+    await tx.execute(sql`UPDATE iam_policies SET created_by = NULL WHERE created_by = ${id}`)
+
+    // iam_workspace_roles.createdBy
+    await tx.execute(sql`UPDATE iam_workspace_roles SET created_by = NULL WHERE created_by = ${id}`)
+
+    // iam_role_policies.attachedBy
+    await tx.execute(sql`UPDATE iam_role_policies SET attached_by = NULL WHERE attached_by = ${id}`)
+
+    // iam_member_roles.grantedBy
+    await tx.execute(sql`UPDATE iam_member_roles SET granted_by = NULL WHERE granted_by = ${id}`)
+
+    // iam_member_policies.attachedBy
+    await tx.execute(
+      sql`UPDATE iam_member_policies SET attached_by = NULL WHERE attached_by = ${id}`,
+    )
+
+    // subscription_history.changedBy
+    await tx.execute(
+      sql`UPDATE subscription_history SET changed_by = NULL WHERE changed_by = ${id}`,
+    )
+
+    // workspace_members.invitedBy
+    await tx.execute(sql`UPDATE workspace_members SET invited_by = NULL WHERE invited_by = ${id}`)
+
+    logger.info({ userId: id }, "Nullified all RESTRICT FK references")
+
+    // ============================================================================
+    // Phase 5: 사용자 완전 삭제
+    // ============================================================================
+
+    // CASCADE로 자동 삭제되는 항목:
+    // - billing_customers (users CASCADE)
+    // - user_signature_preferences (users CASCADE)
+    // - chat_conversations (users CASCADE) - 이미 워크스페이스 삭제로 처리됨
+
+    // SET NULL로 자동 처리되는 항목:
+    // - email_signatures.userId (set null)
+    // - activity_logs.userId (set null)
+    // - iam_audit_logs.userId (set null)
+
+    await tx.delete(users).where(eq(users.id, id))
+
+    logger.info({ userId: id }, "User permanently deleted from database")
   })
 
   logger.info(
     {
       userId: id,
-      emailAccountsProcessed: emailAccounts.length,
+      ownedWorkspacesDeleted: ownedWorkspaces.length,
+      emailAccountsProcessed: allEmailAccounts.length,
       nylasGrantsDeleted,
       nylasGrantsFailed,
     },
-    "Soft delete user process completed successfully",
+    "Hard delete user process completed successfully",
   )
-
-  // 삭제 후 검증: 남은 데이터가 있는지 확인
-  await verifyUserDeletion(id)
 }
 
 /**
- * 사용자 삭제 후 남은 데이터 검증
- * 찌꺼기 데이터가 남아있는지 확인
+ * 사용자 삭제 전 관련 데이터 카운트 조회 (디버깅용)
+ * Hard Delete 전에 얼마나 많은 데이터가 삭제될지 확인
  */
-async function verifyUserDeletion(userId: string) {
+export async function getUserDataCounts(userId: string) {
   try {
-    // 1. 이메일 계정 확인
-    const remainingEmailAccounts = await db
+    // 1. 소유한 워크스페이스 확인
+    const ownedWorkspaces = await db
+      .select({ count: count() })
+      .from(workspaces)
+      .where(eq(workspaces.ownerId, userId))
+
+    // 2. 이메일 계정 확인
+    const emailAccounts = await db
       .select({ count: count() })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.userId, userId))
 
-    // 2. 워크스페이스 멤버십 확인
-    const remainingMemberships = await db
+    // 3. 워크스페이스 멤버십 확인
+    const memberships = await db
       .select({ count: count() })
       .from(workspaceMembers)
       .where(eq(workspaceMembers.userId, userId))
 
-    // 3. IAM 역할 확인 (member_id를 통해 확인)
-    const remainingIamRoles = await db
-      .select({ count: count() })
-      .from(iamMemberRoles)
-      .innerJoin(workspaceMembers, eq(iamMemberRoles.memberId, workspaceMembers.id))
-      .where(eq(workspaceMembers.userId, userId))
+    // 4. 사용자가 보낸 이메일 확인 (user_email_account를 통해)
+    const sentEmails = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(emails)
+      .innerJoin(userEmailAccounts, eq(emails.userEmailAccountId, userEmailAccounts.id))
+      .where(eq(userEmailAccounts.userId, userId))
 
-    // 4. 사용자 정보 확인 (익명화 확인)
-    const [user] = await db
-      .select({
-        isActive: users.isActive,
-        email: users.email,
-        oauthId: users.oauthId,
-        passwordHash: users.passwordHash,
-        profilePicture: users.profilePicture,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-
-    const emailAccountCount = Number(remainingEmailAccounts[0]?.count || 0)
-    const membershipCount = Number(remainingMemberships[0]?.count || 0)
-    const iamRoleCount = Number(remainingIamRoles[0]?.count || 0)
-
-    const isAnonymized =
-      user &&
-      !user.isActive &&
-      user.email.includes("@deleted.local") &&
-      user.oauthId === null &&
-      user.passwordHash === null &&
-      user.profilePicture === null
-
-    const hasLeftoverData = emailAccountCount > 0 || membershipCount > 0 || iamRoleCount > 0
-
-    if (hasLeftoverData || !isAnonymized) {
-      logger.error(
-        {
-          userId,
-          emailAccountCount,
-          membershipCount,
-          iamRoleCount,
-          isAnonymized,
-          userEmail: user?.email,
-        },
-        "⚠️ WARNING: User deletion verification failed - leftover data detected!",
-      )
-    } else {
-      logger.info(
-        {
-          userId,
-          emailAccountCount,
-          membershipCount,
-          iamRoleCount,
-          isAnonymized,
-        },
-        "✅ User deletion verification passed - no leftover data",
-      )
+    return {
+      ownedWorkspaceCount: Number(ownedWorkspaces[0]?.count || 0),
+      emailAccountCount: Number(emailAccounts[0]?.count || 0),
+      membershipCount: Number(memberships[0]?.count || 0),
+      emailCount: Number(sentEmails[0]?.count || 0),
     }
   } catch (error) {
-    logger.error({ err: error, userId }, "Failed to verify user deletion")
+    logger.error({ err: error, userId }, "Failed to get user data counts")
+    return null
   }
 }
 

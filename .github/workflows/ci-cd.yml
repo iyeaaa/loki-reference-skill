@@ -44,6 +44,47 @@ jobs:
           --exclude='.DS_Store' \
           ./ ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/send-grid-test/
 
+    - name: Pre-deployment Database Backup
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e
+          echo "[+] Creating pre-deployment database backup..."
+
+          BACKUP_DIR="$HOME/backups/postgres/pre-deploy"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="${BACKUP_DIR}/postgres_pre-deploy_${TIMESTAMP}.dump"
+          MAX_BACKUPS=20  # Keep only last 20 pre-deploy backups (~1GB)
+
+          mkdir -p "${BACKUP_DIR}"
+
+          # Check if postgres container is running
+          if docker inspect send-grid-test-postgres-1 &>/dev/null; then
+            # Skip if last backup was less than 30 minutes ago (avoid duplicate backups)
+            LATEST=$(find "${BACKUP_DIR}" -name "*.dump" -mmin -30 2>/dev/null | head -1)
+            if [ -n "${LATEST}" ]; then
+              echo "[+] Recent backup exists (< 30min), skipping: $(basename ${LATEST})"
+            else
+              docker exec send-grid-test-postgres-1 pg_dump -U postgres -d postgres \
+                --format=custom --compress=6 --no-owner --no-privileges \
+                --file=/tmp/backup.dump
+
+              docker cp send-grid-test-postgres-1:/tmp/backup.dump "${BACKUP_FILE}"
+              docker exec send-grid-test-postgres-1 rm -f /tmp/backup.dump
+
+              SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+              echo "[+] Pre-deploy backup created: ${BACKUP_FILE} (${SIZE})"
+            fi
+
+            # Keep only last N backups (count-based, not time-based)
+            cd "${BACKUP_DIR}"
+            ls -t *.dump 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs -r rm -f
+            CURRENT_COUNT=$(ls -1 *.dump 2>/dev/null | wc -l)
+            echo "[+] Pre-deploy backups: ${CURRENT_COUNT}/${MAX_BACKUPS}"
+          else
+            echo "[!] PostgreSQL container not running, skipping backup"
+          fi
+        EOF
+
     - name: Build and Deploy SendGrinda with Docker Compose
       run: |
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'

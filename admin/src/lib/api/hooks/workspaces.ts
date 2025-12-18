@@ -136,6 +136,48 @@ export function useUpdateWorkspace() {
   })
 }
 
+// Partial update workspace (PATCH) - for updating specific fields only
+export function usePatchWorkspace(options?: { showToast?: boolean }) {
+  const queryClient = useQueryClient()
+  const showToast = options?.showToast ?? false
+
+  return useMutation({
+    mutationFn: ({
+      workspaceId,
+      data,
+    }: {
+      workspaceId: string
+      data: Partial<{
+        name: string
+        description: string
+        ownerId: string
+        isActive: boolean
+        companyName: string
+        companyWebsite: string | null
+        companyPhone: string
+        industry: string
+        companySize: string
+        companyAddress: string
+        companyDescription: string
+      }>
+    }) => workspacesApi.patch(workspaceId, data),
+    onSuccess: (_, variables) => {
+      // Invalidate workspace detail query
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.detail(variables.workspaceId),
+      })
+      // Invalidate user workspaces query (for Step 3 to get updated data)
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+      if (showToast) {
+        toast.success("워크스페이스 정보가 업데이트되었습니다")
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "워크스페이스 업데이트에 실패했습니다")
+    },
+  })
+}
+
 export function useEnrichWorkspace() {
   return useMutation({
     mutationFn: ({ workspaceId, websiteUrl }: { workspaceId: string; websiteUrl: string }) =>

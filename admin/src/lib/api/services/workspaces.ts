@@ -105,10 +105,32 @@ export const workspacesApi = {
       body: JSON.stringify(data),
     }),
 
-  // Update workspace
+  // Update workspace (full update - PUT)
   update: async (id: string, data: UpdateWorkspaceData): Promise<Workspace> =>
     apiFetch<Workspace>(`/api/v1/workspaces/${id}`, {
       method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // Partial update workspace (PATCH) - for updating specific fields only
+  patch: async (
+    id: string,
+    data: Partial<{
+      name: string
+      description: string
+      ownerId: string
+      isActive: boolean
+      companyName: string
+      companyWebsite: string | null
+      companyPhone: string
+      industry: string
+      companySize: string
+      companyAddress: string
+      companyDescription: string
+    }>,
+  ): Promise<Workspace> =>
+    apiFetch<Workspace>(`/api/v1/workspaces/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     }),
 

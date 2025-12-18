@@ -188,14 +188,6 @@ export function StepEmailGeneration() {
                   ? "리드 탐색 및 이메일 템플릿 생성 중..."
                   : "Discovering leads and generating email templates..."}
               </p>
-
-              {/* Next Button - allow skipping while generating */}
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleNext} variant="outline">
-                  {isKorean ? "건너뛰기" : "Skip"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
             </div>
           ) : (
             // Generation complete - show results

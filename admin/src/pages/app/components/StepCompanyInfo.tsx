@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { apiFetch } from "@/lib/api/client"
 import { useCompleteStep1, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { usePatchWorkspace, useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 type SalesStrategyData = {
   companyName: string
@@ -105,6 +105,7 @@ export function StepCompanyInfo() {
   // Onboarding hooks
   const { data: onboardingData } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
   const completeStep1Mutation = useCompleteStep1()
+  const patchWorkspaceMutation = usePatchWorkspace()
 
   console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
 
@@ -208,7 +209,7 @@ export function StepCompanyInfo() {
 
     setIsSaving(true)
     try {
-      // 1. workspace 업데이트 (companyName, companyDescription, companyWebsite)
+      // 1. workspace 업데이트 (companyName, companyDescription, companyWebsite) - tanstack-query mutation 사용
       console.log(`[StepCompanyInfo] 📤 Updating workspace at /api/v1/workspaces/${workspace.id}`)
       const workspacePayload = {
         companyName: editedData.companyName,
@@ -217,11 +218,11 @@ export function StepCompanyInfo() {
       }
       console.log("[StepCompanyInfo] Workspace payload:", JSON.stringify(workspacePayload, null, 2))
 
-      await apiFetch(`/api/v1/workspaces/${workspace.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(workspacePayload),
+      await patchWorkspaceMutation.mutateAsync({
+        workspaceId: workspace.id,
+        data: workspacePayload,
       })
-      console.log("[StepCompanyInfo] ✅ Workspace updated")
+      console.log("[StepCompanyInfo] ✅ Workspace updated (cache invalidated)")
 
       // 2. onboarding_progress.survey_data 저장
       console.log(

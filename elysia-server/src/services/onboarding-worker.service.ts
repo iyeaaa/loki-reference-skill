@@ -533,9 +533,18 @@ export async function runTemplatesPhase(
         : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
 
       try {
+        // Use companyName and companyDescription if available, fallback to workspace name/description
+        // Filter out default values like "기본 워크스페이스" that don't provide useful context
+        const effectiveDescription =
+          workspace.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
+            ? workspace.companyDescription
+            : workspace.description && workspace.description !== "기본 워크스페이스"
+              ? workspace.description
+              : undefined
+
         const template = await aiService.generateEmailTemplate({
-          workspaceName: workspace.name,
-          workspaceDescription: workspace.description || undefined,
+          workspaceName: workspace.companyName || workspace.name,
+          workspaceDescription: effectiveDescription,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,
         })

@@ -15,6 +15,7 @@ import { emails } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads as leadsTable } from "../db/schema/leads"
 import { type OnboardingStatus, onboardingProgress } from "../db/schema/onboarding"
+import { sequenceSteps } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
 import { createLog } from "./activity-log.service"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
@@ -309,6 +310,25 @@ export async function completeStep1CompanyInfo(
       } catch (error) {
         console.error("[Onboarding] Failed to auto-create sales strategy:", error)
       }
+    }
+  }
+
+  // 🔄 이메일 재생성: Step 1 완료 시 회사 정보로 이메일 템플릿 재생성
+  // 회원가입 시 자동 생성된 이메일은 기본값(기본 워크스페이스)을 사용했을 수 있음
+  if (progress.generatedSequenceId) {
+    try {
+      console.log(
+        `[Onboarding] Step 1 완료 - 이메일 재생성 시작 (sequence: ${progress.generatedSequenceId})`,
+      )
+      await regenerateSequenceEmails(
+        workspaceId,
+        progress.generatedSequenceId,
+        progress.surveyData as OnboardingSurveyData,
+      )
+      console.log("[Onboarding] ✅ 이메일 재생성 완료")
+    } catch (error) {
+      console.error("[Onboarding] ⚠️ 이메일 재생성 실패 (계속 진행):", error)
+      // 재생성 실패해도 Step 1 완료는 진행
     }
   }
 
@@ -1646,4 +1666,122 @@ export async function autoGenerateOnboarding(
     console.error("[AutoGenerate] Failed:", error)
     // Silently fail - user can still do manual onboarding
   }
+}
+
+/**
+ * Step 1 완료 시 이메일 재생성
+ * 회원가입 시 자동 생성된 이메일의 템플릿을 업데이트된 회사 정보로 재생성합니다.
+ */
+async function regenerateSequenceEmails(
+  workspaceId: string,
+  sequenceId: string,
+  surveyData: OnboardingSurveyData,
+): Promise<void> {
+  const isKorean = surveyData.lang === "ko"
+
+  // 1. 최신 워크스페이스 정보 가져오기
+  const workspace = await workspaceServiceImport.getWorkspace(workspaceId)
+  if (!workspace) {
+    throw new Error("Workspace not found")
+  }
+
+  // 회사 정보가 기본값인 경우 재생성하지 않음
+  const hasValidCompanyInfo =
+    workspace.companyName &&
+    workspace.companyName.trim() !== "" &&
+    workspace.companyDescription &&
+    workspace.companyDescription.trim() !== "" &&
+    workspace.companyDescription !== "기본 워크스페이스"
+
+  if (!hasValidCompanyInfo) {
+    console.log("[RegenerateEmails] 회사 정보가 기본값이므로 재생성 스킵")
+    return
+  }
+
+  console.log(
+    `[RegenerateEmails] 회사 정보: ${workspace.companyName} - ${workspace.companyDescription?.substring(0, 50)}...`,
+  )
+
+  // 2. 시퀀스 스텝 가져오기
+  const steps = await db
+    .select()
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.sequenceId, sequenceId))
+    .orderBy(sequenceSteps.stepOrder)
+
+  if (steps.length === 0) {
+    console.log("[RegenerateEmails] 시퀀스 스텝이 없음")
+    return
+  }
+
+  // 3. AI 서비스로 템플릿 재생성
+  const aiService = getAITemplateGenerationService()
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]
+    if (!step) continue
+
+    const emailType = EMAIL_TYPES_2TOUCH[i]
+    if (!emailType) continue
+
+    const prompt = isKorean ? emailType.promptKr : emailType.promptEn
+    const industryContext = isKorean
+      ? `${surveyData.industry} 산업의 ${surveyData.target} 고객을 대상으로`
+      : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
+
+    try {
+      const template = await aiService.generateEmailTemplate({
+        workspaceName: workspace.companyName || workspace.name,
+        workspaceDescription: workspace.companyDescription || undefined,
+        country: surveyData.country || "jp",
+        userPrompt: `${prompt} ${industryContext}`,
+      })
+
+      // 4. 시퀀스 스텝 업데이트
+      await db
+        .update(sequenceSteps)
+        .set({
+          emailSubject: template.subject,
+          emailBodyText: template.bodyText,
+          emailBodyHtml: template.bodyHtml,
+          updatedAt: new Date(),
+        })
+        .where(eq(sequenceSteps.id, step.id))
+
+      console.log(`[RegenerateEmails] 스텝 ${i + 1} 템플릿 재생성 완료`)
+    } catch (error) {
+      console.error(`[RegenerateEmails] 스텝 ${i + 1} 재생성 실패:`, error)
+    }
+  }
+
+  // 5. 기존 이메일들도 업데이트 (draft 상태인 것만)
+  // 시퀀스 스텝의 새 템플릿을 기반으로 이메일 본문 업데이트
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]
+    if (!step) continue
+
+    // 업데이트된 스텝 정보 다시 가져오기
+    const [updatedStep] = await db.select().from(sequenceSteps).where(eq(sequenceSteps.id, step.id))
+
+    if (!updatedStep) continue
+
+    // 해당 스텝의 draft 이메일들 업데이트
+    await db
+      .update(emails)
+      .set({
+        subject: updatedStep.emailSubject,
+        bodyText: updatedStep.emailBodyText,
+        bodyHtml: updatedStep.emailBodyHtml,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(emails.sequenceId, sequenceId),
+          eq(emails.stepId, step.id),
+          eq(emails.status, "draft"),
+        ),
+      )
+  }
+
+  console.log("[RegenerateEmails] ✅ 모든 이메일 재생성 완료")
 }

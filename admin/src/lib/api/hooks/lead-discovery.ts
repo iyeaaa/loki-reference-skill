@@ -730,6 +730,11 @@ export type FitScoreCallbackOptions = {
   onError?: (error: string) => void
 }
 
+type FitScoreWorkerOutgoingMessage =
+  | { type: "score"; leadId: string; score: number; reason?: string; progress: number }
+  | { type: "complete"; totalProcessed: number }
+  | { type: "error"; error: string }
+
 /**
  * AI 기반 적합도 계산 API 호출
  * SSE 스트리밍으로 각 리드별 점수를 실시간으로 받아옴
@@ -749,6 +754,63 @@ export async function calculateFitScores(
   userQuery?: string, // 사용자 검색 쿼리 추가
   workspaceId?: string, // 워크스페이스 단위 캐시 분리(옵션)
 ): Promise<void> {
+  // Web Worker가 있으면 메인 스레드 UI 블로킹을 줄이기 위해 Worker로 실행
+  try {
+    const worker = new Worker(new URL("../../workers/fit-score.worker.ts", import.meta.url), {
+      type: "module",
+    })
+
+    await new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        worker.terminate()
+      }
+
+      worker.onmessage = (event: MessageEvent<FitScoreWorkerOutgoingMessage>) => {
+        const msg = event.data
+        switch (msg.type) {
+          case "score":
+            callbacks.onScore?.(msg.leadId, msg.score)
+            callbacks.onProgress?.(msg.progress)
+            break
+          case "complete":
+            callbacks.onComplete?.(msg.totalProcessed)
+            cleanup()
+            resolve()
+            break
+          case "error":
+            callbacks.onError?.(msg.error)
+            cleanup()
+            reject(new Error(msg.error))
+            break
+        }
+      }
+
+      worker.onerror = (e) => {
+        cleanup()
+        reject(new Error(e.message || "FitScore Worker failed"))
+      }
+
+      worker.postMessage({
+        type: "start",
+        payload: {
+          baseUrl: BASE_URL,
+          leads,
+          websiteAnalysis,
+          selectedTarget,
+          userQuery,
+          workspaceId,
+        },
+      })
+    })
+
+    return
+  } catch (error) {
+    // Worker 실패 시 기존 메인 스레드 구현으로 fallback
+    log.debug("FitScore worker fallback", {
+      error: error instanceof Error ? error.message : String(error ?? ""),
+    })
+  }
+
   const url = `${BASE_URL}/api/v1/lead-discovery/score`
 
   log.request("FitScore", {

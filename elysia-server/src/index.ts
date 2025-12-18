@@ -128,6 +128,14 @@ const app = new Elysia()
   .use(requestId) // Add request ID for tracing
   .use(httpLogger) // Logger
 
+  // Skip automatic body parsing for multipart/form-data (MUST be before any plugins that access body)
+  .onParse((context, contentType) => {
+    // Skip parsing for multipart form-data to allow custom parsing in webhook handlers
+    if (contentType.startsWith("multipart/form-data")) {
+      return // Return undefined to skip automatic parsing
+    }
+  })
+
   // Webhooks (must be registered before permissionGuard to handle custom body parsing)
   .use(webhookRoutes)
 

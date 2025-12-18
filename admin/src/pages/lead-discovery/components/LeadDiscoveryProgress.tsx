@@ -282,28 +282,50 @@ function AnalyzedPageCard({ page }: { page: AnalyzedPage }) {
   )
 }
 
-// 현재 페이지 iframe 프리뷰 (analyzing 중)
+// 현재 페이지 iframe 프리뷰 (analyzing 중, 분석 리포트 시작 시 창 닫는 애니메이션)
 function CurrentPagePreview({
   pages,
   isAnalyzing,
+  hasAnalysisSummary,
 }: {
   pages: AnalyzedPage[]
   isAnalyzing: boolean
+  hasAnalysisSummary: boolean
 }) {
-  if (!isAnalyzing || pages.length === 0) {
-    return null
-  }
-
   const currentPage = pages.at(-1)
 
-  if (!currentPage) {
+  // 페이지가 없으면 표시 안함
+  if (pages.length === 0 || !currentPage) {
     return null
   }
+
+  // 분석 리포트가 시작되면 미리보기 숨김 (창 닫는 애니메이션)
+  const showPreview = isAnalyzing && !hasAnalysisSummary
 
   return (
     <div className="mt-4">
       <AnimatePresence mode="wait">
-        <WebsiteIframePreview key={currentPage.url} page={currentPage} />
+        {/* 분석 중이고 리포트가 아직 없을 때만 표시 */}
+        {showPreview && (
+          <motion.div
+            animate={{ opacity: 1, scaleY: 1, height: "auto" }}
+            exit={{
+              opacity: 0,
+              scaleY: 0,
+              height: 0,
+              transition: {
+                duration: 0.4,
+                ease: [0.4, 0, 0.2, 1],
+              },
+            }}
+            initial={{ opacity: 0, scaleY: 0.8, height: 0 }}
+            key={currentPage.url}
+            style={{ originY: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <WebsiteIframePreview page={currentPage} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   )
@@ -312,13 +334,14 @@ function CurrentPagePreview({
 // 분석 완료된 페이지 목록 (컴팩트)
 function AnalyzedPagesSummary({
   pages,
-  isAnalyzing,
+  status,
 }: {
   pages: AnalyzedPage[]
-  isAnalyzing: boolean
+  status: LeadDiscoveryStatus
 }) {
-  // analyzing 중이거나 페이지가 없으면 표시 안함
-  if (isAnalyzing || pages.length === 0) {
+  // analyzing/recommending 중이거나 페이지가 없으면 표시 안함
+  // waiting_selection 이후에만 표시 (리포트 작성 완료 후)
+  if (status === "analyzing" || status === "recommending" || pages.length === 0) {
     return null
   }
 
@@ -488,6 +511,10 @@ type LeadDiscoveryProgressProps = {
   analyzedPages?: AnalyzedPage[]
   customerAnalysisSummary?: string
   className?: string
+  /** 미리보기/분석 텍스트 숨기기 (진행 상태만 표시) */
+  hidePreview?: boolean
+  /** 진행 상태 표시 숨기기 (미리보기만 표시) */
+  hideStatus?: boolean
 }
 
 export function LeadDiscoveryProgress({
@@ -497,6 +524,8 @@ export function LeadDiscoveryProgress({
   analyzedPages = [],
   customerAnalysisSummary = "",
   className,
+  hidePreview = false,
+  hideStatus = false,
 }: LeadDiscoveryProgressProps) {
   // 모드에 따라 표시할 노드 결정
   const allNodes =
@@ -543,109 +572,123 @@ export function LeadDiscoveryProgress({
       aria-label="리드 검색 진행 상태"
       className={cn("space-y-3", className)}
     >
-      {/* 스크린 리더용 진행 상태 안내 (aria-live) */}
-      <output aria-atomic="true" aria-live="polite" className="sr-only">
-        {status === "complete"
-          ? "리드 검색이 완료되었습니다."
-          : `리드 검색 진행 중: ${NODE_CONFIG[status]?.name || "처리 중"}. ${completedSteps}/${totalSteps} 단계 완료.`}
-      </output>
+      {/* 진행 상태 표시 - hideStatus가 false일 때만 표시 */}
+      {!hideStatus && (
+        <>
+          {/* 스크린 리더용 진행 상태 안내 (aria-live) */}
+          <output aria-atomic="true" aria-live="polite" className="sr-only">
+            {status === "complete"
+              ? "리드 검색이 완료되었습니다."
+              : `리드 검색 진행 중: ${NODE_CONFIG[status]?.name || "처리 중"}. ${completedSteps}/${totalSteps} 단계 완료.`}
+          </output>
 
-      {/* 현재 진행 메시지 */}
-      <div aria-hidden="true" className="flex items-center gap-2.5">
-        <StarSpinner size={20} />
-        <span className="font-medium text-foreground text-sm">{message || "처리 중..."}</span>
-      </div>
+          {/* 현재 진행 메시지 */}
+          <div aria-hidden="true" className="flex items-center gap-2.5">
+            <StarSpinner size={20} />
+            <span className="font-medium text-foreground text-sm">{message || "처리 중..."}</span>
+          </div>
 
-      {/* 진행률 표시 (시각적으로 숨김, 스크린 리더용) */}
-      <div
-        aria-label={`진행률 ${progressPercent}%`}
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={progressPercent}
-        className="sr-only"
-        role="progressbar"
-      />
+          {/* 진행률 표시 (시각적으로 숨김, 스크린 리더용) */}
+          <div
+            aria-label={`진행률 ${progressPercent}%`}
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={progressPercent}
+            className="sr-only"
+            role="progressbar"
+          />
 
-      {/* 단계 표시 - 세로 배치 (애니메이션 적용) */}
-      <div className="ml-1 flex flex-col gap-0">
-        <AnimatePresence mode="popLayout">
-          {visibleNodes.map((nodeKey, index) => {
-            const config = NODE_CONFIG[nodeKey]
-            if (!config) {
-              return null
-            }
+          {/* 단계 표시 - 세로 배치 (애니메이션 적용) */}
+          <div className="ml-1 flex flex-col gap-0">
+            <AnimatePresence mode="popLayout">
+              {visibleNodes.map((nodeKey, index) => {
+                const config = NODE_CONFIG[nodeKey]
+                if (!config) {
+                  return null
+                }
 
-            const nodeStatus = getNodeStatus(config.order, status)
-            const isLast = index === visibleNodes.length - 1
+                const nodeStatus = getNodeStatus(config.order, status)
+                const isLast = index === visibleNodes.length - 1
 
-            return (
-              <motion.div
-                animate={{ opacity: 1, height: "auto" }}
-                className="flex items-stretch"
-                exit={{ opacity: 0, height: 0 }}
-                initial={{ opacity: 0, height: 0 }}
-                key={nodeKey}
-                transition={{ duration: 0.2 }}
-              >
-                {/* 왼쪽: 아이콘 + 연결선 */}
-                <div className="mr-2 flex flex-col items-center">
-                  <div
-                    className={cn(
-                      "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-all",
-                      nodeStatus === "completed" &&
-                        "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-                      nodeStatus === "in_progress" &&
-                        "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-                      nodeStatus === "pending" && "bg-muted text-muted-foreground/50",
-                    )}
+                return (
+                  <motion.div
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="flex items-stretch"
+                    exit={{ opacity: 0, height: 0 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    key={nodeKey}
+                    transition={{ duration: 0.2 }}
                   >
-                    <StepIcon status={nodeStatus} />
-                  </div>
-                  {/* 세로 연결선 */}
-                  {!isLast && (
-                    <div
-                      className={cn(
-                        "min-h-[12px] w-px flex-1",
-                        nodeStatus === "completed"
-                          ? "bg-emerald-300 dark:bg-emerald-700"
-                          : "bg-muted-foreground/20",
+                    {/* 왼쪽: 아이콘 + 연결선 */}
+                    <div className="mr-2 flex flex-col items-center">
+                      <div
+                        className={cn(
+                          "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-all",
+                          nodeStatus === "completed" &&
+                            "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+                          nodeStatus === "in_progress" &&
+                            "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+                          nodeStatus === "pending" && "bg-muted text-muted-foreground/50",
+                        )}
+                      >
+                        <StepIcon status={nodeStatus} />
+                      </div>
+                      {/* 세로 연결선 */}
+                      {!isLast && (
+                        <div
+                          className={cn(
+                            "min-h-[12px] w-px flex-1",
+                            nodeStatus === "completed"
+                              ? "bg-emerald-300 dark:bg-emerald-700"
+                              : "bg-muted-foreground/20",
+                          )}
+                        />
                       )}
-                    />
-                  )}
-                </div>
+                    </div>
 
-                {/* 오른쪽: 텍스트 */}
-                <div className={cn("pb-3", isLast && "pb-0")}>
-                  <span
-                    className={cn(
-                      "font-medium text-sm transition-all",
-                      nodeStatus === "completed" && "text-emerald-600 dark:text-emerald-400",
-                      nodeStatus === "in_progress" && "text-blue-600 dark:text-blue-400",
-                      nodeStatus === "pending" && "text-muted-foreground/50",
-                    )}
-                  >
-                    {config.name}
-                  </span>
-                </div>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
-      </div>
+                    {/* 오른쪽: 텍스트 */}
+                    <div className={cn("pb-3", isLast && "pb-0")}>
+                      <span
+                        className={cn(
+                          "font-medium text-sm transition-all",
+                          nodeStatus === "completed" && "text-emerald-600 dark:text-emerald-400",
+                          nodeStatus === "in_progress" && "text-blue-600 dark:text-blue-400",
+                          nodeStatus === "pending" && "text-muted-foreground/50",
+                        )}
+                      >
+                        {config.name}
+                      </span>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
+          </div>
+        </>
+      )}
 
-      {/* iframe 프리뷰 - analyzing 상태에서만 현재 페이지 하나만 표시 */}
-      <CurrentPagePreview isAnalyzing={isAnalyzing} pages={analyzedPages} />
+      {/* 미리보기/분석 텍스트 - hidePreview가 false일 때만 표시 */}
+      {!hidePreview && (
+        <>
+          {/* iframe 프리뷰 - analyzing 상태에서만, 분석 리포트 시작 전에만 표시 */}
+          <CurrentPagePreview
+            hasAnalysisSummary={!!customerAnalysisSummary}
+            isAnalyzing={isAnalyzing}
+            pages={analyzedPages}
+          />
 
-      {/* 분석 완료된 페이지 목록 - analyzing 이후에 표시 */}
-      <AnalyzedPagesSummary isAnalyzing={isAnalyzing} pages={analyzedPages} />
+          {/* 분석 완료된 페이지 목록 - 리포트 작성 완료 후(waiting_selection 이후) 표시 */}
+          <AnalyzedPagesSummary pages={analyzedPages} status={status} />
 
-      {/* 고객군 분석 스트리밍 텍스트 - searching 상태에서 표시 */}
-      {customerAnalysisSummary && (
-        <StreamingAnalysisSummary
-          isStreaming={status === "searching"}
-          text={customerAnalysisSummary}
-          title="잠재 바이어 분석 리포트"
-        />
+          {/* 고객군 분석 스트리밍 텍스트 - searching 상태에서 표시 */}
+          {customerAnalysisSummary && (
+            <StreamingAnalysisSummary
+              isStreaming={status === "searching"}
+              text={customerAnalysisSummary}
+              title="잠재 바이어 분석 리포트"
+            />
+          )}
+        </>
       )}
     </section>
   )

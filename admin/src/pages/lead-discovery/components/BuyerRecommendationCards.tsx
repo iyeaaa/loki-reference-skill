@@ -6,8 +6,7 @@
 
 import { AnimatePresence, motion } from "framer-motion"
 import { Check, ChevronDown, ChevronRight, FileText, Loader2, MapPin, Target } from "lucide-react"
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import ReactMarkdown from "react-markdown"
 import type { BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 import { cn } from "@/lib/utils"
@@ -110,8 +109,19 @@ export function BuyerRecommendationCards({
   // 코드 펜스 제거 처리
   const cleanAnalysisSummary = analysisSummary ? stripCodeFences(analysisSummary) : ""
 
-  // 분석 리포트 접기/펼치기 상태 (기본: 접힌 상태)
-  const [isReportExpanded, setIsReportExpanded] = useState(false)
+  // 분석 리포트 접기/펼치기 상태 (분석 중일 때는 펼친 상태로 시작)
+  const [isReportExpanded, setIsReportExpanded] = useState(isAnalyzing)
+
+  // 분석 시작 시 자동으로 펼치기, 완료 시 자동으로 접기
+  React.useEffect(() => {
+    if (isAnalyzing && cleanAnalysisSummary) {
+      // 분석 중이고 리포트가 있으면 펼치기
+      setIsReportExpanded(true)
+    } else if (!isAnalyzing && recommendations.length > 0) {
+      // 분석 완료되고 추천 카드가 있으면 접기
+      setIsReportExpanded(false)
+    }
+  }, [isAnalyzing, cleanAnalysisSummary, recommendations.length])
 
   // 분석 중이 아니고, 로딩 중이 아니고, 추천도 없으면 null 반환
   if (!(isAnalyzing || isLoadingRecommendations) && recommendations.length === 0) {

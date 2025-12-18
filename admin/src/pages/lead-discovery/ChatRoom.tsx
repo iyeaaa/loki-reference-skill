@@ -44,7 +44,6 @@ import type { BigQueryResult, BuyerRecommendation } from "@/lib/api/types/lead-d
 import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
-import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
 import { ClarificationCards } from "./components/ClarificationCards"
 import { ErrorCard } from "./components/ErrorCard"
 import { FilterSearchForm } from "./components/FilterSearchForm"
@@ -93,33 +92,96 @@ function stripCodeFences(text: string): string {
   return result
 }
 
-// 검색 조건 포맷팅 유틸리티
-function formatSearchConditions(data: {
+// 저장된 분석 리포트 컴포넌트 (접기/펼치기)
+function SavedAnalysisReport({ summary }: { summary: string }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const cleanSummary = stripCodeFences(summary)
+
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-3 overflow-hidden rounded-lg border border-border/50 bg-muted/20"
+      initial={{ opacity: 0, y: 5 }}
+      transition={{ duration: 0.2 }}
+    >
+      <button
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        onClick={() => setIsExpanded(!isExpanded)}
+        type="button"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          <span className="font-medium text-muted-foreground text-xs">웹사이트 분석 리포트</span>
+        </div>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+            !isExpanded && "-rotate-90",
+          )}
+        />
+      </button>
+      {isExpanded && (
+        <motion.div
+          animate={{ height: "auto", opacity: 1 }}
+          className="border-border/50 border-t px-3 pb-3"
+          exit={{ height: 0, opacity: 0 }}
+          initial={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div className="prose prose-sm dark:prose-invert max-w-none pt-3 text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            <ReactMarkdown>{cleanSummary}</ReactMarkdown>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  )
+}
+
+// 검색 완료 메시지 생성 유틸리티
+function formatCompletionMessage(data: {
+  totalCount: number
+  displayCount?: number
   selectedRecommendation?: BuyerRecommendation
   userQuery?: string
+  hasMore?: boolean
 }): string {
-  const parts: string[] = []
+  const { totalCount, displayCount, selectedRecommendation, userQuery, hasMore } = data
 
-  // 사용자 쿼리 (원본 요청)
-  if (data.userQuery) {
-    parts.push(`💬 **원본 요청**: "${data.userQuery}"`)
+  // 메인 메시지
+  const mainMessage = displayCount
+    ? `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에 **${displayCount.toLocaleString()}개** 결과를 표시했어요.`
+    : `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에서 결과를 확인하세요.`
+
+  // 더 많은 데이터 안내
+  const moreDataNote =
+    hasMore || totalCount > (displayCount || 100)
+      ? "\n\n> 💡 더 많은 바이어 데이터가 필요하시면 [문의하기](mailto:info@rinda.ai)로 연락해 주세요."
+      : ""
+
+  // 검색 조건 정보
+  const conditionParts: string[] = []
+
+  if (userQuery) {
+    conditionParts.push(`**검색어**: ${userQuery}`)
   }
 
-  // 선택한 타겟 정보
-  if (data.selectedRecommendation) {
-    const rec = data.selectedRecommendation
+  if (selectedRecommendation) {
+    const rec = selectedRecommendation
     const targetParts = [rec.country, rec.industry]
     if (rec.subIndustry) {
       targetParts.push(rec.subIndustry)
     }
-    parts.push(`🎯 **검색 타겟**: ${targetParts.join(" / ")}`)
+    conditionParts.push(`**타겟**: ${targetParts.join(" > ")}`)
 
     if (rec.keywords && rec.keywords.length > 0) {
-      parts.push(`🏷️ **키워드**: ${rec.keywords.join(", ")}`)
+      conditionParts.push(`**키워드**: ${rec.keywords.join(", ")}`)
     }
   }
 
-  return parts.length > 0 ? `\n\n---\n\n${parts.join("\n\n")}` : ""
+  const conditionsBlock =
+    conditionParts.length > 0 ? `\n\n---\n\n🔍 **검색 조건**\n\n${conditionParts.join("\n\n")}` : ""
+
+  return `${mainMessage}${moreDataNote}${conditionsBlock}`
 }
 
 type SearchMode = "website" | "criteria_input" | "criteria_click"
@@ -574,14 +636,16 @@ export function ChatRoom() {
             ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
             : ""
 
-          // 검색 조건 정보 포맷팅
-          const searchConditions = formatSearchConditions({
+          // 검색 완료 메시지 생성
+          const completionMessage = formatCompletionMessage({
+            totalCount: data.totalCount ?? 0,
             selectedRecommendation: data.selectedRecommendation,
             userQuery: prev.userQuery,
+            hasMore: data.hasMore,
           })
 
           updateMessage(prev.messageId, {
-            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}\n\n${analysisPart}${customerAnalysisPart}`,
+            content: `${completionMessage}\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
         // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
@@ -708,14 +772,16 @@ export function ChatRoom() {
       setStreamingState((prev) => {
         // 검색 결과를 응답 메시지(messageId)에 포함
         if (prev.messageId) {
-          // 검색 조건 정보 포맷팅
-          const searchConditions = formatSearchConditions({
+          // 검색 완료 메시지 생성
+          const completionMessage = formatCompletionMessage({
+            totalCount: data.totalCount ?? 0,
             selectedRecommendation: data.selectedRecommendation,
             userQuery: prev.userQuery,
+            hasMore: data.hasMore,
           })
 
           updateMessage(prev.messageId, {
-            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}`,
+            content: completionMessage,
           })
         }
 
@@ -788,14 +854,16 @@ export function ChatRoom() {
     onComplete: (data) => {
       setStreamingState((prev) => {
         if (prev.messageId) {
-          // 검색 조건 정보 포맷팅
-          const searchConditions = formatSearchConditions({
+          // 검색 완료 메시지 생성
+          const completionMessage = formatCompletionMessage({
+            totalCount: data.totalCount ?? 0,
             selectedRecommendation: data.selectedRecommendation,
             userQuery: prev.userQuery,
+            hasMore: data.hasMore,
           })
 
           updateMessage(prev.messageId, {
-            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.${searchConditions}`,
+            content: completionMessage,
           })
         }
 
@@ -884,7 +952,6 @@ export function ChatRoom() {
   // 파생 상태
   const isSearching =
     searchMutation.isPending || selectMutation.isPending || clarifyMutation.isPending
-  const isWaitingSelection = streamingState.status === "waiting_selection"
   const isWaitingClarification = streamingState.status === "waiting_clarification"
 
   // Markdown components for consistent styling
@@ -1008,13 +1075,23 @@ export function ChatRoom() {
         return
       }
 
+      // 선택 전에 현재 분석 메시지에 analysisSummary 저장 (나중에 다시 볼 수 있도록)
+      if (streamingState.messageId && streamingState.analysisSummary) {
+        updateMessage(streamingState.messageId, {
+          analysisSummary: streamingState.analysisSummary,
+        })
+      }
+
       const now = Date.now()
 
-      // 선택 메시지 추가
+      // 선택 메시지 추가 (사용자가 직접 입력한 것처럼 자연스러운 문장)
+      const targetDescription = rec.subIndustry
+        ? `${rec.country}의 ${rec.industry} 중 ${rec.subIndustry}`
+        : `${rec.country}의 ${rec.industry}`
       const selectMessage: ChatMessage = {
         id: `msg-${now}-select`,
         role: "user",
-        content: `${rec.country} / ${rec.industry} 선택`,
+        content: `${targetDescription} 바이어를 찾아줘`,
         timestamp: new Date(now),
       }
       addMessage(selectMessage)
@@ -1062,12 +1139,46 @@ export function ChatRoom() {
     [
       selectedWorkspace,
       streamingState.sessionId,
+      streamingState.messageId,
+      streamingState.analysisSummary,
       addMessage,
+      updateMessage,
       selectMutation,
       setStreamingState,
       setSelectedTarget,
     ],
   )
+
+  // AnalysisPanel에서 추천 선택 시 CustomEvent를 수신하여 처리
+  useEffect(() => {
+    const handleSelectRecommendation = (
+      e: CustomEvent<{
+        id: string
+        country: string
+        industry: string
+        subIndustry?: string
+      }>,
+    ) => {
+      const { id, country, industry, subIndustry } = e.detail
+      // handleRecommendationSelect는 BuyerRecommendation 타입을 받으므로 최소 필드만 전달
+      handleRecommendationSelect({
+        id,
+        country,
+        industry,
+        subIndustry,
+        keywords: [],
+        reasoning: "",
+      })
+    }
+
+    window.addEventListener("selectRecommendation", handleSelectRecommendation as EventListener)
+    return () => {
+      window.removeEventListener(
+        "selectRecommendation",
+        handleSelectRecommendation as EventListener,
+      )
+    }
+  }, [handleRecommendationSelect])
 
   // 확인 질문 답변 핸들러
   const handleClarificationSubmit = useCallback(
@@ -1566,21 +1677,7 @@ export function ChatRoom() {
                 ref={scrollRef}
               >
                 <div className="space-y-4 p-4 pt-4">
-                  {/* 검색 중이고 메시지가 없을 때만 상단에 progress 표시 (메시지가 있으면 메시지 내부에서 표시) */}
-                  {isSearching && messages.length === 0 && (
-                    <div className="flex justify-start">
-                      <div className="w-full space-y-4">
-                        <LeadDiscoveryProgress
-                          analyzedPages={streamingState.analyzedPages}
-                          className="max-w-2xl"
-                          customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                          message={streamingState.message}
-                          mode={streamingState.mode}
-                          status={streamingState.status}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  {/* 분석 진행 상태는 오른쪽 AnalysisPanel에서 표시 */}
                   {messages
                     // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
                     .slice()
@@ -1613,40 +1710,24 @@ export function ChatRoom() {
                           </div>
                         ) : (
                           <div className="w-full space-y-4">
-                            {/* LangGraph 진행 상태 표시 */}
+                            {/* LangGraph 진행 상태 표시 (진행 단계만, 미리보기는 오른쪽 AnalysisPanel에서) */}
                             {message.id === streamingState.messageId && (
                               <>
-                                {/* 웹사이트 분석 중일 때 (선택 후에는 표시 안 함) */}
+                                {/* 진행 상태 표시 (idle, complete 제외하고 모든 상태에서 표시) */}
                                 {streamingState.status !== "idle" &&
-                                  streamingState.status !== "complete" &&
-                                  streamingState.status !== "waiting_selection" &&
-                                  !streamingState.selectedRecommendationId && (
+                                  streamingState.status !== "complete" && (
                                     <LeadDiscoveryProgress
                                       analyzedPages={streamingState.analyzedPages}
                                       className="max-w-2xl"
                                       customerAnalysisSummary={
                                         streamingState.customerAnalysisSummary
                                       }
+                                      hidePreview
                                       message={streamingState.message}
                                       mode={streamingState.mode}
                                       status={streamingState.status}
                                     />
                                   )}
-
-                                {/* 선택 후 검색 중 로딩 UI */}
-                                {isSearching && streamingState.selectedRecommendationId && (
-                                  <motion.div
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="flex items-center gap-3 py-4"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    transition={{ duration: 0.3 }}
-                                  >
-                                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                    <span className="text-base text-muted-foreground">
-                                      선택하신 타겟에 맞는 바이어를 찾고 있어요
-                                    </span>
-                                  </motion.div>
-                                )}
                               </>
                             )}
 
@@ -1657,6 +1738,11 @@ export function ChatRoom() {
                                   {message.content}
                                 </ReactMarkdown>
                               </div>
+                            )}
+
+                            {/* 저장된 분석 리포트 (분석 완료 후 다시 볼 수 있도록) */}
+                            {message.analysisSummary && (
+                              <SavedAnalysisReport summary={message.analysisSummary} />
                             )}
 
                             {/* 워크스페이스 선택 UI */}
@@ -1725,37 +1811,7 @@ export function ChatRoom() {
                               />
                             )}
 
-                            {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
-                            {message.id === streamingState.analysisMessageId &&
-                              (streamingState.status === "analyzing" ||
-                                streamingState.status === "recommending" ||
-                                streamingState.status === "complete" ||
-                                (streamingState.recommendations.length > 0 &&
-                                  (isWaitingSelection ||
-                                    streamingState.selectedRecommendationId))) && (
-                                <BuyerRecommendationCards
-                                  analysisSummary={streamingState.analysisSummary}
-                                  className="max-w-2xl"
-                                  disabled={
-                                    isSearching || !!streamingState.selectedRecommendationId
-                                  }
-                                  isAnalysisComplete={
-                                    isWaitingSelection ||
-                                    streamingState.status === "complete" ||
-                                    !!streamingState.selectedRecommendationId
-                                  }
-                                  isAnalyzing={
-                                    streamingState.status === "analyzing" ||
-                                    streamingState.status === "recommending"
-                                  }
-                                  isLoadingRecommendations={
-                                    streamingState.status === "recommending"
-                                  }
-                                  onSelect={handleRecommendationSelect}
-                                  recommendations={streamingState.recommendations}
-                                  selectedId={streamingState.selectedRecommendationId}
-                                />
-                              )}
+                            {/* 바이어 추천 선택 UI는 오른쪽 AnalysisPanel에서 표시 */}
 
                             {/* 확인 질문 UI - 모호한 검색어에 대해 확인 질문 표시 */}
                             {message.id === streamingState.messageId &&

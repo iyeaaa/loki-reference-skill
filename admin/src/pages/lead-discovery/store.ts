@@ -54,6 +54,7 @@ export type ChatMessage = {
   customersAdded?: Customer[]
   type?: "default" | "workspace_select" | "error" // 워크스페이스 선택 UI 표시용, 에러 표시용
   errorData?: LeadDiscoveryError // 에러 상세 정보
+  analysisSummary?: string // 웹사이트 분석 리포트 (분석 완료 후 저장)
 }
 
 // ============================================

@@ -263,42 +263,43 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-sidebar-border border-b pb-3 group-data-[collapsible=icon]:pb-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-transparent" size="lg">
-              <Link to="/dashboard">
-                <div className="flex aspect-square size-10 items-center justify-center group-data-[collapsible=icon]:size-8">
-                  <img
-                    alt="Rinda Logo"
-                    className="size-10 rounded-xl object-contain group-data-[collapsible=icon]:size-8"
-                    src="/images/rinda-logo.png"
-                  />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-bold text-base">
-                    {t("sidebar.title.sendGrinda")}
-                  </span>
-                  <span className="truncate text-muted-foreground text-xs">
-                    {t("sidebar.subtitle.aiEmailSystem")}
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="p-0">
+        {/* Logo row - matches main header height */}
+        <div className="flex h-16 items-center border-sidebar-border border-b px-2 group-data-[collapsible=icon]:h-12">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="hover:bg-transparent" size="lg">
+                <Link to="/dashboard">
+                  <div className="flex aspect-square size-10 items-center justify-center group-data-[collapsible=icon]:size-8">
+                    <img
+                      alt="Rinda Logo"
+                      className="size-10 rounded-xl object-contain group-data-[collapsible=icon]:size-8"
+                      src="/images/rinda-logo.png"
+                    />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-bold text-base">
+                      {t("sidebar.title.sendGrinda")}
+                    </span>
+                    <span className="truncate text-muted-foreground text-xs">
+                      {t("sidebar.subtitle.aiEmailSystem")}
+                    </span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
 
         {/* 워크스페이스 선택 */}
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
-          <div className="mt-3 group-data-[collapsible=icon]:hidden">
-            <div className="px-2">
-              <WorkspaceSelector
-                className="w-full"
-                onValueChange={onWorkspaceChange}
-                options={workspaceOptions}
-                value={selectedWorkspace}
-              />
-            </div>
+          <div className="p-2 group-data-[collapsible=icon]:hidden">
+            <WorkspaceSelector
+              className="w-full"
+              onValueChange={onWorkspaceChange}
+              options={workspaceOptions}
+              value={selectedWorkspace}
+            />
           </div>
         )}
       </SidebarHeader>

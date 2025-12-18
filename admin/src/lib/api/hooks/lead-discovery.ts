@@ -711,6 +711,10 @@ export type LeadForScoring = {
   email?: string
   phone?: string
   web_address?: string
+  description?: string
+  company_type?: string
+  http_status?: number | null
+  verified?: boolean
   country?: string
   industry?: string
   sub_industry?: string
@@ -743,10 +747,16 @@ export async function calculateFitScores(
   selectedTarget: { country: string; industry: string },
   callbacks: FitScoreCallbackOptions,
   userQuery?: string, // 사용자 검색 쿼리 추가
+  workspaceId?: string, // 워크스페이스 단위 캐시 분리(옵션)
 ): Promise<void> {
   const url = `${BASE_URL}/api/v1/lead-discovery/score`
 
-  log.request("FitScore", { leadCount: leads.length, target: selectedTarget, userQuery })
+  log.request("FitScore", {
+    leadCount: leads.length,
+    target: selectedTarget,
+    userQuery,
+    workspaceId,
+  })
 
   try {
     const response = await fetch(url, {
@@ -760,6 +770,7 @@ export async function calculateFitScores(
         websiteAnalysis,
         selectedTarget,
         userQuery, // 검색 쿼리 전달
+        workspaceId, // 워크스페이스 단위 캐시 분리
       }),
     })
 
@@ -825,6 +836,9 @@ export type EnrichmentResult = {
   foundCompanyName?: string
   description?: string
   companyType?: string // 업체 유형 (제조업체, 브랜드사, 유통업체, 수입업체, 대리점, 소매업체 등)
+  // 웹사이트 크롤링 상태
+  httpStatus?: number | null
+  crawlTimeSeconds?: number | null
   // 연락처
   email?: string
   phoneNumber?: string
@@ -846,6 +860,8 @@ export type EnrichmentResult = {
   businessSectors?: string
   productCategories?: string
   industryTypes?: string
+  // enrichment는 성공했지만 유효 데이터가 부족한 경우(또는 접속 실패 등) 설명
+  errorMessage?: string
 }
 
 export type EnrichLeadRequest = {
@@ -865,6 +881,8 @@ const transformWebExtractionData = (data: Record<string, unknown>): EnrichmentRe
   foundCompanyName: data.found_company_name as string | undefined,
   description: data.description as string | undefined,
   companyType: data.company_type as string | undefined,
+  httpStatus: (data.http_status as number | null | undefined) ?? null,
+  crawlTimeSeconds: (data.crawl_time_seconds as number | null | undefined) ?? null,
   email: data.email as string | undefined,
   phoneNumber: data.phone_number as string | undefined,
   address: data.address as string | undefined,
@@ -931,17 +949,24 @@ export const enrichLead = async (
     // 실제 데이터가 있으면 사용
     if (actualData && typeof actualData === "object" && "website_url" in actualData) {
       const enrichmentData = transformWebExtractionData(actualData)
+      const errorMessage = result.error || innerResult.error
 
-      // 유효한 데이터가 있으면 성공으로 처리
-      if (hasValidData(enrichmentData)) {
-        log.info("Enrichment data extracted", {
-          hasDescription: !!enrichmentData.description,
-          hasEmail: !!enrichmentData.email,
-        })
-        return {
-          success: true,
-          data: enrichmentData,
-        }
+      // 유효 데이터가 없더라도(예: 접속 실패/빈 페이지) httpStatus 등은 FitScore 정책에 필요하므로
+      // 성공으로 내려서 프론트가 Customer에 반영할 수 있게 한다.
+      if (!hasValidData(enrichmentData)) {
+        enrichmentData.errorMessage = errorMessage || "유효한 추출 데이터가 없습니다"
+      }
+
+      log.info("Enrichment data extracted", {
+        hasDescription: !!enrichmentData.description,
+        hasEmail: !!enrichmentData.email,
+        httpStatus: enrichmentData.httpStatus,
+      })
+
+      return {
+        success: true,
+        data: enrichmentData,
+        error: enrichmentData.errorMessage,
       }
     }
 

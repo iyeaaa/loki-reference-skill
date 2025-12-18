@@ -16,9 +16,13 @@ const llm = new ChatOpenAI({
 export interface LeadForScoring {
   id: string
   company_name?: string
+  description?: string
+  company_type?: string
   email?: string
   phone?: string
   web_address?: string
+  http_status?: number | null
+  verified?: boolean
   country?: string
   industry?: string
   sub_industry?: string
@@ -115,7 +119,7 @@ function makeFitScoreCacheKey(params: {
 }): string {
   const { lead, websiteAnalysis, selectedTarget, userQuery, workspaceId } = params
   const raw = JSON.stringify({
-    v: 1,
+    v: 2,
     workspaceId: workspaceId ?? null,
     userQuery: userQuery ?? null,
     selectedTarget,
@@ -133,6 +137,10 @@ function makeFitScoreCacheKey(params: {
     lead: {
       id: lead.id,
       company_name: lead.company_name ?? null,
+      description: lead.description ?? null,
+      company_type: lead.company_type ?? null,
+      http_status: lead.http_status ?? null,
+      verified: Boolean(lead.verified),
       country: lead.country ?? null,
       industry: lead.industry ?? null,
       sub_industry: lead.sub_industry ?? null,
@@ -146,6 +154,197 @@ function makeFitScoreCacheKey(params: {
   })
 
   return createHash("sha256").update(raw).digest("hex")
+}
+
+function clampScore(score: number): number {
+  if (!Number.isFinite(score)) return 0
+  return Math.min(100, Math.max(0, Math.round(score)))
+}
+
+function isLikelyValidEmail(value?: string): boolean {
+  const v = normalizeText(value)
+  return Boolean(v?.includes("@") && !v.includes("noreply"))
+}
+
+function isWebsiteUnreachable(httpStatus?: number | null): boolean {
+  if (httpStatus === null || httpStatus === undefined) return false
+  // 4xx/5xx: 접근 실패로 간주
+  return httpStatus >= 400
+}
+
+function toHttpUrl(raw?: string | null): string | null {
+  const value = (raw ?? "").trim()
+  if (!value) return null
+  if (/^https?:\/\//i.test(value)) return value
+  return `https://${value}`
+}
+
+async function probeWebsiteHttpStatus(
+  url: string,
+  timeoutMs: number,
+): Promise<{ status: number; finalUrl?: string }> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    // 1) HEAD 먼저 시도
+    const head = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: controller.signal,
+    })
+    return { status: head.status, finalUrl: head.url }
+  } catch {
+    // 2) HEAD가 막히는 사이트가 많아 GET fallback
+    const controller2 = new AbortController()
+    const timer2 = setTimeout(() => controller2.abort(), timeoutMs)
+    try {
+      const get = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        signal: controller2.signal,
+        headers: {
+          // 일부 서버가 UA 없으면 차단하는 케이스 완화
+          "User-Agent": "Mozilla/5.0 (compatible; LeadDiscoveryBot/1.0)",
+        },
+      })
+      return { status: get.status, finalUrl: get.url }
+    } finally {
+      clearTimeout(timer2)
+    }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function hydrateMissingHttpStatus(leads: LeadForScoring[]): Promise<LeadForScoring[]> {
+  const enabled =
+    (process.env.LEAD_DISCOVERY_FIT_SCORE_WEBSITE_PROBE_ENABLED ?? "true").toLowerCase().trim() ===
+    "true"
+  if (!enabled) return leads
+
+  const timeoutMs = parsePositiveInt(
+    process.env.LEAD_DISCOVERY_FIT_SCORE_WEBSITE_PROBE_TIMEOUT_MS,
+    2500,
+  )
+  const concurrency = parsePositiveInt(
+    process.env.LEAD_DISCOVERY_FIT_SCORE_WEBSITE_PROBE_CONCURRENCY,
+    10,
+  )
+
+  const tasks: Array<() => Promise<void>> = []
+  const statusById = new Map<string, number>()
+
+  for (const lead of leads) {
+    if (lead.http_status !== null && lead.http_status !== undefined) continue
+    const url = toHttpUrl(lead.web_address)
+    if (!url) continue
+
+    tasks.push(async () => {
+      try {
+        const { status } = await probeWebsiteHttpStatus(url, timeoutMs)
+        statusById.set(lead.id, status)
+      } catch (error) {
+        // 네트워크/타임아웃 등: 접근 실패로 간주하여 강한 페널티가 적용되게 한다.
+        leadDiscoveryLogger.debug?.(
+          `[fit-score] website probe failed leadId=${lead.id} url=${url}: ${String(error)}`,
+        )
+        statusById.set(lead.id, 599)
+      }
+    })
+  }
+
+  if (tasks.length === 0) return leads
+
+  // 간단한 워커 풀 (의존성 없이)
+  let idx = 0
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(concurrency, tasks.length)) },
+    async () => {
+      while (true) {
+        const current = idx
+        idx++
+        const task = tasks[current]
+        if (!task) break
+        await task()
+      }
+    },
+  )
+  await Promise.all(workers)
+
+  return leads.map((lead) => {
+    const status = statusById.get(lead.id)
+    if (status === undefined) return lead
+    return { ...lead, http_status: status }
+  })
+}
+
+function applyFitScorePolicy(params: {
+  lead: LeadForScoring
+  base: FitScoreResult
+}): FitScoreResult {
+  const { lead, base } = params
+  let score = base.score
+
+  const hasWebsite = Boolean(normalizeText(lead.web_address))
+  const hasEmail = isLikelyValidEmail(lead.email)
+  const hasPhone = Boolean(normalizeText(lead.phone))
+  const websiteUnreachable = isWebsiteUnreachable(lead.http_status)
+
+  const missingSignals: string[] = []
+  if (!normalizeText(lead.company_name)) missingSignals.push("company_name")
+  if (!normalizeText(lead.country)) missingSignals.push("country")
+  if (!normalizeText(lead.industry) && !normalizeText(lead.sub_industry))
+    missingSignals.push("industry")
+  if (!normalizeText(lead.description)) missingSignals.push("description")
+  if (!hasWebsite) missingSignals.push("website")
+  if (!hasEmail) missingSignals.push("email")
+  if (!hasPhone) missingSignals.push("phone")
+
+  // (1) 정보 부족 패널티: 핵심 정보가 비어있을수록 점수 하향
+  // - “매칭” 점수를 완전히 뒤엎기보다는, 부족한 정보만큼 신뢰도를 낮춘다.
+  const missingPenalty = Math.min(35, missingSignals.length * 5)
+  score -= missingPenalty
+
+  // (2) 이메일 보너스: 회사 이메일이 있으면 가산
+  if (hasEmail) score += 8
+
+  // (3) 연락처가 거의 없으면 추가 하향
+  if (!hasEmail && !hasPhone) score -= 10
+
+  // (4) 프로필 고도화(verified) 보너스: 정보 신뢰도 소폭 가산
+  if (lead.verified) score += 5
+
+  score = clampScore(score)
+
+  // (5) 홈페이지 접근 실패는 “강한 하한/상한” 정책으로 반영
+  // - 사용자 요구: 홈페이지 접속이 안되면 점수가 아예 낮아야 한다.
+  if (websiteUnreachable) {
+    score = Math.min(score, 12)
+  }
+
+  // (6) 웹사이트가 아예 없으면 점수 상한을 낮춘다 (접속여부를 확인할 수 없음)
+  if (!hasWebsite) {
+    score = Math.min(score, 25)
+  }
+
+  const policyNotes: string[] = []
+  if (websiteUnreachable) policyNotes.push(`홈페이지 접속 실패(http=${lead.http_status ?? "?"})`)
+  if (!hasWebsite) policyNotes.push("웹사이트 없음")
+  if (missingPenalty > 0) policyNotes.push(`정보 부족(-${missingPenalty})`)
+  if (hasEmail) policyNotes.push("회사 이메일(+8)")
+  if (!hasEmail && !hasPhone) policyNotes.push("연락처 부족(-10)")
+  if (lead.verified) policyNotes.push("프로필 고도화(+5)")
+
+  const mergedReason =
+    policyNotes.length > 0
+      ? [base.reason, `정책: ${policyNotes.join(", ")}`].filter(Boolean).join(" | ")
+      : base.reason
+
+  return {
+    ...base,
+    score,
+    reason: mergedReason,
+  }
 }
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
@@ -454,23 +653,24 @@ export async function calculateFitScores(
   userQuery?: string, // 사용자 검색 쿼리 추가
   workspaceId?: string,
 ): Promise<void> {
+  // enrichment 전이라도 웹사이트 접속 실패를 반영하기 위해 http_status를 가능한 채운다.
+  const effectiveLeads = await hydrateMissingHttpStatus(leads)
+
   // 단순 지역/국가 검색인 경우 AI 호출 없이 모두 100점 반환
   if (userQuery && isSimpleLocationSearch(userQuery)) {
     leadDiscoveryLogger.info(
       `Simple location search detected: "${userQuery}". All leads scored 100.`,
     )
-    for (const lead of leads) {
-      onScore({
-        leadId: lead.id,
-        score: 100,
-      })
+    for (const lead of effectiveLeads) {
+      const base: FitScoreResult = { leadId: lead.id, score: 100, reason: "단순 지역/국가 검색" }
+      onScore(applyFitScorePolicy({ lead, base }))
     }
     return
   }
 
   const BATCH_SIZE = parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_SIZE, 10)
   const concurrency =
-    leads.length >= 100
+    effectiveLeads.length >= 100
       ? parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CONCURRENCY, 3)
       : parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CONCURRENCY, 1)
 
@@ -478,7 +678,7 @@ export async function calculateFitScores(
 
   // 0) key precompute (hash) to reuse across memory/redis cache
   const keyByLeadId = new Map<string, string>()
-  for (const lead of leads) {
+  for (const lead of effectiveLeads) {
     const keyHash = makeFitScoreCacheKey({
       lead,
       websiteAnalysis,
@@ -493,7 +693,7 @@ export async function calculateFitScores(
   const candidatesForRedis: LeadForScoring[] = []
 
   // 1) 메모리 캐시 hit는 즉시 반환
-  for (const lead of leads) {
+  for (const lead of effectiveLeads) {
     const keyHash = keyByLeadId.get(lead.id)
     if (!keyHash) {
       remainingForLlm.push(lead)
@@ -502,7 +702,12 @@ export async function calculateFitScores(
 
     const cached = FIT_SCORE_CACHE.get(keyHash)
     if (cached) {
-      onScore({ leadId: lead.id, score: cached.score, reason: cached.reason })
+      onScore(
+        applyFitScorePolicy({
+          lead,
+          base: { leadId: lead.id, score: cached.score, reason: cached.reason },
+        }),
+      )
       continue
     }
 
@@ -528,7 +733,12 @@ export async function calculateFitScores(
         const hit = redisHitMap.get(keyHash)
         if (hit) {
           FIT_SCORE_CACHE.set(keyHash, { score: hit.score, reason: hit.reason })
-          onScore({ leadId: lead.id, score: hit.score, reason: hit.reason })
+          onScore(
+            applyFitScorePolicy({
+              lead,
+              base: { leadId: lead.id, score: hit.score, reason: hit.reason },
+            }),
+          )
           continue
         }
 
@@ -550,9 +760,13 @@ export async function calculateFitScores(
 
     const ruleScore = tryRuleBasedScore({ lead, selectedTarget, userQuery })
     if (ruleScore) {
-      FIT_SCORE_CACHE.set(keyHash, { score: ruleScore.score, reason: ruleScore.reason })
-      redisWrites.push({ keyHash, value: { score: ruleScore.score, reason: ruleScore.reason } })
-      onScore(ruleScore)
+      const finalScore = applyFitScorePolicy({ lead, base: ruleScore })
+      FIT_SCORE_CACHE.set(keyHash, { score: finalScore.score, reason: finalScore.reason })
+      redisWrites.push({
+        keyHash,
+        value: { score: finalScore.score, reason: finalScore.reason },
+      })
+      onScore(finalScore)
       continue
     }
 
@@ -589,24 +803,46 @@ export async function calculateFitScores(
           for (const score of scores) {
             const lead = batch.find((l) => l.id === score.leadId)
             if (lead) {
+              const base: FitScoreResult = {
+                leadId: score.leadId,
+                score: score.score,
+                reason: score.reason ?? "LLM 평가",
+              }
+              const finalScore = applyFitScorePolicy({ lead, base })
               const keyHash = keyByLeadId.get(lead.id)
               if (keyHash) {
-                FIT_SCORE_CACHE.set(keyHash, { score: score.score, reason: score.reason })
-                redisWrites.push({ keyHash, value: { score: score.score, reason: score.reason } })
+                FIT_SCORE_CACHE.set(keyHash, {
+                  score: finalScore.score,
+                  reason: finalScore.reason,
+                })
+                redisWrites.push({
+                  keyHash,
+                  value: { score: finalScore.score, reason: finalScore.reason },
+                })
               }
             }
-            onScore(score)
+            if (lead) {
+              const base: FitScoreResult = {
+                leadId: score.leadId,
+                score: score.score,
+                reason: score.reason ?? "LLM 평가",
+              }
+              onScore(applyFitScorePolicy({ lead, base }))
+            } else {
+              onScore(score)
+            }
           }
         } catch (error) {
           leadDiscoveryLogger.error(
             `Fit score calculation error for batch ${currentIndex}: ${error}`,
           )
           for (const lead of batch) {
-            onScore({
+            const base: FitScoreResult = {
               leadId: lead.id,
               score: 50,
               reason: "계산 중 오류 발생",
-            })
+            }
+            onScore(applyFitScorePolicy({ lead, base }))
           }
         }
       }
@@ -633,13 +869,17 @@ async function calculateBatchScores(
       (lead, idx) =>
         `${idx + 1}. ID: ${lead.id}
    - Company: ${lead.company_name || "N/A"}
+   - Company Type: ${lead.company_type || "N/A"}
+   - Description: ${(lead.description || "N/A").toString().slice(0, 160)}
    - Industry: ${lead.industry || "N/A"} / ${lead.sub_industry || "N/A"}
    - Country: ${lead.country || "N/A"}
    - Title: ${lead.title || "N/A"}
    - Employees: ${lead.employee || "N/A"}
    - Has Email: ${lead.email ? "Yes" : "No"}
    - Has Phone: ${lead.phone ? "Yes" : "No"}
-   - Has Website: ${lead.web_address ? "Yes" : "No"}`,
+   - Has Website: ${lead.web_address ? "Yes" : "No"}
+   - Website HTTP Status: ${lead.http_status ?? "N/A"}
+   - Enriched Profile: ${lead.verified ? "Yes" : "No"}`,
     )
     .join("\n\n")
 

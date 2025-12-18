@@ -16,6 +16,8 @@ export type Customer = {
   web_address?: string // 웹사이트
   description?: string // Description
   fit_score?: number // Fit Score (0-100)
+  httpStatus?: number | null // 웹사이트 접속 상태(Enrichment 결과)
+  crawlTimeSeconds?: number | null // 크롤링 시간(초)
   country?: string // Country
   category?: string // Category
   industry?: string // Main Industry
@@ -313,6 +315,7 @@ export const selectedTargetAtom = atom<SelectedTarget | null>(null)
 
 export type FitScoreState = {
   scores: Record<string, number> // leadId -> score
+  signatures: Record<string, string> // leadId -> signature (입력 데이터 변경 시 재계산 트리거)
   isLoading: boolean
   progress: number // 0-100
   error?: string
@@ -320,6 +323,7 @@ export type FitScoreState = {
 
 export const initialFitScoreState: FitScoreState = {
   scores: {},
+  signatures: {},
   isLoading: false,
   progress: 0,
 }
@@ -330,11 +334,16 @@ export const fitScoreStateAtom = atom<FitScoreState>(initialFitScoreState)
 // 적합도 점수 업데이트 (단일)
 export const updateFitScoreAtom = atom(
   null,
-  (get, set, { leadId, score }: { leadId: string; score: number }) => {
+  (
+    get,
+    set,
+    { leadId, score, signature }: { leadId: string; score: number; signature?: string },
+  ) => {
     const current = get(fitScoreStateAtom)
     set(fitScoreStateAtom, {
       ...current,
       scores: { ...current.scores, [leadId]: score },
+      ...(signature ? { signatures: { ...current.signatures, [leadId]: signature } } : {}),
     })
   },
 )

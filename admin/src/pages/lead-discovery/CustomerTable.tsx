@@ -352,12 +352,21 @@ function EmptyStateWaitingSelection() {
 
 // 적합도 배지 컴포넌트
 function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boolean }) {
-  // 로딩 중
-  if (isLoading || score === undefined) {
+  // 로딩 중(실제로 계산 요청이 진행 중인 경우에만)
+  if (isLoading) {
     return (
       <div className="inline-flex h-6 w-8 items-center justify-center">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       </div>
+    )
+  }
+
+  // 점수 없음(미계산/데이터 없음)
+  if (score === undefined || score === null || !Number.isFinite(score)) {
+    return (
+      <span className="inline-flex h-6 w-8 items-center justify-center text-muted-foreground text-xs">
+        -
+      </span>
     )
   }
 
@@ -383,7 +392,7 @@ function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boole
         textColor,
       )}
     >
-      {score}
+      {Math.round(score)}
     </div>
   )
 }
@@ -442,8 +451,46 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   const updateFitScore = useSetAtom(updateFitScoreAtom)
   const setFitScoreLoading = useSetAtom(setFitScoreLoadingAtom)
 
+  const getResolvedFitScore = useCallback(
+    (leadId: string, fallback?: number) => {
+      const value = fitScoreState.scores[leadId] ?? fallback
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return
+      }
+      return value
+    },
+    [fitScoreState.scores],
+  )
+
   // 선택된 바이어 타겟 (스트리밍 완료 후에도 유지)
   const selectedTarget = useAtomValue(selectedTargetAtom)
+
+  const makeFitScoreSignature = useCallback(
+    (customer: Customer) => {
+      return JSON.stringify({
+        // 검색 의도(가장 중요)
+        userQuery: streamingState.userQuery ?? null,
+        // 선택 타겟
+        targetCountry: selectedTarget?.country ?? null,
+        targetIndustry: selectedTarget?.industry ?? null,
+        // 리드 정보(프로필 고도화로 바뀌는 값 포함)
+        company_name: customer.company_name ?? null,
+        web_address: customer.web_address ?? null,
+        httpStatus: customer.httpStatus ?? null,
+        description: customer.description ?? null,
+        companyType: customer.companyType ?? null,
+        email: customer.email ?? null,
+        phone: customer.phone ?? null,
+        country: customer.country ?? null,
+        industry: customer.industry ?? null,
+        sub_industry: customer.sub_industry ?? null,
+        employee: customer.employee ?? null,
+        revenue: customer.revenue ?? null,
+        verified: Boolean(customer.verified),
+      })
+    },
+    [streamingState.userQuery, selectedTarget],
+  )
 
   // 고객그룹 추가 관련 상태
   const { selectedWorkspace } = useWorkspace()
@@ -548,8 +595,15 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       return
     }
 
-    // 점수가 없는 고객 찾기
-    const customersToScore = customers.filter((c) => fitScoreState.scores[c.id] === undefined)
+    // 점수가 없거나(미계산), 프로필 고도화 등으로 입력 데이터가 바뀐 고객 찾기
+    const customersToScore = customers.filter((c) => {
+      const signature = makeFitScoreSignature(c)
+      const prev = fitScoreState.signatures[c.id]
+      if (!prev) {
+        return true
+      }
+      return prev !== signature
+    })
 
     if (customersToScore.length === 0) {
       console.log("[FitScore] 조건 실패: 점수 계산할 고객이 없음")
@@ -562,6 +616,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     // 로딩 상태 설정
     setFitScoreLoading({ isLoading: true, progress: 0 })
 
+    const signatureByLeadId = new Map<string, string>()
+    for (const c of customersToScore) {
+      signatureByLeadId.set(c.id, makeFitScoreSignature(c))
+    }
+
     // API 호출
     // "원하는 조건으로 찾기" 모드에서는 selectedTarget 정보를 판매자 정보로 사용
     const hasWebsiteAnalysis = !!streamingState.analysisSummary
@@ -572,6 +631,10 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         email: c.email,
         phone: c.phone,
         web_address: c.web_address,
+        description: c.description,
+        company_type: c.companyType,
+        http_status: c.httpStatus ?? null,
+        verified: Boolean(c.verified),
         country: c.country,
         industry: c.industry,
         sub_industry: c.sub_industry,
@@ -592,7 +655,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       },
       {
         onScore: (leadId, score) => {
-          updateFitScore({ leadId, score })
+          updateFitScore({ leadId, score, signature: signatureByLeadId.get(leadId) })
         },
         onProgress: (progress) => {
           setFitScoreLoading({ isLoading: true, progress })
@@ -609,6 +672,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
       streamingState.userQuery, // 사용자 검색 쿼리 전달
+      workspaceId, // 워크스페이스 단위 캐시 분리
     )
   }, [
     customers,
@@ -618,6 +682,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     streamingState.userQuery,
     updateFitScore,
     setFitScoreLoading,
+    workspaceId,
+    makeFitScoreSignature,
+    fitScoreState.signatures,
   ])
 
   const initialSettingsRef = useRef<PersistedTableSettings | null>(loadTableSettings())
@@ -793,6 +860,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             verified: true,
             // 기본 정보
             description: result.description,
+            // 웹사이트 접속 상태(접속 실패도 FitScore 정책에 반영)
+            ...(result.httpStatus !== undefined && { httpStatus: result.httpStatus }),
+            ...(result.crawlTimeSeconds !== undefined && {
+              crawlTimeSeconds: result.crawlTimeSeconds,
+            }),
             // 업체 유형 (제조업체, 브랜드사, 유통업체 등)
             ...(result.companyType && { companyType: result.companyType }),
             // 연락처 (기존 값이 없을 때만 업데이트)
@@ -1011,7 +1083,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       // Fit Score
       {
         id: "fitScore",
-        accessorFn: (row) => fitScoreState.scores[row.id] ?? row.fit_score ?? -1,
+        accessorFn: (row) => getResolvedFitScore(row.id, row.fit_score) ?? -1,
         header: ({ column }) => (
           <Button
             className="-ml-2 h-8 px-2"
@@ -1029,7 +1101,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           </Button>
         ),
         cell: ({ row }) => {
-          const score = fitScoreState.scores[row.original.id] ?? row.original.fit_score
+          const score = getResolvedFitScore(row.original.id, row.original.fit_score)
           const isLoading = fitScoreState.isLoading && score === undefined
           return <FitScoreBadge isLoading={isLoading} score={score} />
         },
@@ -1198,7 +1270,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     ],
-    [removeCustomer, fitScoreState, enrichmentState],
+    [removeCustomer, fitScoreState, enrichmentState, getResolvedFitScore],
   )
 
   // 정렬된 데이터: 1순위 verified (체크 표시), 2순위 fit_score
@@ -1213,11 +1285,11 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       }
 
       // 2순위: fit_score (높은 것이 위로) - fitScoreState.scores에서 가져옴
-      const scoreA = fitScoreState.scores[a.id] ?? a.fit_score ?? 0
-      const scoreB = fitScoreState.scores[b.id] ?? b.fit_score ?? 0
+      const scoreA = getResolvedFitScore(a.id, a.fit_score) ?? -1
+      const scoreB = getResolvedFitScore(b.id, b.fit_score) ?? -1
       return scoreB - scoreA
     })
-  }, [customers, fitScoreState.scores])
+  }, [customers, getResolvedFitScore])
 
   const resolvedColumnOrder = useMemo(() => sanitizeColumnOrder(columnOrder), [columnOrder])
 

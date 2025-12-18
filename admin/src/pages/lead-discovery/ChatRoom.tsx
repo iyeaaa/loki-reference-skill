@@ -78,6 +78,13 @@ import {
 } from "./store"
 import { classifyError } from "./utils/error-classifier"
 
+// ============================================
+// 모듈 레벨 AbortController (컴포넌트 리마운트와 무관하게 유지)
+// 레이아웃 전환 시에도 검색 요청이 취소되지 않도록 함
+// ============================================
+let globalAbortController: AbortController | null = null
+let globalEnrichmentAbortController: AbortController | null = null
+
 // 코드 펜스 제거 유틸리티 (GPT가 ```markdown 으로 감싸는 경우 대비)
 function stripCodeFences(text: string): string {
   let result = text
@@ -241,8 +248,8 @@ export function ChatRoom() {
   // 새 검색 핸들러 - 모든 상태 초기화
   const handleNewSearch = useCallback(() => {
     // 진행 중인 요청 취소
-    abortControllerRef.current?.abort()
-    abortControllerRef.current = null
+    globalAbortController?.abort()
+    globalAbortController = null
 
     resetAll()
     setStreamingState(initialStreamingState)
@@ -256,19 +263,9 @@ export function ChatRoom() {
   const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // AbortController ref for SSE request cancellation
-  const abortControllerRef = useRef<AbortController | null>(null)
-  // Enrichment용 별도 AbortController ref (메인 검색과 분리)
-  const enrichmentAbortControllerRef = useRef<AbortController | null>(null)
-
-  // 컴포넌트 언마운트 시 진행 중인 요청 취소
-  useEffect(
-    () => () => {
-      abortControllerRef.current?.abort()
-      enrichmentAbortControllerRef.current?.abort()
-    },
-    [],
-  )
+  // NOTE: AbortController는 모듈 레벨 변수(globalAbortController)로 이동
+  // 레이아웃 전환으로 인한 컴포넌트 리마운트 시에도 검색 요청이 취소되지 않도록 함
+  // cleanup에서 abort하지 않음 - 새 요청 시작 시에만 이전 요청 취소
 
   // 워크스페이스
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace()
@@ -349,8 +346,8 @@ export function ChatRoom() {
     startEnrichment(leadsToEnrich.map((c) => c.id))
 
     // 이전 enrichment 요청 취소 및 새 AbortController 생성
-    enrichmentAbortControllerRef.current?.abort()
-    enrichmentAbortControllerRef.current = new AbortController()
+    globalEnrichmentAbortController?.abort()
+    globalEnrichmentAbortController = new AbortController()
 
     await enrichLeads(
       leadsToEnrich.map((c) => ({
@@ -391,7 +388,7 @@ export function ChatRoom() {
         onComplete: () => {
           finishBulkEnrichment()
         },
-        signal: enrichmentAbortControllerRef.current.signal,
+        signal: globalEnrichmentAbortController.signal,
       },
     )
   }, [
@@ -674,14 +671,14 @@ export function ChatRoom() {
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = new AbortController()
+      globalAbortController?.abort()
+      globalAbortController = new AbortController()
 
       // LangGraph API 호출
       searchMutation.mutate({
         query,
         workspaceId,
-        signal: abortControllerRef.current.signal,
+        signal: globalAbortController.signal,
       })
     }
 
@@ -866,14 +863,14 @@ export function ChatRoom() {
     setStreamingState(initialStreamingState)
 
     // 이전 요청 취소 및 새 AbortController 생성
-    abortControllerRef.current?.abort()
-    abortControllerRef.current = new AbortController()
+    globalAbortController?.abort()
+    globalAbortController = new AbortController()
 
     // 마지막 쿼리로 다시 검색
     searchMutation.mutate({
       query: lastQuery.query,
       workspaceId: lastQuery.workspaceId,
-      signal: abortControllerRef.current.signal,
+      signal: globalAbortController.signal,
     })
   }, [lastQuery, clearError, searchMutation, setStreamingState])
 
@@ -1051,15 +1048,15 @@ export function ChatRoom() {
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = new AbortController()
+      globalAbortController?.abort()
+      globalAbortController = new AbortController()
 
       // 선택 API 호출
       selectMutation.mutate({
         sessionId: streamingState.sessionId,
         selectedRecommendationId: rec.id,
         workspaceId: selectedWorkspace.id,
-        signal: abortControllerRef.current.signal,
+        signal: globalAbortController.signal,
       })
     },
     [
@@ -1117,15 +1114,15 @@ export function ChatRoom() {
       }))
 
       // 이전 요청 취소 및 새 AbortController 생성
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = new AbortController()
+      globalAbortController?.abort()
+      globalAbortController = new AbortController()
 
       // Clarify API 호출
       clarifyMutation.mutate({
         sessionId: streamingState.sessionId,
         answers,
         workspaceId: selectedWorkspace.id,
-        signal: abortControllerRef.current.signal,
+        signal: globalAbortController.signal,
       })
     },
     [selectedWorkspace, streamingState.sessionId, addMessage, clarifyMutation, setStreamingState],
@@ -1192,14 +1189,14 @@ export function ChatRoom() {
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = new AbortController()
+      globalAbortController?.abort()
+      globalAbortController = new AbortController()
 
       // LangGraph API 호출
       searchMutation.mutate({
         query,
         workspaceId: selectedWorkspace.id,
-        signal: abortControllerRef.current.signal,
+        signal: globalAbortController.signal,
       })
     },
     [
@@ -1225,23 +1222,23 @@ export function ChatRoom() {
 
       const now = Date.now()
       const userInput = input.trim()
-      const userMessage: ChatMessage = {
-        id: `msg-${now}`,
-        role: "user",
-        content: userInput,
-        timestamp: new Date(now),
-      }
 
-      console.log("[ChatRoom] Adding user message:", userMessage.id)
-      addMessage(userMessage)
-      setInput("")
-
-      // 워크스페이스 확인
+      // 워크스페이스 확인 (메시지 추가 전에 확인하여 불필요한 화면 전환 방지)
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
         console.log("[ChatRoom] No workspace selected")
         // 쿼리를 저장하여 워크스페이스 선택 후 자동 검색
         console.log("[ChatRoom] Setting pendingQuery (handleSubmit):", userInput)
         setPendingQuery(userInput)
+
+        const userMessage: ChatMessage = {
+          id: `msg-${now}`,
+          role: "user",
+          content: userInput,
+          timestamp: new Date(now),
+        }
+        addMessage(userMessage)
+        setInput("")
+
         const errorMessage: ChatMessage = {
           id: `msg-${now + 1}-error`,
           role: "assistant",
@@ -1270,17 +1267,11 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
 
-      // 빈 assistant 메시지 먼저 추가 (스트리밍용) - 1ms 후의 timestamp로 순서 보장
+      // 빈 assistant 메시지 ID 생성
       const assistantMessageId = `msg-${now + 1}-response`
-      const assistantMessage: ChatMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        timestamp: new Date(now + 1),
-      }
-      addMessage(assistantMessage)
 
-      // 스트리밍 상태 초기화
+      // ★ 스트리밍 상태를 먼저 설정 (화면 전환 전에 상태 설정)
+      // 이렇게 하면 ChatRoom이 리마운트되어도 올바른 상태가 유지됨
       setStreamingState({
         messageId: assistantMessageId,
         analysisMessageId: assistantMessageId, // 분석 결과가 표시될 메시지 ID
@@ -1295,15 +1286,34 @@ export function ChatRoom() {
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
-      abortControllerRef.current?.abort()
-      abortControllerRef.current = new AbortController()
+      globalAbortController?.abort()
+      globalAbortController = new AbortController()
 
-      // LangGraph API 호출
+      // LangGraph API 호출 (화면 전환 전에 검색 시작)
       searchMutation.mutate({
         query: userInput,
         workspaceId: selectedWorkspace.id,
-        signal: abortControllerRef.current.signal,
+        signal: globalAbortController.signal,
       })
+
+      // ★ 메시지 추가는 마지막에 (화면 전환 트리거)
+      // 이 시점에서 이미 스트리밍 상태가 "connecting"으로 설정되어 있음
+      const userMessage: ChatMessage = {
+        id: `msg-${now}`,
+        role: "user",
+        content: userInput,
+        timestamp: new Date(now),
+      }
+      addMessage(userMessage)
+      setInput("")
+
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(now + 1),
+      }
+      addMessage(assistantMessage)
     },
     [
       input,

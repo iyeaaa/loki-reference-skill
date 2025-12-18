@@ -233,7 +233,9 @@ export const initialStreamingState: StreamingState = {
   customerAnalysisSummary: "",
 }
 
-// 로컬스토리지에서 스트리밍 상태 로드 (로딩 중 상태면 완료로 변경)
+// 로컬스토리지에서 스트리밍 상태 로드
+// NOTE: 로딩 중 상태를 강제로 complete로 변환하지 않음
+// 화면 전환 시에도 로딩 상태를 유지해야 검색이 정상적으로 진행됨
 const loadStreamingState = (): StreamingState => {
   try {
     const stored = localStorage.getItem("lead-discovery-streaming-state")
@@ -243,24 +245,8 @@ const loadStreamingState = (): StreamingState => {
 
     const parsed = JSON.parse(stored) as StreamingState
 
-    // 로딩 중 상태 (idle, complete, waiting_selection, error 제외)면 완료 상태로 변경
-    const loadingStatuses: LeadDiscoveryStatus[] = [
-      "connecting",
-      "routing",
-      "analyzing",
-      "recommending",
-      "searching",
-    ]
-    if (loadingStatuses.includes(parsed.status)) {
-      // 추천이 있으면 waiting_selection, 없으면 complete
-      return {
-        ...parsed,
-        status: parsed.recommendations.length > 0 ? "waiting_selection" : "complete",
-        message: "",
-        progress: 100,
-      }
-    }
-
+    // 저장된 상태를 그대로 반환 (로딩 중 상태도 유지)
+    // 실제 새로고침 후 복구가 필요한 경우, 사용자가 "새 검색" 버튼을 클릭하여 처리
     return parsed
   } catch {
     return initialStreamingState

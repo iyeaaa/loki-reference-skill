@@ -1,7 +1,7 @@
-import path from "path";
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import { cleanLoggerPlugin } from "./vite-plugins/clean-logger";
 
 export default defineConfig({
@@ -45,6 +45,13 @@ export default defineConfig({
       ".ngrok-free.app", // 모든 ngrok 호스트 허용
       ".ngrok.io", // 기존 ngrok 도메인도 허용
     ],
+    // monorepo 루트(node_modules/.bun 등)에서 참조되는 파일(폰트/CSS)을 Vite가 서빙할 수 있게 허용
+    // Step2에서 사용하는 @uiw/react-md-editor 동적 로드 시 "outside of Vite serving allow list" 오류 방지
+    fs: {
+      // searchForWorkspaceRoot는 현재 repo에서 admin 디렉토리를 반환하므로,
+      // 실제 모노레포 루트(../)도 함께 허용해야 함.
+      allow: [searchForWorkspaceRoot(process.cwd()), path.resolve(process.cwd(), "..")],
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3001",

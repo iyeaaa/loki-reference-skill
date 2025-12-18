@@ -4,22 +4,30 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   Check,
-  ChevronDown,
-  ChevronUp,
   Clock,
+  FileSignature,
   Info,
+  Paperclip,
   Plus,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -135,9 +143,13 @@ export function ManualModeContent({
   const [aiGroupInfo, setAiGroupInfo] = useState("") // Auto-detected group info
   const [aiGoal, setAiGoal] = useState("") // Follow-up goal
   const [aiStrategy, setAiStrategy] = useState("") // Tone and manner strategy
-  const [showSignaturePreview, setShowSignaturePreview] = useState(false)
+  const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
+  const [applyTemplateToAllSteps, setApplyTemplateToAllSteps] = useState(true)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
   const [selectedAITemplateId, setSelectedAITemplateId] = useState<string>("none") // Template for AI generation
+  const [variableInsertTarget, setVariableInsertTarget] = useState<"subject" | "body">("body")
+  const subjectInputRef = useRef<HTMLInputElement>(null)
 
   // Get all signatures (userId를 전달하여 기본 서명 표시 포함)
   const { data: signatures } = useEmailSignatures(
@@ -159,6 +171,39 @@ export function ManualModeContent({
   useEffect(() => {
     setSelectedTemplateId("")
   }, [selectedStepIndex])
+
+  const insertIntoSubject = (text: string) => {
+    const input = subjectInputRef.current
+    const current = currentStep?.emailSubject || ""
+
+    if (!input) {
+      onUpdateStep({ emailSubject: `${current}${text}` })
+      return
+    }
+
+    const start = input.selectionStart ?? current.length
+    const end = input.selectionEnd ?? current.length
+    const next = current.slice(0, start) + text + current.slice(end)
+    onUpdateStep({ emailSubject: next })
+
+    setTimeout(() => {
+      try {
+        input.focus()
+        const pos = start + text.length
+        input.setSelectionRange(pos, pos)
+      } catch {
+        // ignore
+      }
+    }, 0)
+  }
+
+  const handleInsertVariable = (value: string) => {
+    if (variableInsertTarget === "subject") {
+      insertIntoSubject(value)
+      return
+    }
+    insertVariable(value)
+  }
 
   // currentStep이 변경될 때 서명이 없으면 기본 서명 자동 설정
   useEffect(() => {
@@ -230,6 +275,18 @@ export function ManualModeContent({
     // Custom signature (not in list)
     return "custom"
   }
+
+  const signatureHtmlForPreview = (() => {
+    const currentValue = getCurrentSignatureValue()
+    if (currentValue === "none") {
+      return null
+    }
+    if (currentValue === "default") {
+      return getUserSignature()
+    }
+    const selectedSig = signatures?.find((sig) => sig.id === currentValue)
+    return selectedSig?.signatureHtml || getUserSignature()
+  })()
 
   // Handle signature selection
   const handleSignatureChange = async (signatureId: string) => {
@@ -308,15 +365,31 @@ export function ManualModeContent({
   }
 
   // Handle template selection
-  const handleTemplateSelect = (templateId: string) => {
+  const handleTemplateSelect = (templateId: string, options?: { applyToAllSteps?: boolean }) => {
     setSelectedTemplateId(templateId)
     const template = templatesData?.emailTemplates.find((t) => t.id === templateId)
     if (template) {
+      const applyToAll = options?.applyToAllSteps ?? false
+
+      if (applyToAll) {
+        const nextSteps = steps.map((step) => ({
+          ...step,
+          emailSubject: template.subject,
+          emailBodyText: template.bodyText || "",
+          // 템플릿 적용 후에는 저장 필요 상태로 간주
+          isDraft: true,
+        }))
+        setSteps(nextSteps)
+        toast.success("템플릿이 모든 스텝에 적용되었습니다")
+        return
+      }
+
       onUpdateStep({
         emailSubject: template.subject,
         emailBodyText: template.bodyText || "",
+        isDraft: true,
       })
-      toast.success("템플릿이 적용되었습니다")
+      toast.success("템플릿이 현재 스텝에 적용되었습니다")
     }
   }
 
@@ -471,9 +544,9 @@ export function ManualModeContent({
   }
 
   return (
-    <div className="flex flex-1 gap-6 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 gap-6 overflow-hidden">
       {/* Left Panel - Steps List */}
-      <div className="flex w-[420px] flex-shrink-0 flex-col gap-4 border-r pr-6">
+      <div className="flex min-h-0 w-[420px] flex-shrink-0 flex-col gap-4 overflow-hidden border-r pr-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-lg">{t("sequences.manualMode.emailSteps")}</h3>
@@ -525,7 +598,7 @@ export function ManualModeContent({
           </div>
         )}
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-2 pr-2">
             {steps.map((step, index) => (
               // biome-ignore lint/a11y/useSemanticElements: Cannot use button element because it contains nested interactive elements (buttons)
@@ -797,60 +870,203 @@ export function ManualModeContent({
       </div>
 
       {/* Right Panel - Email Editor (65%) */}
-      <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-        <div className="flex items-center justify-between">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        <div className="flex flex-shrink-0 items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg">스텝 {currentStep?.stepOrder} 편집</h3>
             <p className="text-muted-foreground text-sm">이메일 내용을 작성하세요</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button className="h-9" onClick={handleOpenAISheet} size="sm" variant="outline">
+            <Dialog onOpenChange={setIsTemplateDialogOpen} open={isTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-8" size="sm" type="button" variant="outline">
+                  템플릿 적용
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>템플릿 적용</DialogTitle>
+                  <DialogDescription>선택한 템플릿이 제목과 본문에 적용됩니다.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2">
+                    <Label className="cursor-pointer text-sm" htmlFor="apply-template-all-steps">
+                      모든 스텝에 일괄 적용
+                    </Label>
+                    <Checkbox
+                      checked={applyTemplateToAllSteps}
+                      id="apply-template-all-steps"
+                      onCheckedChange={(checked) => setApplyTemplateToAllSteps(checked as boolean)}
+                    />
+                  </div>
+                  <Label>템플릿 선택</Label>
+                  <Select
+                    onValueChange={(v) => {
+                      setSelectedTemplateId(v)
+                      handleTemplateSelect(v, { applyToAllSteps: applyTemplateToAllSteps })
+                      setIsTemplateDialogOpen(false)
+                    }}
+                    value={selectedTemplateId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="템플릿 선택 (선택사항)" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[360px]">
+                      {templatesData?.emailTemplates && templatesData.emailTemplates.length > 0 ? (
+                        templatesData.emailTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium">{template.name}</span>
+                              {template.description && (
+                                <span className="text-muted-foreground text-xs">
+                                  {template.description}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem disabled value="no-templates">
+                          등록된 템플릿이 없습니다
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-xs">
+                    💡 템플릿을 선택하면 제목/본문이 자동으로 입력됩니다
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Signature Dialog */}
+            <Dialog onOpenChange={setIsSignatureDialogOpen} open={isSignatureDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-8" size="sm" type="button" variant="outline">
+                  <FileSignature className="mr-2 h-4 w-4" />
+                  서명
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>서명 설정</DialogTitle>
+                  <DialogDescription>
+                    이메일 본문 하단에 추가될 서명을 선택하세요.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={currentStep?.includeSignature !== false}
+                      id="include-signature-dialog"
+                      onCheckedChange={(checked) =>
+                        onUpdateStep({ includeSignature: checked as boolean })
+                      }
+                    />
+                    <Label
+                      className="cursor-pointer font-normal text-sm"
+                      htmlFor="include-signature-dialog"
+                    >
+                      이메일에 서명 추가
+                    </Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>서명 선택</Label>
+                    <Select
+                      onValueChange={handleSignatureChange}
+                      value={getCurrentSignatureValue()}
+                    >
+                      <SelectTrigger className="relative h-auto min-h-9 py-1.5">
+                        {(() => {
+                          const value = getCurrentSignatureValue()
+                          const selected = signatures?.find((sig) => sig.id === value)
+
+                          if (value === "none") {
+                            return <SelectValue placeholder="서명 없음" />
+                          }
+                          if (value === "default") {
+                            return <SelectValue placeholder="기본 서명" />
+                          }
+                          if (value === "custom") {
+                            return <SelectValue placeholder="사용자 정의 서명" />
+                          }
+                          if (selected) {
+                            return <SelectValue className="sr-only" placeholder={selected.name} />
+                          }
+                          return <SelectValue placeholder="서명을 선택하세요" />
+                        })()}
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <SelectItem value="none">서명 없음</SelectItem>
+                        <SelectItem value="default">기본 서명</SelectItem>
+                        {signatures?.map((signature) => {
+                          const displayText = `${signature.name}${signature.workspaceName ? ` (${signature.workspaceName}${signature.userName ? ` • ${signature.userName}` : ""})` : ""}`
+                          return (
+                            <SelectItem
+                              key={signature.id}
+                              textValue={displayText}
+                              value={signature.id}
+                            >
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{signature.name}</span>
+                                  {signature.isDefault && (
+                                    <Badge className="text-xs" variant="secondary">
+                                      기본
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                                  {signature.workspaceName && (
+                                    <span>{signature.workspaceName}</span>
+                                  )}
+                                  {signature.userName && (
+                                    <>
+                                      {signature.workspaceName && <span>•</span>}
+                                      <span>{signature.userName}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Signature Preview */}
+                  {signatureHtmlForPreview && (
+                    <div className="space-y-2">
+                      <Label>미리보기</Label>
+                      <div className="max-h-[200px] overflow-auto rounded-md border bg-muted/10 p-3">
+                        <div
+                          className="prose prose-sm dark:prose-invert max-w-none text-xs"
+                          // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+                          dangerouslySetInnerHTML={{ __html: signatureHtmlForPreview }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button className="h-8" onClick={handleOpenAISheet} size="sm" variant="outline">
               <Sparkles className="mr-2 h-4 w-4" />
               AI 생성
             </Button>
-            <Button className="h-9" onClick={onSaveStep} size="sm">
+            <Button className="h-8" onClick={onSaveStep} size="sm">
               <Check className="mr-2 h-4 w-4" />
               저장
             </Button>
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="space-y-4 pr-4">
-            {/* Template Selection */}
-            <div className="space-y-2">
-              <Label>템플릿에서 불러오기</Label>
-              <Select onValueChange={handleTemplateSelect} value={selectedTemplateId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="템플릿 선택 (선택사항)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {templatesData?.emailTemplates && templatesData.emailTemplates.length > 0 ? (
-                    templatesData.emailTemplates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">{template.name}</span>
-                          {template.description && (
-                            <span className="text-muted-foreground text-xs">
-                              {template.description}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled value="no-templates">
-                      등록된 템플릿이 없습니다
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                💡 기존 템플릿을 선택하면 제목과 본문이 자동으로 입력됩니다
-              </p>
-            </div>
-
-            {/* Email Subject */}
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-4 pr-4">
+            {/* Email Subject (always visible) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>이메일 제목 *</Label>
@@ -870,220 +1086,105 @@ export function ManualModeContent({
               </div>
               <Input
                 onChange={(e) => onUpdateStep({ emailSubject: e.target.value })}
+                onFocus={() => setVariableInsertTarget("subject")}
                 placeholder="예: 안녕하세요, {{회사명}} 담당자님"
+                ref={subjectInputRef}
                 value={currentStep?.emailSubject || ""}
               />
             </div>
 
-            {/* Variables */}
-            <div className="space-y-2">
-              <Label>변수 삽입</Label>
-              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
-                {getVariables(t).map((variable) => (
-                  <Button
-                    className="h-7 text-xs"
-                    key={variable.value}
-                    onClick={() => insertVariable(variable.value)}
-                    size="sm"
-                    variant="outline"
-                  >
-                    {variable.label}
-                  </Button>
-                ))}
-                <p className="mt-2 w-full text-muted-foreground text-xs">
-                  클릭하면 본문에 변수가 추가됩니다
-                </p>
-              </div>
-            </div>
-
-            {/* Email Body with RichTextEditor */}
-            <div className="space-y-2">
+            {/* Email Body */}
+            <div className="flex flex-col gap-2">
               <Label>이메일 본문 *</Label>
-              <RichTextEditor
-                height="300px"
-                onChange={(value) => onUpdateStep({ emailBodyText: value })}
-                placeholder="이메일 내용을 입력하세요..."
-                ref={editorRef}
-                value={currentStep?.emailBodyText || ""}
-              />
-
-              {/* 서명 선택 및 미리보기 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">서명 선택</Label>
-                  <Button
-                    className="h-7 text-xs"
-                    onClick={() => setShowSignaturePreview(!showSignaturePreview)}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    {showSignaturePreview ? (
-                      <>
-                        <ChevronUp className="mr-1 h-3 w-3" />
-                        미리보기 숨기기
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="mr-1 h-3 w-3" />
-                        미리보기 보기
-                      </>
-                    )}
-                  </Button>
-                </div>
-                {/* 서명 포함 여부 체크박스 */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={currentStep?.includeSignature !== false}
-                    id={`include-signature-${currentStep?.stepOrder || 0}`} // 기본값: true
-                    onCheckedChange={(checked) =>
-                      onUpdateStep({ includeSignature: checked as boolean })
-                    }
-                  />
-                  <Label
-                    className="cursor-pointer font-normal text-sm"
-                    htmlFor={`include-signature-${currentStep?.stepOrder || 0}`}
-                  >
-                    이메일에 서명 추가
-                  </Label>
-                </div>
-                <Select onValueChange={handleSignatureChange} value={getCurrentSignatureValue()}>
-                  <SelectTrigger className="relative h-auto min-h-9 py-1.5">
-                    {(() => {
-                      const value = getCurrentSignatureValue()
-                      const selected = signatures?.find((sig) => sig.id === value)
-
-                      if (value === "none") {
-                        return <SelectValue placeholder="서명 없음" />
-                      }
-                      if (value === "default") {
-                        return <SelectValue placeholder="기본 서명" />
-                      }
-                      if (value === "custom") {
-                        return <SelectValue placeholder="사용자 정의 서명" />
-                      }
-                      if (selected) {
-                        return <SelectValue className="sr-only" placeholder={selected.name} />
-                      }
-                      return <SelectValue placeholder="서명을 선택하세요" />
-                    })()}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">서명 없음</SelectItem>
-                    <SelectItem value="default">기본 서명</SelectItem>
-                    {signatures?.map((signature) => {
-                      const displayText = `${signature.name}${signature.workspaceName ? ` (${signature.workspaceName}${signature.userName ? ` • ${signature.userName}` : ""})` : ""}`
-                      return (
-                        <SelectItem key={signature.id} textValue={displayText} value={signature.id}>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{signature.name}</span>
-                              {signature.isDefault && (
-                                <Badge className="text-xs" variant="secondary">
-                                  기본
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                              {signature.workspaceName && (
-                                <span className="flex items-center gap-1">
-                                  <span>{signature.workspaceName}</span>
-                                </span>
-                              )}
-                              {signature.userName && (
-                                <>
-                                  {signature.workspaceName && <span>•</span>}
-                                  <span>{signature.userName}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-
-                {/* 서명 미리보기 (토글형) */}
-                {showSignaturePreview &&
-                  (() => {
-                    // 표시할 서명 HTML 가져오기
-                    const signatureToShow =
-                      currentStep?.emailSignature ||
-                      (() => {
-                        const currentValue = getCurrentSignatureValue()
-                        if (currentValue === "none") {
-                          return null
-                        }
-                        if (currentValue === "default") {
-                          return getUserSignature()
-                        }
-                        const selectedSig = signatures?.find((sig) => sig.id === currentValue)
-                        return selectedSig?.signatureHtml || getUserSignature()
-                      })()
-
-                    return signatureToShow ? (
-                      <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-                        <Label className="font-medium text-muted-foreground text-xs">
-                          서명 미리보기
-                        </Label>
-                        <div
-                          className="prose prose-sm dark:prose-invert max-w-none text-xs"
-                          // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
-                          dangerouslySetInnerHTML={{ __html: signatureToShow }}
-                        />
-                        <p className="text-muted-foreground text-xs">
-                          이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
-                        </p>
-                      </div>
-                    ) : null
-                  })()}
+              <div className="min-h-[220px]" onFocusCapture={() => setVariableInsertTarget("body")}>
+                <RichTextEditor
+                  height={220}
+                  onChange={(value) => onUpdateStep({ emailBodyText: value })}
+                  placeholder="이메일 내용을 입력하세요..."
+                  ref={editorRef}
+                  value={currentStep?.emailBodyText || ""}
+                />
               </div>
             </div>
 
-            {/* Attachments */}
-            <div className="space-y-2">
-              <Label>첨부 파일</Label>
-              <div className="rounded-lg border-2 border-dashed p-4 text-center">
-                <input
-                  className="hidden"
-                  id={`file-input-${selectedStepIndex}`}
-                  multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || [])
-                    onUpdateStep({ files })
-                  }}
-                  type="file"
-                />
-                <label
-                  className="cursor-pointer text-muted-foreground text-sm hover:text-foreground"
-                  htmlFor={`file-input-${selectedStepIndex}`}
-                >
-                  클릭하여 파일 선택
-                </label>
-                {currentStep?.files && currentStep.files.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {currentStep.files.map((file, idx) => (
-                      <div
-                        className="flex items-center justify-between rounded bg-muted p-2 text-xs"
-                        key={`file-${file.name}-${idx}`}
-                      >
-                        <span>{file.name}</span>
-                        <Button
-                          className="h-5 w-5 p-0"
-                          onClick={() => {
-                            const newFiles = currentStep.files?.filter((_, i) => i !== idx)
-                            onUpdateStep({ files: newFiles })
-                          }}
-                          size="sm"
-                          variant="ghost"
+            {/* Variables & Attachments - 2 column layout */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Variables */}
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="font-medium text-sm">변수 삽입</span>
+                  <span className="text-muted-foreground text-xs">
+                    ({variableInsertTarget === "subject" ? "제목" : "본문"})
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {getVariables(t).map((variable) => (
+                    <Button
+                      className="h-6 px-2 text-xs"
+                      key={variable.value}
+                      onClick={() => handleInsertVariable(variable.value)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      {variable.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Attachments */}
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="font-medium text-sm">첨부파일</span>
+                  {currentStep?.files && currentStep.files.length > 0 && (
+                    <Badge className="h-5 px-1.5 text-xs" variant="secondary">
+                      {currentStep.files.length}
+                    </Badge>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <input
+                    className="hidden"
+                    id={`file-input-${selectedStepIndex}`}
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || [])
+                      onUpdateStep({ files })
+                    }}
+                    type="file"
+                  />
+                  <label
+                    className="flex cursor-pointer items-center justify-center rounded-md border-2 border-dashed p-2 text-muted-foreground text-xs transition-colors hover:border-primary hover:text-foreground"
+                    htmlFor={`file-input-${selectedStepIndex}`}
+                  >
+                    파일 선택
+                  </label>
+                  {currentStep?.files && currentStep.files.length > 0 && (
+                    <div className="max-h-[60px] space-y-1 overflow-auto">
+                      {currentStep.files.map((file, idx) => (
+                        <div
+                          className="flex items-center justify-between rounded bg-background p-1.5 text-xs"
+                          key={`file-${file.name}-${idx}`}
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <span className="truncate">{file.name}</span>
+                          <Button
+                            className="h-4 w-4 flex-shrink-0 p-0"
+                            onClick={() => {
+                              const newFiles = currentStep.files?.filter((_, i) => i !== idx)
+                              onUpdateStep({ files: newFiles })
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

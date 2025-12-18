@@ -444,6 +444,37 @@ export default function CreateCampaignPage() {
               {t("sequences.createPage.back")}
             </Button>
           </div>
+
+          {/* Compact Stepper (between back & save) */}
+          <div className="flex flex-1 items-center justify-center px-6">
+            <div className="flex items-center gap-2 rounded-full border bg-muted/20 px-3 py-1">
+              {steps.map((step, index) => (
+                <div className="flex items-center" key={step.number}>
+                  <div
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-full border text-xs",
+                      currentStep === step.number
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : currentStep > step.number
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-muted-foreground/30 bg-background text-muted-foreground",
+                    )}
+                  >
+                    {currentStep > step.number ? <Check className="h-3 w-3" /> : step.number}
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div
+                      className={cn(
+                        "mx-2 h-px w-10",
+                        currentStep > step.number ? "bg-primary" : "bg-muted-foreground/30",
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             {lastSaved && (
               <div className="flex items-center gap-2 text-muted-foreground text-xs">
@@ -498,49 +529,6 @@ export default function CreateCampaignPage() {
         </div>
       </div>
 
-      {/* Step Navigation */}
-      <div className="border-b bg-muted/30 px-6 py-3">
-        <div className="flex items-center justify-center gap-4">
-          {steps.map((step, index) => (
-            <div className="flex items-center" key={step.number}>
-              <div className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border-2 font-semibold text-sm transition-colors",
-                    currentStep === step.number
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : currentStep > step.number
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-muted-foreground/30 bg-background text-muted-foreground",
-                  )}
-                >
-                  {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
-                </div>
-                <div className="text-left">
-                  <div
-                    className={cn(
-                      "font-medium text-sm",
-                      currentStep === step.number ? "text-primary" : "text-muted-foreground",
-                    )}
-                  >
-                    {step.title}
-                  </div>
-                  <div className="text-muted-foreground text-xs">{step.description}</div>
-                </div>
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "mx-4 h-0.5 w-16 transition-colors",
-                    currentStep > step.number ? "bg-primary" : "bg-muted-foreground/30",
-                  )}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Content Area - Full Height without Scroll */}
       <div className="flex-1 overflow-hidden">
         {currentStep === 1 && (
@@ -556,7 +544,7 @@ export default function CreateCampaignPage() {
           </div>
         )}
         {currentStep === 2 && (
-          <div className="h-full p-6">
+          <div className="h-full overflow-hidden p-6">
             <CreateCampaignStep2
               data={{
                 workspaceId: campaignData.workspaceId,
@@ -584,12 +572,18 @@ export default function CreateCampaignPage() {
 
       {/* Footer Navigation */}
       {currentStep < 3 && (
-        <div className="border-t bg-background px-6 py-4">
+        <div className="flex-shrink-0 border-t bg-background px-6 py-2">
           <div className="flex justify-between">
-            <Button disabled={currentStep === 1} onClick={handlePrevStep} variant="outline">
+            <Button
+              className="h-8"
+              disabled={currentStep === 1}
+              onClick={handlePrevStep}
+              size="sm"
+              variant="outline"
+            >
               {t("sequences.createPage.previous")}
             </Button>
-            <Button disabled={!sequenceId} onClick={handleNextStep}>
+            <Button className="h-8" disabled={!sequenceId} onClick={handleNextStep} size="sm">
               {sequenceId ? t("sequences.createPage.next") : t("sequences.createPage.initializing")}
             </Button>
           </div>

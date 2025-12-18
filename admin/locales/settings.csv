@@ -129,20 +129,19 @@ dangerZone.title,위험 구역,Danger Zone
 dangerZone.members,명의 멤버,members
 dangerZone.workspaceDeletionWarning,다음 워크스페이스도 함께 삭제됩니다:,The following workspaces will also be deleted:
 dangerZone.confirmDescriptionWithWorkspaces,정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며 계정과 함께 {{count}}개의 워크스페이스도 삭제됩니다.,Are you sure you want to delete your account? This action cannot be undone and {{count}} workspace(s) will also be deleted.
-dangerZone.backupNotice,데이터 백업 안내,Data Backup Notice
-dangerZone.backupNoticeDesc,"서버 데이터는 매일 자동 백업되며, 배포 시마다 추가 백업이 생성됩니다. 계정 삭제 후에도 관리자 문의 시 일정 기간 내 복구가 가능할 수 있습니다.","Server data is automatically backed up daily and additional backups are created with each deployment. Recovery may be possible within a certain period after account deletion by contacting administrators."
-dangerZone.confirmInputInvalid,정확히 입력해주세요,Please enter exactly
-dangerZone.confirmInputLabel,"삭제를 진행하려면 아래에 ""{{text}}""를 입력하세요.","To proceed with deletion, please enter ""{{text}}"" below."
-dangerZone.confirmInputValid,확인 완료,Confirmed
-dangerZone.deletionProcess,삭제 프로세스,Deletion Process
-dangerZone.phase1Desc,"Nylas 이메일 연동이 해제되고 모든 이메일 계정 연결이 끊어집니다.","Nylas email integration will be disconnected and all email account connections will be removed."
-dangerZone.phase1Title,이메일 연동 해제,Email Integration Removal
-dangerZone.phase2Desc,"소유한 워크스페이스의 모든 데이터가 삭제됩니다: 리드, 시퀀스, 이메일, 고객 그룹, 웹셋, 템플릿 등","All data in owned workspaces will be deleted: leads, sequences, emails, customer groups, websets, templates, etc."
-dangerZone.phase2Title,워크스페이스 데이터 삭제,Workspace Data Deletion
-dangerZone.phase3Desc,"다른 워크스페이스의 멤버십, 역할 할당, 시퀀스 등록 정보가 삭제됩니다.","Memberships, role assignments, and sequence enrollment information from other workspaces will be deleted."
-dangerZone.phase3Title,멤버십 정리,Membership Cleanup
-dangerZone.phase4Desc,다른 사용자가 생성한 데이터에서 생성자 정보가 익명화됩니다.,Creator information in data created by other users will be anonymized.
-dangerZone.phase4Title,참조 데이터 정리,Reference Data Cleanup
-dangerZone.phase5Desc,사용자 계정이 시스템에서 완전히 삭제됩니다.,User account will be completely deleted from the system.
-dangerZone.phase5Title,계정 완전 삭제,Complete Account Deletion
-dangerZone.workspacesDeleted,함께 삭제될 워크스페이스 ({{count}}개),Workspaces to be deleted ({{count}})
+dangerZone.backupNotice,[NO TRANSLATION] settings.dangerZone.backupNotice,[NO TRANSLATION] settings.dangerZone.backupNotice
+dangerZone.backupNoticeDesc,[NO TRANSLATION] settings.dangerZone.backupNoticeDesc,[NO TRANSLATION] settings.dangerZone.backupNoticeDesc
+dangerZone.confirmInputInvalid,[NO TRANSLATION] settings.dangerZone.confirmInputInvalid,[NO TRANSLATION] settings.dangerZone.confirmInputInvalid
+dangerZone.confirmInputLabel,[NO TRANSLATION] settings.dangerZone.confirmInputLabel,[NO TRANSLATION] settings.dangerZone.confirmInputLabel
+dangerZone.confirmInputValid,[NO TRANSLATION] settings.dangerZone.confirmInputValid,[NO TRANSLATION] settings.dangerZone.confirmInputValid
+dangerZone.deletionProcess,[NO TRANSLATION] settings.dangerZone.deletionProcess,[NO TRANSLATION] settings.dangerZone.deletionProcess
+dangerZone.phase1Desc,[NO TRANSLATION] settings.dangerZone.phase1Desc,[NO TRANSLATION] settings.dangerZone.phase1Desc
+dangerZone.phase1Title,[NO TRANSLATION] settings.dangerZone.phase1Title,[NO TRANSLATION] settings.dangerZone.phase1Title
+dangerZone.phase2Desc,[NO TRANSLATION] settings.dangerZone.phase2Desc,[NO TRANSLATION] settings.dangerZone.phase2Desc
+dangerZone.phase2Title,[NO TRANSLATION] settings.dangerZone.phase2Title,[NO TRANSLATION] settings.dangerZone.phase2Title
+dangerZone.phase3Desc,[NO TRANSLATION] settings.dangerZone.phase3Desc,[NO TRANSLATION] settings.dangerZone.phase3Desc
+dangerZone.phase3Title,[NO TRANSLATION] settings.dangerZone.phase3Title,[NO TRANSLATION] settings.dangerZone.phase3Title
+dangerZone.phase4Desc,[NO TRANSLATION] settings.dangerZone.phase4Desc,[NO TRANSLATION] settings.dangerZone.phase4Desc
+dangerZone.phase4Title,[NO TRANSLATION] settings.dangerZone.phase4Title,[NO TRANSLATION] settings.dangerZone.phase4Title
+dangerZone.phase5Desc,[NO TRANSLATION] settings.dangerZone.phase5Desc,[NO TRANSLATION] settings.dangerZone.phase5Desc
+dangerZone.phase5Title,[NO TRANSLATION] settings.dangerZone.phase5Title,[NO TRANSLATION] settings.dangerZone.phase5Title

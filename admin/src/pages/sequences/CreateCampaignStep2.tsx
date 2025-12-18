@@ -1,8 +1,9 @@
-import { Mail, Sparkles } from "lucide-react"
+import { ChevronDown, ChevronUp, Mail, Sparkles } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { RichTextEditorRef } from "@/components/ui/rich-text-editor"
@@ -68,6 +69,7 @@ export function CreateCampaignStep2({
   // Generate unique IDs for form elements
   const modeAiId = useId()
   const modeManualId = useId()
+  const [showModeDetails, setShowModeDetails] = useState(false)
 
   // Get default signature from database
   const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
@@ -230,9 +232,24 @@ export function CreateCampaignStep2({
       return
     }
 
+    // 스텝별 발송기간 기본값 설정
+    // 2번째 스텝: 3일 후, 3번째 스텝: 7일 후, 4번째 스텝: 10일 후
+    const getDefaultDelayDays = (stepIndex: number): number => {
+      switch (stepIndex) {
+        case 1: // 2번째 스텝
+          return 3
+        case 2: // 3번째 스텝
+          return 7
+        case 3: // 4번째 스텝
+          return 10
+        default: // 5번째 이후
+          return 14
+      }
+    }
+
     const newStep: EmailStep = {
       stepOrder: steps.length + 1,
-      delayDays: 1, // Default 1 day after previous step
+      delayDays: getDefaultDelayDays(steps.length),
       scheduledHour: getCeiledHour(),
       scheduledMinute: 0,
       emailSubject: "",
@@ -518,110 +535,144 @@ export function CreateCampaignStep2({
   }
 
   return (
-    <div className="flex h-full flex-col gap-6">
-      {/* Mode Selection - AI/Manual Toggle */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg">{t("sequences.step2.creationMode")}</h3>
-
-        <RadioGroup
-          onValueChange={(value) => setCreationMode(value as "ai" | "manual")}
-          value={creationMode}
-        >
-          {/* AI Mode */}
-          <div className="flex items-start space-x-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <RadioGroupItem className="mt-1" id={modeAiId} value="ai" />
-            <Label className="flex-1 cursor-pointer" htmlFor={modeAiId}>
-              <div className="mb-1 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-violet-600" />
-                <span className="font-medium">{t("sequences.step2.aiMode.title")}</span>
-                <Badge className="text-xs" variant="secondary">
-                  {t("sequences.step2.aiMode.recommended")}
-                </Badge>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {t("sequences.step2.aiMode.description")}
-              </p>
-            </Label>
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+      {/* Mode Selection - Compact */}
+      <div className="flex flex-shrink-0 flex-col gap-2 rounded-lg border bg-muted/20 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-sm">{t("sequences.step2.creationMode")}</h3>
+            <Button
+              aria-label="toggle mode details"
+              className="h-7 px-2"
+              onClick={() => setShowModeDetails((prev) => !prev)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              {showModeDetails ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
           </div>
 
-          {/* Manual Mode */}
-          <div className="flex items-start space-x-3 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-            <RadioGroupItem className="mt-1" id={modeManualId} value="manual" />
-            <Label className="flex-1 cursor-pointer" htmlFor={modeManualId}>
-              <div className="mb-1 flex items-center gap-2">
+          <RadioGroup
+            className="grid grid-cols-2 gap-2"
+            onValueChange={(value) => {
+              const nextMode = value as "ai" | "manual"
+              setCreationMode(nextMode)
+              onChange({ creationMode: nextMode })
+            }}
+            value={creationMode}
+          >
+            {/* Manual Mode */}
+            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
+              <RadioGroupItem id={modeManualId} value="manual" />
+              <Label className="flex cursor-pointer items-center gap-2" htmlFor={modeManualId}>
                 <Mail className="h-4 w-4" />
-                <span className="font-medium">{t("sequences.step2.manualMode.title")}</span>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {t("sequences.step2.manualMode.description")}
-              </p>
-            </Label>
+                <span className="font-medium text-sm">{t("sequences.step2.manualMode.title")}</span>
+              </Label>
+            </div>
+
+            {/* AI Mode (Beta) */}
+            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
+              <RadioGroupItem id={modeAiId} value="ai" />
+              <Label className="flex cursor-pointer items-center gap-2" htmlFor={modeAiId}>
+                <Sparkles className="h-4 w-4 text-violet-600" />
+                <span className="font-medium text-sm">{t("sequences.step2.aiMode.title")}</span>
+                <Badge className="h-5 px-2 text-[10px]" variant="secondary">
+                  BETA
+                </Badge>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {showModeDetails && (
+          <div className="grid gap-2 text-muted-foreground text-xs">
+            <div>
+              <span className="font-medium text-foreground">
+                {t("sequences.step2.aiMode.title")}
+              </span>
+              <span className="ml-2">{t("sequences.step2.aiMode.description")}</span>
+            </div>
+            <div>
+              <span className="font-medium text-foreground">
+                {t("sequences.step2.manualMode.title")}
+              </span>
+              <span className="ml-2">{t("sequences.step2.manualMode.description")}</span>
+            </div>
           </div>
-        </RadioGroup>
+        )}
       </div>
 
-      {/* AI Mode Content */}
-      {creationMode === "ai" && (
-        <AIModeContent
-          getUserSignature={getUserSignature}
-          includeSignature={aiIncludeSignature}
-          // selectedEmailAccountId={selectedEmailAccountId}
-          // onEmailAccountChange={setSelectedEmailAccountId}
-          // emailAccounts={emailAccounts
-          //   .filter((a) => a.workspaceId === data.workspaceId)
-          //   .map((a) => ({
-          //     id: a.id,
-          //     emailAddress: a.emailAddress,
-          //     displayName: a.displayName,
-          //     userEmail: a.userEmail,
-          //   }))}
-          isGenerating={isGenerating}
-          onGenerateAI={handleGenerateAIMode}
-          onGenerationComplete={onGenerationComplete}
-          onIncludeSignatureChange={setAiIncludeSignature}
-          onSignatureChange={setAiSignature}
-          sequenceId={sequenceId}
-          signature={aiSignature}
-          userId={user?.id}
-          workspaceId={data.workspaceId}
-        />
-      )}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {/* AI Mode Content */}
+        {creationMode === "ai" && (
+          <div className="h-full min-h-0 overflow-auto">
+            <AIModeContent
+              getUserSignature={getUserSignature}
+              includeSignature={aiIncludeSignature}
+              // selectedEmailAccountId={selectedEmailAccountId}
+              // onEmailAccountChange={setSelectedEmailAccountId}
+              // emailAccounts={emailAccounts
+              //   .filter((a) => a.workspaceId === data.workspaceId)
+              //   .map((a) => ({
+              //     id: a.id,
+              //     emailAddress: a.emailAddress,
+              //     displayName: a.displayName,
+              //     userEmail: a.userEmail,
+              //   }))}
+              isGenerating={isGenerating}
+              onGenerateAI={handleGenerateAIMode}
+              onGenerationComplete={onGenerationComplete}
+              onIncludeSignatureChange={setAiIncludeSignature}
+              onSignatureChange={setAiSignature}
+              sequenceId={sequenceId}
+              signature={aiSignature}
+              userId={user?.id}
+              workspaceId={data.workspaceId}
+            />
+          </div>
+        )}
 
-      {/* Manual Mode Content */}
-      {creationMode === "manual" && (
-        <ManualModeContent
-          aiPrompt={aiPrompt}
-          currentStep={currentStep}
-          customerGroupId={data.customerGroupId}
-          editingScheduleIndex={editingScheduleIndex}
-          editorRef={editorRef}
-          getUserSignature={getUserSignature}
-          handleAdvertisementToggle={handleAdvertisementToggle}
-          hasDraftSteps={hasDraftSteps}
-          insertVariable={insertVariable}
-          isGeneratingAI={isGeneratingAI}
-          isSignatureModalOpen={false}
-          isStepComplete={isStepComplete}
-          onAddStep={handleAddStep}
-          onAIPromptChange={setAiPrompt}
-          onCloseSignature={() => {}}
-          onDeleteStep={handleDeleteStep}
-          onEditingScheduleIndexChange={setEditingScheduleIndex}
-          onSaveSignature={() => {}}
-          onSaveStep={handleSaveCurrentStep}
-          onSelectedStepChange={setSelectedStepIndex}
-          onShowAISheetChange={setShowAISheet}
-          onSignatureModalOpenChange={() => {}}
-          onUpdateStep={updateCurrentStep}
-          selectedStepIndex={selectedStepIndex}
-          setIsGeneratingAI={setIsGeneratingAI}
-          setSteps={setSteps}
-          showAISheet={showAISheet}
-          steps={steps}
-          userId={user?.id}
-          workspaceId={data.workspaceId}
-        />
-      )}
+        {/* Manual Mode Content */}
+        {creationMode === "manual" && (
+          <ManualModeContent
+            aiPrompt={aiPrompt}
+            currentStep={currentStep}
+            customerGroupId={data.customerGroupId}
+            editingScheduleIndex={editingScheduleIndex}
+            editorRef={editorRef}
+            getUserSignature={getUserSignature}
+            handleAdvertisementToggle={handleAdvertisementToggle}
+            hasDraftSteps={hasDraftSteps}
+            insertVariable={insertVariable}
+            isGeneratingAI={isGeneratingAI}
+            isSignatureModalOpen={false}
+            isStepComplete={isStepComplete}
+            onAddStep={handleAddStep}
+            onAIPromptChange={setAiPrompt}
+            onCloseSignature={() => {}}
+            onDeleteStep={handleDeleteStep}
+            onEditingScheduleIndexChange={setEditingScheduleIndex}
+            onSaveSignature={() => {}}
+            onSaveStep={handleSaveCurrentStep}
+            onSelectedStepChange={setSelectedStepIndex}
+            onShowAISheetChange={setShowAISheet}
+            onSignatureModalOpenChange={() => {}}
+            onUpdateStep={updateCurrentStep}
+            selectedStepIndex={selectedStepIndex}
+            setIsGeneratingAI={setIsGeneratingAI}
+            setSteps={setSteps}
+            showAISheet={showAISheet}
+            steps={steps}
+            userId={user?.id}
+            workspaceId={data.workspaceId}
+          />
+        )}
+      </div>
     </div>
   )
 }

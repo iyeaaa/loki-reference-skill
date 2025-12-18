@@ -36,6 +36,8 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const { selectedWorkspace } = useWorkspace()
   const selectAllId = useId()
   const selectAllRepliedId = useId()
+  const nonRepliedListTouchedRef = useRef(false)
+  const nonRepliedListCollapseThreshold = 30
 
   // Use current workspace automatically
   const workspaceId =
@@ -46,6 +48,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
     data.selectedLeadIds.length > 0 ? data.selectedLeadIds : [],
   )
   const [showRepliedSection, setShowRepliedSection] = useState(true)
+  const [showNonRepliedList, setShowNonRepliedList] = useState(true)
 
   // Filter states
   const [selectedCountry, setSelectedCountry] = useState<string>("all")
@@ -153,6 +156,9 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
     repliedLeads.find((m) => m.id === id),
   ).length
 
+  const shouldCollapseNonRepliedList =
+    filteredNonRepliedLeads.length > nonRepliedListCollapseThreshold
+
   // Update parent when data changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
   useEffect(() => {
@@ -168,12 +174,30 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   // Reset lead selections when customer group changes and select all by default
   useEffect(() => {
     if (prevCustomerGroupId.current !== customerGroupId && customerGroupId) {
+      // Members are loaded asynchronously; avoid "locking in" empty selections before data arrives.
+      if (members.length === 0 && nonRepliedLeads.length === 0) {
+        return
+      }
       // Default to selecting all non-replied leads
       const allNonRepliedIds = nonRepliedLeads.map((m) => m.id)
       setSelectedLeadIds(allNonRepliedIds)
       prevCustomerGroupId.current = customerGroupId
     }
-  }, [customerGroupId, nonRepliedLeads])
+  }, [customerGroupId, members.length, nonRepliedLeads])
+
+  // Reset non-replied list UI state when customer group changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally reset ref when customerGroupId changes
+  useEffect(() => {
+    nonRepliedListTouchedRef.current = false
+  }, [customerGroupId])
+
+  // Auto-collapse non-replied list when there are many leads, unless user explicitly toggled it.
+  useEffect(() => {
+    if (nonRepliedListTouchedRef.current) {
+      return
+    }
+    setShowNonRepliedList(!shouldCollapseNonRepliedList)
+  }, [shouldCollapseNonRepliedList])
 
   // Reset filters function
   const handleResetFilters = () => {
@@ -565,32 +589,73 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                       </div>
                     </div>
 
-                    <ScrollArea className="h-[400px] rounded-md border">
-                      <div className="space-y-2 p-3">
-                        {filteredNonRepliedLeads.map((member) => (
-                          <div
-                            className="flex cursor-pointer items-center gap-2 rounded-sm p-2 transition-colors hover:bg-muted/50"
-                            key={member.id}
-                          >
-                            <Checkbox
-                              checked={selectedLeadIds.includes(member.id)}
-                              id={member.id}
-                              onCheckedChange={() => handleToggleLead(member.id)}
-                            />
-                            <Label className="flex-1 cursor-pointer text-sm" htmlFor={member.id}>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{member.name}</span>
-                              </div>
-                              {member.email && (
-                                <span className="mt-0.5 block text-muted-foreground text-xs">
-                                  {member.email}
-                                </span>
-                              )}
-                            </Label>
-                          </div>
-                        ))}
+                    {shouldCollapseNonRepliedList && (
+                      <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2">
+                        <p className="text-muted-foreground text-xs">
+                          {t("sequences.step1.leadListHiddenSummary", {
+                            count: filteredNonRepliedLeads.length,
+                          })}
+                        </p>
+                        <Button
+                          onClick={() => {
+                            nonRepliedListTouchedRef.current = true
+                            setShowNonRepliedList((prev) => !prev)
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {showNonRepliedList ? (
+                            <>
+                              <ChevronUp className="mr-1 h-4 w-4" />
+                              {t("sequences.step1.hideLeadList")}
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="mr-1 h-4 w-4" />
+                              {t("sequences.step1.showLeadList")}
+                            </>
+                          )}
+                        </Button>
                       </div>
-                    </ScrollArea>
+                    )}
+
+                    {shouldCollapseNonRepliedList && !showNonRepliedList && (
+                      <div className="rounded-md border bg-muted/20 p-3">
+                        <p className="text-muted-foreground text-xs">
+                          {t("sequences.step1.leadListHiddenNotice")}
+                        </p>
+                      </div>
+                    )}
+
+                    {(!shouldCollapseNonRepliedList || showNonRepliedList) && (
+                      <ScrollArea className="h-[400px] rounded-md border">
+                        <div className="space-y-2 p-3">
+                          {filteredNonRepliedLeads.map((member) => (
+                            <div
+                              className="flex cursor-pointer items-center gap-2 rounded-sm p-2 transition-colors hover:bg-muted/50"
+                              key={member.id}
+                            >
+                              <Checkbox
+                                checked={selectedLeadIds.includes(member.id)}
+                                id={member.id}
+                                onCheckedChange={() => handleToggleLead(member.id)}
+                              />
+                              <Label className="flex-1 cursor-pointer text-sm" htmlFor={member.id}>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{member.name}</span>
+                                </div>
+                                {member.email && (
+                                  <span className="mt-0.5 block text-muted-foreground text-xs">
+                                    {member.email}
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
                   </div>
                 </div>
               </div>

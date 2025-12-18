@@ -692,6 +692,10 @@ step1.selectAll,전체 선택,Select All
 step1.reEnrollWarning,재등록 시 주의 필요,Caution required for re-enrollment
 step1.normalLeadsSelectAll,일반 리드 전체 선택 ({{selected}}/{{total}}),Select All Normal Leads ({{selected}}/{{total}})
 step1.deselectAll,선택 해제,Deselect All
+step1.leadListHiddenSummary,일반 리드 {{count}}명,Normal leads: {{count}}
+step1.showLeadList,목록 보기,Show list
+step1.hideLeadList,목록 숨기기,Hide list
+step1.leadListHiddenNotice,리드가 많아 목록을 숨겼습니다. 필요하면 '목록 보기'를 눌러 개별 선택을 조정하세요.,The list is hidden because there are many leads. Click 'Show list' to adjust individual selections.
 step3.noSequenceId,시퀀스 ID가 없습니다,No sequence ID
 step3.enterCampaignName,캠페인 이름을 입력해주세요,Please enter campaign name
 step3.draftSaved,초안이 저장되었습니다,Draft saved successfully
@@ -989,3 +993,6 @@ stepsList.dialog.noContent,내용이 없습니다.,No content available.
 stepsList.dialog.subject,제목,Subject
 stepsList.inlineEdit.alreadySent,[NO TRANSLATION] sequences.stepsList.inlineEdit.alreadySent,[NO TRANSLATION] sequences.stepsList.inlineEdit.alreadySent
 editPage.partialEditNotice,[NO TRANSLATION] sequences.editPage.partialEditNotice,[NO TRANSLATION] sequences.editPage.partialEditNotice
+step1.hideLeadList,[NO TRANSLATION] sequences.step1.hideLeadList,[NO TRANSLATION] sequences.step1.hideLeadList
+step1.leadListHiddenNotice,[NO TRANSLATION] sequences.step1.leadListHiddenNotice,[NO TRANSLATION] sequences.step1.leadListHiddenNotice
+step1.showLeadList,[NO TRANSLATION] sequences.step1.showLeadList,[NO TRANSLATION] sequences.step1.showLeadList

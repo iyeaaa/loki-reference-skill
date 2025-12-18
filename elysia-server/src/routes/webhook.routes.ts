@@ -4,7 +4,7 @@ import logger from "../utils/logger"
 import { parseMultipartFormData } from "../utils/multipart.util"
 
 export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
-  .onParse((context, contentType) => {
+  .onParse((_context, contentType) => {
     // Skip automatic body parsing for multipart form-data
     // We need to manually parse it to handle file uploads correctly
     if (contentType.startsWith("multipart/form-data")) {

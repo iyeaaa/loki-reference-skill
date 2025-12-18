@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Eye, Loader2, Mail, Sparkles } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,8 @@ export function StepEmailGeneration() {
   const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [showFullEmail, setShowFullEmail] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
 
   console.log("[StepEmailGeneration] Component rendered")
 
@@ -110,6 +112,35 @@ export function StepEmailGeneration() {
     }
   }, [isGenerationComplete, isLoadingEmails, refetchEmails, emails.length])
 
+  // Exponential decay progress bar - slows down as it approaches completion
+  // Formula: progress = 100 * (1 - e^(-t/τ)) where τ is the time constant
+  useEffect(() => {
+    if (isGenerationComplete) {
+      setProgress(100)
+      startTimeRef.current = null
+      return
+    }
+
+    // Initialize start time
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+    const interval = setInterval(() => {
+      if (!startTimeRef.current) {
+        return
+      }
+
+      const elapsed = (Date.now() - startTimeRef.current) / 1000 // seconds
+      const tau = 25 // time constant - controls how fast progress grows (lower = faster initial growth)
+      // Exponential decay formula: approaches 95% asymptotically, never quite reaching it
+      const newProgress = Math.min(95, 100 * (1 - Math.exp(-elapsed / tau)))
+      setProgress(Math.round(newProgress))
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [isGenerationComplete])
+
   const handleNext = () => {
     setSearchParams({ step: "4" })
   }
@@ -124,7 +155,7 @@ export function StepEmailGeneration() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-2xl">
-            <Sparkles className="h-6 w-6 text-purple-500" />
+            <Sparkles className="h-6 w-6 text-blue-500" />
             {t("app.onboarding.step3.generatingTitle", "AI 이메일 생성 중")}
           </CardTitle>
           <p className="mt-1 text-gray-600 text-sm">
@@ -139,8 +170,8 @@ export function StepEmailGeneration() {
             // Generating state - waiting for backend auto-generation
             <div className="space-y-6 py-8">
               <div className="flex flex-col items-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 </div>
                 <p className="font-medium text-gray-900 text-lg">
                   {t("app.onboarding.step3.generating", "생성 중...")}
@@ -151,7 +182,7 @@ export function StepEmailGeneration() {
                     : "AI is generating emails. Please wait..."}
                 </p>
               </div>
-              <Progress className="h-2" value={isLoadingEmails ? 40 : 80} />
+              <Progress className="h-2" value={progress} />
               <p className="text-center text-gray-500 text-sm">
                 {isKorean
                   ? "리드 탐색 및 이메일 템플릿 생성 중..."

@@ -58,6 +58,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -345,6 +346,64 @@ function EmptyStateWaitingSelection() {
         <span className="font-medium text-sm text-violet-600 dark:text-violet-400">
           선택 대기 중
         </span>
+      </div>
+    </motion.div>
+  )
+}
+
+// 로딩 스켈레톤 상태 - 테이블 로딩 중
+const SKELETON_COLUMN_WIDTHS = [40, 180, 200, 280, 60, 100, 120, 140, 180, 100]
+
+function TableSkeletonLoading({ message, progress }: { message?: string; progress?: number }) {
+  return (
+    <motion.div
+      animate={{ opacity: 1 }}
+      className="flex h-full flex-col"
+      initial={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* 로딩 상태 헤더 */}
+      <div className="flex items-center justify-center gap-3 border-b bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 dark:from-blue-950/30 dark:to-indigo-950/30">
+        <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+        <div className="flex flex-col">
+          <span className="font-medium text-blue-700 text-sm dark:text-blue-300">
+            {message || "바이어를 검색하고 있습니다..."}
+          </span>
+          {typeof progress === "number" && progress > 0 && (
+            <div className="mt-1 h-1.5 w-48 overflow-hidden rounded-full bg-blue-200/50 dark:bg-blue-800/50">
+              <motion.div
+                animate={{ width: `${progress}%` }}
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                initial={{ width: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 스켈레톤 테이블 행들 */}
+      <div className="flex-1 overflow-hidden">
+        {Array.from({ length: 8 }).map((_, rowIndex) => (
+          <motion.div
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3 border-border/30 border-b px-4 py-3"
+            initial={{ opacity: 0, x: -10 }}
+            key={rowIndex}
+            transition={{ delay: rowIndex * 0.05, duration: 0.2 }}
+          >
+            {SKELETON_COLUMN_WIDTHS.map((width, colIndex) => (
+              <Skeleton
+                className="h-4 rounded"
+                key={colIndex}
+                style={{
+                  width: `${width}px`,
+                  opacity: 1 - rowIndex * 0.08,
+                }}
+              />
+            ))}
+          </motion.div>
+        ))}
       </div>
     </motion.div>
   )
@@ -1583,6 +1642,14 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                     ) : /* 바이어 선택 대기 중 */
                     streamingState.status === "waiting_selection" ? (
                       <EmptyStateWaitingSelection />
+                    ) : /* 로딩 중 (검색 진행 중) */
+                    ["connecting", "routing", "analyzing", "recommending", "searching"].includes(
+                        streamingState.status,
+                      ) ? (
+                      <TableSkeletonLoading
+                        message={streamingState.message}
+                        progress={streamingState.progress}
+                      />
                     ) : /* 검색 완료 후 결과가 0개인 경우 */
                     streamingState.status === "complete" ? (
                       <EmptyStateNoResults userQuery={streamingState.userQuery} />

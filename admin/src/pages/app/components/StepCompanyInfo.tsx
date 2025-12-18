@@ -175,19 +175,34 @@ export function StepCompanyInfo() {
       return
     }
 
-    // 필수 필드 검증 (companyName, companyDescription 추가)
-    if (
-      !(
-        editedData.companyName &&
-        editedData.companyDescription &&
-        editedData.industry &&
-        editedData.target &&
-        editedData.country &&
-        editedData.experience
+    // 필수 필드 검증
+    const missingFields: string[] = []
+    if (!editedData.companyName?.trim()) {
+      missingFields.push(isKorean ? "회사명" : "Company Name")
+    }
+    if (!editedData.companyDescription?.trim()) {
+      missingFields.push(isKorean ? "회사 소개" : "Company Description")
+    }
+    if (!editedData.industry) {
+      missingFields.push(isKorean ? "산업군" : "Industry")
+    }
+    if (!editedData.target) {
+      missingFields.push(isKorean ? "타겟 고객" : "Target Customer")
+    }
+    if (!editedData.country) {
+      missingFields.push(isKorean ? "희망 진출 국가" : "Target Country")
+    }
+    if (!editedData.experience) {
+      missingFields.push(isKorean ? "수출 경험" : "Export Experience")
+    }
+
+    if (missingFields.length > 0) {
+      console.log("[StepCompanyInfo] ❌ Missing required fields:", missingFields)
+      toast.error(
+        isKorean
+          ? `다음 필드를 입력해주세요: ${missingFields.join(", ")}`
+          : `Please fill in: ${missingFields.join(", ")}`,
       )
-    ) {
-      console.log("[StepCompanyInfo] ❌ Missing required fields")
-      toast.error(isKorean ? "모든 필수 필드를 입력해주세요" : "Please fill in all required fields")
       return
     }
 

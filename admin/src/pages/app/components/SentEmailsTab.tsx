@@ -1,15 +1,15 @@
 import { format } from "date-fns"
-import { Clock, Loader2, Mail, Send } from "lucide-react"
+import { CalendarClock, CheckCircle2, Clock, Loader2, Mail, Send } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useEmails } from "@/lib/api/hooks/emails"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import type { Email, EmailStatus } from "@/lib/api/types/email"
+import type { Email } from "@/lib/api/types/email"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { cn } from "@/lib/utils"
 import { ConnectEmailCard } from "./ConnectEmailCard"
 import { EmailDetailDialog } from "./EmailDetailDialog"
 
@@ -55,11 +55,11 @@ export function SentEmailsTab() {
   const emailQueryWorkspaceId = isAllWorkspaces ? undefined : workspaceId || undefined
 
   // Fetch all outbound emails (draft, scheduled, sent) for comprehensive view
+  // Use higher limit to get accurate counts
   const { data: emailsData, isLoading } = useEmails({
     workspaceId: emailQueryWorkspaceId || "",
-    status: emailFilter === "all" ? undefined : (emailFilter as EmailStatus),
     direction: "outbound",
-    limit: 50,
+    limit: 500,
   })
 
   // Filter emails based on selected tab
@@ -144,13 +144,17 @@ export function SentEmailsTab() {
     }
   }
 
-  // Helper function to get email time display
-  const getEmailTime = (email: Email) => {
+  // Helper function to get short time for list display
+  const getShortEmailTime = (email: Email) => {
     if (email.status === "sent" && email.sentAt) {
-      return format(new Date(email.sentAt), "MMM d, HH:mm")
+      return isKorean
+        ? format(new Date(email.sentAt), "M/d HH:mm")
+        : format(new Date(email.sentAt), "M/d HH:mm")
     }
     if (email.scheduledAt) {
-      return format(new Date(email.scheduledAt), "MMM d, HH:mm")
+      return isKorean
+        ? format(new Date(email.scheduledAt), "M/d HH:mm")
+        : format(new Date(email.scheduledAt), "M/d HH:mm")
     }
     return ""
   }
@@ -199,25 +203,68 @@ export function SentEmailsTab() {
     setDialogOpen(true)
   }
 
+  const totalCount = sentCount + scheduledCount
+
   return (
     <>
-      {/* Filter tabs */}
-      <div className="mb-4">
-        <Tabs onValueChange={(v) => setEmailFilter(v as EmailFilter)} value={emailFilter}>
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="all">
-              {isKorean ? "전체" : "All"} ({sentCount + scheduledCount})
-            </TabsTrigger>
-            <TabsTrigger value="sent">
-              {isKorean ? "발송됨" : "Sent"} ({sentCount})
-            </TabsTrigger>
-            <TabsTrigger value="scheduled">
-              {isKorean ? "예약됨" : "Scheduled"} ({scheduledCount})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {/* Summary Stats - Always visible cards */}
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            emailFilter === "all" && "shadow-md ring-2 ring-primary",
+          )}
+          onClick={() => setEmailFilter("all")}
+        >
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
+              <Mail className="h-5 w-5 text-gray-600" />
+            </div>
+            <div>
+              <p className="font-bold text-2xl">{totalCount}</p>
+              <p className="text-muted-foreground text-xs">{isKorean ? "전체" : "Total"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            emailFilter === "sent" && "shadow-md ring-2 ring-green-500",
+          )}
+          onClick={() => setEmailFilter("sent")}
+        >
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="font-bold text-2xl text-green-600">{sentCount}</p>
+              <p className="text-muted-foreground text-xs">{isKorean ? "발송됨" : "Sent"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            emailFilter === "scheduled" && "shadow-md ring-2 ring-blue-500",
+          )}
+          onClick={() => setEmailFilter("scheduled")}
+        >
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+              <CalendarClock className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-bold text-2xl text-blue-600">{scheduledCount}</p>
+              <p className="text-muted-foreground text-xs">{isKorean ? "예약됨" : "Scheduled"}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Email List */}
       <Card>
         <CardContent className="p-4">
           <div className="space-y-2">
@@ -230,14 +277,15 @@ export function SentEmailsTab() {
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div
-                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
-                      email.status === "sent" ? "bg-green-500/10" : "bg-blue-500/10"
-                    }`}
+                    className={cn(
+                      "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full",
+                      email.status === "sent" ? "bg-green-100" : "bg-blue-100",
+                    )}
                   >
                     {email.status === "sent" ? (
-                      <Send className="h-4 w-4 text-green-500" />
+                      <Send className="h-4 w-4 text-green-600" />
                     ) : (
-                      <Clock className="h-4 w-4 text-blue-500" />
+                      <Clock className="h-4 w-4 text-blue-600" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -250,8 +298,11 @@ export function SentEmailsTab() {
                     </p>
                   </div>
                 </div>
-                <div className="ml-4 flex-shrink-0 text-muted-foreground text-xs">
-                  {getEmailTime(email)}
+                <div className="ml-4 flex shrink-0 flex-col items-end text-muted-foreground text-xs">
+                  <span>{getShortEmailTime(email)}</span>
+                  {email.status !== "sent" && email.scheduledAt && (
+                    <span className="text-blue-500">{isKorean ? "예정" : "Scheduled"}</span>
+                  )}
                 </div>
               </button>
             ))}

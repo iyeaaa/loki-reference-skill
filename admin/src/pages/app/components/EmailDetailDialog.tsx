@@ -1,5 +1,6 @@
 import { format } from "date-fns"
-import { Clock, Mail, MailOpen, MousePointerClick, User } from "lucide-react"
+import { ko } from "date-fns/locale"
+import { CalendarClock, Clock, Mail, MailOpen, MousePointerClick, User } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -20,7 +21,16 @@ type EmailDetailDialogProps = {
 }
 
 export function EmailDetailDialog({ email, open, onOpenChange }: EmailDetailDialogProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const isKorean = i18n.language === "ko"
+
+  // Helper function to format date
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return isKorean
+      ? format(date, "yyyy년 M월 d일 HH시 mm분", { locale: ko })
+      : format(date, "MMM d, yyyy HH:mm")
+  }
 
   if (!email) {
     return null
@@ -96,29 +106,42 @@ export function EmailDetailDialog({ email, open, onOpenChange }: EmailDetailDial
             <Separator />
 
             {/* 통계 정보 */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div className="text-sm">
-                  <p className="text-muted-foreground">{t("app.dashboard.sentAt", "발송 시간")}</p>
-                  <p className="font-medium">
-                    {email.sentAt
-                      ? format(new Date(email.sentAt), "MMM d, HH:mm")
-                      : t("app.dashboard.notSent", "미발송")}
-                  </p>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              {/* 발송 시간 또는 예약 시간 */}
+              {email.sentAt ? (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-green-500" />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">{isKorean ? "발송 시간" : "Sent at"}</p>
+                    <p className="font-medium">{formatDateTime(email.sentAt)}</p>
+                  </div>
                 </div>
-              </div>
+              ) : email.scheduledAt ? (
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-blue-500" />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">
+                      {isKorean ? "예약 시간" : "Scheduled at"}
+                    </p>
+                    <p className="font-medium text-blue-600">{formatDateTime(email.scheduledAt)}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">{isKorean ? "발송 시간" : "Sent at"}</p>
+                    <p className="font-medium">{isKorean ? "미발송" : "Not sent"}</p>
+                  </div>
+                </div>
+              )}
 
               {email.openedAt && (
                 <div className="flex items-center gap-2">
                   <MailOpen className="h-4 w-4 text-primary" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">
-                      {t("app.dashboard.openedAt", "읽은 시간")}
-                    </p>
-                    <p className="font-medium">
-                      {format(new Date(email.openedAt), "MMM d, HH:mm")}
-                    </p>
+                    <p className="text-muted-foreground">{isKorean ? "읽은 시간" : "Opened at"}</p>
+                    <p className="font-medium">{formatDateTime(email.openedAt)}</p>
                   </div>
                 </div>
               )}
@@ -127,22 +150,18 @@ export function EmailDetailDialog({ email, open, onOpenChange }: EmailDetailDial
                 <div className="flex items-center gap-2">
                   <MousePointerClick className="h-4 w-4 text-blue-500" />
                   <div className="text-sm">
-                    <p className="text-muted-foreground">
-                      {t("app.dashboard.clickedAt", "클릭 시간")}
-                    </p>
-                    <p className="font-medium">
-                      {format(new Date(email.clickedAt), "MMM d, HH:mm")}
-                    </p>
+                    <p className="text-muted-foreground">{isKorean ? "클릭 시간" : "Clicked at"}</p>
+                    <p className="font-medium">{formatDateTime(email.clickedAt)}</p>
                   </div>
                 </div>
               )}
 
               <div className="flex items-center gap-2">
                 <div className="text-sm">
-                  <p className="text-muted-foreground">{t("app.dashboard.engagement", "참여도")}</p>
+                  <p className="text-muted-foreground">{isKorean ? "참여도" : "Engagement"}</p>
                   <p className="font-medium">
-                    {t("app.dashboard.opens", "열람")}: {email.openCount} /{" "}
-                    {t("app.dashboard.clicks", "클릭")}: {email.clickCount}
+                    {isKorean ? "열람" : "Opens"}: {email.openCount} /{" "}
+                    {isKorean ? "클릭" : "Clicks"}: {email.clickCount}
                   </p>
                 </div>
               </div>
@@ -197,12 +216,12 @@ export function EmailDetailDialog({ email, open, onOpenChange }: EmailDetailDial
               </>
             )}
 
-            {/* 시퀀스 정보 */}
+            {/* 캠페인 정보 */}
             {email.sequenceName && (
               <>
                 <Separator />
                 <div className="space-y-1">
-                  <h4 className="font-medium text-sm">{t("app.dashboard.sequence", "시퀀스")}</h4>
+                  <h4 className="font-medium text-sm">{isKorean ? "캠페인" : "Campaign"}</h4>
                   <p className="text-muted-foreground text-sm">{email.sequenceName}</p>
                 </div>
               </>

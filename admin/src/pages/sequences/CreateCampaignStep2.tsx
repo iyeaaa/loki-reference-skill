@@ -13,6 +13,7 @@ import {
   useCreateSequenceStep,
   useDeleteSequenceStep,
   useGenerateAISequence,
+  useSequenceSteps,
   useUpdateSequenceStep,
 } from "@/lib/api/hooks/sequences"
 import { useAuth } from "@/lib/auth-provider"
@@ -52,6 +53,9 @@ export function CreateCampaignStep2({
   const updateSequenceStep = useUpdateSequenceStep()
   const deleteSequenceStep = useDeleteSequenceStep()
   const generateAIMutation = useGenerateAISequence()
+
+  // 서버에서 스텝 데이터 직접 가져오기 (부모 컴포넌트에 의존하지 않음)
+  const { data: serverStepsData } = useSequenceSteps(sequenceId || "", !!sequenceId)
 
   // AI mode state
   const [creationMode, setCreationMode] = useState<"ai" | "manual">(data.creationMode)
@@ -117,14 +121,59 @@ export function CreateCampaignStep2({
   const prevDataStepsRef = useRef(data.steps)
   const editorRef = useRef<RichTextEditorRef>(null)
 
+  // 초기 로딩 완료 여부 (초기 로딩 후에는 서버 데이터 refetch 무시)
+  const isInitialLoadDoneRef = useRef(false)
+
   // 인라인 스케줄 편집 상태
   const [editingScheduleIndex, setEditingScheduleIndex] = useState<number | null>(null)
 
   // Current editing step
   const currentStep = steps[selectedStepIndex]
 
-  // Update steps when data.steps changes (e.g., when loading existing campaign)
+  // 서버에서 직접 가져온 스텝 데이터 - 초기 로딩 시에만 반영
+  // 저장/삭제 후 refetch된 데이터는 무시하고 로컬 상태만 관리
   useEffect(() => {
+    // 이미 초기 로딩이 완료되었으면 서버 데이터 변경 무시
+    if (isInitialLoadDoneRef.current) {
+      console.log("📥 Ignoring server data refetch (initial load already done)")
+      return
+    }
+
+    if (!serverStepsData || serverStepsData.length === 0) {
+      return
+    }
+
+    console.log("📥 Initial load - Setting steps from server:", serverStepsData)
+
+    // 서버 스텝을 EmailStep 형식으로 변환
+    const serverSteps: EmailStep[] = serverStepsData.map((step) => ({
+      id: step.id,
+      stepOrder: step.stepOrder,
+      delayDays: step.delayDays,
+      scheduledHour: step.scheduledHour || 9,
+      scheduledMinute: step.scheduledMinute || 0,
+      emailSubject: step.emailSubject || "",
+      emailBodyText: step.emailBodyText || "",
+      emailBodyHtml: step.emailBodyHtml || "",
+      isDraft: false,
+    }))
+
+    setSteps(serverSteps)
+    isInitialLoadDoneRef.current = true
+  }, [serverStepsData])
+
+  // Update steps when data.steps changes (초기 로딩 시에만 사용)
+  useEffect(() => {
+    // 이미 초기 로딩이 완료되었으면 무시
+    if (isInitialLoadDoneRef.current) {
+      return
+    }
+
+    // 서버 데이터가 있으면 위의 useEffect에서 처리하므로 스킵
+    if (serverStepsData && serverStepsData.length > 0) {
+      return
+    }
+
     if (data.steps.length === 0) {
       return
     }
@@ -137,11 +186,12 @@ export function CreateCampaignStep2({
     )
 
     if (prevStepsStr !== newStepsStr) {
-      console.log("📥 Step2 - Data steps changed, updating:", data.steps)
+      console.log("📥 Step2 - Initial data.steps load:", data.steps)
       setSteps(data.steps)
       prevDataStepsRef.current = data.steps
+      isInitialLoadDoneRef.current = true
     }
-  }, [data.steps])
+  }, [data.steps, serverStepsData])
 
   // DB에서 서명이 로드되면 모든 스텝에 서명 설정
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when signature loads, not when steps change
@@ -226,25 +276,27 @@ export function CreateCampaignStep2({
     })
   }
 
+  // 스텝별 발송기간 기본값 설정 (공통 함수)
+  // 1번째 스텝: 0일 (즉시), 2번째 스텝: 3일 후, 3번째 스텝: 7일 후, 4번째 스텝: 10일 후
+  const getDefaultDelayDays = (stepIndex: number): number => {
+    switch (stepIndex) {
+      case 0: // 1번째 스텝
+        return 0
+      case 1: // 2번째 스텝
+        return 3
+      case 2: // 3번째 스텝
+        return 7
+      case 3: // 4번째 스텝
+        return 10
+      default: // 5번째 이후
+        return 14
+    }
+  }
+
   const handleAddStep = () => {
     if (steps.length >= MAX_STEPS) {
       toast.error(t("sequences.step2.maxStepsError", { max: MAX_STEPS }))
       return
-    }
-
-    // 스텝별 발송기간 기본값 설정
-    // 2번째 스텝: 3일 후, 3번째 스텝: 7일 후, 4번째 스텝: 10일 후
-    const getDefaultDelayDays = (stepIndex: number): number => {
-      switch (stepIndex) {
-        case 1: // 2번째 스텝
-          return 3
-        case 2: // 3번째 스텝
-          return 7
-        case 3: // 4번째 스텝
-          return 10
-        default: // 5번째 이후
-          return 14
-      }
     }
 
     const newStep: EmailStep = {
@@ -292,11 +344,56 @@ export function CreateCampaignStep2({
     }
 
     const updatedSteps = steps.filter((_, i) => i !== index)
-    // Re-order steps
-    updatedSteps.forEach((step, i) => {
-      step.stepOrder = i + 1
-    })
+
+    // Re-order steps and update server for affected steps
+    // 삭제된 스텝 이후의 모든 스텝의 stepOrder와 delayDays를 재조정
+    const stepsToUpdate: Array<{ step: EmailStep; newStepOrder: number; newDelayDays: number }> = []
+
+    for (let i = 0; i < updatedSteps.length; i++) {
+      const newStepOrder = i + 1
+      const newDelayDays = getDefaultDelayDays(i) // 새로운 위치에 맞는 기본 발송 일정
+      const step = updatedSteps[i]
+
+      if (step.stepOrder !== newStepOrder) {
+        stepsToUpdate.push({ step, newStepOrder, newDelayDays })
+        step.stepOrder = newStepOrder
+        step.delayDays = newDelayDays // 발송 일정도 함께 업데이트
+        console.log(`📅 Step ${newStepOrder}: delayDays updated to ${newDelayDays}`)
+      }
+    }
+
+    // 먼저 로컬 상태 업데이트 (UI 반응성)
     setSteps(updatedSteps)
+
+    // 서버에 저장된 스텝들의 stepOrder와 delayDays 업데이트
+    if (sequenceId && stepsToUpdate.length > 0) {
+      try {
+        for (const { step, newStepOrder, newDelayDays } of stepsToUpdate) {
+          if (step.id) {
+            console.log(
+              `📝 Updating step ${step.id}: order=${newStepOrder}, delayDays=${newDelayDays}`,
+            )
+            await updateSequenceStep.mutateAsync({
+              sequenceId,
+              stepId: step.id,
+              data: {
+                stepOrder: newStepOrder,
+                delayDays: newDelayDays, // 발송 일정도 서버에 업데이트
+                scheduledHour: step.scheduledHour,
+                scheduledMinute: step.scheduledMinute,
+                emailSubject: step.emailSubject,
+                emailBodyText: step.emailBodyText,
+                emailBodyHtml: step.emailBodyHtml,
+              },
+            })
+          }
+        }
+        console.log("✅ All step orders and schedules updated successfully")
+      } catch (error) {
+        console.error("Failed to update step orders:", error)
+        // 에러가 발생해도 로컬 상태는 이미 업데이트됨
+      }
+    }
 
     // Adjust selected index
     if (selectedStepIndex >= updatedSteps.length) {
@@ -407,24 +504,20 @@ export function CreateCampaignStep2({
 
           console.log("[DEBUG] updateSequenceStep.mutateAsync completed:", updatedStep)
 
-          // DB 저장 성공 후 isDraft: false로 설정 및 서명 정보 업데이트
-          updateCurrentStep({
-            isDraft: false,
-            emailSignature,
-            emailSignatureId,
-            includeSignature,
-            emailBodyHtml,
-          })
-
-          // Update step ID in local state if it was just created
-          if (updatedStep?.id && !currentStep.id) {
-            const updatedSteps = [...steps]
-            updatedSteps[selectedStepIndex] = {
-              ...updatedSteps[selectedStepIndex],
-              id: updatedStep.id,
+          // DB 저장 성공 후 isDraft: false로 설정 및 서명 정보 업데이트 (함수형 업데이트로 최신 상태 보장)
+          setSteps((prevSteps) => {
+            const newSteps = [...prevSteps]
+            newSteps[selectedStepIndex] = {
+              ...newSteps[selectedStepIndex],
+              id: updatedStep?.id || newSteps[selectedStepIndex].id,
+              isDraft: false,
+              emailSignature,
+              emailSignatureId,
+              includeSignature,
+              emailBodyHtml,
             }
-            setSteps(updatedSteps)
-          }
+            return newSteps
+          })
         } else {
           console.log("aaaaaaaaaaaaa")
           const createdStep = await createSequenceStep.mutateAsync({
@@ -435,24 +528,20 @@ export function CreateCampaignStep2({
             files: currentStep.files,
           })
 
-          // DB 저장 성공 후 isDraft: false로 설정 및 서명 정보 업데이트
-          updateCurrentStep({
-            isDraft: false,
-            emailSignature,
-            emailSignatureId,
-            includeSignature,
-            emailBodyHtml,
-          })
-
-          // Update step ID in local state
-          if (createdStep?.id) {
-            const updatedSteps = [...steps]
-            updatedSteps[selectedStepIndex] = {
-              ...updatedSteps[selectedStepIndex],
-              id: createdStep.id,
+          // DB 저장 성공 후 isDraft: false로 설정 및 ID 업데이트 (함수형 업데이트로 최신 상태 보장)
+          setSteps((prevSteps) => {
+            const newSteps = [...prevSteps]
+            newSteps[selectedStepIndex] = {
+              ...newSteps[selectedStepIndex],
+              id: createdStep?.id || newSteps[selectedStepIndex].id,
+              isDraft: false,
+              emailSignature,
+              emailSignatureId,
+              includeSignature,
+              emailBodyHtml,
             }
-            setSteps(updatedSteps)
-          }
+            return newSteps
+          })
         }
         toast.success(t("sequences.step2.stepSaved"))
       } catch (error) {

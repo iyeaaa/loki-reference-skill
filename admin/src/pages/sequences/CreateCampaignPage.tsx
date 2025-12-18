@@ -102,6 +102,27 @@ export default function CreateCampaignPage() {
     console.log("📂 Customer Group ID from sequence:", existingSequence.customerGroupId)
     console.log("📂 Existing steps:", existingSteps)
 
+    // 서버에서 가져온 스텝 데이터
+    const serverSteps =
+      existingSteps?.map((step) => ({
+        id: step.id, // Include step ID for updates
+        stepOrder: step.stepOrder,
+        delayDays: step.delayDays,
+        scheduledHour: step.scheduledHour || 9,
+        scheduledMinute: step.scheduledMinute || 0,
+        emailSubject: step.emailSubject || "",
+        emailBodyText: step.emailBodyText || "",
+        isDraft: false,
+      })) || []
+
+    // 이미 초기화된 경우: steps는 CreateCampaignStep2에서 직접 관리하므로 건드리지 않음
+    // CreateCampaignStep2가 localDraftsRef를 사용하여 로컬 드래프트를 보존함
+    if (isInitialized) {
+      console.log("📂 Already initialized, skipping steps update (managed by Step2)")
+      return
+    }
+
+    // 초기 로딩: 전체 데이터 설정
     const loadedData = {
       workspaceId: existingSequence.workspaceId,
       customerGroupId: existingSequence.customerGroupId || "",
@@ -112,17 +133,7 @@ export default function CreateCampaignPage() {
       description: existingSequence.description || "",
       creationMode: "manual" as "ai" | "manual",
       selectedEmailAccountId: "",
-      steps:
-        existingSteps?.map((step) => ({
-          id: step.id, // Include step ID for updates
-          stepOrder: step.stepOrder,
-          delayDays: step.delayDays,
-          scheduledHour: step.scheduledHour || 9,
-          scheduledMinute: step.scheduledMinute || 0,
-          emailSubject: step.emailSubject || "",
-          emailBodyText: step.emailBodyText || "",
-          isDraft: false,
-        })) || [],
+      steps: serverSteps,
       memo: existingSequence.memo || "",
     }
 
@@ -144,7 +155,7 @@ export default function CreateCampaignPage() {
         ).sort(),
       ),
     }
-  }, [editingSequenceId, existingSequence, existingSteps])
+  }, [editingSequenceId, existingSequence, existingSteps, isInitialized])
 
   // Update ref when sequenceId changes
   useEffect(() => {

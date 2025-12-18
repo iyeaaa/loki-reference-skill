@@ -308,7 +308,7 @@ function extractWorkspaceId(
     return params.id
   }
 
-  // 2. Body에서
+  // 2. Body에서 (body가 null이 아닐 때만)
   if (body && typeof body === "object" && "workspaceId" in body) {
     return (body as { workspaceId: string }).workspaceId
   }
@@ -338,19 +338,13 @@ export interface PermissionContext {
  */
 export const permissionGuard = new Elysia({ name: "permission-guard" })
   .derive(
-    async ({
-      request,
-      headers,
-      params,
-      body,
-      query,
-    }): Promise<{ permission: PermissionContext }> => {
+    async ({ request, headers, params, query }): Promise<{ permission: PermissionContext }> => {
       const method = request.method
       const url = new URL(request.url)
       const path = url.pathname
       const routeKey = normalizeRoutePath(method, path)
 
-      // 1. 공개 라우트 체크
+      // 1. 공개 라우트 체크 (body 파싱 전에 먼저 체크!)
       if (PUBLIC_ROUTES.has(routeKey) || PUBLIC_ROUTES.has(`${method} ${path}`)) {
         return {
           permission: {
@@ -379,10 +373,10 @@ export const permissionGuard = new Elysia({ name: "permission-guard" })
         }
       }
 
-      // 3. 워크스페이스 ID 추출
+      // 3. 워크스페이스 ID 추출 (body는 request에서 직접 읽지 않음)
       const workspaceId = extractWorkspaceId(
         params as Record<string, string>,
-        body,
+        null, // body를 null로 전달하여 파싱 방지
         query as Record<string, string>,
       )
 

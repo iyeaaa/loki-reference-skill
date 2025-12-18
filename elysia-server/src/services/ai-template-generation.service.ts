@@ -135,56 +135,71 @@ ${ex.content}
         ? "여러 국가를 대상으로 하므로 이메일을 영어로 작성하세요"
         : `"${country}" 국가에서 사용하는 주요 언어로 이메일을 작성하세요`
 
-      const systemPrompt = `당신은 자연스럽고 효과적인 콜드 이메일 작성 전문가입니다.
-처음 연락하는 잠재 고객에게 보내는 이메일을 작성합니다.
+      const systemPrompt = `You are a world-class cold email copywriter with expertise in B2B sales outreach.
+Your emails have consistently achieved 40%+ open rates and 15%+ response rates.
 
-[발신자 정보]
-- 회사: ${workspaceName}
-${workspaceDescription ? `- 서비스: ${workspaceDescription}` : ""}
+[SENDER COMPANY INFORMATION]
+- Company: ${workspaceName}
+${workspaceDescription ? `- About: ${workspaceDescription}` : ""}
 
-[수신자 정보]
-- 국가: ${country}
+[TARGET RECIPIENT]
+- Country: ${country}
 
-[콜드 이메일 작성 핵심 원칙]
-1. ${targetLanguageInstruction}
-2. **자연스러운 대화체**: 템플릿처럼 느껴지지 않게 자연스러운 어조로 작성
-3. **개인화**: 받는 사람의 회사나 상황에 맞춘 느낌 (placeholder 활용)
-4. **명확한 가치**: 상대방이 얻을 수 있는 이점을 구체적으로 제시
-5. **부담 없는 CTA**: "관심 있으시면 답장 주세요" 정도의 가벼운 행동 유도
+[CORE PRINCIPLES - The REPLY Framework]
+1. **Relevance**: Connect the sender's solution to the recipient's likely pain points
+2. **Empathy**: Write as a helpful peer, not a salesperson
+3. **Personalization**: Use {{회사명}} and {{담당자명}} variables naturally
+4. **Lightness**: Keep it conversational - no corporate jargon
+5. **Yield**: End with a low-friction CTA (simple reply, not a calendar link)
 
-[사용 가능한 변수 (필요한 것만 선택적으로 사용)]
-- {{회사명}} - 받는 회사명
-- {{담당자명}} - 받는 담당자명 (없으면 사용하지 마세요)
+[CRITICAL INSTRUCTIONS]
+${workspaceDescription ? `- **MUST incorporate sender's business context**: "${workspaceDescription}" - weave this naturally into the value proposition without being promotional` : "- Focus on recipient benefits"}
+- ${targetLanguageInstruction}
+- Write like a human, not a template - vary sentence length, use contractions
+- Lead with curiosity or insight, not a pitch
+- One clear idea per email - don't overwhelm
+- Subject line: 3-6 words, spark curiosity, avoid spam triggers
 
-[절대 하지 말아야 할 것]
-- "귀사", "당사" 같은 딱딱한 표현 사용 금지
-- "워크스페이스", "담당자 & 워크스페이스" 같은 부자연스러운 표현 금지
-- 너무 많은 정보 나열 금지
-- 영어 placeholder 사용 금지 ({{company_name}} 등 사용 금지)
-- {{리드점수}}, {{리드상태}}, {{리드소스}} 같은 내부 데이터 placeholder 사용 금지
+[AVAILABLE VARIABLES]
+- {{회사명}} - Recipient company name (required)
+- {{담당자명}} - Recipient contact name (optional - omit if uncertain)
+
+[STRICT PROHIBITIONS]
+- No formal expressions like "귀사", "당사" (too stiff)
+- No English placeholders like {{company_name}}
+- No internal data variables like {{리드점수}}, {{리드상태}}
+- No signature placeholders like [Your Name], [Your Position] - signatures are added automatically by the system
+- No "I hope this email finds you well" or similar clichés
+- No multiple CTAs - one clear ask only
 
 ${
   examplesText
     ? `
-[참고 예시 - 자연스러운 콜드 이메일]
+[REFERENCE EXAMPLES - Study the tone and structure]
 ${examplesText}
 `
     : ""
 }
 
-[응답 형식]
-LANGUAGE: [언어 코드]
-SUBJECT: [이메일 제목 - 궁금증을 유발하는 짧은 제목]
+[OUTPUT FORMAT]
+LANGUAGE: [language code, e.g., ko, en, ja]
+SUBJECT: [compelling subject line - curiosity-driven, 3-6 words]
 BODY:
-[이메일 본문 - 자연스럽고 간결하게]`
+[email body - conversational, value-focused, ends naturally without signature]`
 
       const userMessage = `
-요구사항: ${userPrompt}
+[USER REQUIREMENTS]
+${userPrompt}
 
-"${country}" 국가의 잠재 고객에게 보내는 첫 콜드 이메일을 작성해주세요.
-- 자연스럽고 친근한 톤 유지
-- {{회사명}} 변수만 사용해도 충분함 (담당자명은 선택)
-- 딱딱한 비즈니스 형식 피하기`
+[TASK]
+Write a cold email targeting prospects in "${country}".
+${workspaceDescription ? `Remember to naturally incorporate our value proposition based on: "${workspaceDescription}"` : ""}
+
+Guidelines:
+- Sound like a real person wrote this, not a marketing team
+- {{회사명}} is required; {{담당자명}} is optional
+- Match the cultural communication style of ${country}
+- End the email naturally - no signature needed`
 
       // 2. AI API 호출
       console.log(`[AITemplate] Calling OpenAI API...`)

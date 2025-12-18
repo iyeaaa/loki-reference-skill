@@ -1101,10 +1101,11 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         }
 
         // AI 템플릿 생성 서비스 호출
+        // 발신자의 회사 정보 사용 (companyName, companyDescription)
         const aiService = getAITemplateGenerationService()
         const template = await aiService.generateEmailTemplate({
-          workspaceName: workspace.name,
-          workspaceDescription: workspace.description || undefined,
+          workspaceName: workspace.companyName || workspace.name,
+          workspaceDescription: workspace.companyDescription || undefined,
           country: body.country,
           userPrompt: body.prompt,
           model: body.model,

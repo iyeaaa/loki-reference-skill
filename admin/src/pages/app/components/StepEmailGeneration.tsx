@@ -1,13 +1,4 @@
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Eye,
-  Loader2,
-  Mail,
-  Sparkles,
-} from "lucide-react"
+import { ArrowRight, CheckCircle2, Eye, Loader2, Mail, Sparkles } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -26,7 +17,6 @@ export function StepEmailGeneration() {
   const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [showFullEmail, setShowFullEmail] = useState(false)
-  const [showMissingInfoModal, setShowMissingInfoModal] = useState(false)
   const [progress, setProgress] = useState(0)
   const startTimeRef = useRef<number | null>(null)
 
@@ -40,30 +30,6 @@ export function StepEmailGeneration() {
   const isKorean = i18n.language === "ko"
 
   console.log("[StepEmailGeneration] workspace:", workspace?.id)
-
-  // Check if required company info is missing
-  const isMissingCompanyInfo = useMemo(() => {
-    if (!workspace) {
-      return false
-    }
-    const hasCompanyName = workspace.companyName && workspace.companyName.trim() !== ""
-    const hasCompanyDescription =
-      workspace.companyDescription &&
-      workspace.companyDescription.trim() !== "" &&
-      workspace.companyDescription !== "기본 워크스페이스"
-    return !(hasCompanyName && hasCompanyDescription)
-  }, [workspace])
-
-  // Show modal when company info is missing
-  useEffect(() => {
-    if (workspace && isMissingCompanyInfo) {
-      setShowMissingInfoModal(true)
-    }
-  }, [workspace, isMissingCompanyInfo])
-
-  const handleGoToStep1 = () => {
-    setSearchParams({ step: "1" })
-  }
 
   // Onboarding hooks - fetch first to get sequenceId
   const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
@@ -352,59 +318,6 @@ export function StepEmailGeneration() {
           )}
         </CardContent>
       </Card>
-
-      {/* Missing Company Info Modal */}
-      <Dialog onOpenChange={setShowMissingInfoModal} open={showMissingInfoModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" />
-              {isKorean ? "필수 정보 미입력" : "Required Information Missing"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <p className="text-gray-600 text-sm">
-              {isKorean
-                ? "AI가 정확한 이메일을 작성하려면 회사 정보가 필요합니다. 아래 항목을 입력해 주세요."
-                : "AI needs company information to write accurate emails. Please fill in the following:"}
-            </p>
-            <div className="space-y-2 rounded-lg bg-amber-50 p-3">
-              {(!workspace?.companyName || workspace.companyName.trim() === "") && (
-                <div className="flex items-center gap-2 text-amber-700 text-sm">
-                  <span className="font-medium">•</span>
-                  <span>{isKorean ? "회사명" : "Company Name"}</span>
-                </div>
-              )}
-              {(!workspace?.companyDescription ||
-                workspace.companyDescription.trim() === "" ||
-                workspace.companyDescription === "기본 워크스페이스") && (
-                <div className="flex items-center gap-2 text-amber-700 text-sm">
-                  <span className="font-medium">•</span>
-                  <span>{isKorean ? "회사 소개" : "Company Description"}</span>
-                </div>
-              )}
-            </div>
-            <p className="text-gray-500 text-xs">
-              {isKorean
-                ? "회사 정보를 입력하면 바이어에게 더 설득력 있는 맞춤 이메일이 생성됩니다."
-                : "Providing company info helps AI generate more persuasive, personalized emails for your buyers."}
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                className="flex-1"
-                onClick={() => setShowMissingInfoModal(false)}
-                variant="outline"
-              >
-                {isKorean ? "나중에" : "Later"}
-              </Button>
-              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleGoToStep1}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {isKorean ? "정보 입력하기" : "Enter Info"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

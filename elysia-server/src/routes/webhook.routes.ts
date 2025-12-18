@@ -1,18 +1,10 @@
 import { Elysia } from "elysia"
 import { webhookService } from "../services/webhook.service"
 import logger from "../utils/logger"
-import { parseMultipartFormData } from "../utils/multipart.util"
 
 export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
-  .onParse((_context, contentType) => {
-    // Skip automatic body parsing for multipart form-data
-    // We need to manually parse it to handle file uploads correctly
-    if (contentType.startsWith("multipart/form-data")) {
-      return // Return undefined to skip parsing
-    }
-  })
-  // SendGrid Inbound Parse
-  .post("/inbound", async ({ request }) => {
+  // SendGrid Inbound Parse - Use ElysiaJS built-in multipart parser
+  .post("/inbound", async ({ body, request }) => {
     const contentType = request.headers.get("content-type")
     logger.info(
       {
@@ -23,49 +15,95 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       "Received inbound webhook request",
     )
 
-    const arrayBuffer = await request.arrayBuffer()
+    // ElysiaJS automatically parses multipart/form-data
+    // body will contain the parsed form data
     logger.info(
       {
-        bodySize: arrayBuffer.byteLength,
-        contentType,
+        bodyType: typeof body,
+        bodyKeys: body && typeof body === "object" ? Object.keys(body) : [],
       },
-      "Parsing multipart form data",
+      "Body received",
     )
 
     try {
-      const { formData: body, files } = await parseMultipartFormData(contentType, arrayBuffer)
+      // Convert ElysiaJS parsed body to our expected format
+      const formData: Record<string, unknown> = {}
+      const files: Array<{
+        fieldname: string
+        originalname: string
+        mimetype: string
+        size: number
+        buffer: Buffer
+      }> = []
+
+      if (body && typeof body === "object") {
+        for (const [key, value] of Object.entries(body)) {
+          if (value instanceof File || value instanceof Blob) {
+            files.push({
+              fieldname: key,
+              originalname: value instanceof File ? value.name : key,
+              mimetype: value.type,
+              size: value.size,
+              buffer: Buffer.from(await value.arrayBuffer()),
+            })
+          } else {
+            formData[key] = value
+          }
+        }
+      }
 
       logger.info(
         {
-          filesCount: files?.length || 0,
-          fileNames: files?.map((f) => f.originalname) || [],
-          bodyKeys: Object.keys(body),
-          attachmentsField: body.attachments,
-          attachmentInfoField: body["attachment-info"],
+          filesCount: files.length,
+          fileNames: files.map((f) => f.originalname),
+          bodyKeys: Object.keys(formData),
         },
         "Multipart parsing completed",
       )
 
-      return webhookService.processInboundEmail(body, files)
+      // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
+      return webhookService.processInboundEmail(formData as any, files as any)
     } catch (error) {
       logger.error(
         {
           err: error,
           errorMessage: error instanceof Error ? error.message : String(error),
           contentType,
-          bodySize: arrayBuffer.byteLength,
         },
-        "Failed to parse multipart form data",
+        "Failed to process inbound email",
       )
       throw error
     }
   })
-  .post("/inbound-store", async ({ request }) => {
-    const contentType = request.headers.get("content-type")
-    const arrayBuffer = await request.arrayBuffer()
-    const { formData: body, files } = await parseMultipartFormData(contentType, arrayBuffer)
+  .post("/inbound-store", async ({ body }) => {
+    // Use ElysiaJS built-in parser
+    const formData: Record<string, unknown> = {}
+    const files: Array<{
+      fieldname: string
+      originalname: string
+      mimetype: string
+      size: number
+      buffer: Buffer
+    }> = []
 
-    return webhookService.processInboundStore(body, files)
+    if (body && typeof body === "object") {
+      for (const [key, value] of Object.entries(body)) {
+        if (value instanceof File || value instanceof Blob) {
+          files.push({
+            fieldname: key,
+            originalname: value instanceof File ? value.name : key,
+            mimetype: value.type,
+            size: value.size,
+            buffer: Buffer.from(await value.arrayBuffer()),
+          })
+        } else {
+          formData[key] = value
+        }
+      }
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
+    return webhookService.processInboundStore(formData as any, files as any)
   })
   // SendGrid Event Webhook
   .post("/sendgrid-events", async ({ body }) => {

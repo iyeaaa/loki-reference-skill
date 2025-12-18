@@ -129,7 +129,7 @@ const app = new Elysia()
   .use(httpLogger) // Logger
 
   // Skip automatic body parsing for multipart/form-data (MUST be before any plugins that access body)
-  .onParse((context, contentType) => {
+  .onParse((_context, contentType) => {
     // Skip parsing for multipart form-data to allow custom parsing in webhook handlers
     if (contentType.startsWith("multipart/form-data")) {
       return // Return undefined to skip automatic parsing

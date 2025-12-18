@@ -128,6 +128,9 @@ const app = new Elysia()
   .use(requestId) // Add request ID for tracing
   .use(httpLogger) // Logger
 
+  // Webhooks (must be registered before permissionGuard to handle custom body parsing)
+  .use(webhookRoutes)
+
   // Security plugins
   .use(rateLimit) // Apply rate limiting to all routes
   .use(permissionGuard) // Apply centralized permission check (2025 best practice)
@@ -161,7 +164,6 @@ const app = new Elysia()
   .use(apiHealthRoute)
   .use(healthRoutes)
   .use(sseTestRoutes)
-  .use(webhookRoutes)
   .use(aiRoutes)
   .use(chatbotRoutes)
   .use(authRoutes)

@@ -3,6 +3,7 @@ import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
 import { iamMemberRoles } from "../db/schema/iam"
+import { sequenceEnrollments } from "../db/schema/sequences"
 import { departments, users } from "../db/schema/users"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
 import { createDefaultRolesForWorkspace, syncMemberRoleToIamRole } from "../db/seed-iam"
@@ -316,7 +317,23 @@ export async function softDeleteUser(id: string) {
       )
       logger.info({ userId: id }, "Deleted email_replies from owned workspaces")
 
-      // 2-3. workspaces 삭제 (CASCADE로 다음 테이블들 자동 삭제)
+      // 2-3. sequence_enrollments 삭제 (user_email_account_id RESTRICT 제약)
+      // sequence_enrollments -> user_email_accounts (RESTRICT)
+      // workspaces 삭제 시 user_email_accounts가 CASCADE로 삭제되려 하지만
+      // sequence_enrollments가 참조하고 있으면 RESTRICT 오류 발생
+      // sequence_step_executions는 enrollment_id CASCADE로 자동 삭제됨
+      await tx.execute(
+        sql`DELETE FROM sequence_enrollments
+            WHERE sequence_id IN (
+              SELECT id FROM sequences WHERE workspace_id IN (${sql.join(
+                ownedWorkspaceIds.map((wid) => sql`${wid}`),
+                sql`, `,
+              )})
+            )`,
+      )
+      logger.info({ userId: id }, "Deleted sequence_enrollments from owned workspaces")
+
+      // 2-4. workspaces 삭제 (CASCADE로 다음 테이블들 자동 삭제)
       // - leads (-> lead_contacts, lead_products, lead_social_media, lead_business_sectors,
       //          lead_product_categories, lead_industry_types CASCADE)
       // - sequences (-> sequence_steps, sequence_enrollments -> sequence_step_executions CASCADE)
@@ -376,7 +393,7 @@ export async function softDeleteUser(id: string) {
     await tx.delete(workspaceMembers).where(eq(workspaceMembers.userId, id))
     logger.info({ userId: id, membershipCount: memberIds.length }, "Deleted workspace memberships")
 
-    // 3-4. 사용자의 남은 이메일 계정에서 보낸 이메일 삭제 (다른 워크스페이스)
+    // 3-4. 사용자의 남은 이메일 계정 관련 데이터 삭제 (다른 워크스페이스)
     const remainingEmailAccountIds = await tx
       .select({ id: userEmailAccounts.id })
       .from(userEmailAccounts)
@@ -384,6 +401,32 @@ export async function softDeleteUser(id: string) {
 
     if (remainingEmailAccountIds.length > 0) {
       const accountIds = remainingEmailAccountIds.map((acc) => acc.id)
+
+      // 3-4-1. sequence_enrollments 삭제 (user_email_account_id RESTRICT 제약)
+      // 이 이메일 계정으로 등록된 시퀀스 enrollment들 삭제
+      await tx.delete(sequenceEnrollments).where(
+        sql`user_email_account_id IN (${sql.join(
+          accountIds.map((aid) => sql`${aid}`),
+          sql`, `,
+        )})`,
+      )
+      logger.info(
+        { userId: id, emailAccountCount: accountIds.length },
+        "Deleted sequence_enrollments for remaining user email accounts",
+      )
+
+      // 3-4-2. workflow_executions의 user_email_account_id 처리
+      // workflow_executions.user_email_account_id -> user_email_accounts (no onDelete = RESTRICT)
+      await tx.execute(
+        sql`DELETE FROM workflow_executions
+            WHERE user_email_account_id IN (${sql.join(
+              accountIds.map((aid) => sql`${aid}`),
+              sql`, `,
+            )})`,
+      )
+      logger.info({ userId: id }, "Deleted workflow_executions for remaining user email accounts")
+
+      // 3-4-3. emails 삭제 (user_email_account_id RESTRICT 제약)
       const deletedEmails = await tx
         .delete(emails)
         .where(

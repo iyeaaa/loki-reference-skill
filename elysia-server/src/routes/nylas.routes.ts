@@ -447,11 +447,11 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
   })
 
   /**
-   * POST /api/v1/nylas/api/v1/nylas/webhooks
+   * POST /api/v1/nylas/webhooks
    * Receive Nylas webhook events (opens, clicks, replies)
    */
   .post(
-    "/api/v1/nylas/webhooks",
+    "/webhooks",
     async ({ body, set }) => {
       try {
         const payload = body as NylasWebhookPayload

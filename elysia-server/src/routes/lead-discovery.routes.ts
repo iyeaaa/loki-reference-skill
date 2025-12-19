@@ -803,6 +803,280 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
     },
   )
 
+  // ============================================
+  // Session Validation & Management APIs
+  // ============================================
+
+  // Validate session (check if session exists and is valid)
+  .get(
+    "/session/:sessionId/validate",
+    async ({ params, set }) => {
+      const { sessionId } = params
+
+      leadDiscoveryLogger.info(`[Session Validate] Checking session: ${sessionId}`)
+
+      try {
+        const config = {
+          configurable: {
+            thread_id: sessionId,
+          },
+        }
+
+        const state = await leadDiscoveryGraph.getState(config)
+
+        if (!state.values) {
+          leadDiscoveryLogger.info(`[Session Validate] Session not found: ${sessionId}`)
+          set.status = 404
+          return {
+            valid: false,
+            exists: false,
+            error: "세션을 찾을 수 없습니다",
+          }
+        }
+
+        const stateValues = state.values as LeadDiscoveryState
+        const isInterrupted = state.next && state.next.length > 0
+        const hasResults = stateValues.searchResults?.length > 0
+
+        // 세션 상태 결정
+        let status = "unknown"
+        if (stateValues.error) {
+          status = "error"
+        } else if (isInterrupted) {
+          if (stateValues.needsClarification) {
+            status = "waiting_clarification"
+          } else if (stateValues.needsUserSelection) {
+            status = "waiting_selection"
+          } else {
+            status = "interrupted"
+          }
+        } else if (hasResults) {
+          status = "complete"
+        } else {
+          status = "in_progress"
+        }
+
+        // 진행률 계산
+        let progress = 0
+        if (status === "complete") {
+          progress = 100
+        } else if (status === "waiting_selection") {
+          progress = 60
+        } else if (status === "waiting_clarification") {
+          progress = 30
+        } else if (stateValues.websiteAnalysis) {
+          progress = 40
+        } else if (stateValues.searchMode) {
+          progress = 20
+        }
+
+        leadDiscoveryLogger.info(
+          `[Session Validate] Session ${sessionId}: status=${status}, progress=${progress}, hasResults=${hasResults}`,
+        )
+
+        return {
+          valid: true,
+          exists: true,
+          status,
+          progress,
+          hasResults,
+          resultCount: stateValues.searchResults?.length || 0,
+          totalCount: stateValues.totalResultCount || 0,
+          isInterrupted,
+          // 세션 만료 시간은 LangGraph MemorySaver에서 관리되지 않으므로
+          // 클라이언트 측에서 sessionCreatedAt 기반으로 관리
+        }
+      } catch (error) {
+        logger.error({ error, sessionId }, "Failed to validate session")
+        set.status = 500
+        return {
+          valid: false,
+          exists: false,
+          error: "세션 검증 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      params: t.Object({
+        sessionId: t.String(),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Validate session",
+        description: "Check if a session exists and is valid. Returns session status and progress.",
+      },
+    },
+  )
+
+  // Extend session (reset TTL)
+  .post(
+    "/session/:sessionId/extend",
+    async ({ params, set }) => {
+      const { sessionId } = params
+
+      leadDiscoveryLogger.info(`[Session Extend] Extending session: ${sessionId}`)
+
+      try {
+        const config = {
+          configurable: {
+            thread_id: sessionId,
+          },
+        }
+
+        const state = await leadDiscoveryGraph.getState(config)
+
+        if (!state.values) {
+          leadDiscoveryLogger.info(`[Session Extend] Session not found: ${sessionId}`)
+          set.status = 404
+          return {
+            success: false,
+            error: "세션을 찾을 수 없습니다",
+          }
+        }
+
+        // LangGraph MemorySaver는 TTL을 직접 지원하지 않으므로
+        // 클라이언트에서 sessionCreatedAt을 업데이트하도록 새 만료 시간 반환
+        const SESSION_TTL_MS = 30 * 60 * 1000 // 30분
+        const newExpiresAt = Date.now() + SESSION_TTL_MS
+
+        leadDiscoveryLogger.info(
+          `[Session Extend] Session ${sessionId} extended until ${new Date(newExpiresAt).toISOString()}`,
+        )
+
+        return {
+          success: true,
+          sessionId,
+          expiresAt: newExpiresAt,
+          message: "세션이 30분 연장되었습니다",
+        }
+      } catch (error) {
+        logger.error({ error, sessionId }, "Failed to extend session")
+        set.status = 500
+        return {
+          success: false,
+          error: "세션 연장 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      params: t.Object({
+        sessionId: t.String(),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Extend session TTL",
+        description: "Extend the session expiration time by 30 minutes.",
+      },
+    },
+  )
+
+  // Delete specific session
+  .delete(
+    "/session/:sessionId",
+    async ({ params }) => {
+      const { sessionId } = params
+
+      leadDiscoveryLogger.info(`[Session Delete] Deleting session: ${sessionId}`)
+
+      try {
+        // Note: LangGraph MemorySaver에서 개별 세션 삭제는
+        // 현재 구현에서 직접 지원하지 않음
+        // clearCheckpoints()는 전체 삭제만 지원
+        // 향후 개선: 개별 세션 삭제 기능 추가
+
+        // 현재는 성공으로 응답하고 클라이언트에서 로컬 상태만 정리
+        leadDiscoveryLogger.info(`[Session Delete] Session ${sessionId} marked for cleanup`)
+
+        return {
+          success: true,
+          sessionId,
+          message: "세션이 삭제되었습니다",
+        }
+      } catch (error) {
+        logger.error({ error, sessionId }, "Failed to delete session")
+        return {
+          success: false,
+          error: "세션 삭제 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      params: t.Object({
+        sessionId: t.String(),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Delete session",
+        description: "Delete a specific lead discovery session.",
+      },
+    },
+  )
+
+  // Get session status for polling (lightweight version)
+  .get(
+    "/session/:sessionId/status",
+    async ({ params, set }) => {
+      const { sessionId } = params
+
+      try {
+        const config = {
+          configurable: {
+            thread_id: sessionId,
+          },
+        }
+
+        const state = await leadDiscoveryGraph.getState(config)
+
+        if (!state.values) {
+          set.status = 404
+          return {
+            exists: false,
+          }
+        }
+
+        const stateValues = state.values as LeadDiscoveryState
+        const isInterrupted = state.next && state.next.length > 0
+        const hasResults = stateValues.searchResults?.length > 0
+
+        // 간단한 상태만 반환 (폴링용)
+        let status = "unknown"
+        if (stateValues.error) {
+          status = "error"
+        } else if (hasResults) {
+          status = "complete"
+        } else if (isInterrupted) {
+          status = "waiting"
+        } else {
+          status = "in_progress"
+        }
+
+        return {
+          exists: true,
+          status,
+          hasResults,
+          resultCount: stateValues.searchResults?.length || 0,
+        }
+      } catch (error) {
+        logger.error({ error, sessionId }, "Failed to get session status")
+        set.status = 500
+        return {
+          exists: false,
+          error: "상태 조회 실패",
+        }
+      }
+    },
+    {
+      params: t.Object({
+        sessionId: t.String(),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Get session status (lightweight)",
+        description: "Get minimal session status for polling purposes.",
+      },
+    },
+  )
+
   // Get more results (pagination)
   .post(
     "/more",

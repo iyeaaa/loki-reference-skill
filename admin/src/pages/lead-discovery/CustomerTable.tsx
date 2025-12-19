@@ -11,7 +11,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
@@ -26,6 +26,7 @@ import {
   GripVertical,
   Lightbulb,
   Loader2,
+  Lock,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -60,20 +61,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
 import { calculateFitScores, enrichLeads, loadMoreResults } from "@/lib/api/hooks/lead-discovery"
 import { API_BASE_URL } from "@/lib/env"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
+  activeSessionIdAtom,
   addCustomersAtom,
   type Customer,
   customersAtom,
@@ -87,6 +81,7 @@ import {
   streamingStateAtom,
   updateCustomerAtom,
   updateFitScoreAtom,
+  updateSearchSessionAtom,
   updateStreamingStateAtom,
 } from "./store"
 
@@ -97,13 +92,13 @@ const COLUMN_CONFIG = [
   { id: "company_name", label: "Company", canHide: true },
   { id: "web_address", label: "Website", canHide: true },
   { id: "description", label: "Description", canHide: true },
+  { id: "email", label: "Company Email", canHide: true },
   { id: "fitScore", label: "Fit Score", canHide: true },
   { id: "country", label: "Country", canHide: true },
   { id: "category", label: "Category", canHide: true },
   { id: "companyType", label: "Business Type", canHide: true },
   { id: "industry", label: "Main Industry", canHide: true },
   { id: "sub_industry", label: "Sub Industry", canHide: true },
-  { id: "email", label: "Company Email", canHide: true },
   { id: "actions", label: "Actions", canHide: false },
 ] as const
 
@@ -506,6 +501,10 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   const streamingState = useAtomValue(streamingStateAtom)
   const updateStreamingState = useSetAtom(updateStreamingStateAtom)
 
+  // 검색 세션 관련
+  const activeSessionId = useAtomValue(activeSessionIdAtom)
+  const updateSearchSession = useSetAtom(updateSearchSessionAtom)
+
   // 적합도 점수 상태
   const fitScoreState = useAtomValue(fitScoreStateAtom)
   const updateFitScore = useSetAtom(updateFitScoreAtom)
@@ -579,6 +578,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   // FitScore 계산용 AbortController
   const fitScoreAbortControllerRef = useRef<AbortController | null>(null)
 
+  // fitScoreState를 ref로 저장하여 useEffect에서 최신 값 사용
+  const fitScoreStateRef = useRef(fitScoreState)
+  useEffect(() => {
+    fitScoreStateRef.current = fitScoreState
+  }, [fitScoreState])
+
   // 더 가져오기 핸들러
   const handleLoadMore = useCallback(async () => {
     if (!streamingState.sessionId || isLoadingMore) {
@@ -635,13 +640,14 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 고객이 있고 선택된 추천이 있으면 적합도 계산 API 호출
   useEffect(() => {
+    const currentFitScoreState = fitScoreStateRef.current
     console.log("[FitScore] useEffect 실행", {
       customersLength: customers.length,
       selectedTarget: selectedTarget
         ? `${selectedTarget.country}/${selectedTarget.industry}`
         : null,
       isCalculating: isCalculatingRef.current,
-      scoresCount: Object.keys(fitScoreState.scores).length,
+      scoresCount: Object.keys(currentFitScoreState.scores).length,
     })
 
     // 조건: 고객이 있고, 선택된 타겟이 있고, API 호출 중이 아닐 때
@@ -661,7 +667,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     // 점수가 없거나(미계산), 프로필 고도화 등으로 입력 데이터가 바뀐 고객 찾기
     const customersToScore = customers.filter((c) => {
       const signature = makeFitScoreSignature(c)
-      const prev = fitScoreState.signatures[c.id]
+      const prev = currentFitScoreState.signatures[c.id]
       if (!prev) {
         return true
       }
@@ -731,6 +737,15 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           console.log("[FitScore] 적합도 계산 완료")
           setFitScoreLoading({ isLoading: false, progress: 100 })
           isCalculatingRef.current = false
+
+          // ★ 현재 세션에 Fit Score 저장
+          const currentScores = fitScoreStateRef.current
+          if (activeSessionId && Object.keys(currentScores.scores).length > 0) {
+            updateSearchSession(activeSessionId, {
+              fitScores: currentScores.scores,
+              fitScoreSignatures: currentScores.signatures,
+            })
+          }
         },
         onError: (error) => {
           console.error("[FitScore] 적합도 계산 에러:", error)
@@ -746,18 +761,20 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     // cleanup: 컴포넌트 언마운트 또는 의존성 변경 시 진행 중인 요청 취소
     return () => {
       fitScoreAbortControllerRef.current?.abort()
+      isCalculatingRef.current = false
     }
   }, [
     customers,
     selectedTarget,
-    fitScoreState.scores,
     streamingState.analysisSummary,
     streamingState.userQuery,
     updateFitScore,
     setFitScoreLoading,
     workspaceId,
     makeFitScoreSignature,
-    fitScoreState.signatures,
+    activeSessionId,
+    updateSearchSession,
+    // fitScoreState.scores와 signatures는 의존성에서 제외 - 점수가 업데이트될 때마다 재실행되면 abort됨
   ])
 
   const initialSettingsRef = useRef<PersistedTableSettings | null>(loadTableSettings())
@@ -1064,7 +1081,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           const isVerified = row.original.verified
           return (
             <div className="flex max-w-[200px] items-center gap-1.5">
-              <span className="truncate font-medium">{row.getValue("company_name") || "-"}</span>
+              <span className="truncate text-xs">{row.getValue("company_name") || "-"}</span>
               {isVerified && (
                 <div
                   className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm"
@@ -1089,10 +1106,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </div>
           )
         },
+        size: 180,
       },
       {
         accessorKey: "web_address",
         header: "Website",
+        size: 160,
         cell: ({ row }) => {
           const webAddress = row.getValue("web_address") as string | undefined
           if (!webAddress) {
@@ -1121,6 +1140,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         cell: ({ row }) => {
           const description = row.getValue("description") as string | undefined
           const isLoading = enrichmentState.loadingIds.has(row.original.id)
+          const isVerified = row.original.verified
 
           if (isLoading) {
             return (
@@ -1132,6 +1152,18 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           }
 
           if (!description || description === "-") {
+            // 프로필 고도화 전이면 잠금 아이콘 표시
+            if (!isVerified) {
+              return (
+                <div
+                  className="flex items-center gap-1 text-muted-foreground/60"
+                  title="프로필 고도화 후 확인 가능"
+                >
+                  <Lock className="h-3 w-3" />
+                  <span className="text-xs">고도화 필요</span>
+                </div>
+              )
+            }
             return <span className="text-muted-foreground text-xs">-</span>
           }
 
@@ -1178,22 +1210,41 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         ),
         cell: ({ row }) => {
           const score = getResolvedFitScore(row.original.id, row.original.fit_score)
-          const isLoading = fitScoreState.isLoading && score === undefined
+          const isLoading = fitScoreStateRef.current.isLoading && score === undefined
           return <FitScoreBadge isLoading={isLoading} score={score} />
         },
-        size: 70,
+        size: 140,
       },
       // Country
       {
         accessorKey: "country",
         header: "Country",
         cell: ({ row }) => <span className="text-xs">{row.getValue("country") || "-"}</span>,
+        size: 120,
       },
       // Category (BigQuery 원본)
       {
         accessorKey: "category",
         header: "Category",
-        cell: ({ row }) => <span className="text-xs">{row.getValue("category") || "-"}</span>,
+        cell: ({ row }) => {
+          const category = row.getValue("category") as string | undefined
+          const isVerified = row.original.verified
+          if (!category || category === "-") {
+            if (!isVerified) {
+              return (
+                <div
+                  className="flex items-center gap-1 text-muted-foreground/60"
+                  title="프로필 고도화 후 확인 가능"
+                >
+                  <Lock className="h-3 w-3" />
+                </div>
+              )
+            }
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+          return <span className="text-xs">{category}</span>
+        },
+        size: 130,
       },
       // 업체 유형 (Enrichment로 추출)
       {
@@ -1201,7 +1252,20 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         header: "Business Type",
         cell: ({ row }) => {
           const companyType = row.getValue("companyType") as string | undefined
+          const isVerified = row.original.verified
+
           if (!companyType) {
+            // 프로필 고도화 전이면 잠금 아이콘 표시
+            if (!isVerified) {
+              return (
+                <div
+                  className="flex items-center gap-1 text-muted-foreground/60"
+                  title="프로필 고도화 후 확인 가능"
+                >
+                  <Lock className="h-3 w-3" />
+                </div>
+              )
+            }
             return <span className="text-muted-foreground text-xs">-</span>
           }
 
@@ -1226,10 +1290,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </span>
           )
         },
+        size: 130,
       },
       // Main Industry
       {
         accessorKey: "industry",
+        size: 150,
         header: ({ column }) => (
           <Button
             className="-ml-2 h-8 px-2"
@@ -1268,20 +1334,35 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       {
         accessorKey: "sub_industry",
         header: "Sub Industry",
+        size: 130,
         cell: ({ row }) => {
           const subIndustry = row.getValue("sub_industry") as string | undefined
+          const isVerified = row.original.verified
+
+          if (!subIndustry || subIndustry === "-") {
+            if (!isVerified) {
+              return (
+                <div
+                  className="flex items-center gap-1 text-muted-foreground/60"
+                  title="프로필 고도화 후 확인 가능"
+                >
+                  <Lock className="h-3 w-3" />
+                </div>
+              )
+            }
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
           return (
             <Popover>
               <PopoverTrigger asChild>
                 <span className="block max-w-[150px] cursor-pointer truncate text-muted-foreground text-xs hover:text-primary">
-                  {subIndustry || "-"}
+                  {subIndustry}
                 </span>
               </PopoverTrigger>
-              {subIndustry && (
-                <PopoverContent align="start" className="max-h-[200px] w-[300px] overflow-y-auto">
-                  <p className="text-sm">{subIndustry}</p>
-                </PopoverContent>
-              )}
+              <PopoverContent align="start" className="max-h-[200px] w-[300px] overflow-y-auto">
+                <p className="text-sm">{subIndustry}</p>
+              </PopoverContent>
             </Popover>
           )
         },
@@ -1289,6 +1370,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       // Company Email
       {
         accessorKey: "email",
+        size: 180,
         header: ({ column }) => (
           <Button
             className="-ml-2 h-8 px-2"
@@ -1305,15 +1387,31 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             )}
           </Button>
         ),
-        cell: ({ row }) => (
-          <span className="block max-w-[200px] truncate font-mono text-xs">
-            {row.getValue("email") || "-"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const email = row.getValue("email") as string | undefined
+          const isVerified = row.original.verified
+
+          if (!email || email === "-") {
+            if (!isVerified) {
+              return (
+                <div
+                  className="flex items-center gap-1 text-muted-foreground/60"
+                  title="프로필 고도화 후 확인 가능"
+                >
+                  <Lock className="h-3 w-3" />
+                </div>
+              )
+            }
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
+          return <span className="block max-w-[200px] truncate font-mono text-xs">{email}</span>
+        },
       },
       {
         id: "actions",
         enableHiding: false,
+        size: 60,
         cell: ({ row }) => {
           const customer = row.original
 
@@ -1346,7 +1444,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     ],
-    [removeCustomer, fitScoreState, enrichmentState, getResolvedFitScore],
+    [removeCustomer, enrichmentState, getResolvedFitScore],
   )
 
   // 정렬된 데이터: 1순위 verified (체크 표시), 2순위 fit_score
@@ -1396,6 +1494,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableRowSelection: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
   })
 
   // 컬럼 드래그 핸들러
@@ -1434,11 +1534,29 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 테이블 행 가상화
   const { rows } = table.getRowModel()
+
+  // 디버깅: 테이블 데이터 상태 확인
+  console.log("[CustomerTable] Render state:", {
+    customersLength: customers.length,
+    sortedCustomersLength: sortedCustomers.length,
+    rowsLength: rows.length,
+    hasTableRef: !!tableContainerRef.current,
+    tableRefHeight: tableContainerRef.current?.clientHeight,
+    tableRefScrollHeight: tableContainerRef.current?.scrollHeight,
+  })
+
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 48, // 예상 행 높이 (px)
     overscan: 10, // 뷰포트 외부에 추가로 렌더링할 행 수
+  })
+
+  // 디버깅: 가상화 상태 확인
+  console.log("[CustomerTable] Virtualizer state:", {
+    totalSize: rowVirtualizer.getTotalSize(),
+    virtualItemsCount: rowVirtualizer.getVirtualItems().length,
+    firstVirtualItem: rowVirtualizer.getVirtualItems()[0],
   })
 
   return (
@@ -1581,27 +1699,30 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         </div>
       </div>
 
-      {/* 테이블 */}
+      {/* 테이블 (div 기반) */}
       <section
         aria-label="잠재 고객 목록"
         className="min-h-0 flex-1 overflow-auto rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3"
         ref={tableContainerRef}
       >
-        <Table aria-label="잠재 고객 테이블" className="border-collapse">
-          <TableHeader className="sticky top-0 z-10">
+        <div className="relative" style={{ width: table.getTotalSize() }}>
+          {/* 헤더 */}
+          <div className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                className="border-border/50 border-b hover:bg-transparent"
+              <div
+                className="flex border-border/50 border-b bg-zinc-50 dark:bg-zinc-900"
                 key={headerGroup.id}
               >
                 {headerGroup.headers.map((header, index) => {
                   const canDrag = header.column.id !== "select" && header.column.id !== "actions"
                   const isFirstColumn = index === 0
+                  const canResize = header.column.getCanResize()
                   return (
-                    <TableHead
+                    // biome-ignore lint/a11y/noStaticElementInteractions: 드래그 앤 드롭을 위한 이벤트
+                    <div
                       className={cn(
-                        "border-border/30 border-r bg-zinc-50 dark:bg-zinc-900",
-                        isFirstColumn && "sticky left-0 z-20",
+                        "relative flex items-center whitespace-nowrap border-border/30 border-r px-4 py-3 font-medium text-sm",
+                        isFirstColumn && "sticky left-0 z-20 bg-zinc-50 dark:bg-zinc-900",
                         canDrag && "cursor-grab",
                         draggedColumn === header.column.id && "opacity-50",
                       )}
@@ -1610,99 +1731,110 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                       onDragOver={handleDragOver}
                       onDragStart={() => canDrag && handleDragStart(header.column.id)}
                       onDrop={() => canDrag && handleDrop(header.column.id)}
-                      style={{ width: header.getSize() }}
+                      style={{
+                        width: header.getSize(),
+                        flexShrink: 0,
+                      }}
                     >
-                      <div className="flex items-center gap-1">
-                        {canDrag && <GripVertical className="h-3 w-3 text-muted-foreground/50" />}
+                      <div className="flex flex-1 items-center gap-1">
+                        {canDrag && (
+                          <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                        )}
                         {header.isPlaceholder
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
                       </div>
-                    </TableHead>
+                      {/* 리사이저 핸들 */}
+                      {canResize && (
+                        <button
+                          aria-label="열 너비 조절"
+                          className={cn(
+                            "absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none border-none bg-transparent p-0 hover:bg-primary/50 focus:outline-none",
+                            header.column.getIsResizing() && "bg-primary",
+                          )}
+                          onDoubleClick={() => header.column.resetSize()}
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          type="button"
+                        />
+                      )}
+                    </div>
                   )
                 })}
-              </TableRow>
+              </div>
             ))}
-          </TableHeader>
-          <TableBody>
+          </div>
+          {/* 바디 */}
+          <div>
             {rows.length > 0 ? (
-              <>
-                {/* 가상화된 행 렌더링 */}
-                <tr style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
-                  <td colSpan={columns.length} style={{ padding: 0, height: "100%" }}>
-                    <div style={{ position: "relative", height: "100%" }}>
-                      {rowVirtualizer.getVirtualItems().map((virtualRow: VirtualItem) => {
-                        const row = rows[virtualRow.index]
+              <div style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = rows[virtualRow.index]
+                  return (
+                    <div
+                      className="absolute left-0 flex border-border/30 border-b hover:bg-muted/40 data-[state=selected]:bg-muted"
+                      data-index={virtualRow.index}
+                      data-state={row.getIsSelected() ? "selected" : undefined}
+                      key={row.original.id}
+                      style={{
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell, cellIndex) => {
+                        const isFirstColumn = cellIndex === 0
                         return (
                           <div
-                            className="absolute left-0 flex w-full border-border/30 border-b hover:bg-muted/40 data-[state=selected]:bg-muted"
-                            data-index={virtualRow.index}
-                            data-state={row.getIsSelected() ? "selected" : undefined}
-                            key={row.original.id}
+                            className={cn(
+                              "flex items-center overflow-hidden border-border/20 border-r px-4 py-2",
+                              isFirstColumn && "sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-900",
+                            )}
+                            key={cell.id}
                             style={{
-                              height: `${virtualRow.size}px`,
-                              transform: `translateY(${virtualRow.start}px)`,
+                              width: cell.column.getSize(),
+                              flexShrink: 0,
                             }}
                           >
-                            {row.getVisibleCells().map((cell, cellIndex) => {
-                              const isFirstColumn = cellIndex === 0
-                              return (
-                                <div
-                                  className={cn(
-                                    "flex items-center border-border/20 border-r px-4 py-2",
-                                    isFirstColumn &&
-                                      "sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-900",
-                                  )}
-                                  key={cell.id}
-                                  style={{
-                                    width: cell.column.getSize(),
-                                    minWidth: cell.column.getSize(),
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </div>
-                              )
-                            })}
+                            <div className="w-full truncate">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </div>
                           </div>
                         )
                       })}
                     </div>
-                  </td>
-                </tr>
-              </>
+                  )
+                })}
+              </div>
             ) : (
-              <TableRow className="hover:bg-transparent">
-                <TableCell className="h-[400px] p-0" colSpan={columns.length}>
-                  {/* 필터로 인해 결과가 0개인 경우 */}
-                  {customers.length > 0 && globalFilter ? (
-                    <EmptyStateFilteredEmpty
-                      onClearFilter={() => setGlobalFilter("")}
-                      totalCount={customers.length}
-                    />
-                  ) : /* 바이어 선택 대기 중 */
-                  streamingState.status === "waiting_selection" ? (
-                    <EmptyStateWaitingSelection />
-                  ) : /* 로딩 중 (검색 진행 중) */
-                  ["connecting", "routing", "analyzing", "recommending", "searching"].includes(
-                      streamingState.status,
-                    ) ? (
-                    <TableSkeletonLoading
-                      message={streamingState.message}
-                      progress={streamingState.progress}
-                    />
-                  ) : /* 검색 완료 후 결과가 0개인 경우 */
-                  streamingState.status === "complete" ? (
-                    <EmptyStateNoResults userQuery={streamingState.userQuery} />
-                  ) : (
-                    /* 아직 검색하지 않은 초기 상태 */
-                    <EmptyStateInitial />
-                  )}
-                </TableCell>
-              </TableRow>
+              <div className="flex h-[400px] items-center justify-center">
+                {/* 필터로 인해 결과가 0개인 경우 */}
+                {customers.length > 0 && globalFilter ? (
+                  <EmptyStateFilteredEmpty
+                    onClearFilter={() => setGlobalFilter("")}
+                    totalCount={customers.length}
+                  />
+                ) : /* 바이어 선택 대기 중 */
+                streamingState.status === "waiting_selection" ? (
+                  <EmptyStateWaitingSelection />
+                ) : /* 로딩 중 (검색 진행 중) */
+                ["connecting", "routing", "analyzing", "recommending", "searching"].includes(
+                    streamingState.status,
+                  ) ? (
+                  <TableSkeletonLoading
+                    message={streamingState.message}
+                    progress={streamingState.progress}
+                  />
+                ) : /* 검색 완료 후 결과가 0개인 경우 */
+                streamingState.status === "complete" ? (
+                  <EmptyStateNoResults userQuery={streamingState.userQuery} />
+                ) : (
+                  /* 아직 검색하지 않은 초기 상태 */
+                  <EmptyStateInitial />
+                )}
+              </div>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
       </section>
 
       {/* 더 가져오기 버튼 */}

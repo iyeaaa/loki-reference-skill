@@ -65,6 +65,7 @@ import {
   finishBulkEnrichmentAtom,
   finishCreateGroupAtom,
   finishEnrichmentAtom,
+  fitScoreStateAtom,
   getThinkingEntriesForMessage,
   initialStreamingState,
   recoverStateAtom,
@@ -266,6 +267,7 @@ export function ChatRoom() {
   const updateSearchSession = useSetAtom(updateSearchSessionAtom)
   const setSessionCustomers = useSetAtom(setSessionCustomersAtom)
   const switchToSession = useSetAtom(switchToSessionAtom)
+  const fitScoreState = useAtomValue(fitScoreStateAtom)
 
   // Thinking 상태 (Cursor Agent 스타일)
   const thinkingState = useAtomValue(thinkingStateAtom)
@@ -360,6 +362,7 @@ export function ChatRoom() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const currentSessionIdRef = useRef<string | null>(null) // 현재 세션 ID 추적 (클로저 문제 해결)
 
   // NOTE: AbortController는 모듈 레벨 변수(globalAbortController)로 이동
   // 레이아웃 전환으로 인한 컴포넌트 리마운트 시에도 검색 요청이 취소되지 않도록 함
@@ -678,7 +681,9 @@ export function ChatRoom() {
       setCustomers(newCustomers) // Replace instead of append for new search
 
       // ★ 검색 세션에 고객 데이터 저장 (검색 기록)
-      const currentSessionId = streamingState.currentSessionId
+      // currentSessionIdRef를 사용하여 클로저 문제 해결
+      const currentSessionId = currentSessionIdRef.current
+      console.log("[ChatRoom] Saving customers to session:", currentSessionId, newCustomers.length)
       if (currentSessionId) {
         setSessionCustomers(currentSessionId, newCustomers)
       }
@@ -922,9 +927,24 @@ export function ChatRoom() {
       })
     },
     onResults: (results, totalCount) => {
-      console.log("[ChatRoom] Selection results:", totalCount)
+      console.log("[ChatRoom] Selection results:", totalCount, "raw results:", results?.length)
+      console.log("[ChatRoom] First result sample:", results?.[0])
       const newCustomers = convertResultsToCustomers(results)
+      console.log("[ChatRoom] Converted customers:", newCustomers?.length)
+      console.log("[ChatRoom] First customer sample:", newCustomers?.[0])
       setCustomers(newCustomers) // Replace instead of append for selection results
+
+      // ★ 검색 세션에 고객 데이터 저장 (검색 기록)
+      // currentSessionIdRef를 사용하여 클로저 문제 해결
+      const currentSessionId = currentSessionIdRef.current
+      console.log(
+        "[ChatRoom] Saving selection customers to session:",
+        currentSessionId,
+        newCustomers.length,
+      )
+      if (currentSessionId) {
+        setSessionCustomers(currentSessionId, newCustomers)
+      }
     },
     onComplete: (data) => {
       setStreamingState((prev) => {
@@ -940,6 +960,18 @@ export function ChatRoom() {
 
           updateMessage(prev.messageId, {
             content: completionMessage,
+          })
+        }
+
+        // ★ 검색 세션 완료 상태로 업데이트 (검색 기록 저장)
+        if (prev.currentSessionId) {
+          updateSearchSession(prev.currentSessionId, {
+            status: "complete",
+            totalCount: data.totalCount ?? 0,
+            message: `${data.totalCount ?? 0}건 검색 완료`,
+            selectedRecommendationId: data.selectedRecommendation?.id,
+            analysisSummary: prev.analysisSummary,
+            recommendations: prev.recommendations,
           })
         }
 
@@ -1043,6 +1075,17 @@ export function ChatRoom() {
       console.log("[ChatRoom] Clarify results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
       setCustomers(newCustomers)
+
+      // ★ 검색 세션에 고객 데이터 저장 (검색 기록)
+      const currentSessionId = currentSessionIdRef.current
+      console.log(
+        "[ChatRoom] Saving clarify customers to session:",
+        currentSessionId,
+        newCustomers.length,
+      )
+      if (currentSessionId) {
+        setSessionCustomers(currentSessionId, newCustomers)
+      }
     },
     onComplete: (data) => {
       setStreamingState((prev) => {
@@ -1057,6 +1100,18 @@ export function ChatRoom() {
 
           updateMessage(prev.messageId, {
             content: completionMessage,
+          })
+        }
+
+        // ★ 검색 세션 완료 상태로 업데이트 (검색 기록 저장)
+        if (prev.currentSessionId) {
+          updateSearchSession(prev.currentSessionId, {
+            status: "complete",
+            totalCount: data.totalCount ?? 0,
+            message: `${data.totalCount ?? 0}건 검색 완료`,
+            selectedRecommendationId: data.selectedRecommendation?.id,
+            analysisSummary: prev.analysisSummary,
+            recommendations: prev.recommendations,
           })
         }
 
@@ -1519,6 +1574,25 @@ export function ChatRoom() {
       // 이전 검색 상태 초기화 (고객 목록, 적합도 점수 등)
       resetSearchState()
 
+      // 에러 상태 클리어
+      clearError()
+
+      // 검색 쿼리 저장 (다시 시도용)
+      setLastQuery({
+        query,
+        workspaceId: selectedWorkspace.id,
+      })
+
+      // ★ 검색 세션 생성 (검색 기록에 저장) - 현재 모드에 따라 다른 searchMode 전달
+      const newSession = createSearchSession({
+        query,
+        searchMode, // website, criteria_input, criteria_click 중 현재 모드
+        workspaceId: selectedWorkspace.id,
+      })
+
+      // ref에도 세션 ID 저장 (콜백에서 사용)
+      currentSessionIdRef.current = newSession?.id ?? null
+
       // 빈 assistant 메시지 추가 (스트리밍용)
       const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
@@ -1542,6 +1616,7 @@ export function ChatRoom() {
         customerAnalysisSummary: "",
         userQuery: query,
         sessionCreatedAt: Date.now(), // 세션 만료 체크용
+        currentSessionId: newSession?.id, // ★ 검색 세션 ID 저장
       })
 
       // Thinking 상태에 현재 메시지 ID 설정
@@ -1570,6 +1645,9 @@ export function ChatRoom() {
       setPendingQuery,
       setThinkingMessageId,
       analysisSettings,
+      clearError,
+      createSearchSession,
+      searchMode,
     ],
   )
 
@@ -1633,9 +1711,12 @@ export function ChatRoom() {
       // ★ 검색 세션 생성 (검색 기록에 저장)
       const newSession = createSearchSession({
         query: userInput,
-        searchMode: "website", // TODO: 실제 검색 모드 반영
+        searchMode, // 현재 선택된 검색 모드 (website, criteria_input, criteria_click)
         workspaceId: selectedWorkspace.id,
       })
+
+      // ref에도 세션 ID 저장 (콜백에서 사용)
+      currentSessionIdRef.current = newSession?.id ?? null
 
       // 빈 assistant 메시지 ID 생성
       const assistantMessageId = `msg-${now + 1}-response`
@@ -1706,6 +1787,7 @@ export function ChatRoom() {
       setThinkingMessageId,
       analysisSettings,
       createSearchSession,
+      searchMode,
     ],
   )
 
@@ -1926,6 +2008,66 @@ export function ChatRoom() {
                     </div>
                   )}
                 </div>
+
+                {/* 최근 검색 기록 */}
+                <div className="w-full pt-4">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <History className="h-4 w-4" />
+                    <span>최근 검색</span>
+                  </div>
+                  {sessions.length === 0 ? (
+                    <div className="mt-3 rounded-lg border border-border/60 border-dashed bg-muted/20 px-4 py-6 text-center">
+                      <p className="text-muted-foreground text-sm">검색 기록이 없습니다.</p>
+                      <p className="mt-1 text-muted-foreground/70 text-xs">
+                        새 검색을 시작해보세요
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {sessions.slice(0, 5).map((session) => (
+                        <button
+                          className="group flex w-full items-center justify-between rounded-lg border border-border/50 bg-background px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-muted/50"
+                          key={session.id}
+                          onClick={() => {
+                            // 세션 전환: 현재 메시지 저장 + 새 세션 데이터 로드
+                            // 빈 메시지 세션 복원은 switchToSessionAtom에서 처리
+                            switchToSession({
+                              targetSessionId: session.id,
+                              currentMessages: messages,
+                              currentFitScores: {
+                                scores: fitScoreState.scores,
+                                signatures: fitScoreState.signatures,
+                              },
+                            })
+                          }}
+                          type="button"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-foreground text-sm">
+                              {session.query}
+                            </p>
+                            <div className="mt-1 flex items-center gap-2 text-muted-foreground text-xs">
+                              {session.country && (
+                                <span className="rounded bg-muted px-1.5 py-0.5">
+                                  {session.country}
+                                </span>
+                              )}
+                              {session.industry && (
+                                <span className="rounded bg-muted px-1.5 py-0.5">
+                                  {session.industry}
+                                </span>
+                              )}
+                              {session.totalCount !== undefined && session.totalCount > 0 && (
+                                <span>{session.totalCount}건</span>
+                              )}
+                            </div>
+                          </div>
+                          <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
@@ -1971,6 +2113,10 @@ export function ChatRoom() {
                     switchToSession({
                       targetSessionId: session.id,
                       currentMessages: messages,
+                      currentFitScores: {
+                        scores: fitScoreState.scores,
+                        signatures: fitScoreState.signatures,
+                      },
                     })
                     setShowSessionManager(false)
                   }}

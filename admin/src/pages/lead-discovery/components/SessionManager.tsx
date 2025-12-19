@@ -4,7 +4,7 @@
  * - 검색 바, 필터, 정렬 기능 제공
  */
 
-import { useAtom, useSetAtom } from "jotai"
+import { useAtomValue, useSetAtom } from "jotai"
 import {
   ArrowDownUp,
   CheckCircle2,
@@ -52,8 +52,8 @@ type SessionManagerProps = {
 }
 
 export function SessionManager({ className, onSessionSelect, onClose }: SessionManagerProps) {
-  const [sessions] = useAtom(searchSessionsAtom)
-  const [activeSessionId, setActiveSessionId] = useAtom(activeSessionIdAtom)
+  const sessions = useAtomValue(searchSessionsAtom)
+  const activeSessionId = useAtomValue(activeSessionIdAtom)
   const removeSession = useSetAtom(removeSearchSessionAtom)
   const clearAllSessions = useSetAtom(clearAllSessionsAtom)
 
@@ -119,10 +119,9 @@ export function SessionManager({ className, onSessionSelect, onClose }: SessionM
   // 세션 선택 핸들러
   const handleSelectSession = useCallback(
     (session: SearchSession) => {
-      setActiveSessionId(session.id)
       onSessionSelect?.(session)
     },
-    [setActiveSessionId, onSessionSelect],
+    [onSessionSelect],
   )
 
   // 세션 삭제 핸들러

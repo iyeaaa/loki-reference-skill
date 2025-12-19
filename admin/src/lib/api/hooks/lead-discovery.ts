@@ -510,6 +510,7 @@ async function processSSEStream(
           hasMore: data.hasMore,
           totalAvailable: data.totalAvailable,
         })
+        console.log("[SSE] Results event data:", { results: results?.slice(0, 2), totalCount })
 
         // 결과 콜백 호출 (CustomerTable 등에서 사용)
         options.onResults?.(results, totalCount)

@@ -1027,6 +1027,10 @@ export type SearchSession = {
   customerAnalysisSummary?: string
   siteFavicon?: string
 
+  // Fit Score (세션별 저장)
+  fitScores?: Record<string, number>
+  fitScoreSignatures?: Record<string, string>
+
   // 메타데이터
   createdAt: number
   updatedAt: number
@@ -1273,25 +1277,34 @@ export const switchToSessionAtom = atom(
     params: {
       targetSessionId: string
       currentMessages?: ChatMessage[] // 현재 세션의 메시지 (저장용)
+      currentFitScores?: { scores: Record<string, number>; signatures: Record<string, string> } // 현재 세션의 Fit Score (저장용)
     },
   ) => {
     const sessions = get(searchSessionsAtom)
     const currentActiveId = get(activeSessionIdAtom)
-    const { targetSessionId, currentMessages } = params
+    const { targetSessionId, currentMessages, currentFitScores } = params
 
     // 같은 세션이면 무시
     if (currentActiveId === targetSessionId) {
       return null
     }
 
-    // 1. 현재 세션의 메시지 저장 (있는 경우)
-    if (currentActiveId && currentMessages && currentMessages.length > 0) {
-      set(
-        searchSessionsAtom,
-        sessions.map((s) =>
-          s.id === currentActiveId ? { ...s, messages: currentMessages, updatedAt: Date.now() } : s,
-        ),
-      )
+    // 1. 현재 세션의 메시지 및 Fit Score 저장 (있는 경우)
+    if (currentActiveId) {
+      const updates: Partial<SearchSession> = { updatedAt: Date.now() }
+      if (currentMessages && currentMessages.length > 0) {
+        updates.messages = currentMessages
+      }
+      if (currentFitScores && Object.keys(currentFitScores.scores).length > 0) {
+        updates.fitScores = currentFitScores.scores
+        updates.fitScoreSignatures = currentFitScores.signatures
+      }
+      if (Object.keys(updates).length > 1) {
+        set(
+          searchSessionsAtom,
+          sessions.map((s) => (s.id === currentActiveId ? { ...s, ...updates } : s)),
+        )
+      }
     }
 
     // 2. 타겟 세션 찾기
@@ -1308,16 +1321,96 @@ export const switchToSessionAtom = atom(
     set(customersAtom, targetSession.customers)
 
     // 5. 채팅 메시지 로드
-    set(chatMessagesAtom, targetSession.messages)
+    // - 과거 세션에 메시지가 저장되지 않은 경우(구버전/버그), 기본 메시지를 생성해서 복원
+    const hasMessages = targetSession.messages.length > 0
+    const restoredMessages: ChatMessage[] = hasMessages
+      ? targetSession.messages
+      : (() => {
+          const now = Date.now()
+          const resultCount = targetSession.totalCount || targetSession.customers.length
+          const userMsg: ChatMessage = {
+            id: `msg-${now}-restored-user`,
+            role: "user",
+            content: targetSession.query,
+            timestamp: new Date(now),
+          }
+          const assistantMsg: ChatMessage = {
+            id: `msg-${now + 1}-restored-assistant`,
+            role: "assistant",
+            content:
+              targetSession.status === "complete" && resultCount > 0
+                ? `Rinda 데이터베이스에서 **${resultCount}개의 잠재 바이어**를 찾았습니다. 오른쪽 테이블에서 결과를 확인하세요.`
+                : targetSession.status === "error"
+                  ? "검색 중 오류가 발생했습니다."
+                  : "검색 결과를 불러오는 중...",
+            timestamp: new Date(now + 1),
+          }
+          return [userMsg, assistantMsg]
+        })()
 
-    // 6. 스트리밍 상태 복원 (완료된 세션의 경우)
-    if (targetSession.status === "complete" || targetSession.status === "error") {
-      set(streamingStateAtom, {
-        ...initialStreamingState,
-        status: targetSession.status,
-        sessionId: targetSession.backendSessionId,
-        analysisSummary: targetSession.analysisSummary || "",
-        messageId: targetSession.messages.at(-1)?.id ?? null,
+    // 복원 메시지는 세션에도 저장해두어 다음부터는 동일 로직이 반복되지 않도록 함
+    if (!hasMessages) {
+      set(
+        searchSessionsAtom,
+        updatedSessions.map((s) =>
+          s.id === targetSessionId
+            ? { ...s, messages: restoredMessages, updatedAt: Date.now() }
+            : s,
+        ),
+      )
+    }
+
+    set(chatMessagesAtom, restoredMessages)
+
+    // 6. Fit Score 복원
+    if (targetSession.fitScores || targetSession.fitScoreSignatures) {
+      set(fitScoreStateAtom, {
+        scores: targetSession.fitScores || {},
+        signatures: targetSession.fitScoreSignatures || {},
+        isLoading: false,
+        progress: 100,
+      })
+    } else {
+      // Fit Score가 없으면 초기화
+      set(fitScoreStateAtom, {
+        scores: {},
+        signatures: {},
+        isLoading: false,
+        progress: 0,
+      })
+    }
+
+    // 7. 스트리밍 상태 완전 복원
+    const selectedRec = targetSession.recommendations?.find(
+      (r) => r.id === targetSession.selectedRecommendationId,
+    )
+    set(streamingStateAtom, {
+      analysisMessageId: null,
+      status: targetSession.status,
+      sessionId: targetSession.backendSessionId ?? undefined,
+      progress: targetSession.progress,
+      message: targetSession.message,
+      recommendations: targetSession.recommendations || [],
+      selectedRecommendationId: selectedRec?.id,
+      clarificationData: targetSession.clarificationData ?? undefined,
+      analyzedPages: targetSession.analyzedPages || [],
+      analysisSummary: targetSession.analysisSummary || "",
+      customerAnalysisSummary: targetSession.customerAnalysisSummary || "",
+      siteFavicon: targetSession.siteFavicon || "",
+      hasMore: false,
+      totalAvailable: targetSession.totalCount || 0,
+      loadedOffset: targetSession.customers.length,
+      userQuery: targetSession.query,
+      messageId: restoredMessages.at(-1)?.id ?? null,
+      currentSessionId: targetSession.id,
+    })
+
+    // 8. 선택된 바이어 타겟 복원
+    if (selectedRec) {
+      set(selectedTargetAtom, {
+        country: selectedRec.country,
+        industry: selectedRec.industry,
+        subIndustry: selectedRec.subIndustry,
       })
     }
 
@@ -1354,8 +1447,11 @@ export const getSessionStatusText = (session: SearchSession): string => {
       return "추가 정보 입력 필요"
     case "searching":
       return "리드 검색 중..."
-    case "complete":
-      return `${session.customers.length}건 완료`
+    case "complete": {
+      // totalCount를 우선 사용하고, 없으면 customers.length 사용
+      const count = session.totalCount || session.customers.length
+      return `${count}건 완료`
+    }
     case "error":
       return "오류 발생"
     default:

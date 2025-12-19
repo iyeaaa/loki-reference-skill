@@ -71,11 +71,53 @@ const ERROR_CONFIG: Record<
     iconColor: "text-cyan-500",
     borderColor: "border-cyan-200 dark:border-cyan-800",
   },
+  bigquery_query_invalid: {
+    icon: Search,
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
+    iconColor: "text-cyan-500",
+    borderColor: "border-cyan-200 dark:border-cyan-800",
+  },
+  bigquery_quota: {
+    icon: Clock,
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
+    iconColor: "text-cyan-500",
+    borderColor: "border-cyan-200 dark:border-cyan-800",
+  },
+  bigquery_no_results: {
+    icon: Search,
+    bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
+    iconColor: "text-cyan-500",
+    borderColor: "border-cyan-200 dark:border-cyan-800",
+  },
   ai: {
     icon: Sparkles,
     bgColor: "bg-violet-50 dark:bg-violet-950/30",
     iconColor: "text-violet-500",
     borderColor: "border-violet-200 dark:border-violet-800",
+  },
+  ai_parse_error: {
+    icon: Sparkles,
+    bgColor: "bg-violet-50 dark:bg-violet-950/30",
+    iconColor: "text-violet-500",
+    borderColor: "border-violet-200 dark:border-violet-800",
+  },
+  website_unreachable: {
+    icon: WifiOff,
+    bgColor: "bg-rose-50 dark:bg-rose-950/30",
+    iconColor: "text-rose-500",
+    borderColor: "border-rose-200 dark:border-rose-800",
+  },
+  website_blocked: {
+    icon: AlertTriangle,
+    bgColor: "bg-rose-50 dark:bg-rose-950/30",
+    iconColor: "text-rose-500",
+    borderColor: "border-rose-200 dark:border-rose-800",
+  },
+  user_cancelled: {
+    icon: XCircle,
+    bgColor: "bg-gray-50 dark:bg-gray-950/30",
+    iconColor: "text-gray-500",
+    borderColor: "border-gray-200 dark:border-gray-800",
   },
   unknown: {
     icon: AlertTriangle,

@@ -193,6 +193,9 @@ export const resetAllAtom = atom(null, (_get, set) => {
 import type { ClarificationData, LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
 import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 
+// 세션 TTL (30분)
+const SESSION_TTL_MS = 30 * 60 * 1000
+
 // 스트리밍 상태 인터페이스
 export type StreamingState = {
   messageId: string | null
@@ -204,6 +207,7 @@ export type StreamingState = {
   recommendations: BuyerRecommendation[]
   selectedRecommendationId?: string // 선택된 추천 ID
   sessionId?: string
+  sessionCreatedAt?: number // 세션 생성 시간 (만료 체크용)
   // 분석된 페이지 목록
   analyzedPages: AnalyzedPage[]
   siteFavicon?: string
@@ -234,9 +238,24 @@ export const initialStreamingState: StreamingState = {
   customerAnalysisSummary: "",
 }
 
-// 로컬스토리지에서 스트리밍 상태 로드
-// NOTE: 로딩 중 상태를 강제로 complete로 변환하지 않음
-// 화면 전환 시에도 로딩 상태를 유지해야 검색이 정상적으로 진행됨
+/**
+ * 세션이 만료되었는지 확인
+ * @param sessionCreatedAt 세션 생성 시간 (timestamp)
+ * @returns 만료 여부
+ */
+export const isSessionExpired = (sessionCreatedAt?: number): boolean => {
+  if (!sessionCreatedAt) {
+    return false
+  }
+  const now = Date.now()
+  return now - sessionCreatedAt > SESSION_TTL_MS
+}
+
+/**
+ * 로컬스토리지에서 스트리밍 상태 로드
+ * - 세션 만료 체크: 30분 이상 지난 세션은 초기화
+ * - 진행 중 상태 체크: 세션이 만료되었으면 idle로 리셋
+ */
 const loadStreamingState = (): StreamingState => {
   try {
     const stored = localStorage.getItem("lead-discovery-streaming-state")
@@ -246,8 +265,28 @@ const loadStreamingState = (): StreamingState => {
 
     const parsed = JSON.parse(stored) as StreamingState
 
-    // 저장된 상태를 그대로 반환 (로딩 중 상태도 유지)
-    // 실제 새로고침 후 복구가 필요한 경우, 사용자가 "새 검색" 버튼을 클릭하여 처리
+    // 세션 만료 체크 (30분)
+    if (parsed.sessionId && isSessionExpired(parsed.sessionCreatedAt)) {
+      console.log(
+        "[store] Session expired - resetting state",
+        `sessionId: ${parsed.sessionId}`,
+        `createdAt: ${parsed.sessionCreatedAt ? new Date(parsed.sessionCreatedAt).toISOString() : "unknown"}`,
+      )
+
+      // 세션이 만료된 경우: 기본 상태로 리셋하되, 완료된 결과는 유지
+      // (status가 complete인 경우 결과를 보여줄 수 있도록)
+      if (parsed.status === "complete") {
+        return {
+          ...parsed,
+          sessionId: undefined, // 세션 ID는 제거
+          sessionCreatedAt: undefined,
+        }
+      }
+
+      // 진행 중이었던 상태는 완전 초기화
+      return initialStreamingState
+    }
+
     return parsed
   } catch {
     return initialStreamingState

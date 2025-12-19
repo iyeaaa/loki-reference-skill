@@ -700,6 +700,41 @@ export function ChatRoom() {
         status: "error",
       }))
     },
+    // 세션 만료 시 자동 처리 - 상태 리셋 및 새 검색 유도
+    onSessionExpired: (data) => {
+      console.log("[ChatRoom] Session expired (search):", data)
+      const expiredError = {
+        type: "session_expired" as const,
+        message: data.message || "세션이 만료되었습니다",
+        originalError: `Session ${data.sessionId} expired`,
+        retryable: false,
+        recoverable: true,
+        suggestedAction: data.suggestedAction || "새 검색을 시작해주세요",
+        context: { sessionId: data.sessionId, timestamp: Date.now() },
+      }
+      setError(expiredError)
+
+      const currentMessageId = streamingState.messageId
+      if (currentMessageId) {
+        updateMessage(currentMessageId, { content: "", type: "error", errorData: expiredError })
+      } else {
+        addMessage({
+          id: `msg-${Date.now()}-expired`,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+          type: "error",
+          errorData: expiredError,
+        })
+      }
+
+      setStreamingState((prev) => ({
+        ...prev,
+        status: "error",
+        sessionId: undefined,
+        sessionCreatedAt: undefined,
+      }))
+    },
   })
 
   // 워크스페이스 선택 후 자동 검색 실행을 위한 이벤트 리스너
@@ -720,7 +755,7 @@ export function ChatRoom() {
       }
       addMessage(assistantMessage)
 
-      // 스트리밍 상태 초기화
+      // 스트리밍 상태 초기화 (세션 생성 시간 포함)
       setStreamingState({
         messageId: assistantMessageId,
         analysisMessageId: assistantMessageId,
@@ -732,6 +767,7 @@ export function ChatRoom() {
         analysisSummary: "",
         customerAnalysisSummary: "",
         userQuery: query,
+        sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
@@ -832,6 +868,41 @@ export function ChatRoom() {
         }
       })
     },
+    // 세션 만료 시 자동 처리
+    onSessionExpired: (data) => {
+      console.log("[ChatRoom] Session expired (select):", data)
+      const expiredError = {
+        type: "session_expired" as const,
+        message: data.message || "세션이 만료되었습니다",
+        originalError: `Session ${data.sessionId} expired`,
+        retryable: false,
+        recoverable: true,
+        suggestedAction: data.suggestedAction || "새 검색을 시작해주세요",
+        context: { sessionId: data.sessionId, timestamp: Date.now() },
+      }
+      setError(expiredError)
+
+      const currentMessageId = streamingState.messageId
+      if (currentMessageId) {
+        updateMessage(currentMessageId, { content: "", type: "error", errorData: expiredError })
+      } else {
+        addMessage({
+          id: `msg-${Date.now()}-expired`,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+          type: "error",
+          errorData: expiredError,
+        })
+      }
+
+      setStreamingState((prev) => ({
+        ...prev,
+        status: "error",
+        sessionId: undefined,
+        sessionCreatedAt: undefined,
+      }))
+    },
   })
 
   // Clarify mutation for handling clarification answers
@@ -912,6 +983,41 @@ export function ChatRoom() {
           status: "error",
         }
       })
+    },
+    // 세션 만료 시 자동 처리
+    onSessionExpired: (data) => {
+      console.log("[ChatRoom] Session expired (clarify):", data)
+      const expiredError = {
+        type: "session_expired" as const,
+        message: data.message || "세션이 만료되었습니다",
+        originalError: `Session ${data.sessionId} expired`,
+        retryable: false,
+        recoverable: true,
+        suggestedAction: data.suggestedAction || "새 검색을 시작해주세요",
+        context: { sessionId: data.sessionId, timestamp: Date.now() },
+      }
+      setError(expiredError)
+
+      const currentMessageId = streamingState.messageId
+      if (currentMessageId) {
+        updateMessage(currentMessageId, { content: "", type: "error", errorData: expiredError })
+      } else {
+        addMessage({
+          id: `msg-${Date.now()}-expired`,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+          type: "error",
+          errorData: expiredError,
+        })
+      }
+
+      setStreamingState((prev) => ({
+        ...prev,
+        status: "error",
+        sessionId: undefined,
+        sessionCreatedAt: undefined,
+      }))
     },
   })
 
@@ -1285,7 +1391,7 @@ export function ChatRoom() {
       }
       addMessage(assistantMessage)
 
-      // 스트리밍 상태 초기화
+      // 스트리밍 상태 초기화 (세션 생성 시간 포함)
       setStreamingState({
         messageId: assistantMessageId,
         analysisMessageId: assistantMessageId,
@@ -1297,6 +1403,7 @@ export function ChatRoom() {
         analysisSummary: "",
         customerAnalysisSummary: "",
         userQuery: query,
+        sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
       // 이전 요청 취소 및 새 AbortController 생성
@@ -1394,6 +1501,7 @@ export function ChatRoom() {
         analysisSummary: "",
         customerAnalysisSummary: "",
         userQuery: userInput, // 검색 쿼리 저장 (FitScore 계산용)
+        sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
       // 이전 요청 취소 및 새 AbortController 생성

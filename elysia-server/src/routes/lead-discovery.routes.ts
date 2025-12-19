@@ -370,6 +370,28 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
 
             // Get current state to find the selected recommendation
             const currentState = await leadDiscoveryGraph.getState(config)
+
+            // ⭐ 세션이 없거나 만료된 경우 명확한 에러 반환
+            if (!currentState.values) {
+              leadDiscoveryLogger.error(`[Select] Session not found or expired: ${sessionId}`)
+              session.push({
+                event: "error",
+                data: {
+                  type: "session_expired",
+                  message: "세션이 만료되었습니다",
+                  originalError: "Session not found or expired",
+                  retryable: false,
+                  recoverable: true,
+                  suggestedAction: "새 검색을 시작해주세요",
+                  context: {
+                    node: "select",
+                    sessionId,
+                    timestamp: Date.now(),
+                  },
+                },
+              })
+              return
+            }
             const state = currentState.values as LeadDiscoveryState
 
             // ⭐ interrupt payload에서도 recommendations 찾기
@@ -558,6 +580,29 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
 
             // Get current state
             const currentState = await leadDiscoveryGraph.getState(config)
+
+            // ⭐ 세션이 없거나 만료된 경우 명확한 에러 반환
+            if (!currentState.values) {
+              leadDiscoveryLogger.error(`[Clarify] Session not found or expired: ${sessionId}`)
+              session.push({
+                event: "error",
+                data: {
+                  type: "session_expired",
+                  message: "세션이 만료되었습니다",
+                  originalError: "Session not found or expired",
+                  retryable: false,
+                  recoverable: true,
+                  suggestedAction: "새 검색을 시작해주세요",
+                  context: {
+                    node: "clarify",
+                    sessionId,
+                    timestamp: Date.now(),
+                  },
+                },
+              })
+              return
+            }
+
             const state = currentState.values as LeadDiscoveryState
 
             leadDiscoveryLogger.info(

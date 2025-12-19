@@ -74,6 +74,14 @@ export type LeadDiscoveryEventData = {
   totalAvailable?: number
 }
 
+// 세션 만료 에러 데이터 타입
+export type SessionExpiredError = {
+  type: "session_expired"
+  message: string
+  suggestedAction: string
+  sessionId?: string
+}
+
 // Mutation 옵션 (콜백 기반)
 export type UseLeadDiscoveryMutationOptions = {
   onStatusChange?: (data: LeadDiscoveryEventData) => void
@@ -83,6 +91,8 @@ export type UseLeadDiscoveryMutationOptions = {
   onResults?: (results: BigQueryResult[], totalCount: number) => void
   onComplete?: (data: LeadDiscoveryEventData) => void
   onError?: (error: string) => void
+  // 세션 만료 시 호출되는 콜백 (자동 리셋 및 새 검색 유도)
+  onSessionExpired?: (data: SessionExpiredError) => void
   // 분석 요약 텍스트 스트리밍
   onTextChunk?: (chunk: string, accumulated: string) => void
 }
@@ -491,12 +501,29 @@ async function processSSEStream(
       }
 
       case "error": {
-        const errorMsg = (data.error as string) || "알 수 없는 오류"
-        log.error("SSE Error", errorMsg)
+        // 백엔드에서 구조화된 에러 객체를 보내는 경우 처리
+        const errorType = data.type as string | undefined
+        const errorMsg = (data.message as string) || (data.error as string) || "알 수 없는 오류"
+        const suggestedAction = (data.suggestedAction as string) || ""
+
+        log.error("SSE Error", { type: errorType, message: errorMsg })
+
+        // 세션 만료 에러 특별 처리
+        if (errorType === "session_expired") {
+          log.info("Session expired - triggering callback")
+          options.onSessionExpired?.({
+            type: "session_expired",
+            message: errorMsg,
+            suggestedAction,
+            sessionId: sessionIdRef.current,
+          })
+        }
+
         options.onError?.(errorMsg)
         const eventData: LeadDiscoveryEventData = {
           status: "error",
-          message: "오류가 발생했습니다",
+          message:
+            errorType === "session_expired" ? "세션이 만료되었습니다" : "오류가 발생했습니다",
           progress: 0,
           sessionId: sessionIdRef.current,
         }

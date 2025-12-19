@@ -1,6 +1,83 @@
 import iconv from "iconv-lite"
 
 /**
+ * Decode RFC 2047 encoded-word format
+ * Format: =?charset?encoding?encoded_text?=
+ * Example: =?utf-8?B?7LmZ67CU7J207LmZ?= -> 칙바이칙
+ *
+ * @param text - Text that may contain RFC 2047 encoded-words
+ * @returns Decoded text
+ */
+export function decodeRfc2047(text: string): string {
+  if (!text) return text
+
+  // RFC 2047 encoded-word pattern: =?charset?encoding?encoded_text?=
+  const encodedWordRegex = /=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g
+
+  return text.replace(
+    encodedWordRegex,
+    (match, charset: string, encoding: string, encodedText: string) => {
+      try {
+        const normalizedCharset = charset.toLowerCase().trim()
+        const encodingType = encoding.toUpperCase()
+
+        let buffer: Buffer
+
+        if (encodingType === "B") {
+          // Base64 encoding
+          buffer = Buffer.from(encodedText, "base64")
+        } else if (encodingType === "Q") {
+          // Quoted-Printable encoding (with _ = space)
+          const decoded = encodedText
+            .replace(/_/g, " ") // In Q encoding, _ represents space
+            .replace(/=([0-9A-Fa-f]{2})/g, (_, hex: string) => {
+              return String.fromCharCode(Number.parseInt(hex, 16))
+            })
+          buffer = Buffer.from(decoded, "latin1")
+        } else {
+          return match // Unknown encoding, return as-is
+        }
+
+        // Decode with proper charset
+        if (iconv.encodingExists(normalizedCharset)) {
+          return iconv.decode(buffer, normalizedCharset)
+        }
+
+        // Fallback to UTF-8
+        return buffer.toString("utf-8")
+      } catch (error) {
+        console.error("Failed to decode RFC 2047 encoded-word:", error)
+        return match // Return original on error
+      }
+    },
+  )
+}
+
+/**
+ * Sanitize filename while preserving Unicode characters (Korean, Japanese, Chinese, etc.)
+ * Only removes characters that are problematic for filesystems
+ *
+ * @param filename - Original filename
+ * @returns Sanitized filename safe for filesystem
+ */
+export function sanitizeFilename(filename: string): string {
+  if (!filename) return filename
+
+  // First decode any RFC 2047 encoded-word format
+  const decoded = decodeRfc2047(filename)
+
+  // Remove or replace only filesystem-unsafe characters
+  // Preserve Unicode letters (Korean, Japanese, Chinese, etc.)
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Intentionally removing control characters from filenames
+  const unsafeCharsPattern = /[<>:"/\\|?*\x00-\x1f]/g
+  return decoded
+    .replace(unsafeCharsPattern, "_") // Filesystem unsafe characters
+    .replace(/\.{2,}/g, ".") // Multiple dots
+    .replace(/^\.+|\.+$/g, "") // Leading/trailing dots
+    .trim()
+}
+
+/**
  * Extract clean email address from various formats
  *
  * Examples:
@@ -548,7 +625,7 @@ export function parseEmailAttachments(emailContent: string): Array<{
       const base64Content = decodedBuffer.toString("base64")
 
       attachments.push({
-        filename: filename.replace(/[^a-zA-Z0-9._-]/g, "_"), // Sanitize filename
+        filename: sanitizeFilename(filename), // Decode RFC 2047 and sanitize
         type: contentType,
         size: decodedBuffer.length,
         content: base64Content,

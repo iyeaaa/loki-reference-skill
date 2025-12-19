@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export function EmailSignatureManagement() {
   const { user } = useAuth()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingSignature, setEditingSignature] = useState<EmailSignature | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<EmailSignature | null>(null)
 
   // Get workspaceId from localStorage
   // 백엔드에서 JWT 토큰으로 "all"을 처리하므로 프론트엔드에서는 그대로 전달
@@ -144,14 +146,18 @@ export function EmailSignatureManagement() {
     handleCloseDialog()
   }
 
-  const handleDelete = async (signatureId: string) => {
-    if (!confirm("정말 이 서명을 삭제하시겠습니까?")) {
+  const handleDeleteClick = (signature: EmailSignature) => {
+    setDeleteTarget(signature)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) {
       return
     }
-
     await deleteMutation.mutateAsync({
-      id: signatureId,
+      id: deleteTarget.id,
     })
+    setDeleteTarget(null)
   }
 
   const handleSetDefault = async (signatureId: string) => {
@@ -245,7 +251,7 @@ export function EmailSignatureManagement() {
                       </Button>
                       <Button
                         disabled={deleteMutation.isPending}
-                        onClick={() => handleDelete(signature.id)}
+                        onClick={() => handleDeleteClick(signature)}
                         size="sm"
                         title="서명 삭제"
                         variant="ghost"
@@ -335,6 +341,17 @@ export function EmailSignatureManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        confirmText={deleteTarget?.name || ""}
+        description="이 작업은 되돌릴 수 없습니다. 서명이 영구적으로 삭제됩니다."
+        isLoading={deleteMutation.isPending}
+        itemName={deleteTarget?.name}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={!!deleteTarget}
+        title="서명 삭제"
+      />
     </>
   )
 }

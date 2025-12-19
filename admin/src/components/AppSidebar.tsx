@@ -317,11 +317,11 @@ export function AppSidebar({
                     url={item.url}
                   />
                   {/* 대시보드(첫번째) 밑에 구분선 */}
-                  {index === 0 && (
+                  {index === 0 && mainMenuItems.length > 2 && (
                     <div className="my-3 border-sidebar-border border-t group-data-[collapsible=icon]:hidden" />
                   )}
-                  {/* Rinda GPT(마지막) 위에 구분선 */}
-                  {index === mainMenuItems.length - 2 && (
+                  {/* Rinda GPT(마지막) 위에 구분선 - 메뉴가 3개 이상일 때만 */}
+                  {index === mainMenuItems.length - 2 && mainMenuItems.length > 2 && (
                     <div className="my-3 border-sidebar-border border-t group-data-[collapsible=icon]:hidden" />
                   )}
                 </Fragment>

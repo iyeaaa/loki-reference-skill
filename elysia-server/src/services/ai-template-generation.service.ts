@@ -215,7 +215,7 @@ GREETING:
 - NEVER: "Hi 담당자" (language mixing = amateur hour)
 
 ═══════════════════════════════════════════════════════════════
-THE PERFECT COLD EMAIL STRUCTURE (60-80 words)
+THE PERFECT COLD EMAIL STRUCTURE
 ═══════════════════════════════════════════════════════════════
 
 LINE 1 - THE HOOK (Pattern Interrupt)
@@ -239,7 +239,6 @@ NOT: "Would you be available for a 30-minute call next Tuesday at 3pm?"
 ═══════════════════════════════════════════════════════════════
 WHAT MAKES EMAILS GET REPLIES (Data-Backed)
 ═══════════════════════════════════════════════════════════════
-✅ Emails under 75 words: 51% higher response rate
 ✅ One question: 50% more replies than multiple questions
 ✅ Personalized first line: 30%+ open rate increase
 ✅ Specific numbers: 2x more credible than vague claims
@@ -275,12 +274,23 @@ Many beauty distributors we've worked with struggled to find the right buyers wh
 Worth a quick chat about your expansion plans?"
 
 ═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT
+OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON)
 ═══════════════════════════════════════════════════════════════
-LANGUAGE: [en/ko/ja/zh]
-SUBJECT: [3-5 words, curiosity-driven, lowercase except proper nouns]
-BODY:
-[60-80 words, consistent language, no signature]`
+Respond ONLY with a valid JSON object. No other text before or after.
+Use \\n for line breaks within the body text.
+
+{
+  "language": "en",
+  "subject": "your subject line here",
+  "body": "First paragraph here.\\n\\nSecond paragraph here.\\n\\nClosing question?"
+}
+
+Example output:
+{
+  "language": "en",
+  "subject": "quick question about {{company_name}}",
+  "body": "Hi there,\\n\\nNoticed {{company_name}} has been making waves in the market.\\n\\nMany companies we work with faced similar challenges when scaling. We helped 3 similar businesses achieve 50% growth in 90 days.\\n\\nWorth a quick chat?"
+}`
 
       const userMessage = `
 [USER REQUIREMENTS]
@@ -293,7 +303,6 @@ REMEMBER:
 - Language: ${isEnglishTarget ? "English ONLY - no Korean words" : `Primary language of ${country} ONLY`}
 - Use {{company_name}} for company name (will be replaced with real data)
 - Start with "Hi there," or "Hello," - do NOT use contact name variable
-- 75-100 words maximum
 - End naturally - no signature needed
 ${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}`
 
@@ -329,36 +338,153 @@ ${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}
 
   /**
    * AI 응답에서 언어, 제목, 본문 파싱
+   * JSON 형식 우선, 실패 시 텍스트 파싱 폴백
    */
   private parseAIResponse(response: string): GeneratedTemplate {
-    const lines = response.trim().split("\n")
-    let language = "en"
-    let subject = ""
-    let bodyLines: string[] = []
-    let inBody = false
+    const trimmedResponse = response.trim()
 
-    for (const line of lines) {
-      if (line.startsWith("LANGUAGE:")) {
-        language = line.substring("LANGUAGE:".length).trim()
-      } else if (line.startsWith("SUBJECT:")) {
-        subject = line.substring("SUBJECT:".length).trim()
-      } else if (line.startsWith("BODY:")) {
-        inBody = true
-      } else if (inBody) {
-        bodyLines.push(line)
+    // 1단계: JSON 파싱 시도 (우선)
+    const jsonResult = this.tryParseJson(trimmedResponse)
+    if (jsonResult) {
+      console.log(
+        `[AITemplate] ✅ JSON parsed - subject: "${jsonResult.subject.substring(0, 50)}", body: ${jsonResult.bodyText.length} chars`,
+      )
+      return jsonResult
+    }
+
+    // 2단계: JSON 파싱 실패 시 텍스트 기반 파싱 (레거시 폴백)
+    console.warn("[AITemplate] ⚠️ JSON parsing failed, falling back to text parsing")
+    return this.parseTextResponse(trimmedResponse)
+  }
+
+  /**
+   * JSON 형식 응답 파싱 시도
+   */
+  private tryParseJson(response: string): GeneratedTemplate | null {
+    try {
+      // JSON 블록 추출 (```json ... ``` 또는 순수 JSON)
+      let jsonStr = response
+
+      // 마크다운 코드 블록 제거
+      const jsonBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (jsonBlockMatch?.[1]) {
+        jsonStr = jsonBlockMatch[1].trim()
+      }
+
+      // { } 로 감싸진 부분만 추출
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        return null
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        language?: string
+        subject?: string
+        body?: string
+      }
+
+      // 필수 필드 검증
+      if (!parsed.subject || !parsed.body) {
+        console.warn("[AITemplate] JSON parsed but missing required fields")
+        return null
+      }
+
+      const bodyText = parsed.body.trim()
+      const bodyHtml = this.convertTextToHtml(bodyText)
+
+      return {
+        subject: parsed.subject.trim(),
+        bodyText,
+        bodyHtml,
+        detectedLanguage: parsed.language || "en",
+      }
+    } catch {
+      // JSON 파싱 실패 - 무시하고 텍스트 파싱으로 폴백
+      return null
+    }
+  }
+
+  /**
+   * 텍스트 기반 응답 파싱 (레거시 형식 지원)
+   */
+  private parseTextResponse(response: string): GeneratedTemplate {
+    // LANGUAGE: / SUBJECT: / BODY: 마커 기반 파싱
+    const languageMatch = response.match(/^LANGUAGE:\s*(.+?)$/im)
+    const subjectMatch = response.match(/^SUBJECT:\s*(.+?)$/im)
+    const bodyMatch = response.match(/^BODY:\s*([\s\S]*)$/im)
+
+    const language = languageMatch?.[1]?.trim() || "en"
+    let subject = subjectMatch?.[1]?.trim() || ""
+    let bodyText = bodyMatch?.[1]?.trim() || ""
+
+    // BODY: 마커 이후 텍스트 추출 (정규식 실패 시)
+    if (!bodyText && response.includes("BODY:")) {
+      const bodyIndex = response.indexOf("BODY:")
+      bodyText = response.substring(bodyIndex + "BODY:".length).trim()
+    }
+
+    // 마커 없는 경우: 첫 줄을 제목으로, 나머지를 본문으로
+    if (!subject && !bodyText) {
+      const lines = response.split("\n").filter((line) => line.trim())
+      if (lines.length > 0) {
+        const firstLine = lines[0]?.trim() || ""
+        const isGreeting = /^(hi|hello|hey|dear|안녕하세요|안녕)/i.test(firstLine)
+
+        if (isGreeting) {
+          subject = "Quick question"
+          bodyText = lines.join("\n").trim()
+        } else {
+          subject = firstLine
+          bodyText = lines.slice(1).join("\n").trim()
+        }
       }
     }
 
-    // SUBJECT/BODY 형식이 아니면 전체를 본문으로
-    if (!subject && bodyLines.length === 0) {
-      subject = lines[0] || "제목 없음"
-      bodyLines = lines.slice(1)
+    // 본문이 비어있으면 마커 제외한 모든 내용 사용
+    if (subject && !bodyText) {
+      const contentLines = response.split("\n").filter((line) => {
+        const trimmed = line.trim()
+        return (
+          trimmed &&
+          !trimmed.startsWith("LANGUAGE:") &&
+          !trimmed.startsWith("SUBJECT:") &&
+          !trimmed.startsWith("BODY:")
+        )
+      })
+      if (contentLines.length > 0) {
+        bodyText = contentLines.join("\n").trim()
+      }
     }
 
-    const bodyText = bodyLines.join("\n").trim()
+    // 최후의 폴백
+    if (!bodyText) {
+      console.error("[AITemplate] ❌ Empty body - using fallback")
+      console.error(`[AITemplate] Raw: ${response.substring(0, 200)}...`)
+      bodyText =
+        "Hi there,\n\nI noticed {{company_name}} and thought there might be an opportunity to connect.\n\nWorth a quick conversation?"
+    }
 
-    // HTML 버전 생성 (단락 구분 및 줄바꿈 처리)
-    const bodyHtml = bodyText
+    if (!subject) {
+      subject = "Quick question"
+    }
+
+    console.log(
+      `[AITemplate] Text parsed - subject: "${subject.substring(0, 50)}", body: ${bodyText.length} chars`,
+    )
+
+    return {
+      subject,
+      bodyText,
+      bodyHtml: this.convertTextToHtml(bodyText),
+      detectedLanguage: language,
+    }
+  }
+
+  /**
+   * 텍스트를 HTML로 변환
+   */
+  private convertTextToHtml(text: string): string {
+    return text
       .split("\n\n")
       .map((para) => {
         // 빈 단락 스킵
@@ -388,13 +514,6 @@ ${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}
       })
       .filter((para) => para)
       .join("\n")
-
-    return {
-      subject,
-      bodyText,
-      bodyHtml,
-      detectedLanguage: language,
-    }
   }
 
   /**
@@ -426,17 +545,20 @@ Translate the following email to ${targetLanguage}.
 
 IMPORTANT RULES:
 1. Keep the same tone and style as the original
-2. Preserve all placeholders exactly as they are (e.g., {{회사명}}, {{담당자명}})
+2. Preserve all placeholders exactly as they are (e.g., {{company_name}}, {{회사명}})
 3. Make the translation sound natural, not literal
 4. Keep the email concise and professional
-5. Do NOT translate placeholder names - keep them in Korean ({{회사명}}, {{담당자명}})
 
-Respond in this format:
-SUBJECT: [translated subject]
-BODY:
-[translated body]`
+OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON):
+Respond ONLY with a valid JSON object. No other text.
+Use \\n for line breaks within the body.
 
-      const userMessage = `Please translate this email to ${targetLanguage}:
+{
+  "subject": "translated subject here",
+  "body": "Translated body here.\\n\\nWith paragraphs."
+}`
+
+      const userMessage = `Translate this email to ${targetLanguage}:
 
 SUBJECT: ${subject}
 
@@ -453,23 +575,42 @@ ${bodyText}`
       const elapsed = Date.now() - startTime
       console.log(`[AITemplate] Translation completed (${elapsed}ms)`)
 
-      // Parse the response
-      const lines = text.trim().split("\n")
+      // JSON 파싱 시도
       let translatedSubject = subject
-      const translatedBodyLines: string[] = []
-      let inBody = false
+      let translatedBodyText = bodyText
 
-      for (const line of lines) {
-        if (line.startsWith("SUBJECT:")) {
-          translatedSubject = line.substring("SUBJECT:".length).trim()
-        } else if (line.startsWith("BODY:")) {
-          inBody = true
-        } else if (inBody) {
-          translatedBodyLines.push(line)
+      const jsonResult = this.tryParseJson(text)
+      if (jsonResult) {
+        translatedSubject = jsonResult.subject
+        translatedBodyText = jsonResult.bodyText
+        console.log(`[AITemplate] ✅ Translation JSON parsed successfully`)
+      } else {
+        // 레거시 텍스트 파싱 폴백
+        console.warn("[AITemplate] ⚠️ Translation JSON parsing failed, trying text parsing")
+        const lines = text.trim().split("\n")
+        const translatedBodyLines: string[] = []
+        let inBody = false
+
+        for (const line of lines) {
+          if (line.startsWith("SUBJECT:")) {
+            translatedSubject = line.substring("SUBJECT:".length).trim()
+          } else if (line.startsWith("BODY:")) {
+            inBody = true
+          } else if (inBody) {
+            translatedBodyLines.push(line)
+          }
+        }
+
+        if (translatedBodyLines.length > 0) {
+          translatedBodyText = translatedBodyLines.join("\n").trim()
+        }
+
+        // 여전히 비어있으면 원본 사용
+        if (!translatedBodyText) {
+          console.warn("[AITemplate] ⚠️ Translation failed - using original body")
+          translatedBodyText = bodyText
         }
       }
-
-      const translatedBodyText = translatedBodyLines.join("\n").trim()
 
       // Generate HTML version
       const translatedBodyHtml = translatedBodyText

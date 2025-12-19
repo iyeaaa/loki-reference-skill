@@ -15,7 +15,7 @@ export function useOpenAIApiKeys(workspaceId: string) {
   return useQuery({
     queryKey: openAIApiKeyKeys.list(workspaceId),
     queryFn: () => openAIApiKeysApi.list(workspaceId),
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && workspaceId !== "all",
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
   })

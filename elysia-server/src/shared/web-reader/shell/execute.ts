@@ -64,7 +64,7 @@ export async function executeWebReader(
       const body = prepareRequestBody(validatedParams)
       const headers = prepareRequestHeaders(apiKey)
 
-      // Execute with retry logic
+      // Execute with retry logic (with rate limit backoff)
       const response = await pRetry(
         async () => {
           const controller = new AbortController()
@@ -85,13 +85,19 @@ export async function executeWebReader(
             if (!res.ok) {
               const errorBody = await res.text()
 
-              // Check for rate limit
+              // Check for rate limit - throw special error for retry with backoff
               if (res.status === 429) {
                 const retryAfter = res.headers.get("Retry-After")
+                const waitSeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 5
+                logger?.info(`[JinaReader] Rate limited, waiting ${waitSeconds}s before retry`, {
+                  url: validatedParams.url,
+                })
+                // Wait before throwing to trigger retry
+                await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000))
                 const error: WebReaderError = {
                   type: "RATE_LIMIT_ERROR",
                   message: `Rate limit exceeded: ${errorBody}`,
-                  retryAfter: retryAfter ? Number.parseInt(retryAfter, 10) : undefined,
+                  retryAfter: waitSeconds,
                 }
                 throw error
               }
@@ -124,6 +130,8 @@ export async function executeWebReader(
         },
         {
           retries,
+          minTimeout: 2000, // Wait at least 2 seconds between retries
+          maxTimeout: 10000, // Max 10 seconds between retries
           onFailedAttempt: (context) => {
             logger?.error(
               `Web Reader Attempt ${context.attemptNumber} failed for URL '${validatedParams.url}'`,

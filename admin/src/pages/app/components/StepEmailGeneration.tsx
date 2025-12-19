@@ -45,7 +45,7 @@ export function StepEmailGeneration() {
   } = useEmails({
     workspaceId: workspace?.id || "",
     sequenceId: sequenceId || undefined,
-    limit: 50,
+    limit: 700, // 300 leads × 2 steps = 600 emails max
   })
 
   // Get lead IDs from DB onboarding progress
@@ -257,41 +257,61 @@ export function StepEmailGeneration() {
 
                   {/* Full Email Dialog - Show All Emails */}
                   <Dialog onOpenChange={setShowFullEmail} open={showFullEmail}>
-                    <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
-                      <DialogHeader>
+                    <DialogContent className="max-h-[90vh] max-w-4xl">
+                      <DialogHeader className="border-gray-200 border-b pb-4">
                         <DialogTitle className="flex items-center gap-2">
                           <Mail className="h-5 w-5 text-blue-600" />
                           {isKorean
-                            ? `전체 이메일 보기 (${emails.length}개)`
-                            : `All Emails (${emails.length})`}
+                            ? `생성된 이메일 (${emails.length}개)`
+                            : `Generated Emails (${emails.length})`}
                         </DialogTitle>
+                        <p className="mt-1 text-gray-500 text-sm">
+                          {isKorean
+                            ? `${leadCount}명의 바이어에게 발송될 맞춤 이메일입니다`
+                            : `Personalized emails for ${leadCount} buyers`}
+                        </p>
                       </DialogHeader>
-                      <div className="max-h-[60vh] space-y-4 overflow-y-auto pt-4">
+                      <div className="max-h-[70vh] space-y-3 overflow-y-auto py-4">
                         {emails.map((email, index) => (
-                          <div
-                            className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                          <details
+                            className="group rounded-lg border border-gray-200 bg-white"
                             key={email.id}
                           >
-                            <div className="mb-2 flex items-center justify-between">
-                              <span className="font-medium text-blue-600 text-xs">
-                                #{index + 1} - {email.leadName}
-                              </span>
+                            <summary className="flex cursor-pointer items-center justify-between p-4 hover:bg-gray-50">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 font-medium text-blue-600 text-xs">
+                                  {index + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium text-gray-900 text-sm">
+                                    {email.leadName}
+                                  </p>
+                                  <p className="truncate text-gray-500 text-xs">{email.subject}</p>
+                                </div>
+                              </div>
+                              <span className="text-gray-400 text-xs group-open:rotate-180">▼</span>
+                            </summary>
+                            <div className="border-gray-200 border-t bg-gray-50 p-4">
+                              <div className="mb-3">
+                                <p className="mb-1 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                  {isKorean ? "제목" : "Subject"}
+                                </p>
+                                <p className="font-medium text-gray-900">{email.subject}</p>
+                              </div>
+                              <div>
+                                <p className="mb-1 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                  {isKorean ? "본문" : "Body"}
+                                </p>
+                                <div className="whitespace-pre-line rounded-md bg-white p-3 text-gray-800 text-sm leading-relaxed">
+                                  {email.body || (
+                                    <span className="text-gray-400 italic">
+                                      {isKorean ? "(본문 없음)" : "(No content)"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="mb-2">
-                              <p className="mb-1 text-gray-500 text-xs">
-                                {isKorean ? "제목" : "Subject"}
-                              </p>
-                              <p className="font-medium text-gray-900 text-sm">{email.subject}</p>
-                            </div>
-                            <div>
-                              <p className="mb-1 text-gray-500 text-xs">
-                                {isKorean ? "본문" : "Body"}
-                              </p>
-                              <p className="line-clamp-6 whitespace-pre-line text-gray-800 text-sm leading-relaxed">
-                                {email.body}
-                              </p>
-                            </div>
-                          </div>
+                          </details>
                         ))}
                       </div>
                     </DialogContent>

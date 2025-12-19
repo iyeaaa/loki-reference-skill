@@ -3,6 +3,7 @@
  *
  * BullMQ worker service for auto-generate onboarding
  * Handles phase-based execution with BullMQ native job state
+ * Emits real-time progress events via Redis PubSub → SSE
  */
 
 import type { Job } from "bullmq"
@@ -16,16 +17,35 @@ import { leads as leadsTable } from "../db/schema/leads"
 import { onboardingProgress } from "../db/schema/onboarding"
 import { sequenceSteps, sequences } from "../db/schema/sequences"
 import type { OnboardingAutoGenerateJob, OnboardingAutoGenerateResult } from "../lib/queue/types"
+import {
+  createCompleteEvent,
+  createDiscoveryBatchEvent,
+  createDiscoveryCompleteEvent,
+  createDiscoveryStartEvent,
+  createErrorEvent,
+  createGroupCompleteEvent,
+  createGroupStartEvent,
+  createPreviewProgressEvent,
+  createPreviewsCompleteEvent,
+  createPreviewsStartEvent,
+  createSequenceCompleteEvent,
+  createSequenceStartEvent,
+  createTemplateProgressEvent,
+  createTemplatesCompleteEvent,
+  createTemplatesStartEvent,
+  emitOnboardingProgress,
+  type OnboardingProgressEvent,
+} from "../lib/redis/onboarding-events"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
+import { upsertOnboardingProgressNotification } from "./notification.service"
 import {
   COUNTRY_NAMES,
   completeStep1CompanyInfo,
   completeStep2LeadSearch,
-  completeStep3EmailGeneration,
   EMAIL_TYPES_2TOUCH,
   enrichLeadsForOnboarding,
   generatePreviewEmailsForSequence,
@@ -40,8 +60,42 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 300
+const TARGET_LEADS = 20 // Changed from 300 to 20 for faster onboarding
 const ENRICHMENT_BATCH_SIZE = 20
+const BIGQUERY_BATCH_SIZE = 100 // Reduced from 500 since we only need 20 leads
+const MAX_SEARCH_ITERATIONS = 2 // Reduced from 5 since we only need 20 leads
+
+// ====================================
+// SSE + DB NOTIFICATION WRAPPER
+// ====================================
+
+/**
+ * Emit SSE event and save notification to DB
+ * This ensures real-time updates (SSE) and persistence (DB) for notifications
+ */
+async function emitAndSaveNotification(
+  event: OnboardingProgressEvent,
+  userId: string,
+): Promise<void> {
+  console.log(
+    `[OnboardingWorker] emitAndSaveNotification called - phase: ${event.phase}, userId: ${userId}, workspaceId: ${event.workspaceId}`,
+  )
+
+  // Emit SSE event for real-time updates
+  await emitOnboardingProgress(event)
+
+  // Save to DB for persistence (async, don't block on this)
+  try {
+    const notification = await upsertOnboardingProgressNotification(userId, event)
+    console.log(
+      `[OnboardingWorker] Notification saved to DB - id: ${notification.id}, type: ${notification.type}, title: ${notification.title}`,
+    )
+  } catch (error) {
+    // Log error details for debugging
+    console.error("[OnboardingWorker] Failed to save notification to DB:", error)
+    console.error("[OnboardingWorker] Event data:", JSON.stringify(event, null, 2))
+  }
+}
 
 // ====================================
 // TYPES
@@ -186,8 +240,12 @@ export async function runDiscoveryPhase(
   count: number
 }> {
   const { workspaceId, userId, surveyData } = context
+  const jobId = job.id || "unknown"
 
   console.log(`[DiscoveryPhase] Starting for workspace ${workspaceId}`)
+
+  // Emit SSE + Save to DB: Discovery started
+  await emitAndSaveNotification(createDiscoveryStartEvent(workspaceId, jobId), userId)
 
   // Load checkpoint from BullMQ job data
   const _checkpoint = loadCheckpoint(job)
@@ -245,39 +303,96 @@ export async function runDiscoveryPhase(
       progressPercent: 15, // 15%
     })
 
-    // Generate simple generic search query
-    const query = `${industryName} companies in ${countryName}`
-    console.log(`[DiscoveryPhase] Query: "${query}"`)
+    // Track processed websites to avoid duplicates across iterations
+    const processedWebsites = new Set<string>()
 
-    // Search BigQuery
-    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+    // Iterative search until we reach target or exhaust options
+    for (let iteration = 0; iteration < MAX_SEARCH_ITERATIONS; iteration++) {
+      // Check current count before each iteration
+      const currentLeadsCount = await countLeadsWithEmails(workspaceId)
+      if (currentLeadsCount >= TARGET_LEADS) {
+        console.log(
+          `[DiscoveryPhase] Target ${TARGET_LEADS} reached with ${currentLeadsCount} leads, stopping iterations`,
+        )
+        break
+      }
 
-    if (!result.results.length) {
-      console.log("[DiscoveryPhase] No results from BigQuery")
-      return { leadIds: [], count: 0 }
-    }
+      // Generate search query with higher LIMIT for onboarding
+      const query = `${industryName} companies in ${countryName}`
+      console.log(
+        `[DiscoveryPhase] Iteration ${iteration + 1}/${MAX_SEARCH_ITERATIONS}: Query="${query}", LIMIT=${BIGQUERY_BATCH_SIZE}`,
+      )
 
-    console.log(`[DiscoveryPhase] Found ${result.results.length} results from BigQuery`)
+      // Search BigQuery with limitOverride to get more results per iteration
+      let result: Awaited<ReturnType<typeof searchBigQuery>>
 
-    // Prepare leads for enrichment
-    const leadsToEnrich = result.results
-      .filter((row) => row.website)
-      .map((row) => ({
-        company: row.company as string,
-        website: row.website as string,
-        industry: row.industry as string,
-        employees: row.employees?.toString() || "",
-        country: row.country as string,
-      }))
+      if (iteration === 0) {
+        // First iteration: use natural language query with limitOverride
+        result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
+          limitOverride: BIGQUERY_BATCH_SIZE,
+        })
+      } else {
+        // Subsequent iterations: modify query to get different results
+        // Add variation to get different results (e.g., different keywords)
+        const variationQueries = [
+          `${industryName} businesses in ${countryName}`,
+          `${industryName} firms in ${countryName}`,
+          `${countryName} ${industryName} 업체`,
+          `${countryName}의 ${industryName} 회사`,
+        ]
+        const variationIndex = (iteration - 1) % variationQueries.length
+        const variationQuery = variationQueries[variationIndex] as string
+        console.log(`[DiscoveryPhase] Using variation query: "${variationQuery}"`)
+        result = await searchBigQuery(variationQuery, APOLLO_LEADS_DATA_DICTIONARY, {
+          limitOverride: BIGQUERY_BATCH_SIZE,
+        })
+      }
 
-    console.log(`[DiscoveryPhase] Prepared ${leadsToEnrich.length} leads for enrichment`)
+      if (!result.results.length) {
+        console.log(`[DiscoveryPhase] No results from BigQuery in iteration ${iteration + 1}`)
+        continue
+      }
 
-    // Process in batches of 20
-    if (leadsToEnrich.length > 0) {
+      console.log(
+        `[DiscoveryPhase] Iteration ${iteration + 1}: Found ${result.results.length} results from BigQuery`,
+      )
+
+      // Prepare leads for enrichment (filter out already processed)
+      const leadsToEnrich = result.results
+        .filter((row) => {
+          const website = row.website as string
+          if (!website) return false
+          // Skip already processed websites
+          if (processedWebsites.has(website.toLowerCase())) return false
+          processedWebsites.add(website.toLowerCase())
+          return true
+        })
+        .map((row) => ({
+          company: row.company as string,
+          website: row.website as string,
+          industry: row.industry as string,
+          employees: row.employees?.toString() || "",
+          country: row.country as string,
+        }))
+
+      console.log(
+        `[DiscoveryPhase] Iteration ${iteration + 1}: Prepared ${leadsToEnrich.length} new leads for enrichment`,
+      )
+
+      if (leadsToEnrich.length === 0) {
+        console.log(`[DiscoveryPhase] No new leads to enrich in iteration ${iteration + 1}`)
+        continue
+      }
+
+      // Process in batches
+      const totalBatches = Math.ceil(leadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
+      let totalEnrichedCount = 0
+
       for (let i = 0; i < leadsToEnrich.length; i += ENRICHMENT_BATCH_SIZE) {
         const batch = leadsToEnrich.slice(i, i + ENRICHMENT_BATCH_SIZE)
         const batchNum = Math.floor(i / ENRICHMENT_BATCH_SIZE) + 1
-        const totalBatches = Math.ceil(leadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
+        const globalBatchNum =
+          iteration * Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE) + batchNum
 
         console.log(
           `[DiscoveryPhase] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`,
@@ -287,9 +402,31 @@ export async function runDiscoveryPhase(
         const enrichedBatch = await enrichLeadsForOnboarding(batch)
 
         const enrichedCount = enrichedBatch.filter((l) => l.primaryEmail).length
+        totalEnrichedCount += enrichedCount
         console.log(
           `[DiscoveryPhase] Batch ${batchNum}: ${enrichedCount}/${enrichedBatch.length} have emails`,
         )
+
+        // Emit SSE + Save to DB: Batch progress
+        const currentCount = await countLeadsWithEmails(workspaceId)
+        const progressPercent = Math.min(55, 15 + Math.floor((currentCount / TARGET_LEADS) * 40))
+        await emitAndSaveNotification(
+          createDiscoveryBatchEvent(
+            workspaceId,
+            jobId,
+            globalBatchNum,
+            MAX_SEARCH_ITERATIONS * Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE),
+            currentCount,
+            totalEnrichedCount,
+          ),
+          userId,
+        )
+
+        // Update progress
+        await job.updateProgress({
+          phase: "discovery",
+          progressPercent,
+        })
 
         // Filter and save batch with emails
         const batchWithEmails = enrichedBatch.filter((lead) => {
@@ -333,15 +470,21 @@ export async function runDiscoveryPhase(
         }
 
         // Check if we've reached target after this batch
-        const currentCount = await countLeadsWithEmails(workspaceId)
-        console.log(`[DiscoveryPhase] Progress: ${currentCount}/${TARGET_LEADS} leads`)
+        const afterSaveCount = await countLeadsWithEmails(workspaceId)
+        console.log(`[DiscoveryPhase] Progress: ${afterSaveCount}/${TARGET_LEADS} leads`)
 
-        if (currentCount >= TARGET_LEADS) {
+        if (afterSaveCount >= TARGET_LEADS) {
           console.log(
-            `[DiscoveryPhase] Target reached! Stopping enrichment at batch ${batchNum}/${totalBatches}`,
+            `[DiscoveryPhase] Target reached! Stopping enrichment at iteration ${iteration + 1}, batch ${batchNum}/${totalBatches}`,
           )
           break
         }
+      }
+
+      // Check if target reached after this iteration
+      const afterIterationCount = await countLeadsWithEmails(workspaceId)
+      if (afterIterationCount >= TARGET_LEADS) {
+        break
       }
     }
 
@@ -375,6 +518,12 @@ export async function runDiscoveryPhase(
       `[DiscoveryPhase] Complete: ${finalCount} leads with emails, returning ${leadIds.length} IDs`,
     )
 
+    // Emit SSE + Save to DB: Discovery complete
+    await emitAndSaveNotification(
+      createDiscoveryCompleteEvent(workspaceId, jobId, finalCount),
+      userId,
+    )
+
     return {
       leadIds,
       count: finalCount,
@@ -382,6 +531,11 @@ export async function runDiscoveryPhase(
   } catch (error) {
     console.error("[DiscoveryPhase] Error:", error)
     await addCheckpointError(job, "discovery", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "discovery"),
+      userId,
+    )
     throw error
   }
 }
@@ -395,10 +549,14 @@ export async function runGroupPhase(
   leadIds: string[],
 ): Promise<string> {
   const { workspaceId, userId, surveyData } = context
+  const jobId = job.id || "unknown"
   const isKorean = surveyData.lang === "ko"
   const leadCount = leadIds.length
 
   console.log(`[GroupPhase] Creating customer group for ${leadCount} leads`)
+
+  // Emit SSE + Save to DB: Group started
+  await emitAndSaveNotification(createGroupStartEvent(workspaceId, jobId), userId)
 
   try {
     await saveCheckpoint(job, { phase: "group" })
@@ -458,10 +616,21 @@ export async function runGroupPhase(
       console.log(`[GroupPhase] Added ${leadIds.length} leads to group`)
     }
 
+    // Emit SSE + Save to DB: Group complete
+    await emitAndSaveNotification(
+      createGroupCompleteEvent(workspaceId, jobId, leadIds.length),
+      userId,
+    )
+
     return customerGroup.id
   } catch (error) {
     console.error("[GroupPhase] Error:", error)
     await addCheckpointError(job, "group", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "group"),
+      userId,
+    )
     throw error
   }
 }
@@ -481,10 +650,18 @@ export async function runTemplatesPhase(
     emailBodyHtml: string
   }>
 > {
-  const { workspaceId, surveyData } = context
+  const { workspaceId, userId, surveyData } = context
+  const jobId = job.id || "unknown"
   const isKorean = surveyData.lang === "ko"
 
   console.log("[TemplatesPhase] Generating email templates")
+
+  // Emit SSE + Save to DB: Templates started
+  const templatesNeeded = EMAIL_TYPES_2TOUCH.length
+  await emitAndSaveNotification(
+    createTemplatesStartEvent(workspaceId, jobId, templatesNeeded),
+    userId,
+  )
 
   try {
     await saveCheckpoint(job, { phase: "templates" })
@@ -515,6 +692,7 @@ export async function runTemplatesPhase(
       emailBodyText: string
       emailBodyHtml: string
     }> = []
+    const totalTemplates = templatesNeeded
 
     for (let i = 0; i < templatesNeeded; i++) {
       const emailType = EMAIL_TYPES_2TOUCH[i]
@@ -561,6 +739,12 @@ export async function runTemplatesPhase(
           `[TemplatesPhase] Generated template ${i + 1}/${templatesNeeded}: ${emailType.type}`,
         )
 
+        // Emit SSE + Save to DB: Template progress
+        await emitAndSaveNotification(
+          createTemplateProgressEvent(workspaceId, jobId, i + 1, totalTemplates, emailType.type),
+          userId,
+        )
+
         // Save checkpoint after each template (incremental save)
         await saveCheckpoint(job, { generatedTemplates: templates })
       } catch (error) {
@@ -575,6 +759,12 @@ export async function runTemplatesPhase(
 
     console.log(`[TemplatesPhase] Generated ${templates.length} templates`)
 
+    // Emit SSE + Save to DB: Templates complete
+    await emitAndSaveNotification(
+      createTemplatesCompleteEvent(workspaceId, jobId, templates.length),
+      userId,
+    )
+
     // Save final templates to checkpoint
     await saveCheckpoint(job, { generatedTemplates: templates })
 
@@ -582,6 +772,11 @@ export async function runTemplatesPhase(
   } catch (error) {
     console.error("[TemplatesPhase] Error:", error)
     await addCheckpointError(job, "templates", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "templates"),
+      userId,
+    )
     throw error
   }
 }
@@ -613,9 +808,13 @@ export async function runSequencePhase(
   }>
 }> {
   const { workspaceId, userId, surveyData } = context
+  const jobId = job.id || "unknown"
   const isKorean = surveyData.lang === "ko"
 
   console.log("[SequencePhase] Creating sequence and steps")
+
+  // Emit SSE + Save to DB: Sequence started
+  await emitAndSaveNotification(createSequenceStartEvent(workspaceId, jobId), userId)
 
   try {
     await saveCheckpoint(job, { phase: "sequence" })
@@ -739,6 +938,12 @@ export async function runSequencePhase(
 
     console.log(`[SequencePhase] Created ${createdSteps.length} steps`)
 
+    // Emit SSE + Save to DB: Sequence complete
+    await emitAndSaveNotification(
+      createSequenceCompleteEvent(workspaceId, jobId, createdSteps.length),
+      userId,
+    )
+
     return {
       sequenceId: sequence.id,
       steps: createdSteps,
@@ -746,6 +951,11 @@ export async function runSequencePhase(
   } catch (error) {
     console.error("[SequencePhase] Error:", error)
     await addCheckpointError(job, "sequence", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "sequence"),
+      userId,
+    )
     throw error
   }
 }
@@ -768,6 +978,7 @@ export async function runPreviewsPhase(
   leadIds: string[],
 ): Promise<number> {
   const { workspaceId, userId } = context
+  const jobId = job.id || "unknown"
 
   console.log(`[PreviewsPhase] Generating preview emails for ${leadIds.length} leads`)
 
@@ -775,6 +986,16 @@ export async function runPreviewsPhase(
     console.log("[PreviewsPhase] No leads or steps, skipping")
     return 0
   }
+
+  const totalPreviews = leadIds.length * steps.length
+  const leadCount = leadIds.length
+  const stepCount = steps.length
+
+  // Emit SSE + Save to DB: Previews started
+  await emitAndSaveNotification(
+    createPreviewsStartEvent(workspaceId, jobId, totalPreviews, leadCount, stepCount),
+    userId,
+  )
 
   try {
     await saveCheckpoint(job, { phase: "previews" })
@@ -891,7 +1112,7 @@ export async function runPreviewsPhase(
       console.log(`[PreviewsPhase] Created trial email account: ${emailAccountId}`)
     }
 
-    // Generate preview emails
+    // Generate preview emails with progress callback
     const previewCount = await generatePreviewEmailsForSequence(
       workspaceId,
       emailAccountId,
@@ -899,22 +1120,55 @@ export async function runPreviewsPhase(
       sequenceId,
       steps,
       leadDetailsWithEmail,
+      // Progress callback for SSE + DB updates
+      async (generated: number, total: number) => {
+        // Emit every 5% or at least every 10 previews for real-time updates
+        const interval = Math.max(1, Math.floor(total / 20))
+        if (generated % interval === 0 || generated === total) {
+          // Calculate which step we're on
+          const currentStep = Math.ceil(generated / leadCount) || 1
+          await emitAndSaveNotification(
+            createPreviewProgressEvent(
+              workspaceId,
+              jobId,
+              generated,
+              total,
+              currentStep,
+              stepCount,
+            ),
+            userId,
+          )
+        }
+      },
     )
 
     console.log(
       `[PreviewsPhase] Generated ${previewCount} preview emails (${leadDetails.length} leads × ${steps.length} steps)`,
     )
 
+    // Emit SSE + Save to DB: Previews complete
+    await emitAndSaveNotification(
+      createPreviewsCompleteEvent(workspaceId, jobId, previewCount, leadCount, stepCount),
+      userId,
+    )
+
     return previewCount
   } catch (error) {
     console.error("[PreviewsPhase] Error:", error)
     await addCheckpointError(job, "previews", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "previews"),
+      userId,
+    )
     throw error
   }
 }
 
 /**
  * Complete Phase: Update onboarding progress
+ * Sets currentStep to 2 so user can directly proceed to email linking (Step 4)
+ * Skips Step 3 (email confirmation) for faster onboarding flow
  */
 export async function completeOnboarding(
   job: Job<OnboardingAutoGenerateJob, OnboardingAutoGenerateResult>,
@@ -924,6 +1178,7 @@ export async function completeOnboarding(
   leadIds: string[],
 ): Promise<void> {
   const { workspaceId, userId } = context
+  const jobId = job.id || "unknown"
 
   console.log("[CompletePhase] Updating onboarding progress")
 
@@ -951,21 +1206,38 @@ export async function completeOnboarding(
       console.log("[CompletePhase] Step 2 already completed, skipping")
     }
 
-    // Complete step 3 (email generation) if not already done
-    if (!progress?.emailGenerationCompleted) {
-      await completeStep3EmailGeneration(workspaceId, sequenceId, userId)
-      console.log("[CompletePhase] Completed step 3 (email generation)")
-    } else {
-      console.log("[CompletePhase] Step 3 already completed, skipping")
-    }
+    // Skip Step 3 (email generation confirmation) - user can proceed directly to Step 4 (email linking)
+    // Just save the sequenceId to onboarding progress without marking step 3 as complete
+    await db
+      .update(onboardingProgress)
+      .set({
+        generatedSequenceId: sequenceId,
+        currentStep: 2, // Set to step 2 so user proceeds to email linking
+        status: "lead_search", // Keep at lead_search status
+        updatedAt: new Date(),
+      })
+      .where(eq(onboardingProgress.workspaceId, workspaceId))
+    console.log(
+      "[CompletePhase] Saved sequenceId and set currentStep to 2 (skipping step 3 confirmation)",
+    )
 
     // Mark as complete in checkpoint
     await saveCheckpoint(job, { phase: "complete" })
 
-    console.log("[CompletePhase] Onboarding complete")
+    // Emit SSE + Save to DB: Complete
+    await emitAndSaveNotification(createCompleteEvent(workspaceId, jobId, leadIds.length), userId)
+
+    console.log(
+      "[CompletePhase] Onboarding auto-generation complete - user can now link email and start campaign",
+    )
   } catch (error) {
     console.error("[CompletePhase] Error:", error)
     await addCheckpointError(job, "complete", String(error))
+    // Emit SSE + Save to DB: Error
+    await emitAndSaveNotification(
+      createErrorEvent(workspaceId, jobId, String(error), "complete"),
+      userId,
+    )
     throw error
   }
 }

@@ -1,8 +1,10 @@
-import { Key, Plus, Save, Trash2, X } from "lucide-react"
+import { AlertCircle, Key, Plus, Save, Trash2, X } from "lucide-react"
 import { useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import {
   Dialog,
   DialogContent,
@@ -21,12 +23,15 @@ import {
 import type { ApiKey } from "@/lib/api/types/openai-api-keys"
 
 export function OpenAIApiKeyManagement() {
+  const { t } = useTranslation("settings")
   const keyNameId = useId()
   const apiKeyId = useId()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ApiKey | null>(null)
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  const isAllWorkspaces = workspaceId === "all" || !workspaceId
 
   const [formData, setFormData] = useState({
     name: "",
@@ -98,12 +103,16 @@ export function OpenAIApiKeyManagement() {
     handleCloseDialog()
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("이 API 키를 삭제하시겠습니까?")) {
+  const handleDeleteClick = (key: ApiKey) => {
+    setDeleteTarget(key)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) {
       return
     }
-
-    await deleteMutation.mutateAsync({ id, workspaceId })
+    await deleteMutation.mutateAsync({ id: deleteTarget.id, workspaceId })
+    setDeleteTarget(null)
   }
 
   const handleToggleActive = async (key: ApiKey) => {
@@ -118,20 +127,20 @@ export function OpenAIApiKeyManagement() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) {
-      return "사용 안함"
+      return t("openaiApiKeys.neverUsed")
     }
     const date = new Date(dateString)
-    return date.toLocaleString("ko-KR")
+    return date.toLocaleString()
   }
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>OpenAI API 키 관리</CardTitle>
+          <CardTitle>{t("openaiApiKeys.title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">로딩 중...</p>
+          <p className="text-muted-foreground">{t("openaiApiKeys.loading")}</p>
         </CardContent>
       </Card>
     )
@@ -144,27 +153,28 @@ export function OpenAIApiKeyManagement() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
-              OpenAI API 키 관리
+              {t("openaiApiKeys.title")}
             </CardTitle>
-            <CardDescription className="mt-2">
-              웹 데이터 추출에 사용할 OpenAI API 키를 관리합니다. 여러 개의 키를 추가하면 순차적으로
-              사용됩니다.
-            </CardDescription>
+            <CardDescription className="mt-2">{t("openaiApiKeys.description")}</CardDescription>
           </div>
-          <Button onClick={() => handleOpenDialog()}>
+          <Button disabled={isAllWorkspaces} onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
-            API 키 추가
+            {t("openaiApiKeys.addKey")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {apiKeys.length === 0 ? (
+        {isAllWorkspaces ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t("openaiApiKeys.selectWorkspaceTitle")}</AlertTitle>
+            <AlertDescription>{t("openaiApiKeys.selectWorkspaceDescription")}</AlertDescription>
+          </Alert>
+        ) : apiKeys.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <Key className="mx-auto mb-4 h-12 w-12 opacity-50" />
-            <p>등록된 API 키가 없습니다</p>
-            <p className="mt-2 text-sm">
-              API 키를 추가하지 않으면 서버의 환경 변수에 설정된 기본 키가 사용됩니다
-            </p>
+            <p>{t("openaiApiKeys.noKeys")}</p>
+            <p className="mt-2 text-sm">{t("openaiApiKeys.noKeysDescription")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -182,11 +192,11 @@ export function OpenAIApiKeyManagement() {
                       <h3 className="font-semibold">{key.name}</h3>
                       {key.isActive ? (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300">
-                          활성
+                          {t("openaiApiKeys.active")}
                         </span>
                       ) : (
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-800 text-xs dark:bg-gray-800 dark:text-gray-300">
-                          비활성
+                          {t("openaiApiKeys.inactive")}
                         </span>
                       )}
                     </div>
@@ -197,11 +207,13 @@ export function OpenAIApiKeyManagement() {
 
                     <div className="grid grid-cols-2 gap-x-4 text-muted-foreground text-sm">
                       <div>
-                        <span className="font-medium">마지막 사용:</span>{" "}
+                        <span className="font-medium">{t("openaiApiKeys.lastUsed")}:</span>{" "}
                         {formatDate(key.lastUsedAt)}
                       </div>
                       <div>
-                        <span className="font-medium">사용 횟수:</span> {key.usageCount}회
+                        <span className="font-medium">{t("openaiApiKeys.usageCount")}:</span>{" "}
+                        {key.usageCount}
+                        {t("openaiApiKeys.times")}
                       </div>
                     </div>
                   </div>
@@ -211,16 +223,18 @@ export function OpenAIApiKeyManagement() {
                       disabled={updateMutation.isPending}
                       onClick={() => handleToggleActive(key)}
                       size="sm"
-                      title={key.isActive ? "비활성화" : "활성화"}
+                      title={
+                        key.isActive ? t("openaiApiKeys.deactivate") : t("openaiApiKeys.activate")
+                      }
                       variant="outline"
                     >
-                      {key.isActive ? "비활성화" : "활성화"}
+                      {key.isActive ? t("openaiApiKeys.deactivate") : t("openaiApiKeys.activate")}
                     </Button>
                     <Button
                       disabled={deleteMutation.isPending}
-                      onClick={() => handleDelete(key.id)}
+                      onClick={() => handleDeleteClick(key)}
                       size="icon"
-                      title="삭제"
+                      title={t("openaiApiKeys.delete")}
                       variant="ghost"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -234,23 +248,22 @@ export function OpenAIApiKeyManagement() {
 
         <Alert>
           <Key className="h-4 w-4" />
-          <AlertTitle>사용 방법</AlertTitle>
+          <AlertTitle>{t("openaiApiKeys.howToUse")}</AlertTitle>
           <AlertDescription>
             <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-              <li>여러 개의 API 키를 추가하면 순서대로 번갈아가며 사용됩니다 (Round-robin)</li>
-              <li>비활성화된 키는 사용되지 않습니다</li>
-              <li>모든 키가 비활성화되거나 없으면 서버의 기본 API 키가 사용됩니다</li>
+              <li>{t("openaiApiKeys.howToUseRoundRobin")}</li>
+              <li>{t("openaiApiKeys.howToUseDisabled")}</li>
+              <li>{t("openaiApiKeys.howToUseDefault")}</li>
               <li>
-                OpenAI API 키는{" "}
+                {t("openaiApiKeys.howToUseGetKey")}{" "}
                 <a
                   className="underline"
                   href="https://platform.openai.com/api-keys"
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  OpenAI 플랫폼
+                  {t("openaiApiKeys.openaiPlatform")}
                 </a>
-                에서 발급받을 수 있습니다
               </li>
             </ul>
           </AlertDescription>
@@ -260,28 +273,30 @@ export function OpenAIApiKeyManagement() {
       <Dialog onOpenChange={handleCloseDialog} open={isDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingKey ? "API 키 수정" : "API 키 추가"}</DialogTitle>
+            <DialogTitle>
+              {editingKey ? t("openaiApiKeys.editKey") : t("openaiApiKeys.addKey")}
+            </DialogTitle>
             <DialogDescription>
               {editingKey
-                ? "API 키 정보를 수정합니다. API 키를 입력하지 않으면 기존 키가 유지됩니다."
-                : "새로운 OpenAI API 키를 추가합니다."}
+                ? t("openaiApiKeys.editKeyDescription")
+                : t("openaiApiKeys.addKeyDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label htmlFor={keyNameId}>키 이름</Label>
+              <Label htmlFor={keyNameId}>{t("openaiApiKeys.keyName")}</Label>
               <Input
                 id={keyNameId}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="예: Main Key, Backup Key 1"
+                placeholder={t("openaiApiKeys.keyNamePlaceholder")}
                 required={!editingKey}
                 value={formData.name}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={apiKeyId}>API 키</Label>
+              <Label htmlFor={apiKeyId}>{t("openaiApiKeys.apiKey")}</Label>
               <Input
                 id={apiKeyId}
                 onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
@@ -291,25 +306,34 @@ export function OpenAIApiKeyManagement() {
                 value={formData.apiKey}
               />
               <p className="text-muted-foreground text-xs">
-                {editingKey
-                  ? "새 API 키를 입력하지 않으면 기존 키가 유지됩니다"
-                  : "OpenAI 플랫폼에서 발급받은 API 키를 입력하세요"}
+                {editingKey ? t("openaiApiKeys.editKeyHint") : t("openaiApiKeys.addKeyHint")}
               </p>
             </div>
 
             <div className="flex justify-end gap-2">
               <Button onClick={handleCloseDialog} type="button" variant="outline">
                 <X className="mr-2 h-4 w-4" />
-                취소
+                {t("openaiApiKeys.cancel")}
               </Button>
               <Button disabled={createMutation.isPending || updateMutation.isPending} type="submit">
                 <Save className="mr-2 h-4 w-4" />
-                {editingKey ? "수정" : "추가"}
+                {editingKey ? t("openaiApiKeys.edit") : t("openaiApiKeys.add")}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        confirmText={deleteTarget?.name || ""}
+        description={t("openaiApiKeys.deleteDescription")}
+        isLoading={deleteMutation.isPending}
+        itemName={deleteTarget?.name}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={!!deleteTarget}
+        title={t("openaiApiKeys.deleteTitle")}
+      />
     </Card>
   )
 }

@@ -16,6 +16,7 @@ import {
   parseEmailAttachments,
   parseEmailBody,
   parseEmailHeaders,
+  sanitizeFilename,
 } from "../utils/email.util"
 import logger from "../utils/logger"
 import { getAIClassificationService } from "./ai-classification.service"
@@ -613,10 +614,12 @@ class WebhookService {
         // Convert files to base64 and store in DB (same format as outbound emails)
         attachmentMetadata = files.map((file) => {
           const base64Content = file.buffer.toString("base64")
+          const decodedFilename = sanitizeFilename(file.originalname)
           logger.info(
             {
               emailId: inboundEmail.id,
-              filename: file.originalname,
+              originalFilename: file.originalname,
+              decodedFilename: decodedFilename,
               size: file.size,
               mimetype: file.mimetype,
             },
@@ -624,7 +627,7 @@ class WebhookService {
           )
 
           return {
-            filename: file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"), // Sanitize filename
+            filename: decodedFilename, // Decode RFC 2047 and sanitize
             type: file.mimetype || "application/octet-stream",
             size: file.size,
             content: base64Content, // Store as base64 in DB

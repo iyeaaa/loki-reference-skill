@@ -46,6 +46,7 @@ import { leadDiscoveryRoutes } from "./routes/lead-discovery.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
+import { notificationRoutes } from "./routes/notification.routes"
 import { nylasRoutes } from "./routes/nylas.routes"
 import { onboardingRoutes } from "./routes/onboarding.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
@@ -232,6 +233,8 @@ const app = new Elysia()
   .use(iamMyPermissionsRoutes)
   // Onboarding routes
   .use(onboardingRoutes)
+  // Notification routes
+  .use(notificationRoutes)
   // BullMQ Test routes
   .use(bullmqTestRoutes)
   // Job Logs routes

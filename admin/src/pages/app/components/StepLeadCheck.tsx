@@ -1,4 +1,11 @@
-import { ArrowRight, CheckCircle2, Loader2, Upload, Users } from "lucide-react"
+/**
+ * StepLeadCheck Component
+ *
+ * Step 2: 리드 확인 - CSV 업로드 또는 AI 자동 생성
+ * SSE를 통해 실시간으로 백엔드 진행 상황을 표시
+ */
+
+import { ArrowRight, CheckCircle2, Loader2, Upload, Users, XCircle } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { useTranslation } from "react-i18next"
@@ -6,17 +13,83 @@ import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { useOnboardingProgress, useOnboardingSSE } from "@/lib/api/hooks/onboarding"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
 
-type ViewState = "initial" | "generating" | "complete"
+type ViewState = "initial" | "generating" | "complete" | "error"
 
 export function StepLeadCheck() {
   const { i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [viewState, setViewState] = useState<ViewState>("initial")
-  const [progress, setProgress] = useState(0)
   const isKorean = i18n.language === "ko"
+
+  // Get current user and workspace
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}")
+    } catch {
+      return {}
+    }
+  })()
+  const userId = currentUser?.id || ""
+
+  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const workspaceId = userWorkspaces?.[0]?.id || ""
+
+  // Get onboarding progress from DB
+  const { data: onboardingData, refetch: refetchOnboarding } = useOnboardingProgress(
+    workspaceId,
+    !!workspaceId,
+  )
+
+  // SSE for real-time progress updates
+  const {
+    progress: sseProgress,
+    phase,
+    progressPercent,
+    message,
+    isComplete: sseComplete,
+    hasError: sseError,
+  } = useOnboardingSSE(workspaceId, {
+    enabled: viewState === "generating" && !!workspaceId,
+    onComplete: () => {
+      console.log("[StepLeadCheck] SSE complete event received")
+      setViewState("complete")
+      refetchOnboarding()
+    },
+    onError: (event) => {
+      console.error("[StepLeadCheck] SSE error event received:", event)
+      setViewState("error")
+    },
+  })
+
+  // Check if job is already running on mount
+  useEffect(() => {
+    if (onboardingData?.jobStatus === "active" || onboardingData?.jobStatus === "waiting") {
+      console.log("[StepLeadCheck] Job already running, switching to generating view")
+      setViewState("generating")
+    } else if (
+      onboardingData?.jobStatus === "completed" &&
+      onboardingData?.selectedLeadIds?.length
+    ) {
+      console.log("[StepLeadCheck] Job already completed")
+      setViewState("complete")
+    }
+  }, [onboardingData?.jobStatus, onboardingData?.selectedLeadIds])
+
+  // Handle SSE phase changes
+  useEffect(() => {
+    if (sseComplete && viewState === "generating") {
+      setViewState("complete")
+      refetchOnboarding()
+    }
+    if (sseError && viewState === "generating") {
+      setViewState("error")
+    }
+  }, [sseComplete, sseError, viewState, refetchOnboarding])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -37,71 +110,34 @@ export function StepLeadCheck() {
   }
 
   const handleAutoGenerate = () => {
+    // Job is already triggered during auth, just switch to generating view
+    // to start listening to SSE progress
+    console.log("[StepLeadCheck] Starting to listen for SSE progress")
     setViewState("generating")
-    setProgress(0)
   }
-
-  // 자동 생성 로딩 애니메이션 - 최적 UX 알고리즘
-  // 초반 빠르게 → 중반 적당히 → 후반 천천히 (사용자가 진행감을 느끼면서도 지루하지 않게)
-  useEffect(() => {
-    if (viewState !== "generating") {
-      return
-    }
-
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const animate = () => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          return 100
-        }
-
-        // 구간별 증가량 (초반 빠름, 후반 느림)
-        let baseIncrement: number
-        let baseDelay: number
-
-        if (prev < 30) {
-          // 초반: 빠르게 진행 (사용자에게 즉각적인 피드백)
-          baseIncrement = 8 + Math.random() * 6 // 8-14
-          baseDelay = 100 + Math.random() * 100 // 100-200ms
-        } else if (prev < 60) {
-          // 중반: 적당한 속도
-          baseIncrement = 5 + Math.random() * 4 // 5-9
-          baseDelay = 150 + Math.random() * 150 // 150-300ms
-        } else if (prev < 85) {
-          // 후반: 느리게 (완료 기대감 유지)
-          baseIncrement = 3 + Math.random() * 3 // 3-6
-          baseDelay = 200 + Math.random() * 200 // 200-400ms
-        } else {
-          // 마무리: 아주 느리게 (완료 직전 서스펜스)
-          baseIncrement = 2 + Math.random() * 3 // 2-5
-          baseDelay = 150 + Math.random() * 150 // 150-300ms
-        }
-
-        const newProgress = Math.min(Math.round(prev + baseIncrement), 100)
-
-        // 100% 도달 시 완료 상태로 전환
-        if (newProgress >= 100) {
-          setViewState("complete")
-          return 100
-        }
-
-        // 다음 프레임 예약
-        timeoutId = setTimeout(animate, baseDelay)
-        return newProgress
-      })
-    }
-
-    // 시작
-    timeoutId = setTimeout(animate, 100)
-    return () => clearTimeout(timeoutId)
-  }, [viewState])
-
-  // 완료 후 사용자가 직접 다음 단계 버튼을 클릭하도록 변경
-  // (자동 이동 제거 - 사용자가 결과를 확인할 시간 필요)
 
   const handleComplete = () => {
     setSearchParams({ step: "3" })
+  }
+
+  const handleRetry = () => {
+    setViewState("generating")
+  }
+
+  // Get lead count from SSE progress or DB
+  const getLeadCount = (): number => {
+    // From SSE progress details
+    if (sseProgress?.details?.leadsFound) {
+      return sseProgress.details.leadsFound
+    }
+    if (sseProgress?.details?.leadsEnriched) {
+      return sseProgress.details.leadsEnriched
+    }
+    // From DB
+    if (onboardingData?.selectedLeadIds?.length) {
+      return onboardingData.selectedLeadIds.length
+    }
+    return 0
   }
 
   // 자동 생성 중 화면
@@ -114,17 +150,59 @@ export function StepLeadCheck() {
               <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "맞춤 리드를 생성하고 있습니다..." : "Generating custom leads..."}
+              {message ||
+                (isKorean ? "맞춤 리드를 생성하고 있습니다..." : "Generating custom leads...")}
             </h2>
-            <p className="mb-6 text-center text-gray-500 text-sm">
+            <p className="mb-2 text-center text-gray-500 text-sm">
               {isKorean
                 ? "AI가 귀사에 최적화된 해외 바이어를 찾고 있습니다"
                 : "AI is finding the best overseas buyers for your business"}
             </p>
-            <div className="w-full max-w-xs">
-              <Progress className="h-2" value={progress} />
-              <p className="mt-2 text-center text-gray-500 text-sm">{progress}%</p>
+            <div className="mt-6 w-full max-w-xs">
+              <Progress className="h-2" value={progressPercent} />
+              <div className="mt-2 flex justify-between text-gray-500 text-sm">
+                <span>{phase || "init"}</span>
+                <span>{progressPercent}%</span>
+              </div>
             </div>
+            {/* Show details if available (templates/previews only) */}
+            {sseProgress?.details && (
+              <div className="mt-4 text-center text-gray-500 text-xs">
+                {sseProgress.details.templatesGenerated !== undefined &&
+                  sseProgress.details.totalTemplates && (
+                    <p>
+                      {isKorean
+                        ? `템플릿 ${sseProgress.details.templatesGenerated}/${sseProgress.details.totalTemplates}`
+                        : `Templates ${sseProgress.details.templatesGenerated}/${sseProgress.details.totalTemplates}`}
+                    </p>
+                  )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 에러 화면
+  if (viewState === "error") {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Card>
+          <CardContent className="flex flex-col items-center px-8 py-16">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+              <XCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
+              {isKorean ? "리드 생성 중 오류가 발생했습니다" : "Error generating leads"}
+            </h2>
+            <p className="mb-6 text-center text-gray-500 text-sm">
+              {sseProgress?.details?.error ||
+                (isKorean ? "잠시 후 다시 시도해주세요" : "Please try again later")}
+            </p>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRetry}>
+              {isKorean ? "다시 시도" : "Retry"}
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -133,6 +211,8 @@ export function StepLeadCheck() {
 
   // 생성 완료 화면
   if (viewState === "complete") {
+    const leadCount = getLeadCount()
+
     return (
       <div className="mx-auto max-w-2xl">
         <Card>
@@ -145,7 +225,7 @@ export function StepLeadCheck() {
             </h2>
             <div className="mb-6 flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2">
               <Users className="h-5 w-5 text-blue-600" />
-              <span className="font-semibold text-blue-600 text-lg">300</span>
+              <span className="font-semibold text-blue-600 text-lg">{leadCount || "N/A"}</span>
               <span className="text-gray-600">
                 {isKorean ? "개의 리드가 생성되었습니다" : "leads generated"}
               </span>

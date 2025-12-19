@@ -1,9 +1,11 @@
 import { motion } from "framer-motion"
 import { Copy, Gauge, Key, Plus, Sparkles, Trash2, TrendingUp, Zap } from "lucide-react"
+import { useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import {
   Dialog,
   DialogContent,
@@ -53,6 +55,8 @@ export function ApiKeyManagementModal({
   isUpdating,
   isDeleting,
 }: ApiKeyManagementModalProps) {
+  const [deleteTarget, setDeleteTarget] = useState<ApiKey | null>(null)
+
   const handleCopyApiKey = async (apiKey: string) => {
     try {
       await navigator.clipboard.writeText(apiKey)
@@ -60,6 +64,18 @@ export function ApiKeyManagementModal({
     } catch (_error) {
       toast.error("복사에 실패했습니다")
     }
+  }
+
+  const handleDeleteClick = (key: ApiKey) => {
+    setDeleteTarget(key)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) {
+      return
+    }
+    await onDeleteApiKey(deleteTarget.id)
+    setDeleteTarget(null)
   }
 
   return (
@@ -327,7 +343,7 @@ export function ApiKeyManagementModal({
                                     <Button
                                       className="h-8 w-8"
                                       disabled={isDeleting}
-                                      onClick={() => onDeleteApiKey(key.id)}
+                                      onClick={() => handleDeleteClick(key)}
                                       size="icon"
                                       variant="ghost"
                                     >
@@ -349,6 +365,17 @@ export function ApiKeyManagementModal({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        confirmText={deleteTarget?.name || ""}
+        description="이 작업은 되돌릴 수 없습니다. API 키가 영구적으로 삭제됩니다."
+        isLoading={isDeleting}
+        itemName={deleteTarget?.name}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={!!deleteTarget}
+        title="API 키 삭제"
+      />
     </TooltipProvider>
   )
 }

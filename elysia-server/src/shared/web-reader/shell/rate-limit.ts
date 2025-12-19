@@ -4,15 +4,18 @@ import PQueue from "p-queue"
  * Global rate limiter for Web Reader API (Jina Reader)
  * Prevents HTTP 429 rate limit errors when multiple requests run in parallel
  *
- * Configuration:
- * - concurrency: 2 (max 2 concurrent requests at a time)
- * - intervalCap: 20 (max 20 requests per interval)
+ * Configuration (conservative settings to avoid 429):
+ * - concurrency: 1 (max 1 concurrent request - sequential processing)
+ * - intervalCap: 3 (max 3 requests per interval)
  * - interval: 1000ms (1 second interval)
  * - carryoverConcurrencyCount: true (carry over pending requests)
+ *
+ * This results in ~3 requests/second = 180 requests/minute
+ * Jina AI free tier allows ~200 requests/minute
  */
 export const webReaderQueue = new PQueue({
-  concurrency: 2,
-  intervalCap: 20,
+  concurrency: 1,
+  intervalCap: 3,
   interval: 1000,
   carryoverConcurrencyCount: true,
 })

@@ -794,6 +794,7 @@ export async function generatePreviewEmailsForSequence(
     country?: string | null
     businessType?: string | null
   }>,
+  onProgress?: (generated: number, total: number) => Promise<void>,
   baseLanguage?: string,
 ): Promise<number> {
   const emailsToCreate = []
@@ -896,6 +897,12 @@ export async function generatePreviewEmailsForSequence(
         leadName: lead.companyName,
         leadEmail: lead.contactEmail,
       })
+
+      // Call progress callback after each email for real-time updates
+      if (onProgress) {
+        const totalPreviews = leadDetails.length * stepTemplates.length
+        await onProgress(emailsToCreate.length, totalPreviews)
+      }
     }
   }
 
@@ -1639,6 +1646,7 @@ export async function autoGenerateOnboarding(
         sequence.id,
         createdSteps,
         leadDetailsWithEmail,
+        undefined, // No progress callback for this call
         baseLanguage,
       )
       console.log(

@@ -65,7 +65,7 @@ const EXPERIENCE_OPTIONS = [
 ]
 
 export function StepCompanyInfo() {
-  const { t, i18n } = useTranslation()
+  const { i18n } = useTranslation()
   const navigate = useNavigate()
   const [, setSearchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
@@ -84,6 +84,12 @@ export function StepCompanyInfo() {
     experience: "",
     websiteUrl: "",
   })
+
+  // Validation error state
+  const [errors, setErrors] = useState<{
+    companyName?: boolean
+    companyDescription?: boolean
+  }>({})
 
   // Get user's workspace
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
@@ -177,11 +183,15 @@ export function StepCompanyInfo() {
     }
 
     // 필수 필드 검증
+    const newErrors: { companyName?: boolean; companyDescription?: boolean } = {}
     const missingFields: string[] = []
+
     if (!editedData.companyName?.trim()) {
+      newErrors.companyName = true
       missingFields.push(isKorean ? "회사명" : "Company Name")
     }
     if (!editedData.companyDescription?.trim()) {
+      newErrors.companyDescription = true
       missingFields.push(isKorean ? "회사 소개" : "Company Description")
     }
     if (!editedData.industry) {
@@ -196,6 +206,9 @@ export function StepCompanyInfo() {
     if (!editedData.experience) {
       missingFields.push(isKorean ? "수출 경험" : "Export Experience")
     }
+
+    // Set error states to highlight fields
+    setErrors(newErrors)
 
     if (missingFields.length > 0) {
       console.log("[StepCompanyInfo] ❌ Missing required fields:", missingFields)
@@ -212,6 +225,7 @@ export function StepCompanyInfo() {
       // 1. workspace 업데이트 (companyName, companyDescription, companyWebsite) - tanstack-query mutation 사용
       console.log(`[StepCompanyInfo] 📤 Updating workspace at /api/v1/workspaces/${workspace.id}`)
       const workspacePayload = {
+        name: editedData.companyName, // 사이드바에 표시되는 워크스페이스 이름도 업데이트
         companyName: editedData.companyName,
         companyDescription: editedData.companyDescription,
         companyWebsite: editedData.websiteUrl || null,
@@ -327,11 +341,13 @@ export function StepCompanyInfo() {
     <div className="mx-auto max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{isKorean ? "정보 입력" : "Enter Information"}</CardTitle>
+          <CardTitle className="text-2xl">
+            {isKorean ? "회사를 알려주세요" : "Tell us about your company"}
+          </CardTitle>
           <p className="mt-1 text-gray-600 text-sm">
             {isKorean
-              ? "AI가 맞춤형 이메일을 작성할 수 있도록 회사 정보를 입력해주세요"
-              : "Enter your company information so AI can write personalized emails"}
+              ? "입력해주신 내용으로 딱 맞는 바이어를 찾아드릴게요"
+              : "We'll find the perfect buyers based on what you share"}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -339,63 +355,91 @@ export function StepCompanyInfo() {
             {/* Company Name - Toss style */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                {isKorean ? "회사명" : "Company Name"}
-                <span className="font-normal text-blue-500 text-xs">
+                {isKorean ? "회사 이름" : "Company Name"}
+                <span
+                  className={`font-normal text-xs ${errors.companyName ? "text-red-500" : "text-blue-500"}`}
+                >
                   {isKorean ? "필수" : "Required"}
                 </span>
               </Label>
               <Input
-                className="h-12 text-base"
-                onChange={(e) =>
+                className={`h-12 text-base ${errors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                onChange={(e) => {
                   setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
-                }
-                placeholder={isKorean ? "린다 코스메틱" : "Rinda Cosmetics"}
+                  if (errors.companyName) {
+                    setErrors((prev) => ({ ...prev, companyName: false }))
+                  }
+                }}
+                placeholder={isKorean ? "예: 린다 코스메틱" : "e.g., Rinda Cosmetics"}
                 value={editedData.companyName}
               />
-              <p className="text-gray-500 text-sm">
-                {isKorean ? "바이어가 처음 보게 될 이름이에요" : "The first thing buyers will see"}
-              </p>
+              {errors.companyName ? (
+                <p className="text-red-500 text-sm">
+                  {isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name"}
+                </p>
+              ) : (
+                <p className="text-gray-500 text-sm">
+                  {isKorean
+                    ? "바이어에게 보내는 이메일에 이 이름이 표시돼요"
+                    : "This name appears in emails to buyers"}
+                </p>
+              )}
             </div>
 
             {/* Company Description - Toss style */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                {isKorean ? "우리 회사를 소개해주세요" : "Tell us about your company"}
-                <span className="font-normal text-blue-500 text-xs">
+                {isKorean ? "어떤 회사인가요?" : "What does your company do?"}
+                <span
+                  className={`font-normal text-xs ${errors.companyDescription ? "text-red-500" : "text-blue-500"}`}
+                >
                   {isKorean ? "필수" : "Required"}
                 </span>
               </Label>
               <textarea
-                className="flex w-full resize-y rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                onChange={(e) =>
+                className={`flex w-full resize-y rounded-md border bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  errors.companyDescription
+                    ? "border-red-500 focus-visible:ring-red-500"
+                    : "border-input focus-visible:ring-blue-500"
+                }`}
+                onChange={(e) => {
                   setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
-                }
+                  if (errors.companyDescription) {
+                    setErrors((prev) => ({ ...prev, companyDescription: false }))
+                  }
+                }}
                 placeholder={
                   isKorean
-                    ? "예: 천연 성분 기반 K-뷰티 스킨케어 브랜드입니다.\n\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건 제품, 20년 OEM 경험\n현재 일본, 동남아 시장에 수출 중이며 중동 시장 진출을 준비하고 있습니다."
-                    : "e.g., Natural K-beauty skincare brand.\n\nMain products: Vitamin C serum, Hyaluronic acid cream\nStrengths: FDA certified, Vegan products, 20 years OEM experience\nCurrently exporting to Japan and SEA, preparing to enter Middle East."
+                    ? "예: 천연 성분 기반 K-뷰티 스킨케어 브랜드입니다.\n\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건 제품, 20년 OEM 경험"
+                    : "e.g., Natural K-beauty skincare brand.\n\nMain products: Vitamin C serum, Hyaluronic acid cream\nStrengths: FDA certified, Vegan products, 20 years OEM"
                 }
                 rows={5}
                 style={{ minHeight: "140px", maxHeight: "300px" }}
                 value={editedData.companyDescription}
               />
-              <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
-                <span className="text-blue-500">💡</span>
-                <p className="text-blue-700 text-sm">
-                  {isKorean
-                    ? "구체적으로 작성할수록 AI가 바이어 맞춤형 이메일을 정확하게 작성해요. 주력 제품, 강점, 목표 시장을 포함해 주세요."
-                    : "The more specific, the better. Include main products, strengths, and target markets."}
+              {errors.companyDescription ? (
+                <p className="text-red-500 text-sm">
+                  {isKorean ? "회사 설명을 입력해주세요" : "Please enter your company description"}
                 </p>
-              </div>
+              ) : (
+                <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
+                  <span className="text-blue-500">✨</span>
+                  <p className="text-blue-700 text-sm">
+                    {isKorean
+                      ? "자세히 써주실수록 AI가 딱 맞는 바이어를 찾고, 설득력 있는 이메일을 작성해드려요"
+                      : "The more detail you provide, the better AI can find matching buyers and craft compelling emails"}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Website URL */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2" htmlFor={websiteUrlId}>
                 <Globe className="h-4 w-4" />
-                {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
+                {isKorean ? "홈페이지" : "Website"}
                 <span className="font-normal text-gray-400 text-sm">
-                  {isKorean ? "(선택사항)" : "(Optional)"}
+                  {isKorean ? "선택" : "Optional"}
                 </span>
               </Label>
               <Input
@@ -407,20 +451,20 @@ export function StepCompanyInfo() {
               />
               <p className="text-gray-500 text-xs">
                 {isKorean
-                  ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다 (건너뛰기 가능)"
-                  : "Enter your website for more accurate lead discovery (can be skipped)"}
+                  ? "입력하시면 AI가 더 정확하게 바이어를 찾아드려요"
+                  : "Helps AI find more relevant buyers for you"}
               </p>
             </div>
 
             {/* Industry */}
             <div className="space-y-2">
-              <Label>{isKorean ? "산업군" : "Industry"}</Label>
+              <Label>{isKorean ? "어떤 분야인가요?" : "What's your industry?"}</Label>
               <Select
                 onValueChange={(value) => setEditedData((prev) => ({ ...prev, industry: value }))}
                 value={editedData.industry}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "산업군 선택" : "Select industry"} />
+                  <SelectValue placeholder={isKorean ? "분야 선택" : "Select industry"} />
                 </SelectTrigger>
                 <SelectContent>
                   {INDUSTRY_OPTIONS.map((opt) => (
@@ -434,13 +478,13 @@ export function StepCompanyInfo() {
 
             {/* Target Customer */}
             <div className="space-y-2">
-              <Label>{isKorean ? "타겟 고객" : "Target Customer"}</Label>
+              <Label>{isKorean ? "누구에게 판매하세요?" : "Who do you sell to?"}</Label>
               <Select
                 onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
                 value={editedData.target}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "타겟 고객 선택" : "Select target"} />
+                  <SelectValue placeholder={isKorean ? "대상 선택" : "Select target"} />
                 </SelectTrigger>
                 <SelectContent>
                   {TARGET_OPTIONS.map((opt) => (
@@ -454,7 +498,9 @@ export function StepCompanyInfo() {
 
             {/* Target Country */}
             <div className="space-y-2">
-              <Label>{isKorean ? "희망 진출 국가" : "Target Country"}</Label>
+              <Label>
+                {isKorean ? "어디로 진출하고 싶으세요?" : "Where do you want to expand?"}
+              </Label>
               <Select
                 onValueChange={(value) => setEditedData((prev) => ({ ...prev, country: value }))}
                 value={editedData.country}
@@ -474,7 +520,7 @@ export function StepCompanyInfo() {
 
             {/* Export Experience */}
             <div className="space-y-2">
-              <Label>{isKorean ? "수출 경험" : "Export Experience"}</Label>
+              <Label>{isKorean ? "해외 수출 경험이 있으세요?" : "Any export experience?"}</Label>
               <Select
                 onValueChange={(value) => setEditedData((prev) => ({ ...prev, experience: value }))}
                 value={editedData.experience}
@@ -501,7 +547,7 @@ export function StepCompanyInfo() {
               onClick={handleSaveAndNext}
             >
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {t("app.onboarding.step1.nextButton", "다음 단계")}
+              {isKorean ? "바이어 찾아보기" : "Find buyers"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

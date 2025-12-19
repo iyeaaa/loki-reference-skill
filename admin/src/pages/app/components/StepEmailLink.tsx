@@ -63,8 +63,8 @@ export function StepEmailLink() {
   }
 
   const handleNextStep = () => {
-    // Go to step 5 (confirmation)
-    setSearchParams({ step: "5" })
+    // Go to step 4 (confirmation) - updated from 5 to 4 after combining steps
+    setSearchParams({ step: "4" })
   }
 
   // 자동 이동 제거 - 사용자가 이메일 연동 결과를 확인하고 직접 다음 단계 버튼을 클릭하도록 변경
@@ -98,31 +98,30 @@ export function StepEmailLink() {
     )
   }
 
-  // No email accounts - show confirmation dialog
+  // No email accounts - show confirmation dialog (토스 스타일)
   return (
     <Card className="mx-auto max-w-2xl">
       <CardContent className="px-8 pt-12 pb-10">
         <div className="flex flex-col items-center text-center">
           {/* Email Icon */}
-          <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-50">
+          <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50">
             <Mail className="h-10 w-10 text-blue-500" />
           </div>
 
           {/* Title */}
           <h2 className="mb-3 font-bold text-2xl text-gray-900">
-            {t("app.onboarding.step4.connectTitle", "이메일 연동")}
+            {isKorean ? "발송 계정을 연결해주세요" : "Connect your email account"}
           </h2>
 
           {/* Description */}
           <p className="mb-4 max-w-sm text-gray-500">
-            {t(
-              "app.onboarding.step4.connectDescription",
-              "이메일을 발송하기 위해 계정을 연동해주세요",
-            )}
+            {isKorean
+              ? "이 계정에서 바이어에게 이메일이 발송돼요"
+              : "Emails will be sent from this account to your buyers"}
           </p>
 
           {/* Current user email info */}
-          <div className="mb-6 w-full max-w-sm rounded-lg bg-gray-50 p-4">
+          <div className="mb-6 w-full max-w-sm rounded-lg bg-gradient-to-br from-gray-50 to-slate-50 p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
                 <Mail className="h-5 w-5 text-blue-600" />
@@ -130,15 +129,15 @@ export function StepEmailLink() {
               <div className="flex-1 text-left">
                 <p className="font-medium text-gray-900">{userEmail}</p>
                 <p className="text-gray-500 text-sm">
-                  {isKorean ? "현재 로그인된 계정" : "Currently logged in account"}
+                  {isKorean ? "로그인 계정" : "Logged in account"}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Confirmation message */}
-          <p className="mb-6 font-medium text-gray-900 text-lg">
-            {t("app.onboarding.step4.confirmConnect", "연동하시겠습니까?")}
+          <p className="mb-6 font-medium text-base text-gray-700">
+            {isKorean ? "이 계정으로 발송할까요?" : "Send emails from this account?"}
           </p>
 
           {/* Error Message */}
@@ -158,8 +157,12 @@ export function StepEmailLink() {
                 <CheckCircle2 className="mr-2 h-5 w-5" />
               )}
               {isLoading
-                ? t("app.onboarding.step1.loading", "연동 중...")
-                : t("app.onboarding.step4.connectButton", "연동하기")}
+                ? isKorean
+                  ? "연결 중..."
+                  : "Connecting..."
+                : isKorean
+                  ? "계정 연결하기"
+                  : "Connect account"}
             </Button>
           </div>
         </div>
@@ -186,7 +189,7 @@ function LinkedEmailAccountsView({
   onNext,
   isAddingMore,
 }: LinkedEmailAccountsViewProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const deleteEmailAccountMutation = useDeleteEmailAccount()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -220,20 +223,24 @@ function LinkedEmailAccountsView({
     }
   }
 
+  const isKorean = i18n.language === "ko"
+
   return (
     <Card className="mx-auto max-w-2xl">
       <CardContent className="px-8 pt-8 pb-8">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-50 to-emerald-50">
             <CheckCircle2 className="h-6 w-6 text-green-500" />
           </div>
           <div>
             <h2 className="font-bold text-gray-900 text-xl">
-              {t("app.onboarding.step1.linkedTitle", "이메일 계정이 연동되었습니다")}
+              {isKorean ? "연결 완료!" : "Connected!"}
             </h2>
             <p className="text-gray-500 text-sm">
-              {t("app.onboarding.step1.linkedDescription", "아래 계정으로 이메일을 발송합니다")}
+              {isKorean
+                ? "이 계정에서 바이어에게 이메일이 발송돼요"
+                : "Emails will be sent from this account"}
             </p>
           </div>
         </div>
@@ -249,7 +256,7 @@ function LinkedEmailAccountsView({
                 <span className="font-medium text-gray-900">{emailAccount.emailAddress}</span>
                 {emailAccount.isDefault && (
                   <Badge className="text-xs" variant="secondary">
-                    {t("app.onboarding.step1.default", "기본")}
+                    {isKorean ? "기본" : "Default"}
                   </Badge>
                 )}
               </div>
@@ -262,7 +269,9 @@ function LinkedEmailAccountsView({
               variant={emailAccount.status === "active" ? "default" : "secondary"}
             >
               {emailAccount.status === "active"
-                ? t("app.onboarding.step1.statusActive", "활성")
+                ? isKorean
+                  ? "연결됨"
+                  : "Connected"
                 : emailAccount.status}
             </Badge>
             {/* Delete Button */}
@@ -294,12 +303,12 @@ function LinkedEmailAccountsView({
           ) : (
             <Plus className="mr-2 h-4 w-4" />
           )}
-          {t("app.onboarding.step1.addMore", "다른 이메일 계정 추가")}
+          {isKorean ? "다른 계정 추가" : "Add another account"}
         </Button>
 
         {/* Next Step Button */}
         <Button className="h-11 w-full bg-blue-500 text-white hover:bg-blue-600" onClick={onNext}>
-          {t("app.onboarding.step1.nextButton", "다음 단계로")}
+          {isKorean ? "캠페인 시작하기" : "Start campaign"}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardContent>

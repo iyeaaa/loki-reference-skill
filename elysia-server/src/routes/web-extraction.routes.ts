@@ -20,8 +20,25 @@ import {
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
-// 추출 결과를 저장하는 Map (다운로드용)
+// 추출 결과를 저장하는 Map (다운로드용) - TTL 기반 자동 정리
 const resultsMap = new Map<string, CompanyRecord[]>()
+const resultsTimestamps = new Map<string, number>()
+const RESULTS_TTL_MS = 30 * 60 * 1000 // 30분 후 자동 삭제
+
+// 메모리 정리: 오래된 결과 자동 삭제
+function cleanupOldResults() {
+  const now = Date.now()
+  for (const [jobId, timestamp] of resultsTimestamps.entries()) {
+    if (now - timestamp > RESULTS_TTL_MS) {
+      resultsMap.delete(jobId)
+      resultsTimestamps.delete(jobId)
+      logger.info({ jobId }, "[Memory Cleanup] Auto-deleted old extraction results")
+    }
+  }
+}
+
+// 5분마다 정리 실행
+setInterval(cleanupOldResults, 5 * 60 * 1000)
 
 export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extraction" })
   /**
@@ -416,9 +433,9 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           }
         }
 
-        // API 키 개수에 따른 동시성 설정
+        // API 키 개수에 따른 동시성 설정 (메모리 최적화: 최대 10개로 제한)
         const activeApiKeyCount = await getActiveApiKeyCount(workspaceId)
-        const defaultConcurrency = activeApiKeyCount > 0 ? activeApiKeyCount * 20 : 20
+        const defaultConcurrency = Math.min(activeApiKeyCount > 0 ? activeApiKeyCount * 3 : 3, 10)
 
         logger.info(
           {
@@ -563,9 +580,10 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
               if (session.closed) return
 
-              // 결과 저장 (다운로드를 위해)
+              // 결과 저장 (다운로드를 위해) - TTL 타임스탬프와 함께 저장
               const jobId = `${workspaceId}-${Date.now()}`
               resultsMap.set(jobId, results)
+              resultsTimestamps.set(jobId, Date.now())
 
               // 완료 메시지 전송
               session.push({
@@ -814,6 +832,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       const { jobId } = params
 
       resultsMap.delete(jobId)
+      resultsTimestamps.delete(jobId)
 
       logger.info({ jobId }, "Cleaned up web extraction job data")
 

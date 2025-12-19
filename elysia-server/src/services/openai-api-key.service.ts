@@ -118,7 +118,7 @@ export async function getNextApiKey(workspaceId: string): Promise<string | null>
     })
     .where(eq(openaiApiKeys.id, selectedKey.id))
 
-  logger.info(
+  logger.debug(
     {
       workspaceId,
       keyId: selectedKey.id,

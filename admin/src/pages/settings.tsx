@@ -539,6 +539,8 @@ export default function SettingsPage() {
                 canDelete={deletionCheck?.canDelete ?? false}
                 isDeleting={deleteAccountMutation.isPending}
                 onDeleteAccount={() => deleteAccountMutation.mutate()}
+                userEmail={currentUser?.email}
+                userName={currentUser?.username}
                 workspacesRequiringTransfer={deletionCheck?.workspacesRequiringTransfer ?? []}
                 workspacesToBeDeleted={deletionCheck?.workspacesToBeDeleted ?? []}
               />

@@ -18,6 +18,8 @@ export type OnboardingSurveyData = {
   lang?: string
 }
 
+export type JobStatus = "waiting" | "active" | "completed" | "failed" | "delayed" | "stalled"
+
 export type OnboardingProgressData = {
   id: string
   workspaceId: string
@@ -39,6 +41,9 @@ export type OnboardingProgressData = {
   emailGenerationCompleted: string | null
   emailLinkCompleted: string | null
   completedAt: string | null
+  // BullMQ Job 추적 필드
+  jobId: string | null
+  jobStatus: JobStatus | null
   createdAt: string
   updatedAt: string
 }

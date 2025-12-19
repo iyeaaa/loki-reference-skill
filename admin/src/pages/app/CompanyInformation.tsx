@@ -15,9 +15,8 @@ import { isValidSurveyData, migrateFromSessionStorage, surveyDataAtom } from "@/
 import { OnboardingStepper } from "./components/OnboardingStepper"
 import { StepCompanyInfo } from "./components/StepCompanyInfo"
 import { StepConfirmation } from "./components/StepConfirmation"
-import { StepEmailGeneration } from "./components/StepEmailGeneration"
 import { StepEmailLink } from "./components/StepEmailLink"
-import { StepLeadCheck } from "./components/StepLeadCheck"
+import { StepLeadGeneration } from "./components/StepLeadGeneration"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -313,17 +312,20 @@ export default function CompanyInformation() {
   // Calculate completed steps (all steps before current step)
   const completedSteps = Array.from({ length: currentStep - 1 }, (_, i) => i + 1)
 
+  // Updated: 5 steps → 4 steps
+  // Step 1: Company Info
+  // Step 2: Lead & Email Generation (combined)
+  // Step 3: Email Link
+  // Step 4: Confirmation
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return <StepCompanyInfo />
       case 2:
-        return <StepLeadCheck />
+        return <StepLeadGeneration />
       case 3:
-        return <StepEmailGeneration />
-      case 4:
         return <StepEmailLink />
-      case 5:
+      case 4:
         return <StepConfirmation />
       default:
         return <StepCompanyInfo />
@@ -331,7 +333,7 @@ export default function CompanyInformation() {
   }
 
   return (
-    <div className="px-4 py-8">
+    <div className="py-6">
       <WelcomePopup onComplete={handleWelcomeComplete} open={showWelcome} />
 
       {/* Stepper */}

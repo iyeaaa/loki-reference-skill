@@ -240,6 +240,7 @@ export async function fetchWebsiteContent(
 /**
  * 깊이 크롤링 (Contact, About 페이지 등)
  * 중복 fetch 제거: 한 번의 fetch로 content와 links를 모두 추출
+ * 메모리 최적화: 콘텐츠 크기 제한 및 명시적 정리
  */
 export interface PageInfo {
   url: string
@@ -273,7 +274,7 @@ export async function fetchWithDepth(
       normalizedUrl = `https://${normalizedUrl}`
     }
 
-    logger.info(
+    logger.debug(
       { url: normalizedUrl, depth, timeout: timeoutSeconds },
       "[fetchWithDepth] Starting crawl",
     )
@@ -310,7 +311,7 @@ export async function fetchWithDepth(
       !xFrameOptions?.includes("SAMEORIGIN") &&
       !hasFrameAncestors
 
-    logger.info(
+    logger.debug(
       { status: httpStatus, url: normalizedUrl, canEmbed, xFrameOptions },
       "[fetchWithDepth] Successfully fetched main page",
     )
@@ -445,7 +446,7 @@ export async function fetchWithDepth(
         }
       }
 
-      logger.info(
+      logger.debug(
         { totalFound: allLinks.length, selected: links.length, links },
         "[fetchWithDepth] Filtered links",
       )
@@ -468,7 +469,7 @@ export async function fetchWithDepth(
 
     if (pageContent) {
       pagesContent.set(normalizedUrl, pageContent)
-      logger.info(
+      logger.debug(
         {
           contentLength: pageContent.length,
           metadataLength: metadata.length,
@@ -495,7 +496,7 @@ export async function fetchWithDepth(
 
     // depth가 0이면 추가 크롤링 없이 반환
     if (depth === 0) {
-      logger.info(
+      logger.debug(
         { totalPages: pagesContent.size },
         "[fetchWithDepth] Depth is 0, skipping additional pages",
       )
@@ -503,7 +504,7 @@ export async function fetchWithDepth(
     }
 
     // 추가 페이지 크롤링 (링크는 위에서 이미 추출됨)
-    logger.info({ linksFound: links.length }, "[fetchWithDepth] Found additional links to crawl")
+    logger.debug({ linksFound: links.length }, "[fetchWithDepth] Found additional links to crawl")
     if (links.length > 0) {
       onProgress?.(`${links.length}개의 추가 페이지를 발견했어요`)
     }
@@ -520,7 +521,7 @@ export async function fetchWithDepth(
               : link.includes("team")
                 ? "팀 소개"
                 : "추가"
-        logger.info(
+        logger.debug(
           { link, index: i + 1, total: links.length },
           "[fetchWithDepth] Fetching additional page",
         )
@@ -533,7 +534,7 @@ export async function fetchWithDepth(
           // 추가 페이지 제목 추출 (간단하게)
           const pageName = link.split("/").pop() || "추가 페이지"
 
-          logger.info(
+          logger.debug(
             { link, contentLength: pageResult.content.length },
             "[fetchWithDepth] Successfully fetched and extracted additional page",
           )
@@ -997,6 +998,9 @@ export async function processLeadEnrichment(
     const contacts = await extractContactsForLeadDiscovery(pagesContent, config.gptTimeout)
     const gptElapsed = (Date.now() - gptStartTime) / 1000
 
+    // 메모리 해제: pagesContent Map 정리
+    pagesContent.clear()
+
     // 결과 병합
     const result: CompanyRecord = {
       ...record,
@@ -1087,6 +1091,9 @@ export async function processCompanyRecord(
       searchCriteria,
     )
     const gptElapsed = (Date.now() - gptStartTime) / 1000
+
+    // 메모리 해제: pagesContent Map 정리
+    pagesContent.clear()
 
     // 결과 병합
     const result: CompanyRecord = {

@@ -3,6 +3,7 @@ import { AlertCircle, Download, FileUp, Key, RotateCcw, Save, X } from "lucide-r
 import type React from "react"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import * as XLSX from "xlsx"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -44,6 +45,7 @@ import type { ExtractionResult } from "@/lib/api/types/web-extraction"
 import { formatFileSize, validateAndCountUrls } from "@/utils/web-extraction.utils"
 
 export function WebDataExtraction() {
+  const { t } = useTranslation("settings")
   const keyNameId = useId()
   const apiKeyId = useId()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -66,6 +68,7 @@ export function WebDataExtraction() {
   const isInitialMountRef = useRef(true)
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  const isAllWorkspaces = workspaceId === "all" || !workspaceId
 
   const [apiKeyFormData, setApiKeyFormData] = useState({
     name: "",
@@ -426,9 +429,6 @@ export function WebDataExtraction() {
   }
 
   const handleDeleteApiKey = async (id: string) => {
-    if (!confirm("이 API 키를 삭제하시겠습니까?")) {
-      return
-    }
     await deleteApiKeyMutation.mutateAsync({ id, workspaceId })
   }
 
@@ -486,11 +486,20 @@ export function WebDataExtraction() {
         {/* Left: Main Content */}
         {hasData ? (
           <div className="flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
+            {/* All Workspaces Alert */}
+            {isAllWorkspaces && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t("openaiApiKeys.selectWorkspaceTitle")}</AlertTitle>
+                <AlertDescription>{t("openaiApiKeys.selectWorkspaceDescription")}</AlertDescription>
+              </Alert>
+            )}
+
             {/* Error Alert */}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>오류</AlertTitle>
+                <AlertTitle>{t("common.error")}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}

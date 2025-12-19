@@ -525,6 +525,71 @@ export async function deleteLead(id: string) {
 // LEAD QUERY AND SEARCH OPERATIONS
 // ====================================
 
+// GetLeadsByIds :many
+export async function getLeadsByIds(leadIds: string[]) {
+  if (leadIds.length === 0) {
+    return []
+  }
+
+  const result = await db
+    .select({
+      id: leads.id,
+      workspaceId: leads.workspaceId,
+      workspaceName: workspaces.name,
+      companyName: leads.companyName,
+      foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
+      websiteUrl: leads.websiteUrl,
+      businessType: leads.businessType,
+      country: leads.country,
+      city: leads.city,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
+      createdBy: leads.createdBy,
+      createdByUsername: users.username,
+      createdAt: leads.createdAt,
+      updatedAt: leads.updatedAt,
+      lastContactedAt: leads.lastContactedAt,
+    })
+    .from(leads)
+    .innerJoin(workspaces, eq(leads.workspaceId, workspaces.id))
+    .leftJoin(users, eq(leads.createdBy, users.id))
+    .where(inArray(leads.id, leadIds))
+    .orderBy(desc(leads.createdAt))
+
+  // Get contacts for all leads
+  const contactsData = await db
+    .select({
+      leadId: leadContacts.leadId,
+      contactType: leadContacts.contactType,
+      contactValue: leadContacts.contactValue,
+      isPrimary: leadContacts.isPrimary,
+    })
+    .from(leadContacts)
+    .where(inArray(leadContacts.leadId, leadIds))
+
+  // Create contacts map
+  const contactsByLead = contactsData.reduce(
+    (acc, contact) => {
+      if (!acc[contact.leadId]) acc[contact.leadId] = []
+      acc[contact.leadId]?.push(contact)
+      return acc
+    },
+    {} as Record<string, typeof contactsData>,
+  )
+
+  // Merge leads with their contacts
+  return result.map((lead) => {
+    const contacts = contactsByLead[lead.id] || []
+    const primaryEmail = contacts.find((c) => c.contactType === "email" && c.isPrimary)
+    return {
+      ...lead,
+      email: primaryEmail?.contactValue || null,
+      contacts,
+    }
+  })
+}
+
 // ListLeads :many
 export async function listLeads(limit: number, offset: number) {
   const result = await db

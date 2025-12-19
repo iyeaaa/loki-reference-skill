@@ -3,6 +3,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
+import { NotificationBell } from "@/components/NotificationBell"
 import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
 import { ProfileCard } from "@/components/ProfileCard"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -160,7 +161,16 @@ function DashboardContent({ children }: DashboardContentProps) {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <div className="ml-auto flex items-center gap-7 px-4">
+          <div className="ml-auto flex items-center gap-3 px-4">
+            {/* Notification Bell */}
+            {userId && (
+              <NotificationBell
+                userId={userId}
+                workspaceId={selectedWorkspace !== "all" ? selectedWorkspace : undefined}
+              />
+            )}
+
+            {/* Profile Button */}
             <button
               className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
               onClick={() => setShowProfileCard(!showProfileCard)}

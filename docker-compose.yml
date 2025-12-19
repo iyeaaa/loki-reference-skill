@@ -46,6 +46,14 @@ services:
       - NODE_ENV=production
       - DB_HOST=postgres # Docker 네트워크 내 호스트명으로 오버라이드
       - REDIS_HOST=redis # Docker 네트워크 내 호스트명으로 오버라이드
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G  # 메모리 제한 (OOM 방지)
+        reservations:
+          cpus: "0.5"
+          memory: 512M
     networks:
       - app-network
 

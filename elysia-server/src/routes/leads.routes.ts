@@ -754,10 +754,25 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
     },
   )
 
-  // List leads with pagination
+  // List leads with pagination or by IDs
   .get(
     "/",
     async ({ query }) => {
+      // If ids parameter is provided, fetch leads by IDs (for campaign confirmation)
+      if (query.ids) {
+        const leadIds = query.ids.split(",").filter(Boolean)
+        if (leadIds.length > 0) {
+          const leads = await leadService.getLeadsByIds(leadIds)
+          return {
+            data: leads,
+            total: leads.length,
+            limit: leads.length,
+            offset: 0,
+          }
+        }
+      }
+
+      // Default: paginated list
       const limit = parseInt(query.limit || "10", 10)
       const offset = parseInt(query.offset || "0", 10)
 
@@ -773,6 +788,7 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
     },
     {
       query: t.Object({
+        ids: t.Optional(t.String()), // Comma-separated lead IDs
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
       }),

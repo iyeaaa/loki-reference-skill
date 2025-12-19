@@ -12,12 +12,13 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
   const { t } = useTranslation()
   const [, setSearchParams] = useSearchParams()
 
+  // Updated: 5 steps → 4 steps (combined lead discovery + email generation)
+  // 토스 스타일: 사용자 행동/결과 중심의 친근한 라벨
   const steps = [
-    { number: 1, label: t("app.onboarding.step1.label", "정보 입력") },
-    { number: 2, label: t("app.onboarding.step2.label", "리드 확인") },
-    { number: 3, label: t("app.onboarding.step3.label", "이메일 생성") },
-    { number: 4, label: t("app.onboarding.step4.label", "이메일 연동") },
-    { number: 5, label: t("app.onboarding.step5.label", "캠페인 실행") },
+    { number: 1, label: t("app.onboarding.step1.label", "회사 소개") },
+    { number: 2, label: t("app.onboarding.step2.labelNew", "AI가 준비") },
+    { number: 3, label: t("app.onboarding.step3.labelNew", "발송 연결") },
+    { number: 4, label: t("app.onboarding.step4.labelNew", "시작하기") },
   ]
 
   const handleGoBack = () => {

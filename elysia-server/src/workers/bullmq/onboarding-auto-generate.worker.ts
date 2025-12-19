@@ -6,8 +6,9 @@
  */
 
 import { type Job, Worker } from "bullmq"
-import { eq } from "drizzle-orm"
+import { and, eq, isNotNull } from "drizzle-orm"
 import { db } from "../../db"
+import { leadContacts } from "../../db/schema/lead-details"
 import { leads } from "../../db/schema/leads"
 import { onboardingProgress } from "../../db/schema/onboarding"
 import { sequenceSteps } from "../../db/schema/sequences"
@@ -128,16 +129,24 @@ async function processOnboardingJob(
         progressPercent: 30,
       })
     } else {
-      // Recovery: Get existing lead IDs from DB
+      // Recovery: Get existing lead IDs with emails from DB
       const existingLeads = await db
         .select({ id: leads.id })
         .from(leads)
-        .where(eq(leads.workspaceId, workspaceId))
+        .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
+        .where(
+          and(
+            eq(leads.workspaceId, workspaceId),
+            eq(leadContacts.contactType, "email"),
+            eq(leadContacts.isPrimary, true),
+            isNotNull(leadContacts.contactValue),
+          ),
+        )
         .limit(300)
       leadIds = existingLeads.map((l) => l.id)
       logger.info(
         { jobId, leadsCount: leadIds.length },
-        "[OnboardingWorker] Recovered lead IDs from DB",
+        "[OnboardingWorker] Recovered lead IDs with emails from DB",
       )
     }
 

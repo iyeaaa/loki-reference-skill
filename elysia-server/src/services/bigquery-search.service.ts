@@ -595,15 +595,19 @@ export const executeBigQuerySql = async (sql: string): Promise<SearchResult> => 
 export const searchBigQuery = async (
   query: string,
   dataDictionary: DataDictionary,
+  options?: { limitOverride?: number },
 ): Promise<SearchResult> => {
   console.log(`[BigQuery] ========================================`)
   console.log(`[BigQuery] searchBigQuery started`)
   console.log(`[BigQuery]   - query: "${query}"`)
   console.log(`[BigQuery]   - table: ${dataDictionary.tableName}`)
+  if (options?.limitOverride) {
+    console.log(`[BigQuery]   - limitOverride: ${options.limitOverride}`)
+  }
   const totalStartTime = Date.now()
 
   // 1. 자연어 → SQL 변환
-  const { sql, explanation } = await convertNaturalLanguageToSql(query, dataDictionary)
+  let { sql, explanation } = await convertNaturalLanguageToSql(query, dataDictionary)
 
   logger.info({ query, sql }, "Converted natural language to SQL")
 
@@ -619,7 +623,20 @@ export const searchBigQuery = async (
     }
   }
 
-  // 2. BigQuery 실행
+  // 2. LIMIT override if specified
+  if (options?.limitOverride && options.limitOverride > 0) {
+    const limitRegex = /LIMIT\s+\d+/gi
+    if (limitRegex.test(sql)) {
+      sql = sql.replace(limitRegex, `LIMIT ${options.limitOverride}`)
+      console.log(`[BigQuery] LIMIT overridden to ${options.limitOverride}`)
+    } else {
+      // No LIMIT clause found, append one
+      sql = `${sql} LIMIT ${options.limitOverride}`
+      console.log(`[BigQuery] LIMIT ${options.limitOverride} appended`)
+    }
+  }
+
+  // 3. BigQuery 실행
   const result = await executeBigQuerySql(sql)
   const totalElapsed = Date.now() - totalStartTime
 

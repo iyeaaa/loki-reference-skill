@@ -40,6 +40,7 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/v1/webhooks/sendgrid",
   "POST /api/v1/webhooks/nylas",
   "POST /api/v1/webhooks/stripe",
+  "POST /api/v1/nylas/webhooks", // Nylas webhook (실제 경로)
   "POST /api/webhook/inbound",
   "POST /api/webhook/inbound-store",
   "POST /api/webhook/sendgrid-events",

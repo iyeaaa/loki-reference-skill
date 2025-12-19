@@ -376,6 +376,11 @@ export async function createGoogleConnector(): Promise<void> {
  * Find email by message ID (stored in sendgridMessageId field)
  */
 async function findEmailByMessageId(messageId: string) {
+  logger.info(
+    { messageId },
+    "🔍 [NYLAS SERVICE] Looking up email by messageId in sendgridMessageId field",
+  )
+
   const results = await db
     .select({
       id: emails.id,
@@ -386,6 +391,24 @@ async function findEmailByMessageId(messageId: string) {
     .from(emails)
     .where(eq(emails.sendgridMessageId, messageId))
     .limit(1)
+
+  if (results[0]) {
+    logger.info(
+      {
+        messageId,
+        emailId: results[0].id,
+        status: results[0].status,
+        leadId: results[0].leadId,
+      },
+      "✅ [NYLAS SERVICE] Email found by messageId",
+    )
+  } else {
+    logger.warn(
+      { messageId },
+      "⚠️ [NYLAS SERVICE] No email found with this messageId - webhook event cannot be matched to an email",
+    )
+  }
+
   return results[0] || null
 }
 
@@ -736,14 +759,43 @@ async function handleThreadReplied(
   _grantId: string,
   webhookId: string,
 ): Promise<void> {
+  logger.info(
+    {
+      webhookId,
+      rootMessageId: data.root_message_id,
+      messageId: data.message_id,
+      threadId: data.thread_id,
+      replyCount: data.reply_data?.count,
+      timestamp: data.timestamp,
+      label: data.label,
+      fullData: JSON.stringify(data, null, 2),
+    },
+    "💬 [NYLAS SERVICE] thread.replied - Processing inbound reply event",
+  )
+
   const email = await findEmailByMessageId(data.root_message_id)
   if (!email) {
     logger.warn(
-      { rootMessageId: data.root_message_id, webhookId },
-      "Email not found for thread.replied",
+      {
+        rootMessageId: data.root_message_id,
+        messageId: data.message_id,
+        threadId: data.thread_id,
+        webhookId,
+      },
+      "⚠️ [NYLAS SERVICE] thread.replied - Original email not found for reply. The root_message_id doesn't match any email in our database.",
     )
     return
   }
+
+  logger.info(
+    {
+      emailId: email.id,
+      leadId: email.leadId,
+      threadId: data.thread_id,
+      webhookId,
+    },
+    "💬 [NYLAS SERVICE] thread.replied - Found original email, updating repliedAt",
+  )
 
   // Update email repliedAt
   await db
@@ -754,11 +806,28 @@ async function handleThreadReplied(
     })
     .where(eq(emails.id, email.id))
 
-  logger.info({ emailId: email.id, webhookId, threadId: data.thread_id }, "Nylas reply detected")
+  logger.info(
+    {
+      emailId: email.id,
+      webhookId,
+      threadId: data.thread_id,
+      repliedAt: new Date(data.timestamp * 1000).toISOString(),
+    },
+    "✅ [NYLAS SERVICE] thread.replied - Email repliedAt updated successfully",
+  )
 
   // CRITICAL: Stop active sequence enrollments for this lead
   if (email.leadId) {
+    logger.info(
+      { leadId: email.leadId, emailId: email.id, webhookId },
+      "🛑 [NYLAS SERVICE] thread.replied - Stopping active sequence enrollments for lead",
+    )
     await stopActiveEnrollmentsForLead(email.leadId, webhookId)
+  } else {
+    logger.warn(
+      { emailId: email.id, webhookId },
+      "⚠️ [NYLAS SERVICE] thread.replied - No leadId associated with this email, skipping enrollment stop",
+    )
   }
 }
 
@@ -778,43 +847,89 @@ export async function processNylasWebhook(
       eventType: type,
       grantId,
       applicationId: data.application_id,
+      objectKeys: object ? Object.keys(object) : [],
+      fullObject: JSON.stringify(object, null, 2),
     },
-    "Processing Nylas webhook event",
+    "🔄 [NYLAS SERVICE] Starting to process Nylas webhook event",
   )
 
   try {
     switch (type) {
       case "message.send_success":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "📤 [NYLAS SERVICE] Handling message.send_success",
+        )
         await handleMessageSendSuccess(object as NylasSendSuccessData, grantId, webhookId)
         break
 
       case "message.send_failed":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "❌ [NYLAS SERVICE] Handling message.send_failed",
+        )
         await handleMessageSendFailed(object as NylasSendFailedData, grantId, webhookId)
         break
 
       case "message.bounce_detected":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "⚠️ [NYLAS SERVICE] Handling message.bounce_detected",
+        )
         await handleMessageBounceDetected(object as NylasBounceDetectedData, grantId, webhookId)
         break
 
       case "message.opened":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "👁️ [NYLAS SERVICE] Handling message.opened",
+        )
         await handleMessageOpened(object as NylasOpenedData, grantId, webhookId)
         break
 
       case "message.link_clicked":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "🔗 [NYLAS SERVICE] Handling message.link_clicked",
+        )
         await handleLinkClicked(object as NylasClickedData, grantId, webhookId)
         break
 
       case "thread.replied":
+        logger.info(
+          { webhookId, eventType: type, object },
+          "💬 [NYLAS SERVICE] Handling thread.replied - INBOUND REPLY DETECTED",
+        )
         await handleThreadReplied(object as NylasRepliedData, grantId, webhookId)
         break
 
       default:
-        logger.warn({ eventType: type, webhookId }, "Unknown Nylas webhook event type")
+        logger.warn(
+          {
+            eventType: type,
+            webhookId,
+            fullPayload: JSON.stringify(payload, null, 2),
+          },
+          "⚠️ [NYLAS SERVICE] Unknown Nylas webhook event type - this might be an inbound event we're not handling",
+        )
     }
 
+    logger.info(
+      { webhookId, eventType: type },
+      "✅ [NYLAS SERVICE] Webhook event processed successfully",
+    )
     return { success: true }
   } catch (error) {
-    logger.error({ err: error, webhookId, eventType: type }, "Error processing Nylas webhook event")
+    logger.error(
+      {
+        err: error,
+        webhookId,
+        eventType: type,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      },
+      "❌ [NYLAS SERVICE] Error processing Nylas webhook event",
+    )
     return { success: false }
   }
 }

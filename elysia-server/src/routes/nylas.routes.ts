@@ -434,15 +434,43 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
   )
 
   // GET: Webhook verification (Nylas sends this first)
-  .get("/api/v1/nylas/webhooks", ({ query }) => {
+  // Route: /api/v1/nylas/webhooks (prefix + /webhooks)
+  .get("/webhooks", ({ query, request }) => {
+    const requestInfo = {
+      challenge: query.challenge,
+      queryParams: query,
+      url: request.url,
+      method: request.method,
+      headers: Object.fromEntries(request.headers.entries()),
+      timestamp: new Date().toISOString(),
+    }
+
+    logger.info(requestInfo, "🔔 [NYLAS WEBHOOK] GET request received (challenge verification)")
+
     if (query.challenge) {
-      console.log("Received Nylas challenge:", query.challenge)
+      logger.info(
+        {
+          challenge: query.challenge,
+          challengeLength: query.challenge.length,
+          url: request.url,
+        },
+        "✅ [NYLAS WEBHOOK] Challenge received, returning challenge string",
+      )
       // Return ONLY the challenge string, nothing else
       return new Response(query.challenge, {
         status: 200,
         headers: { "Content-Type": "text/plain" },
       })
     }
+
+    logger.warn(
+      {
+        url: request.url,
+        queryParams: query,
+        headers: Object.fromEntries(request.headers.entries()),
+      },
+      "⚠️ [NYLAS WEBHOOK] GET request without challenge parameter",
+    )
     return "No challenge provided"
   })
 
@@ -452,7 +480,28 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
    */
   .post(
     "/webhooks",
-    async ({ body, set }) => {
+    async ({ body, set, request }) => {
+      // Log raw request details first
+      logger.info(
+        {
+          url: request.url,
+          method: request.method,
+          headers: Object.fromEntries(request.headers.entries()),
+          contentType: request.headers.get("content-type"),
+        },
+        "📨 [NYLAS WEBHOOK] POST request received - raw request info",
+      )
+
+      // Log raw body for debugging
+      logger.info(
+        {
+          bodyType: typeof body,
+          bodyKeys: body && typeof body === "object" ? Object.keys(body) : [],
+          rawBody: JSON.stringify(body, null, 2),
+        },
+        "📨 [NYLAS WEBHOOK] Raw body received",
+      )
+
       try {
         const payload = body as NylasWebhookPayload
 
@@ -461,11 +510,51 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
             webhookId: payload.id,
             eventType: payload.type,
             time: payload.time,
+            specversion: payload.specversion,
+            source: payload.source,
+            applicationId: payload.data?.application_id,
+            grantId: payload.data?.grant_id,
+            objectData: payload.data?.object,
           },
-          "Received Nylas webhook",
+          "📨 [NYLAS WEBHOOK] Parsed webhook payload - FULL DETAILS",
         )
 
+        // Check for inbound-related events
+        const inboundEventTypes = [
+          "message.created",
+          "message.received",
+          "thread.replied",
+          "message.send_success",
+          "message.send_failed",
+          "message.opened",
+          "message.link_clicked",
+          "message.bounce_detected",
+        ]
+
+        if (inboundEventTypes.includes(payload.type)) {
+          logger.info(
+            {
+              eventType: payload.type,
+              webhookId: payload.id,
+              grantId: payload.data?.grant_id,
+              objectData: JSON.stringify(payload.data?.object, null, 2),
+            },
+            `🔔 [NYLAS WEBHOOK] IMPORTANT EVENT: ${payload.type}`,
+          )
+        }
+
         const result = await processNylasWebhook(payload)
+
+        logger.info(
+          {
+            webhookId: payload.id,
+            eventType: payload.type,
+            processResult: result,
+          },
+          result.success
+            ? "✅ [NYLAS WEBHOOK] Webhook processed successfully"
+            : "❌ [NYLAS WEBHOOK] Webhook processing failed",
+        )
 
         if (!result.success) {
           set.status = 500
@@ -475,7 +564,15 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
         // Always return 200 to acknowledge receipt
         return { success: true }
       } catch (error) {
-        logger.error({ err: error }, "Error handling Nylas webhook")
+        logger.error(
+          {
+            err: error,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorStack: error instanceof Error ? error.stack : undefined,
+            rawBody: JSON.stringify(body, null, 2),
+          },
+          "❌ [NYLAS WEBHOOK] Error handling Nylas webhook",
+        )
         // Still return 200 to prevent Nylas from retrying
         return { success: false, error: "Internal error" }
       }

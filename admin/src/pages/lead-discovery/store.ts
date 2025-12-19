@@ -61,8 +61,46 @@ export type ChatMessage = {
 // Cross-Component State (CustomerTable과 공유)
 // ============================================
 
-// 발견된 고객 목록
-export const customersAtom = atom<Customer[]>([])
+// 로컬스토리지 저장용 인터페이스 (Date를 string으로 변환)
+type StoredCustomer = Omit<Customer, "createdAt"> & {
+  createdAt: string // ISO string
+}
+
+// 고객 로컬스토리지 커스텀 스토리지
+const customersStorage = {
+  getItem: (key: string): Customer[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) {
+      return []
+    }
+    try {
+      const parsed: StoredCustomer[] = JSON.parse(stored)
+      return parsed.map((c) => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+      }))
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: Customer[]): void => {
+    const toStore: StoredCustomer[] = value.map((c) => ({
+      ...c,
+      createdAt: c.createdAt.toISOString(),
+    }))
+    localStorage.setItem(key, JSON.stringify(toStore))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 발견된 고객 목록 - 로컬스토리지에 저장하여 새로고침/뒤로가기 후에도 유지
+export const customersAtom = atomWithStorage<Customer[]>(
+  "lead-discovery-customers",
+  [],
+  customersStorage,
+)
 
 // 고객 추가 액션 (Load More용 - 기존 고객에 추가)
 export const addCustomersAtom = atom(null, (get, set, newCustomers: Customer[]) => {
@@ -99,6 +137,7 @@ export const updateCustomerAtom = atom(
 // 전체 고객 초기화
 export const resetCustomersAtom = atom(null, (_get, set) => {
   set(customersAtom, [])
+  localStorage.removeItem("lead-discovery-customers")
 })
 
 // ============================================
@@ -176,13 +215,23 @@ export const resetChatMessagesAtom = atom(null, (_get, set) => {
   localStorage.removeItem("lead-discovery-chat-messages")
 })
 
-// 전체 초기화 (새 검색) - 모든 상태를 초기화
+// 검색 화면으로 돌아가기 (메시지만 초기화, 결과는 유지)
+// 사용자가 "이어서 하기"로 돌아올 수 있도록 customers와 userQuery 유지
+export const goBackToSearchAtom = atom(null, (_get, set) => {
+  // 채팅 메시지만 초기화
+  set(chatMessagesAtom, [])
+  localStorage.removeItem("lead-discovery-chat-messages")
+  // customers와 streamingState.userQuery는 유지하여 "이어서 하기" 가능
+})
+
+// 전체 초기화 (완전히 새로 시작) - 모든 상태를 초기화
 export const resetAllAtom = atom(null, (_get, set) => {
   // 채팅 메시지 초기화
   set(chatMessagesAtom, [])
   localStorage.removeItem("lead-discovery-chat-messages")
   // 고객 목록 초기화
   set(customersAtom, [])
+  localStorage.removeItem("lead-discovery-customers")
   // 스트리밍 상태는 streamingStateAtom에서 별도로 초기화 (아래에 정의)
   // Thinking 상태 초기화는 thinkingStateAtom에서 별도로 초기화 (아래에 정의)
 })
@@ -195,7 +244,10 @@ import type { ClarificationData, LeadDiscoveryStatus } from "@/lib/api/hooks/lea
 import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 
 // 세션 TTL (30분)
-const SESSION_TTL_MS = 30 * 60 * 1000
+export const SESSION_TTL_MS = 30 * 60 * 1000
+
+// 세션 만료 경고 시간 (25분 - 만료 5분 전)
+export const SESSION_WARNING_MS = 25 * 60 * 1000
 
 // 스트리밍 상태 인터페이스
 export type StreamingState = {
@@ -729,4 +781,754 @@ export const getThinkingEntriesForMessage = (
 // Thinking 상태 리셋
 export const resetThinkingAtom = atom(null, (_get, set) => {
   set(thinkingStateAtom, initialThinkingState)
+})
+
+// ============================================
+// Search History State (최근 검색 기록)
+// ============================================
+
+export type SearchHistoryItem = {
+  id: string
+  query: string
+  searchMode: "website" | "criteria_input" | "criteria_click"
+  // 조건 검색 모드 필드
+  country?: string
+  industry?: string
+  subIndustry?: string
+  employeeRange?: string
+  // 메타데이터
+  timestamp: number
+  resultCount?: number // 검색 결과 수 (선택적)
+}
+
+export type FavoriteSearch = SearchHistoryItem & {
+  name: string // 사용자 지정 이름
+  createdAt: number
+}
+
+const MAX_HISTORY_ITEMS = 5
+
+// 히스토리 로컬스토리지 커스텀 스토리지
+const historyStorage = {
+  getItem: (key: string): SearchHistoryItem[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) {
+      return []
+    }
+    try {
+      return JSON.parse(stored) as SearchHistoryItem[]
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: SearchHistoryItem[]): void => {
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 즐겨찾기 로컬스토리지 커스텀 스토리지
+const favoritesStorage = {
+  getItem: (key: string): FavoriteSearch[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) {
+      return []
+    }
+    try {
+      return JSON.parse(stored) as FavoriteSearch[]
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: FavoriteSearch[]): void => {
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 최근 검색 히스토리 atom
+export const searchHistoryAtom = atomWithStorage<SearchHistoryItem[]>(
+  "lead-discovery-search-history",
+  [],
+  historyStorage,
+)
+
+// 즐겨찾기 검색 atom
+export const favoriteSearchesAtom = atomWithStorage<FavoriteSearch[]>(
+  "lead-discovery-favorite-searches",
+  [],
+  favoritesStorage,
+)
+
+// 검색 히스토리에 추가
+export const addSearchHistoryAtom = atom(
+  null,
+  (get, set, item: Omit<SearchHistoryItem, "id" | "timestamp">) => {
+    const history = get(searchHistoryAtom)
+
+    // 동일한 쿼리가 있으면 제거 (최신 항목으로 업데이트)
+    const filtered = history.filter((h) => h.query !== item.query)
+
+    const newItem: SearchHistoryItem = {
+      ...item,
+      id: `history-${Date.now()}`,
+      timestamp: Date.now(),
+    }
+
+    // 최근 5개만 유지
+    const newHistory = [newItem, ...filtered].slice(0, MAX_HISTORY_ITEMS)
+    set(searchHistoryAtom, newHistory)
+  },
+)
+
+// 검색 히스토리 결과 수 업데이트
+export const updateSearchHistoryResultAtom = atom(
+  null,
+  (get, set, { query, resultCount }: { query: string; resultCount: number }) => {
+    const history = get(searchHistoryAtom)
+    set(
+      searchHistoryAtom,
+      history.map((h) => (h.query === query ? { ...h, resultCount } : h)),
+    )
+  },
+)
+
+// 검색 히스토리 삭제
+export const removeSearchHistoryAtom = atom(null, (get, set, id: string) => {
+  const history = get(searchHistoryAtom)
+  set(
+    searchHistoryAtom,
+    history.filter((h) => h.id !== id),
+  )
+})
+
+// 검색 히스토리 전체 삭제
+export const clearSearchHistoryAtom = atom(null, (_get, set) => {
+  set(searchHistoryAtom, [])
+})
+
+// 즐겨찾기에 추가
+export const addFavoriteSearchAtom = atom(
+  null,
+  (get, set, item: Omit<FavoriteSearch, "id" | "createdAt">) => {
+    const favorites = get(favoriteSearchesAtom)
+
+    // 동일한 쿼리가 있으면 추가하지 않음
+    if (favorites.some((f) => f.query === item.query)) {
+      return false
+    }
+
+    const newItem: FavoriteSearch = {
+      ...item,
+      id: `favorite-${Date.now()}`,
+      createdAt: Date.now(),
+    }
+
+    set(favoriteSearchesAtom, [...favorites, newItem])
+    return true
+  },
+)
+
+// 즐겨찾기 이름 변경
+export const renameFavoriteSearchAtom = atom(null, (get, set, id: string, newName: string) => {
+  const favorites = get(favoriteSearchesAtom)
+  set(
+    favoriteSearchesAtom,
+    favorites.map((f) => (f.id === id ? { ...f, name: newName } : f)),
+  )
+})
+
+// 즐겨찾기 삭제
+export const removeFavoriteSearchAtom = atom(null, (get, set, id: string) => {
+  const favorites = get(favoriteSearchesAtom)
+  set(
+    favoriteSearchesAtom,
+    favorites.filter((f) => f.id !== id),
+  )
+})
+
+// 히스토리 아이템을 즐겨찾기로 이동
+export const historyToFavoriteAtom = atom(null, (get, set, historyId: string, name: string) => {
+  const history = get(searchHistoryAtom)
+  const historyItem = history.find((h) => h.id === historyId)
+
+  if (!historyItem) {
+    return false
+  }
+
+  const favorites = get(favoriteSearchesAtom)
+
+  // 이미 즐겨찾기에 있으면 추가하지 않음
+  if (favorites.some((f) => f.query === historyItem.query)) {
+    return false
+  }
+
+  const newFavorite: FavoriteSearch = {
+    ...historyItem,
+    id: `favorite-${Date.now()}`,
+    name,
+    createdAt: Date.now(),
+  }
+
+  set(favoriteSearchesAtom, [...favorites, newFavorite])
+  return true
+})
+
+// ============================================
+// Search Session State (멀티 세션 검색 관리)
+// 백그라운드에서 독립적으로 진행되는 검색 세션들
+// ============================================
+
+// 검색 세션 상태 타입
+export type SearchSessionStatus =
+  | "connecting" // 서버 연결 중
+  | "analyzing" // 웹사이트 분석 중
+  | "waiting_selection" // 바이어 타겟 선택 대기
+  | "waiting_clarification" // 확인 질문 대기
+  | "searching" // 리드 검색 중
+  | "complete" // 완료
+  | "error" // 에러
+
+// 개별 검색 세션
+export type SearchSession = {
+  id: string
+  query: string
+  searchMode: "website" | "criteria_input" | "criteria_click"
+  workspaceId: string
+
+  // 상태
+  status: SearchSessionStatus
+  progress: number
+  message: string
+  error?: LeadDiscoveryError
+
+  // 백엔드 세션 정보
+  backendSessionId?: string
+  sessionCreatedAt?: number
+
+  // 검색 결과
+  customers: Customer[]
+  totalCount?: number
+
+  // 바이어 추천 (waiting_selection 상태에서 사용)
+  recommendations?: BuyerRecommendation[]
+  selectedRecommendationId?: string
+
+  // 확인 질문 (waiting_clarification 상태에서 사용)
+  clarificationData?: ClarificationData
+
+  // 분석 정보
+  analyzedPages?: AnalyzedPage[]
+  analysisSummary?: string
+  customerAnalysisSummary?: string
+  siteFavicon?: string
+
+  // 메타데이터
+  createdAt: number
+  updatedAt: number
+
+  // 필터 조건 (조건 검색용)
+  country?: string
+  industry?: string
+  subIndustry?: string
+  employeeRange?: string
+}
+
+// 최대 동시 검색 수
+const MAX_CONCURRENT_SEARCHES = 3
+
+// 검색 세션 저장용 타입 (Date -> string)
+type StoredSearchSession = Omit<SearchSession, "customers"> & {
+  customers: StoredCustomer[]
+}
+
+// 검색 세션 로컬스토리지 커스텀 스토리지
+const searchSessionsStorage = {
+  getItem: (key: string): SearchSession[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) {
+      return []
+    }
+    try {
+      const parsed: StoredSearchSession[] = JSON.parse(stored)
+      return parsed.map((s) => ({
+        ...s,
+        customers: s.customers.map((c) => ({
+          ...c,
+          createdAt: new Date(c.createdAt),
+        })),
+      }))
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: SearchSession[]): void => {
+    const toStore: StoredSearchSession[] = value.map((s) => ({
+      ...s,
+      customers: s.customers.map((c) => ({
+        ...c,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    }))
+    localStorage.setItem(key, JSON.stringify(toStore))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 검색 세션 목록 atom
+export const searchSessionsAtom = atomWithStorage<SearchSession[]>(
+  "lead-discovery-search-sessions",
+  [],
+  searchSessionsStorage,
+)
+
+// 현재 활성 세션 ID (ChatRoom에서 보고 있는 세션)
+export const activeSessionIdAtom = atom<string | null>(null)
+
+// 현재 활성 세션 가져오기 (파생 atom)
+export const activeSessionAtom = atom((get) => {
+  const sessions = get(searchSessionsAtom)
+  const activeId = get(activeSessionIdAtom)
+  if (!activeId) {
+    return null
+  }
+  return sessions.find((s) => s.id === activeId) || null
+})
+
+// 진행 중인 세션들 (connecting, analyzing, searching)
+export const inProgressSessionsAtom = atom((get) => {
+  const sessions = get(searchSessionsAtom)
+  return sessions.filter((s) => ["connecting", "analyzing", "searching"].includes(s.status))
+})
+
+// 대기 중인 세션들 (waiting_selection, waiting_clarification)
+export const waitingSessionsAtom = atom((get) => {
+  const sessions = get(searchSessionsAtom)
+  return sessions.filter((s) => ["waiting_selection", "waiting_clarification"].includes(s.status))
+})
+
+// 완료된 세션들 (complete)
+export const completedSessionsAtom = atom((get) => {
+  const sessions = get(searchSessionsAtom)
+  return sessions.filter((s) => s.status === "complete")
+})
+
+// 에러 세션들 (error)
+export const errorSessionsAtom = atom((get) => {
+  const sessions = get(searchSessionsAtom)
+  return sessions.filter((s) => s.status === "error")
+})
+
+// 동시 검색 가능 여부 확인
+export const canStartNewSearchAtom = atom((get) => {
+  const inProgress = get(inProgressSessionsAtom)
+  return inProgress.length < MAX_CONCURRENT_SEARCHES
+})
+
+// 새 검색 세션 생성
+export const createSearchSessionAtom = atom(
+  null,
+  (
+    get,
+    set,
+    params: {
+      query: string
+      searchMode: "website" | "criteria_input" | "criteria_click"
+      workspaceId: string
+      country?: string
+      industry?: string
+      subIndustry?: string
+      employeeRange?: string
+    },
+  ): SearchSession | null => {
+    const sessions = get(searchSessionsAtom)
+    const inProgress = sessions.filter((s) =>
+      ["connecting", "analyzing", "searching"].includes(s.status),
+    )
+
+    // 동시 검색 제한 확인
+    if (inProgress.length >= MAX_CONCURRENT_SEARCHES) {
+      return null
+    }
+
+    const now = Date.now()
+    const newSession: SearchSession = {
+      id: `session-${now}-${Math.random().toString(36).slice(2, 9)}`,
+      query: params.query,
+      searchMode: params.searchMode,
+      workspaceId: params.workspaceId,
+      status: "connecting",
+      progress: 0,
+      message: "서버에 연결 중...",
+      customers: [],
+      createdAt: now,
+      updatedAt: now,
+      country: params.country,
+      industry: params.industry,
+      subIndustry: params.subIndustry,
+      employeeRange: params.employeeRange,
+    }
+
+    set(searchSessionsAtom, [newSession, ...sessions])
+    set(activeSessionIdAtom, newSession.id)
+
+    return newSession
+  },
+)
+
+// 검색 세션 업데이트
+export const updateSearchSessionAtom = atom(
+  null,
+  (get, set, sessionId: string, updates: Partial<SearchSession>) => {
+    const sessions = get(searchSessionsAtom)
+    set(
+      searchSessionsAtom,
+      sessions.map((s) => (s.id === sessionId ? { ...s, ...updates, updatedAt: Date.now() } : s)),
+    )
+  },
+)
+
+// 검색 세션에 고객 추가
+export const addCustomersToSessionAtom = atom(
+  null,
+  (get, set, sessionId: string, newCustomers: Customer[]) => {
+    const sessions = get(searchSessionsAtom)
+    set(
+      searchSessionsAtom,
+      sessions.map((s) =>
+        s.id === sessionId
+          ? { ...s, customers: [...s.customers, ...newCustomers], updatedAt: Date.now() }
+          : s,
+      ),
+    )
+  },
+)
+
+// 검색 세션에 고객 목록 교체
+export const setSessionCustomersAtom = atom(
+  null,
+  (get, set, sessionId: string, customers: Customer[]) => {
+    const sessions = get(searchSessionsAtom)
+    set(
+      searchSessionsAtom,
+      sessions.map((s) => (s.id === sessionId ? { ...s, customers, updatedAt: Date.now() } : s)),
+    )
+  },
+)
+
+// 검색 세션 삭제
+export const removeSearchSessionAtom = atom(null, (get, set, sessionId: string) => {
+  const sessions = get(searchSessionsAtom)
+  const activeId = get(activeSessionIdAtom)
+
+  set(
+    searchSessionsAtom,
+    sessions.filter((s) => s.id !== sessionId),
+  )
+
+  // 삭제된 세션이 활성 세션이었으면 초기화
+  if (activeId === sessionId) {
+    set(activeSessionIdAtom, null)
+  }
+})
+
+// 모든 완료된 세션 삭제
+export const clearCompletedSessionsAtom = atom(null, (get, set) => {
+  const sessions = get(searchSessionsAtom)
+  set(
+    searchSessionsAtom,
+    sessions.filter((s) => s.status !== "complete"),
+  )
+})
+
+// 모든 세션 삭제
+export const clearAllSessionsAtom = atom(null, (_get, set) => {
+  set(searchSessionsAtom, [])
+  set(activeSessionIdAtom, null)
+  localStorage.removeItem("lead-discovery-search-sessions")
+})
+
+// 세션 상태에 따른 표시 텍스트
+export const getSessionStatusText = (session: SearchSession): string => {
+  switch (session.status) {
+    case "connecting":
+      return "연결 중..."
+    case "analyzing":
+      return "웹사이트 분석 중..."
+    case "waiting_selection":
+      return "바이어 타겟 선택 필요"
+    case "waiting_clarification":
+      return "추가 정보 입력 필요"
+    case "searching":
+      return "리드 검색 중..."
+    case "complete":
+      return `${session.customers.length}건 완료`
+    case "error":
+      return "오류 발생"
+    default:
+      return "알 수 없음"
+  }
+}
+
+// 세션 상태에 따른 색상 클래스
+export const getSessionStatusColor = (
+  status: SearchSessionStatus,
+): { bg: string; text: string; border: string } => {
+  switch (status) {
+    case "connecting":
+    case "analyzing":
+    case "searching":
+      return {
+        bg: "bg-blue-500/10",
+        text: "text-blue-600 dark:text-blue-400",
+        border: "border-blue-500/30",
+      }
+    case "waiting_selection":
+    case "waiting_clarification":
+      return {
+        bg: "bg-amber-500/10",
+        text: "text-amber-600 dark:text-amber-400",
+        border: "border-amber-500/30",
+      }
+    case "complete":
+      return {
+        bg: "bg-emerald-500/10",
+        text: "text-emerald-600 dark:text-emerald-400",
+        border: "border-emerald-500/30",
+      }
+    case "error":
+      return {
+        bg: "bg-red-500/10",
+        text: "text-red-600 dark:text-red-400",
+        border: "border-red-500/30",
+      }
+    default:
+      return {
+        bg: "bg-muted",
+        text: "text-muted-foreground",
+        border: "border-border",
+      }
+  }
+}
+
+// ============================================
+// Session Validation & Cleanup (세션 유효성 검증 및 정리)
+// ============================================
+
+/**
+ * 세션이 곧 만료될 예정인지 확인 (5분 이내)
+ */
+export const isSessionExpiringSoon = (sessionCreatedAt?: number): boolean => {
+  if (!sessionCreatedAt) {
+    return false
+  }
+  const now = Date.now()
+  const elapsed = now - sessionCreatedAt
+  return elapsed > SESSION_WARNING_MS && elapsed <= SESSION_TTL_MS
+}
+
+/**
+ * 세션 남은 시간 계산 (밀리초)
+ */
+export const getSessionRemainingTime = (sessionCreatedAt?: number): number => {
+  if (!sessionCreatedAt) {
+    return 0
+  }
+  const elapsed = Date.now() - sessionCreatedAt
+  return Math.max(0, SESSION_TTL_MS - elapsed)
+}
+
+/**
+ * 세션 남은 시간 포맷 (분:초)
+ */
+export const formatSessionRemainingTime = (sessionCreatedAt?: number): string => {
+  const remaining = getSessionRemainingTime(sessionCreatedAt)
+  if (remaining <= 0) {
+    return "만료됨"
+  }
+
+  const minutes = Math.floor(remaining / 60_000)
+  const seconds = Math.floor((remaining % 60_000) / 1000)
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`
+}
+
+// 세션 유효성 검증 상태
+export type SessionValidationState = {
+  isValidating: boolean
+  lastValidatedAt?: number
+  isValid?: boolean
+  serverSessionExists?: boolean
+  error?: string
+}
+
+export const initialSessionValidationState: SessionValidationState = {
+  isValidating: false,
+}
+
+export const sessionValidationStateAtom = atom<SessionValidationState>(
+  initialSessionValidationState,
+)
+
+// 세션 검증 시작
+export const startSessionValidationAtom = atom(null, (get, set) => {
+  const current = get(sessionValidationStateAtom)
+  set(sessionValidationStateAtom, {
+    ...current,
+    isValidating: true,
+    error: undefined,
+  })
+})
+
+// 세션 검증 완료
+export const finishSessionValidationAtom = atom(
+  null,
+  (_get, set, result: { isValid: boolean; serverSessionExists?: boolean; error?: string }) => {
+    set(sessionValidationStateAtom, {
+      isValidating: false,
+      lastValidatedAt: Date.now(),
+      isValid: result.isValid,
+      serverSessionExists: result.serverSessionExists,
+      error: result.error,
+    })
+  },
+)
+
+// 세션 검증 상태 리셋
+export const resetSessionValidationAtom = atom(null, (_get, set) => {
+  set(sessionValidationStateAtom, initialSessionValidationState)
+})
+
+/**
+ * 만료된 검색 세션 정리
+ * - 로컬스토리지에서 만료된 세션 제거
+ * - 에러 상태의 오래된 세션 제거
+ */
+export const cleanupExpiredSessionsAtom = atom(null, (get, set) => {
+  const sessions = get(searchSessionsAtom)
+  const now = Date.now()
+
+  // 만료 기준: 30분 이상 경과하고 진행 중이 아닌 세션
+  const validSessions = sessions.filter((session) => {
+    // 진행 중인 세션은 유지
+    if (["connecting", "analyzing", "searching"].includes(session.status)) {
+      return true
+    }
+
+    // 세션 생성 시간이 없으면 updatedAt 사용
+    const sessionAge = now - (session.sessionCreatedAt || session.createdAt)
+
+    // 완료된 세션: 2시간까지 유지
+    if (session.status === "complete") {
+      return sessionAge < 2 * 60 * 60 * 1000 // 2시간
+    }
+
+    // 대기 중인 세션: 30분까지 유지
+    if (["waiting_selection", "waiting_clarification"].includes(session.status)) {
+      return sessionAge < SESSION_TTL_MS
+    }
+
+    // 에러 세션: 10분까지 유지
+    if (session.status === "error") {
+      return sessionAge < 10 * 60 * 1000 // 10분
+    }
+
+    // 기타: 30분까지 유지
+    return sessionAge < SESSION_TTL_MS
+  })
+
+  if (validSessions.length !== sessions.length) {
+    console.log(
+      `[store] Cleanup: removed ${sessions.length - validSessions.length} expired sessions`,
+    )
+    set(searchSessionsAtom, validSessions)
+  }
+})
+
+/**
+ * 페이지 로드 시 실행할 초기화 및 정리 작업
+ * - 만료된 세션 정리
+ * - 진행 중이었던 세션 상태 복구 시도
+ */
+export const initializeOnPageLoadAtom = atom(null, (get, set) => {
+  console.log("[store] Initializing on page load...")
+
+  // 1. 만료된 세션 정리
+  set(cleanupExpiredSessionsAtom)
+
+  // 2. 스트리밍 상태 확인 및 정리
+  const streamingState = get(streamingStateAtom)
+  if (streamingState.sessionId && isSessionExpired(streamingState.sessionCreatedAt)) {
+    console.log("[store] Current streaming session expired, resetting...")
+    set(streamingStateAtom, {
+      ...initialStreamingState,
+      // 완료된 상태면 결과는 유지
+      ...(streamingState.status === "complete"
+        ? {
+            status: "complete" as const,
+            userQuery: streamingState.userQuery,
+            analysisSummary: streamingState.analysisSummary,
+            customerAnalysisSummary: streamingState.customerAnalysisSummary,
+          }
+        : {}),
+    })
+  }
+
+  // 3. 진행 중이던 세션이 있으면 상태 확인 필요 플래그 설정
+  const sessions = get(searchSessionsAtom)
+  const inProgressSessions = sessions.filter((s) =>
+    ["connecting", "analyzing", "searching"].includes(s.status),
+  )
+
+  if (inProgressSessions.length > 0) {
+    console.log(`[store] Found ${inProgressSessions.length} in-progress sessions to validate`)
+    // 이 세션들은 서버 측 검증이 필요함
+    // validateServerSession 함수로 검증 후 상태 업데이트
+  }
+})
+
+// 세션 만료 알림 상태
+export type SessionExpiryNotification = {
+  sessionId: string
+  type: "warning" | "expired"
+  message: string
+  dismissedAt?: number
+}
+
+export const sessionExpiryNotificationsAtom = atom<SessionExpiryNotification[]>([])
+
+// 만료 알림 추가
+export const addSessionExpiryNotificationAtom = atom(
+  null,
+  (get, set, notification: Omit<SessionExpiryNotification, "dismissedAt">) => {
+    const notifications = get(sessionExpiryNotificationsAtom)
+    // 중복 방지
+    if (
+      notifications.some(
+        (n) => n.sessionId === notification.sessionId && n.type === notification.type,
+      )
+    ) {
+      return
+    }
+    set(sessionExpiryNotificationsAtom, [...notifications, notification])
+  },
+)
+
+// 만료 알림 해제
+export const dismissSessionExpiryNotificationAtom = atom(null, (get, set, sessionId: string) => {
+  const notifications = get(sessionExpiryNotificationsAtom)
+  set(
+    sessionExpiryNotificationsAtom,
+    notifications.map((n) => (n.sessionId === sessionId ? { ...n, dismissedAt: Date.now() } : n)),
+  )
+})
+
+// 만료 알림 전체 클리어
+export const clearSessionExpiryNotificationsAtom = atom(null, (_get, set) => {
+  set(sessionExpiryNotificationsAtom, [])
 })

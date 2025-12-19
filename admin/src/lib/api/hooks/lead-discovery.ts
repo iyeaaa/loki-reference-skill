@@ -786,6 +786,148 @@ export const leadDiscoveryKeys = {
   search: () => [...leadDiscoveryKeys.all, "search"] as const,
   select: () => [...leadDiscoveryKeys.all, "select"] as const,
   clarify: () => [...leadDiscoveryKeys.all, "clarify"] as const,
+  session: (sessionId: string) => [...leadDiscoveryKeys.all, "session", sessionId] as const,
+}
+
+// ============================================
+// Session Validation API (세션 유효성 검증)
+// ============================================
+
+export type SessionValidationResult = {
+  valid: boolean
+  exists: boolean
+  status?: string
+  progress?: number
+  hasResults?: boolean
+  resultCount?: number
+  expiresAt?: number
+  error?: string
+}
+
+/**
+ * 서버 측 세션 유효성 검증
+ * @param sessionId 검증할 세션 ID
+ * @returns 세션 유효성 검증 결과
+ */
+export async function validateServerSession(sessionId: string): Promise<SessionValidationResult> {
+  log.request("ValidateSession", { sessionId })
+
+  try {
+    const response = await fetch(
+      `${BASE_URL}/api/v1/lead-discovery/session/${sessionId}/validate`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    )
+
+    if (response.status === 404) {
+      log.response("ValidateSession", { sessionId, exists: false })
+      return {
+        valid: false,
+        exists: false,
+        error: "세션을 찾을 수 없습니다",
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    log.response("ValidateSession", { sessionId, valid: data.valid, status: data.status })
+
+    return {
+      valid: data.valid ?? false,
+      exists: true,
+      status: data.status,
+      progress: data.progress,
+      hasResults: data.hasResults,
+      resultCount: data.resultCount,
+      expiresAt: data.expiresAt,
+    }
+  } catch (error) {
+    log.error("ValidateSession failed", error)
+    return {
+      valid: false,
+      exists: false,
+      error: error instanceof Error ? error.message : "세션 검증 실패",
+    }
+  }
+}
+
+/**
+ * 세션 연장 요청
+ * @param sessionId 연장할 세션 ID
+ * @returns 연장 성공 여부
+ */
+export async function extendSession(
+  sessionId: string,
+): Promise<{ success: boolean; expiresAt?: number; error?: string }> {
+  log.request("ExtendSession", { sessionId })
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/lead-discovery/session/${sessionId}/extend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    log.response("ExtendSession", { sessionId, success: true, expiresAt: data.expiresAt })
+
+    return {
+      success: true,
+      expiresAt: data.expiresAt,
+    }
+  } catch (error) {
+    log.error("ExtendSession failed", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "세션 연장 실패",
+    }
+  }
+}
+
+/**
+ * 세션 삭제 (정리)
+ * @param sessionId 삭제할 세션 ID
+ */
+export async function deleteSession(
+  sessionId: string,
+): Promise<{ success: boolean; error?: string }> {
+  log.request("DeleteSession", { sessionId })
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/lead-discovery/session/${sessionId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+
+    if (!response.ok && response.status !== 404) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    log.response("DeleteSession", { sessionId, success: true })
+    return { success: true }
+  } catch (error) {
+    log.error("DeleteSession failed", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "세션 삭제 실패",
+    }
+  }
 }
 
 // ============================================

@@ -59,6 +59,12 @@ export interface NodeEventEmitter {
   nodeComplete(nodeName: string, message: string, result?: unknown): void
 
   /**
+   * Emit search results event
+   * Call this to send search results immediately (before complete)
+   */
+  results(results: unknown[], totalCount: number, extra?: Record<string, unknown>): void
+
+  /**
    * Emit error event
    */
   error(nodeName: string, error: string): void
@@ -182,6 +188,25 @@ export function createNodeEmitter(session: SSESession): NodeEventEmitter {
 
       if (success) {
         chatbotLogger.debug(`[Node] ${nodeName} completed: ${message}`)
+      }
+    },
+
+    results(results: unknown[], totalCount: number, extra?: Record<string, unknown>) {
+      if (session.closed) return
+
+      const success = session.push({
+        event: "results",
+        data: {
+          type: "results",
+          results,
+          totalCount,
+          ...extra,
+          timestamp: Date.now(),
+        },
+      })
+
+      if (success) {
+        chatbotLogger.debug(`[SSE] Results sent: ${results.length}/${totalCount}`)
       }
     },
 

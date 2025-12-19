@@ -194,6 +194,10 @@ export interface LeadDiscoveryState {
   userInput: string
   websiteUrl?: string
 
+  // Crawl timeout settings (사용자 설정 가능)
+  crawlTimeoutSeconds: number // 웹사이트 크롤링 타임아웃 (초)
+  useAutoTimeout: boolean // true면 사이트 응답 시간에 따라 자동 조절
+
   // Mode detection
   searchMode: SearchMode
   isWebsiteMode: boolean
@@ -267,6 +271,14 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
   websiteUrl: Annotation<string | undefined>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => undefined,
+  }),
+  crawlTimeoutSeconds: Annotation<number>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => 30, // 기본 30초
+  }),
+  useAutoTimeout: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => true, // 기본적으로 자동 타임아웃 활성화
   }),
   searchMode: Annotation<SearchMode>({
     reducer: (prev, next) => (next !== undefined ? next : prev),

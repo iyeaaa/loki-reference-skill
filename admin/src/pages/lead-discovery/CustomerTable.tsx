@@ -11,7 +11,8 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { AnimatePresence, motion } from "framer-motion"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   ArrowDown,
@@ -822,6 +823,9 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   // 드래그 상태
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
 
+  // 가상화를 위한 ref
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+
   // 고객그룹에 추가
   const handleAddToGroup = useCallback(async () => {
     if (!selectedGroupId) {
@@ -1428,6 +1432,15 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     [draggedColumn, resolvedColumnOrder],
   )
 
+  // 테이블 행 가상화
+  const { rows } = table.getRowModel()
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 48, // 예상 행 높이 (px)
+    overscan: 10, // 뷰포트 외부에 추가로 렌더링할 행 수
+  })
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* 툴바 */}
@@ -1571,7 +1584,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       {/* 테이블 */}
       <section
         aria-label="잠재 고객 목록"
-        className="min-h-0 flex-1 overflow-scroll rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3"
+        className="min-h-0 flex-1 overflow-auto rounded-md border [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar]:block [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3"
+        ref={tableContainerRef}
       >
         <Table aria-label="잠재 고객 테이블" className="border-collapse">
           <TableHeader className="sticky top-0 z-10">
@@ -1611,69 +1625,82 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             ))}
           </TableHeader>
           <TableBody>
-            <AnimatePresence mode="popLayout">
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <motion.tr
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border-border/30 border-b hover:bg-muted/40 data-[state=selected]:bg-muted"
-                    data-state={row.getIsSelected() && "selected"}
-                    exit={{ opacity: 0, y: -20 }}
-                    initial={{ opacity: 0, y: 20 }}
-                    key={row.original.id}
-                    layout
-                    transition={{
-                      layout: { type: "spring", stiffness: 350, damping: 30 },
-                      opacity: { duration: 0.2 },
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell, index) => {
-                      const isFirstColumn = index === 0
-                      return (
-                        <TableCell
-                          className={cn(
-                            "border-border/20 border-r",
-                            isFirstColumn && "sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-900",
-                          )}
-                          key={cell.id}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      )
-                    })}
-                  </motion.tr>
-                ))
-              ) : (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell className="h-[400px] p-0" colSpan={columns.length}>
-                    {/* 필터로 인해 결과가 0개인 경우 */}
-                    {customers.length > 0 && globalFilter ? (
-                      <EmptyStateFilteredEmpty
-                        onClearFilter={() => setGlobalFilter("")}
-                        totalCount={customers.length}
-                      />
-                    ) : /* 바이어 선택 대기 중 */
-                    streamingState.status === "waiting_selection" ? (
-                      <EmptyStateWaitingSelection />
-                    ) : /* 로딩 중 (검색 진행 중) */
-                    ["connecting", "routing", "analyzing", "recommending", "searching"].includes(
-                        streamingState.status,
-                      ) ? (
-                      <TableSkeletonLoading
-                        message={streamingState.message}
-                        progress={streamingState.progress}
-                      />
-                    ) : /* 검색 완료 후 결과가 0개인 경우 */
-                    streamingState.status === "complete" ? (
-                      <EmptyStateNoResults userQuery={streamingState.userQuery} />
-                    ) : (
-                      /* 아직 검색하지 않은 초기 상태 */
-                      <EmptyStateInitial />
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            </AnimatePresence>
+            {rows.length > 0 ? (
+              <>
+                {/* 가상화된 행 렌더링 */}
+                <tr style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+                  <td colSpan={columns.length} style={{ padding: 0, height: "100%" }}>
+                    <div style={{ position: "relative", height: "100%" }}>
+                      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                        const row = rows[virtualRow.index]
+                        return (
+                          <div
+                            className="absolute left-0 flex w-full border-border/30 border-b hover:bg-muted/40 data-[state=selected]:bg-muted"
+                            data-index={virtualRow.index}
+                            data-state={row.getIsSelected() ? "selected" : undefined}
+                            key={row.original.id}
+                            style={{
+                              height: `${virtualRow.size}px`,
+                              transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                          >
+                            {row.getVisibleCells().map((cell, cellIndex) => {
+                              const isFirstColumn = cellIndex === 0
+                              return (
+                                <div
+                                  className={cn(
+                                    "flex items-center border-border/20 border-r px-4 py-2",
+                                    isFirstColumn &&
+                                      "sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-900",
+                                  )}
+                                  key={cell.id}
+                                  style={{
+                                    width: cell.column.getSize(),
+                                    minWidth: cell.column.getSize(),
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              </>
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="h-[400px] p-0" colSpan={columns.length}>
+                  {/* 필터로 인해 결과가 0개인 경우 */}
+                  {customers.length > 0 && globalFilter ? (
+                    <EmptyStateFilteredEmpty
+                      onClearFilter={() => setGlobalFilter("")}
+                      totalCount={customers.length}
+                    />
+                  ) : /* 바이어 선택 대기 중 */
+                  streamingState.status === "waiting_selection" ? (
+                    <EmptyStateWaitingSelection />
+                  ) : /* 로딩 중 (검색 진행 중) */
+                  ["connecting", "routing", "analyzing", "recommending", "searching"].includes(
+                      streamingState.status,
+                    ) ? (
+                    <TableSkeletonLoading
+                      message={streamingState.message}
+                      progress={streamingState.progress}
+                    />
+                  ) : /* 검색 완료 후 결과가 0개인 경우 */
+                  streamingState.status === "complete" ? (
+                    <EmptyStateNoResults userQuery={streamingState.userQuery} />
+                  ) : (
+                    /* 아직 검색하지 않은 초기 상태 */
+                    <EmptyStateInitial />
+                  )}
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </section>

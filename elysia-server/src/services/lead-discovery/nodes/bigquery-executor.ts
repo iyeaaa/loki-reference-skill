@@ -1727,7 +1727,7 @@ export async function executeBigQuery(
       emitter.progress("executeBigQuery", `${totalCount.toLocaleString()}개 리드를 찾았어요`, 80)
       emitter.thinking("executeBigQuery", {
         summary: `${totalCount.toLocaleString()}개 잠재 바이어 중 상위 100개를 엄선합니다`,
-        detail: `**검색 결과 요약**\n- Perplexity (실시간): ${perplexityTotal.toLocaleString()}개\n- Revation (프리미엄): ${revationTotal.toLocaleString()}개\n- Apollo: ${apolloTotal.toLocaleString()}개\n- Fresh Leads: ${freshTotal.toLocaleString()}개\n- B2B Leads: ${b2bTotal.toLocaleString()}개\n- Crunchbase: ${crunchbaseTotal.toLocaleString()}개\n\n**총 ${totalCount.toLocaleString()}개** 잠재 바이어 중 관련도가 높은 **상위 100개**를 선별하여 표시합니다.\n\n> 💡 프리미엄 데이터와 실시간 검색 결과가 우선 노출됩니다.`,
+        detail: `**검색 결과 요약**\n- Perplexity (실시간): ${perplexityTotal.toLocaleString()}개\n- Revation (프리미엄): ${revationTotal.toLocaleString()}개\n- Apollo: ${apolloTotal.toLocaleString()}개\n- Fresh Leads: ${freshTotal.toLocaleString()}개\n- B2B Leads: ${b2bTotal.toLocaleString()}개\n\n**총 ${totalCount.toLocaleString()}개** 잠재 바이어 중 관련도가 높은 **상위 100개**를 선별하여 표시합니다.\n\n> 💡 프리미엄 데이터와 실시간 검색 결과가 우선 노출됩니다.`,
         isStreaming: false,
       })
     }
@@ -1760,6 +1760,16 @@ export async function executeBigQuery(
       apolloCount: apolloTotal,
       freshCount: freshTotal,
     })
+
+    // ★ 검색 결과를 즉시 SSE로 전송 (complete 이벤트 전에 전송하여 연결 끊김 대비)
+    if (emitter) {
+      emitter.results(limitedResults, totalCount, {
+        hasMore,
+        totalAvailable: combinedResults.length,
+        sql: combinedSql,
+        sessionId: state.sessionId,
+      })
+    }
 
     return {
       searchResults: limitedResults,

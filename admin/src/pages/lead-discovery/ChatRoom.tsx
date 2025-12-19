@@ -13,6 +13,7 @@ import {
   ChevronDown,
   FolderPlus,
   Globe,
+  History,
   Keyboard,
   Loader2,
   MousePointerClick,
@@ -44,18 +45,22 @@ import type { BigQueryResult, BuyerRecommendation } from "@/lib/api/types/lead-d
 import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
+import { AnalysisSettingsButton } from "./components/AnalysisSettings"
 import { ClarificationCards } from "./components/ClarificationCards"
 import { ErrorCard } from "./components/ErrorCard"
 import { FilterSearchForm } from "./components/FilterSearchForm"
+import { SessionManager } from "./components/SessionManager"
 import { ThinkingBlock } from "./components/ThinkingBlock"
 import {
   addChatMessageAtom,
+  analysisSettingsAtom,
   bulkEnrichmentStateAtom,
   type ChatMessage,
   type Customer,
   chatMessagesAtom,
   clearErrorAtom,
   createGroupStateAtom,
+  createSearchSessionAtom,
   customersAtom,
   finishBulkEnrichmentAtom,
   finishCreateGroupAtom,
@@ -66,18 +71,22 @@ import {
   resetAllAtom,
   resetSearchStateAtom,
   resetThinkingAtom,
+  searchSessionsAtom,
   selectedTargetAtom,
   setCustomersAtom,
   setErrorAtom,
+  setSessionCustomersAtom,
   setThinkingMessageIdAtom,
   startBulkEnrichmentAtom,
   startCreateGroupAtom,
   startEnrichmentAtom,
   streamingStateAtom,
+  switchToSessionAtom,
   thinkingStateAtom,
   updateBulkEnrichmentProgressAtom,
   updateChatMessageAtom,
   updateCustomerAtom,
+  updateSearchSessionAtom,
   updateThinkingAtom,
 } from "./store"
 import { classifyError } from "./utils/error-classifier"
@@ -248,6 +257,15 @@ export function ChatRoom() {
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
+  const [showSessionManager, setShowSessionManager] = useState(false)
+  const sessions = useAtomValue(searchSessionsAtom)
+  const analysisSettings = useAtomValue(analysisSettingsAtom)
+
+  // 검색 세션 관리 (검색 기록 저장용)
+  const createSearchSession = useSetAtom(createSearchSessionAtom)
+  const updateSearchSession = useSetAtom(updateSearchSessionAtom)
+  const setSessionCustomers = useSetAtom(setSessionCustomersAtom)
+  const switchToSession = useSetAtom(switchToSessionAtom)
 
   // Thinking 상태 (Cursor Agent 스타일)
   const thinkingState = useAtomValue(thinkingStateAtom)
@@ -587,19 +605,48 @@ export function ChatRoom() {
   // ============================================
   const searchMutation = useLeadDiscoveryMutation({
     onStatusChange: (data: LeadDiscoveryEventData) => {
-      setStreamingState((prev) => ({
-        ...prev,
-        status: data.status,
-        message: data.message,
-        progress: data.progress,
-        mode: data.mode,
-        recommendations: data.recommendations || prev.recommendations,
-        sessionId: data.sessionId || prev.sessionId,
-        analyzedPages: data.analyzedPages || prev.analyzedPages,
-        siteFavicon: data.siteFavicon || prev.siteFavicon,
-        analysisSummary: data.analysisSummary || prev.analysisSummary,
-        customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
-      }))
+      setStreamingState((prev) => {
+        // ★ 검색 세션 상태 업데이트 (검색 기록 저장)
+        if (prev.currentSessionId) {
+          // 상태 매핑: LeadDiscoveryStatus -> SearchSessionStatus
+          const statusMap: Record<string, string> = {
+            connecting: "connecting",
+            analyzing: "analyzing",
+            waiting_selection: "waiting_selection",
+            waiting_clarification: "waiting_clarification",
+            searching: "searching",
+            complete: "complete",
+            error: "error",
+          }
+          const sessionStatus = statusMap[data.status] || data.status
+          updateSearchSession(prev.currentSessionId, {
+            status: sessionStatus as
+              | "connecting"
+              | "analyzing"
+              | "waiting_selection"
+              | "waiting_clarification"
+              | "searching"
+              | "complete"
+              | "error",
+            progress: data.progress,
+            message: data.message,
+          })
+        }
+
+        return {
+          ...prev,
+          status: data.status,
+          message: data.message,
+          progress: data.progress,
+          mode: data.mode,
+          recommendations: data.recommendations || prev.recommendations,
+          sessionId: data.sessionId || prev.sessionId,
+          analyzedPages: data.analyzedPages || prev.analyzedPages,
+          siteFavicon: data.siteFavicon || prev.siteFavicon,
+          analysisSummary: data.analysisSummary || prev.analysisSummary,
+          customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
+        }
+      })
     },
     onRecommendations: (recommendations, sessionId) => {
       setStreamingState((prev) => ({
@@ -629,6 +676,12 @@ export function ChatRoom() {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
       setCustomers(newCustomers) // Replace instead of append for new search
+
+      // ★ 검색 세션에 고객 데이터 저장 (검색 기록)
+      const currentSessionId = streamingState.currentSessionId
+      if (currentSessionId) {
+        setSessionCustomers(currentSessionId, newCustomers)
+      }
 
       // "조건으로 찾기(입력/클릭)" 모드에서도 FitScore 계산을 위해 selectedTarget 자동 설정
       if (results.length > 0) {
@@ -675,6 +728,18 @@ export function ChatRoom() {
             content: `${completionMessage}\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
+
+        // ★ 검색 세션 완료 상태로 업데이트 (검색 기록 저장)
+        if (prev.currentSessionId) {
+          updateSearchSession(prev.currentSessionId, {
+            status: "complete",
+            totalCount: data.totalCount ?? 0,
+            message: `${data.totalCount ?? 0}건 검색 완료`,
+            country: data.selectedRecommendation?.country,
+            industry: data.selectedRecommendation?.industry,
+          })
+        }
+
         // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
         // 더 가져오기 정보도 포함
         // userQuery도 유지하여 FitScore 계산에 사용
@@ -687,6 +752,7 @@ export function ChatRoom() {
           totalAvailable: data.totalAvailable,
           loadedOffset: 100, // 초기 100개 로드됨
           userQuery: prev.userQuery, // FitScore 계산용 쿼리 유지
+          currentSessionId: prev.currentSessionId, // 세션 ID 유지
         }
       })
     },
@@ -720,6 +786,14 @@ export function ChatRoom() {
           errorData: classifiedError,
         }
         addMessage(errorMessage)
+      }
+
+      // ★ 검색 세션 에러 상태로 업데이트 (검색 기록 저장)
+      if (streamingState.currentSessionId) {
+        updateSearchSession(streamingState.currentSessionId, {
+          status: "error",
+          message: classifiedError.message,
+        })
       }
 
       setStreamingState((prev) => ({
@@ -804,11 +878,13 @@ export function ChatRoom() {
       globalAbortController?.abort()
       globalAbortController = new AbortController()
 
-      // LangGraph API 호출
+      // LangGraph API 호출 (타임아웃 설정 포함)
       searchMutation.mutate({
         query,
         workspaceId,
         signal: globalAbortController.signal,
+        crawlTimeoutSeconds: analysisSettings.crawlTimeoutSeconds,
+        useAutoTimeout: analysisSettings.useAutoTimeout,
       })
     }
 
@@ -816,7 +892,14 @@ export function ChatRoom() {
     return () => {
       window.removeEventListener("executeSearch", handleExecuteSearch as EventListener)
     }
-  }, [addMessage, searchMutation, setStreamingState, setThinkingMessageId])
+  }, [
+    addMessage,
+    searchMutation,
+    setStreamingState,
+    setThinkingMessageId,
+    analysisSettings.crawlTimeoutSeconds,
+    analysisSettings.useAutoTimeout,
+  ])
 
   const selectMutation = useLeadDiscoverySelectMutation({
     onStatusChange: (data: LeadDiscoveryEventData) => {
@@ -1079,13 +1162,15 @@ export function ChatRoom() {
     globalAbortController?.abort()
     globalAbortController = new AbortController()
 
-    // 마지막 쿼리로 다시 검색
+    // 마지막 쿼리로 다시 검색 (타임아웃 설정 포함)
     searchMutation.mutate({
       query: lastQuery.query,
       workspaceId: lastQuery.workspaceId,
       signal: globalAbortController.signal,
+      crawlTimeoutSeconds: analysisSettings.crawlTimeoutSeconds,
+      useAutoTimeout: analysisSettings.useAutoTimeout,
     })
-  }, [lastQuery, clearError, searchMutation, setStreamingState])
+  }, [lastQuery, clearError, searchMutation, setStreamingState, analysisSettings])
 
   // 이전 상태로 복구 핸들러
   const handleRecover = useCallback(() => {
@@ -1466,11 +1551,13 @@ export function ChatRoom() {
       globalAbortController?.abort()
       globalAbortController = new AbortController()
 
-      // LangGraph API 호출
+      // LangGraph API 호출 (타임아웃 설정 포함)
       searchMutation.mutate({
         query,
         workspaceId: selectedWorkspace.id,
         signal: globalAbortController.signal,
+        crawlTimeoutSeconds: analysisSettings.crawlTimeoutSeconds,
+        useAutoTimeout: analysisSettings.useAutoTimeout,
       })
     },
     [
@@ -1482,6 +1569,7 @@ export function ChatRoom() {
       resetSearchState,
       setPendingQuery,
       setThinkingMessageId,
+      analysisSettings,
     ],
   )
 
@@ -1542,6 +1630,13 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
 
+      // ★ 검색 세션 생성 (검색 기록에 저장)
+      const newSession = createSearchSession({
+        query: userInput,
+        searchMode: "website", // TODO: 실제 검색 모드 반영
+        workspaceId: selectedWorkspace.id,
+      })
+
       // 빈 assistant 메시지 ID 생성
       const assistantMessageId = `msg-${now + 1}-response`
 
@@ -1559,6 +1654,7 @@ export function ChatRoom() {
         customerAnalysisSummary: "",
         userQuery: userInput, // 검색 쿼리 저장 (FitScore 계산용)
         sessionCreatedAt: Date.now(), // 세션 만료 체크용
+        currentSessionId: newSession?.id, // 검색 세션 ID 저장
       })
 
       // Thinking 상태에 현재 메시지 ID 설정
@@ -1568,11 +1664,13 @@ export function ChatRoom() {
       globalAbortController?.abort()
       globalAbortController = new AbortController()
 
-      // LangGraph API 호출 (화면 전환 전에 검색 시작)
+      // LangGraph API 호출 (화면 전환 전에 검색 시작, 타임아웃 설정 포함)
       searchMutation.mutate({
         query: userInput,
         workspaceId: selectedWorkspace.id,
         signal: globalAbortController.signal,
+        crawlTimeoutSeconds: analysisSettings.crawlTimeoutSeconds,
+        useAutoTimeout: analysisSettings.useAutoTimeout,
       })
 
       // ★ 메시지 추가는 마지막에 (화면 전환 트리거)
@@ -1606,6 +1704,8 @@ export function ChatRoom() {
       setPendingQuery,
       clearError,
       setThinkingMessageId,
+      analysisSettings,
+      createSearchSession,
     ],
   )
 
@@ -1832,429 +1932,465 @@ export function ChatRoom() {
             <div className="flex h-full flex-col">
               {/* 새 검색 버튼 헤더 */}
               <div className="flex-shrink-0 border-border/50 border-b bg-background/95 px-4 pt-3 pb-2 backdrop-blur-sm">
-                <Button
-                  className="h-7 gap-1.5 text-xs"
-                  onClick={handleNewSearch}
-                  size="sm"
-                  variant="outline"
-                >
-                  <ArrowRight className="h-3 w-3 rotate-180" />새 검색
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleNewSearch}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <ArrowRight className="h-3 w-3 rotate-180" />새 검색
+                  </Button>
+                  <Button
+                    className={cn("h-7 gap-1.5 text-xs", showSessionManager && "bg-muted")}
+                    onClick={() => setShowSessionManager(!showSessionManager)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <History className="h-3 w-3" />
+                    검색 기록
+                    {sessions.length > 0 && (
+                      <span className="rounded-full bg-primary/10 px-1.5 text-primary text-xs">
+                        {sessions.length}
+                      </span>
+                    )}
+                  </Button>
+                  <div className="ml-auto">
+                    <AnalysisSettingsButton />
+                  </div>
+                </div>
               </div>
-              <ScrollArea
-                className="[&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll min-h-0 flex-1"
-                ref={scrollRef}
-              >
-                <div className="space-y-4 p-4 pt-4">
-                  {/* 분석 진행 상태는 오른쪽 AnalysisPanel에서 표시 */}
-                  {messages
-                    // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
-                    .slice()
-                    .sort(
-                      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-                    )
-                    .filter((message) => {
-                      // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
-                      if (
-                        message.role === "assistant" &&
-                        !message.content &&
-                        message.id !== streamingState.messageId &&
-                        message.id !== streamingState.analysisMessageId
-                      ) {
-                        return false
-                      }
-                      return true
+
+              {/* 세션 매니저 (토글 시 표시) */}
+              {showSessionManager ? (
+                <SessionManager
+                  className="flex-1"
+                  onClose={() => setShowSessionManager(false)}
+                  onSessionSelect={(session) => {
+                    // 세션 전환: 현재 메시지 저장 + 새 세션 데이터 로드
+                    switchToSession({
+                      targetSessionId: session.id,
+                      currentMessages: messages,
                     })
-                    .map((message) => (
-                      <div
-                        className={cn(
-                          "flex",
-                          message.role === "user" ? "justify-end" : "justify-start",
-                        )}
-                        key={message.id}
-                      >
-                        {message.role === "user" ? (
-                          <div className="max-w-[85%] rounded-lg bg-zinc-100 px-4 py-2.5 text-foreground dark:bg-zinc-800">
-                            <p className="whitespace-pre-wrap text-base">{message.content}</p>
-                          </div>
-                        ) : (
-                          <div className="w-full space-y-4">
-                            {/* Thinking Block - Cursor Agent 스타일 사고 과정 표시 */}
-                            {/* 해당 메시지에 속한 Thinking entries만 표시 */}
-                            {getThinkingEntriesForMessage(thinkingState.entries, message.id)
-                              .length > 0 && (
-                              <div className="max-w-2xl space-y-2">
-                                {getThinkingEntriesForMessage(
-                                  thinkingState.entries,
-                                  message.id,
-                                ).map((entry) => (
-                                  <ThinkingBlock
-                                    autoCollapseOnComplete={false}
-                                    defaultExpanded={false}
-                                    detail={entry.detail}
-                                    isStreaming={entry.isStreaming}
-                                    key={entry.id}
-                                    node={entry.node}
-                                    summary={entry.summary}
-                                  />
-                                ))}
-                              </div>
-                            )}
-
-                            {/* 바이어 선택 유도 안내 - waiting_selection 상태일 때 표시 */}
-                            {message.id === streamingState.messageId &&
-                              streamingState.status === "waiting_selection" && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/20">
-                                      <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-foreground">
-                                        오른쪽 패널에서 바이어 타겟을 선택해주세요
-                                      </p>
-                                      <p className="mt-1 text-muted-foreground text-sm">
-                                        추천된 바이어 타겟 중 원하는 것을 선택하면 해당 조건에 맞는
-                                        리드를 검색합니다.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                            {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
-                            {message.content && (
-                              <div className="prose prose-sm dark:prose-invert max-w-none text-base">
-                                <ReactMarkdown components={markdownComponents}>
-                                  {message.content}
-                                </ReactMarkdown>
-                              </div>
-                            )}
-
-                            {/* 저장된 분석 리포트 (분석 완료 후 다시 볼 수 있도록) */}
-                            {message.analysisSummary && (
-                              <SavedAnalysisReport summary={message.analysisSummary} />
-                            )}
-
-                            {/* 워크스페이스 선택 UI */}
-                            {message.type === "workspace_select" && workspaces.length > 0 && (
-                              <div className="mt-4 space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                  {workspaces.map((ws) => (
-                                    <Button
-                                      className="gap-1.5"
-                                      key={ws.id}
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        handleSelectWorkspace(ws.id, ws.name)
-                                      }}
-                                      size="sm"
-                                      type="button"
-                                      variant="outline"
-                                    >
-                                      <Globe className="h-3.5 w-3.5" />
-                                      {ws.name}
-                                    </Button>
+                    setShowSessionManager(false)
+                  }}
+                />
+              ) : (
+                <ScrollArea
+                  className="[&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll min-h-0 flex-1"
+                  ref={scrollRef}
+                >
+                  <div className="space-y-4 p-4 pt-4">
+                    {/* 분석 진행 상태는 오른쪽 AnalysisPanel에서 표시 */}
+                    {messages
+                      // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
+                      .slice()
+                      .sort(
+                        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+                      )
+                      .filter((message) => {
+                        // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
+                        if (
+                          message.role === "assistant" &&
+                          !message.content &&
+                          message.id !== streamingState.messageId &&
+                          message.id !== streamingState.analysisMessageId
+                        ) {
+                          return false
+                        }
+                        return true
+                      })
+                      .map((message) => (
+                        <div
+                          className={cn(
+                            "flex",
+                            message.role === "user" ? "justify-end" : "justify-start",
+                          )}
+                          key={message.id}
+                        >
+                          {message.role === "user" ? (
+                            <div className="max-w-[85%] rounded-lg bg-zinc-100 px-4 py-2.5 text-foreground dark:bg-zinc-800">
+                              <p className="whitespace-pre-wrap text-base">{message.content}</p>
+                            </div>
+                          ) : (
+                            <div className="w-full space-y-4">
+                              {/* Thinking Block - Cursor Agent 스타일 사고 과정 표시 */}
+                              {/* 해당 메시지에 속한 Thinking entries만 표시 */}
+                              {getThinkingEntriesForMessage(thinkingState.entries, message.id)
+                                .length > 0 && (
+                                <div className="max-w-2xl space-y-2">
+                                  {getThinkingEntriesForMessage(
+                                    thinkingState.entries,
+                                    message.id,
+                                  ).map((entry) => (
+                                    <ThinkingBlock
+                                      autoCollapseOnComplete={false}
+                                      defaultExpanded={false}
+                                      detail={entry.detail}
+                                      isStreaming={entry.isStreaming}
+                                      key={entry.id}
+                                      node={entry.node}
+                                      summary={entry.summary}
+                                    />
                                   ))}
                                 </div>
-                              </div>
-                            )}
-
-                            {/* 워크스페이스가 없는 경우 생성 안내 */}
-                            {message.type === "workspace_select" && workspaces.length === 0 && (
-                              <div className="mt-4 rounded-lg border border-border/50 bg-muted/50 p-4">
-                                <p className="mb-3 text-muted-foreground text-sm">
-                                  아직 워크스페이스가 없습니다. 워크스페이스를 먼저 생성해주세요.
-                                </p>
-                                <Button
-                                  className="gap-1.5"
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    navigate("/settings/workspaces")
-                                  }}
-                                  size="sm"
-                                  type="button"
-                                  variant="default"
-                                >
-                                  <FolderPlus className="h-3.5 w-3.5" />
-                                  워크스페이스 생성하기
-                                </Button>
-                              </div>
-                            )}
-
-                            {/* 에러 UI */}
-                            {message.type === "error" && message.errorData && (
-                              <ErrorCard
-                                className="mt-4"
-                                error={message.errorData}
-                                isRetrying={
-                                  searchMutation.isPending ||
-                                  selectMutation.isPending ||
-                                  clarifyMutation.isPending
-                                }
-                                onNewSearch={handleNewSearch}
-                                onRecover={
-                                  message.errorData.recoverable ? handleRecover : undefined
-                                }
-                                onRetry={message.errorData.retryable ? handleRetry : undefined}
-                              />
-                            )}
-
-                            {/* 바이어 추천 선택 UI는 오른쪽 AnalysisPanel에서 표시 */}
-
-                            {/* 확인 질문 UI - 모호한 검색어에 대해 확인 질문 표시 */}
-                            {message.id === streamingState.messageId &&
-                              isWaitingClarification &&
-                              streamingState.clarificationData && (
-                                <ClarificationCards
-                                  clarificationData={streamingState.clarificationData}
-                                  className="max-w-2xl"
-                                  disabled={isSearching}
-                                  isSubmitting={clarifyMutation.isPending}
-                                  onSubmit={handleClarificationSubmit}
-                                />
                               )}
 
-                            {/* 프로필 고도화 퀵액션 - 검색 완료 후 마지막 응답 메시지에 표시 */}
-                            {message.id === streamingState.messageId &&
-                              streamingState.status === "complete" &&
-                              customers.length > 0 &&
-                              !bulkEnrichmentState.isRunning && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                  transition={{ duration: 0.3, delay: 0.5 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-                                      <Sparkles className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-foreground">프로필 고도화</p>
-                                      <p className="mt-1 text-muted-foreground text-sm">
-                                        {
-                                          customers.filter((c) => c.web_address && !c.verified)
-                                            .length
-                                        }
-                                        개 리드의 상세 정보를 AI로 추출합니다
-                                      </p>
-                                      <Button
-                                        className="mt-3 gap-2"
-                                        onClick={handleBulkEnrichment}
-                                        size="sm"
-                                      >
-                                        <Sparkles className="h-4 w-4" />
-                                        프로필 고도화 시작
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                            {/* 프로필 고도화 진행 상태 */}
-                            {message.id === streamingState.messageId &&
-                              bulkEnrichmentState.isRunning && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-                                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-foreground">
-                                        프로필 고도화 진행 중
-                                      </p>
-                                      <div className="mt-2">
-                                        <div className="mb-1 flex items-center justify-between text-sm">
-                                          <span className="max-w-[200px] truncate text-muted-foreground">
-                                            {bulkEnrichmentState.currentCompany || "준비 중..."}
-                                          </span>
-                                          <span className="font-medium text-primary">
-                                            {Math.round(
-                                              (bulkEnrichmentState.completed /
-                                                bulkEnrichmentState.total) *
-                                                100,
-                                            )}
-                                            %
-                                          </span>
-                                        </div>
-                                        <div className="h-2 w-full overflow-hidden rounded-full bg-primary/10">
-                                          <motion.div
-                                            animate={{
-                                              width: `${(bulkEnrichmentState.completed / bulkEnrichmentState.total) * 100}%`,
-                                            }}
-                                            className="h-full rounded-full bg-primary"
-                                            initial={{ width: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                          />
-                                        </div>
-                                        <p className="mt-1 text-muted-foreground text-xs">
-                                          {bulkEnrichmentState.completed} /{" "}
-                                          {bulkEnrichmentState.total} 완료
+                              {/* 바이어 선택 유도 안내 - waiting_selection 상태일 때 표시 */}
+                              {message.id === streamingState.messageId &&
+                                streamingState.status === "waiting_selection" && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+                                        <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                      </div>
+                                      <div>
+                                        <p className="font-medium text-foreground">
+                                          오른쪽 패널에서 바이어 타겟을 선택해주세요
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground text-sm">
+                                          추천된 바이어 타겟 중 원하는 것을 선택하면 해당 조건에
+                                          맞는 리드를 검색합니다.
                                         </p>
                                       </div>
                                     </div>
-                                  </div>
-                                </motion.div>
+                                  </motion.div>
+                                )}
+
+                              {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
+                              {message.content && (
+                                <div className="prose prose-sm dark:prose-invert max-w-none text-base">
+                                  <ReactMarkdown components={markdownComponents}>
+                                    {message.content}
+                                  </ReactMarkdown>
+                                </div>
                               )}
 
-                            {/* 새 고객그룹으로 추가하기 퀵액션 - 검색 완료 후 표시 */}
-                            {message.id === streamingState.messageId &&
-                              streamingState.status === "complete" &&
-                              customers.length > 0 &&
-                              !bulkEnrichmentState.isRunning &&
-                              !createGroupState.isCreating &&
-                              !createGroupState.groupId && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                  transition={{ duration: 0.3, delay: 0.7 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
-                                      <FolderPlus className="h-5 w-5 text-emerald-500" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-foreground">
-                                        새 고객그룹으로 추가하기
-                                      </p>
-                                      <p className="mt-1 text-muted-foreground text-sm">
-                                        {customers.length}개 리드를 새 고객그룹으로 저장합니다
-                                      </p>
+                              {/* 저장된 분석 리포트 (분석 완료 후 다시 볼 수 있도록) */}
+                              {message.analysisSummary && (
+                                <SavedAnalysisReport summary={message.analysisSummary} />
+                              )}
+
+                              {/* 워크스페이스 선택 UI */}
+                              {message.type === "workspace_select" && workspaces.length > 0 && (
+                                <div className="mt-4 space-y-2">
+                                  <div className="flex flex-wrap gap-2">
+                                    {workspaces.map((ws) => (
                                       <Button
-                                        className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700"
-                                        onClick={handleCreateGroup}
+                                        className="gap-1.5"
+                                        key={ws.id}
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          handleSelectWorkspace(ws.id, ws.name)
+                                        }}
                                         size="sm"
-                                      >
-                                        <FolderPlus className="h-4 w-4" />
-                                        고객그룹 만들기
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                            {/* 그룹 생성 진행 상태 */}
-                            {message.id === streamingState.messageId &&
-                              createGroupState.isCreating && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
-                                      <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-foreground">
-                                        고객그룹 생성 중...
-                                      </p>
-                                      <p className="mt-1 text-muted-foreground text-sm">
-                                        {createGroupState.leadsCount}개 리드를 저장하고 있습니다
-                                      </p>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                            {/* 그룹 생성 완료 */}
-                            {message.id === streamingState.messageId &&
-                              createGroupState.groupId && (
-                                <motion.div
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4"
-                                  initial={{ opacity: 0, y: 10 }}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
-                                      <Check className="h-5 w-5 text-emerald-500" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-foreground">
-                                        고객그룹이 생성되었습니다!
-                                      </p>
-                                      <p className="mt-1 text-muted-foreground text-sm">
-                                        {customers.length}개 리드가 새 고객그룹에 추가되었습니다
-                                      </p>
-                                      <Button
-                                        className="mt-3 gap-2"
-                                        onClick={() =>
-                                          window.open(
-                                            `/leads?groupId=${createGroupState.groupId}`,
-                                            "_blank",
-                                          )
-                                        }
-                                        size="sm"
+                                        type="button"
                                         variant="outline"
                                       >
-                                        고객그룹 보기
-                                        <ArrowRight className="h-3 w-3" />
+                                        <Globe className="h-3.5 w-3.5" />
+                                        {ws.name}
                                       </Button>
-                                    </div>
+                                    ))}
                                   </div>
-                                </motion.div>
+                                </div>
                               )}
 
-                            {message.customersAdded && message.customersAdded.length > 0 && (
-                              <div className="mt-2 border-border/50 border-t pt-2">
-                                <p className="text-sm opacity-70">
-                                  새로 추가된 고객{" "}
-                                  {message.customersAdded
-                                    .map((c) => c.company_name || "-")
-                                    .join(", ")}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              {/* 워크스페이스가 없는 경우 생성 안내 */}
+                              {message.type === "workspace_select" && workspaces.length === 0 && (
+                                <div className="mt-4 rounded-lg border border-border/50 bg-muted/50 p-4">
+                                  <p className="mb-3 text-muted-foreground text-sm">
+                                    아직 워크스페이스가 없습니다. 워크스페이스를 먼저 생성해주세요.
+                                  </p>
+                                  <Button
+                                    className="gap-1.5"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      navigate("/settings/workspaces")
+                                    }}
+                                    size="sm"
+                                    type="button"
+                                    variant="default"
+                                  >
+                                    <FolderPlus className="h-3.5 w-3.5" />
+                                    워크스페이스 생성하기
+                                  </Button>
+                                </div>
+                              )}
+
+                              {/* 에러 UI */}
+                              {message.type === "error" && message.errorData && (
+                                <ErrorCard
+                                  className="mt-4"
+                                  error={message.errorData}
+                                  isRetrying={
+                                    searchMutation.isPending ||
+                                    selectMutation.isPending ||
+                                    clarifyMutation.isPending
+                                  }
+                                  onNewSearch={handleNewSearch}
+                                  onRecover={
+                                    message.errorData.recoverable ? handleRecover : undefined
+                                  }
+                                  onRetry={message.errorData.retryable ? handleRetry : undefined}
+                                />
+                              )}
+
+                              {/* 바이어 추천 선택 UI는 오른쪽 AnalysisPanel에서 표시 */}
+
+                              {/* 확인 질문 UI - 모호한 검색어에 대해 확인 질문 표시 */}
+                              {message.id === streamingState.messageId &&
+                                isWaitingClarification &&
+                                streamingState.clarificationData && (
+                                  <ClarificationCards
+                                    clarificationData={streamingState.clarificationData}
+                                    className="max-w-2xl"
+                                    disabled={isSearching}
+                                    isSubmitting={clarifyMutation.isPending}
+                                    onSubmit={handleClarificationSubmit}
+                                  />
+                                )}
+
+                              {/* 프로필 고도화 퀵액션 - 검색 완료 후 마지막 응답 메시지에 표시 */}
+                              {message.id === streamingState.messageId &&
+                                streamingState.status === "complete" &&
+                                customers.length > 0 &&
+                                !bulkEnrichmentState.isRunning && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    transition={{ duration: 0.3, delay: 0.5 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                        <Sparkles className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">프로필 고도화</p>
+                                        <p className="mt-1 text-muted-foreground text-sm">
+                                          {
+                                            customers.filter((c) => c.web_address && !c.verified)
+                                              .length
+                                          }
+                                          개 리드의 상세 정보를 AI로 추출합니다
+                                        </p>
+                                        <Button
+                                          className="mt-3 gap-2"
+                                          onClick={handleBulkEnrichment}
+                                          size="sm"
+                                        >
+                                          <Sparkles className="h-4 w-4" />
+                                          프로필 고도화 시작
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+
+                              {/* 프로필 고도화 진행 상태 */}
+                              {message.id === streamingState.messageId &&
+                                bulkEnrichmentState.isRunning && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">
+                                          프로필 고도화 진행 중
+                                        </p>
+                                        <div className="mt-2">
+                                          <div className="mb-1 flex items-center justify-between text-sm">
+                                            <span className="max-w-[200px] truncate text-muted-foreground">
+                                              {bulkEnrichmentState.currentCompany || "준비 중..."}
+                                            </span>
+                                            <span className="font-medium text-primary">
+                                              {Math.round(
+                                                (bulkEnrichmentState.completed /
+                                                  bulkEnrichmentState.total) *
+                                                  100,
+                                              )}
+                                              %
+                                            </span>
+                                          </div>
+                                          <div className="h-2 w-full overflow-hidden rounded-full bg-primary/10">
+                                            <motion.div
+                                              animate={{
+                                                width: `${(bulkEnrichmentState.completed / bulkEnrichmentState.total) * 100}%`,
+                                              }}
+                                              className="h-full rounded-full bg-primary"
+                                              initial={{ width: 0 }}
+                                              transition={{ duration: 0.3 }}
+                                            />
+                                          </div>
+                                          <p className="mt-1 text-muted-foreground text-xs">
+                                            {bulkEnrichmentState.completed} /{" "}
+                                            {bulkEnrichmentState.total} 완료
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+
+                              {/* 새 고객그룹으로 추가하기 퀵액션 - 검색 완료 후 표시 */}
+                              {message.id === streamingState.messageId &&
+                                streamingState.status === "complete" &&
+                                customers.length > 0 &&
+                                !bulkEnrichmentState.isRunning &&
+                                !createGroupState.isCreating &&
+                                !createGroupState.groupId && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    transition={{ duration: 0.3, delay: 0.7 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                                        <FolderPlus className="h-5 w-5 text-emerald-500" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">
+                                          새 고객그룹으로 추가하기
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground text-sm">
+                                          {customers.length}개 리드를 새 고객그룹으로 저장합니다
+                                        </p>
+                                        <Button
+                                          className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700"
+                                          onClick={handleCreateGroup}
+                                          size="sm"
+                                        >
+                                          <FolderPlus className="h-4 w-4" />
+                                          고객그룹 만들기
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+
+                              {/* 그룹 생성 진행 상태 */}
+                              {message.id === streamingState.messageId &&
+                                createGroupState.isCreating && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                                        <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">
+                                          고객그룹 생성 중...
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground text-sm">
+                                          {createGroupState.leadsCount}개 리드를 저장하고 있습니다
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+
+                              {/* 그룹 생성 완료 */}
+                              {message.id === streamingState.messageId &&
+                                createGroupState.groupId && (
+                                  <motion.div
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+                                        <Check className="h-5 w-5 text-emerald-500" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">
+                                          고객그룹이 생성되었습니다!
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground text-sm">
+                                          {customers.length}개 리드가 새 고객그룹에 추가되었습니다
+                                        </p>
+                                        <Button
+                                          className="mt-3 gap-2"
+                                          onClick={() =>
+                                            window.open(
+                                              `/leads?groupId=${createGroupState.groupId}`,
+                                              "_blank",
+                                            )
+                                          }
+                                          size="sm"
+                                          variant="outline"
+                                        >
+                                          고객그룹 보기
+                                          <ArrowRight className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+
+                              {message.customersAdded && message.customersAdded.length > 0 && (
+                                <div className="mt-2 border-border/50 border-t pt-2">
+                                  <p className="text-sm opacity-70">
+                                    새로 추가된 고객{" "}
+                                    {message.customersAdded
+                                      .map((c) => c.company_name || "-")
+                                      .join(", ")}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                    {/* 오프라인 상태 알림 - 메시지 목록 하단에 표시 */}
+                    {!isOnline && messages.length > 0 && (
+                      <div className="px-4 pb-4">
+                        <ErrorCard
+                          error={{
+                            type: "network",
+                            message: "인터넷 연결이 끊겼습니다",
+                            originalError: "navigator.onLine = false",
+                            retryable: true,
+                            recoverable: false,
+                            suggestedAction: "인터넷 연결을 확인하고 다시 시도해주세요",
+                            context: {
+                              node: "offline_detection",
+                              timestamp: Date.now(),
+                            },
+                          }}
+                          isRetrying={false}
+                          onNewSearch={undefined}
+                          onRecover={undefined}
+                          onRetry={() => {
+                            // 온라인 복구 후 마지막 쿼리 재시도
+                            if (lastQuery && isOnline) {
+                              handleRetry()
+                            }
+                          }}
+                        />
                       </div>
-                    ))}
+                    )}
 
-                  {/* 오프라인 상태 알림 - 메시지 목록 하단에 표시 */}
-                  {!isOnline && messages.length > 0 && (
-                    <div className="px-4 pb-4">
-                      <ErrorCard
-                        error={{
-                          type: "network",
-                          message: "인터넷 연결이 끊겼습니다",
-                          originalError: "navigator.onLine = false",
-                          retryable: true,
-                          recoverable: false,
-                          suggestedAction: "인터넷 연결을 확인하고 다시 시도해주세요",
-                          context: {
-                            node: "offline_detection",
-                            timestamp: Date.now(),
-                          },
-                        }}
-                        isRetrying={false}
-                        onNewSearch={undefined}
-                        onRecover={undefined}
-                        onRetry={() => {
-                          // 온라인 복구 후 마지막 쿼리 재시도
-                          if (lastQuery && isOnline) {
-                            handleRetry()
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* 스크롤 앵커 */}
-                  <div ref={scrollEndRef} />
-                </div>
-              </ScrollArea>
+                    {/* 스크롤 앵커 */}
+                    <div ref={scrollEndRef} />
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           )}
         </div>

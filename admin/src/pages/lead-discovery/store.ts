@@ -145,12 +145,8 @@ export const resetCustomersAtom = atom(null, (_get, set) => {
 // ============================================
 
 // 로컬스토리지 저장용 인터페이스 (Date를 string으로 변환)
-type StoredChatMessage = {
-  id: string
-  role: "user" | "assistant"
-  content: string
+type StoredChatMessage = Omit<ChatMessage, "timestamp"> & {
   timestamp: string // ISO string
-  customersAdded?: Customer[]
 }
 
 // 로컬스토리지 커스텀 스토리지 (Date 직렬화/역직렬화 처리)
@@ -261,6 +257,7 @@ export type StreamingState = {
   selectedRecommendationId?: string // 선택된 추천 ID
   sessionId?: string
   sessionCreatedAt?: number // 세션 생성 시간 (만료 체크용)
+  currentSessionId?: string // 검색 기록용 세션 ID
   // 분석된 페이지 목록
   analyzedPages: AnalyzedPage[]
   siteFavicon?: string
@@ -1014,6 +1011,9 @@ export type SearchSession = {
   customers: Customer[]
   totalCount?: number
 
+  // 채팅 메시지 (세션별 저장)
+  messages: ChatMessage[]
+
   // 바이어 추천 (waiting_selection 상태에서 사용)
   recommendations?: BuyerRecommendation[]
   selectedRecommendationId?: string
@@ -1042,8 +1042,9 @@ export type SearchSession = {
 const MAX_CONCURRENT_SEARCHES = 3
 
 // 검색 세션 저장용 타입 (Date -> string)
-type StoredSearchSession = Omit<SearchSession, "customers"> & {
+type StoredSearchSession = Omit<SearchSession, "customers" | "messages"> & {
   customers: StoredCustomer[]
+  messages: StoredChatMessage[]
 }
 
 // 검색 세션 로컬스토리지 커스텀 스토리지
@@ -1057,9 +1058,13 @@ const searchSessionsStorage = {
       const parsed: StoredSearchSession[] = JSON.parse(stored)
       return parsed.map((s) => ({
         ...s,
-        customers: s.customers.map((c) => ({
+        customers: (s.customers || []).map((c) => ({
           ...c,
           createdAt: new Date(c.createdAt),
+        })),
+        messages: (s.messages || []).map((m) => ({
+          ...m,
+          timestamp: new Date(m.timestamp),
         })),
       }))
     } catch {
@@ -1072,6 +1077,10 @@ const searchSessionsStorage = {
       customers: s.customers.map((c) => ({
         ...c,
         createdAt: c.createdAt.toISOString(),
+      })),
+      messages: s.messages.map((m) => ({
+        ...m,
+        timestamp: m.timestamp.toISOString(),
       })),
     }))
     localStorage.setItem(key, JSON.stringify(toStore))
@@ -1167,6 +1176,7 @@ export const createSearchSessionAtom = atom(
       progress: 0,
       message: "서버에 연결 중...",
       customers: [],
+      messages: [], // 채팅 메시지 초기화
       createdAt: now,
       updatedAt: now,
       country: params.country,
@@ -1252,6 +1262,83 @@ export const clearAllSessionsAtom = atom(null, (_get, set) => {
   set(searchSessionsAtom, [])
   set(activeSessionIdAtom, null)
   localStorage.removeItem("lead-discovery-search-sessions")
+})
+
+// ★ 세션 전환 (현재 세션 저장 + 새 세션 데이터 로드)
+export const switchToSessionAtom = atom(
+  null,
+  (
+    get,
+    set,
+    params: {
+      targetSessionId: string
+      currentMessages?: ChatMessage[] // 현재 세션의 메시지 (저장용)
+    },
+  ) => {
+    const sessions = get(searchSessionsAtom)
+    const currentActiveId = get(activeSessionIdAtom)
+    const { targetSessionId, currentMessages } = params
+
+    // 같은 세션이면 무시
+    if (currentActiveId === targetSessionId) {
+      return null
+    }
+
+    // 1. 현재 세션의 메시지 저장 (있는 경우)
+    if (currentActiveId && currentMessages && currentMessages.length > 0) {
+      set(
+        searchSessionsAtom,
+        sessions.map((s) =>
+          s.id === currentActiveId ? { ...s, messages: currentMessages, updatedAt: Date.now() } : s,
+        ),
+      )
+    }
+
+    // 2. 타겟 세션 찾기
+    const updatedSessions = get(searchSessionsAtom) // 업데이트된 세션 목록
+    const targetSession = updatedSessions.find((s) => s.id === targetSessionId)
+    if (!targetSession) {
+      return null
+    }
+
+    // 3. 활성 세션 ID 변경
+    set(activeSessionIdAtom, targetSessionId)
+
+    // 4. 고객 목록 로드
+    set(customersAtom, targetSession.customers)
+
+    // 5. 채팅 메시지 로드
+    set(chatMessagesAtom, targetSession.messages)
+
+    // 6. 스트리밍 상태 복원 (완료된 세션의 경우)
+    if (targetSession.status === "complete" || targetSession.status === "error") {
+      set(streamingStateAtom, {
+        ...initialStreamingState,
+        status: targetSession.status,
+        sessionId: targetSession.backendSessionId,
+        analysisSummary: targetSession.analysisSummary || "",
+        messageId: targetSession.messages.at(-1)?.id ?? null,
+      })
+    }
+
+    return targetSession
+  },
+)
+
+// 현재 세션의 메시지를 세션에 저장 (페이지 이탈 시 등)
+export const saveCurrentSessionMessagesAtom = atom(null, (get, set) => {
+  const currentActiveId = get(activeSessionIdAtom)
+  const currentMessages = get(chatMessagesAtom)
+  const sessions = get(searchSessionsAtom)
+
+  if (currentActiveId && currentMessages.length > 0) {
+    set(
+      searchSessionsAtom,
+      sessions.map((s) =>
+        s.id === currentActiveId ? { ...s, messages: currentMessages, updatedAt: Date.now() } : s,
+      ),
+    )
+  }
 })
 
 // 세션 상태에 따른 표시 텍스트
@@ -1531,4 +1618,89 @@ export const dismissSessionExpiryNotificationAtom = atom(null, (get, set, sessio
 // 만료 알림 전체 클리어
 export const clearSessionExpiryNotificationsAtom = atom(null, (_get, set) => {
   set(sessionExpiryNotificationsAtom, [])
+})
+
+// ============================================
+// Analysis Settings (웹사이트 분석 설정)
+// ============================================
+
+export type AnalysisSettings = {
+  // 웹사이트 크롤링 타임아웃 (초)
+  crawlTimeoutSeconds: number
+  // 자동 타임아웃 사용 여부 (true면 동적으로 타임아웃 조정)
+  useAutoTimeout: boolean
+}
+
+export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
+  crawlTimeoutSeconds: 30, // 기본 30초
+  useAutoTimeout: true, // 기본적으로 자동 타임아웃 사용
+}
+
+// 타임아웃 프리셋 옵션
+export const TIMEOUT_PRESETS = [
+  { value: 15, label: "빠름 (15초)", description: "빠른 사이트용" },
+  { value: 30, label: "보통 (30초)", description: "일반적인 사이트" },
+  { value: 60, label: "느림 (60초)", description: "느린 사이트용" },
+  { value: 120, label: "매우 느림 (2분)", description: "매우 느린 사이트용" },
+] as const
+
+// 분석 설정 로컬스토리지 스토리지
+const analysisSettingsStorage = {
+  getItem: (key: string): AnalysisSettings => {
+    const stored = localStorage.getItem(key)
+    if (!stored) {
+      return DEFAULT_ANALYSIS_SETTINGS
+    }
+    try {
+      const parsed = JSON.parse(stored) as Partial<AnalysisSettings>
+      return {
+        ...DEFAULT_ANALYSIS_SETTINGS,
+        ...parsed,
+      }
+    } catch {
+      return DEFAULT_ANALYSIS_SETTINGS
+    }
+  },
+  setItem: (key: string, value: AnalysisSettings): void => {
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 분석 설정 atom
+export const analysisSettingsAtom = atomWithStorage<AnalysisSettings>(
+  "lead-discovery-analysis-settings",
+  DEFAULT_ANALYSIS_SETTINGS,
+  analysisSettingsStorage,
+)
+
+// 타임아웃 업데이트
+export const updateCrawlTimeoutAtom = atom(null, (get, set, timeoutSeconds: number) => {
+  const current = get(analysisSettingsAtom)
+  set(analysisSettingsAtom, {
+    ...current,
+    crawlTimeoutSeconds: timeoutSeconds,
+    useAutoTimeout: false, // 수동 설정 시 자동 타임아웃 비활성화
+  })
+})
+
+// 자동 타임아웃 토글
+export const toggleAutoTimeoutAtom = atom(null, (get, set) => {
+  const current = get(analysisSettingsAtom)
+  set(analysisSettingsAtom, {
+    ...current,
+    useAutoTimeout: !current.useAutoTimeout,
+    // 자동 모드로 전환 시 기본값으로 리셋
+    ...(current.useAutoTimeout === false && {
+      crawlTimeoutSeconds: DEFAULT_ANALYSIS_SETTINGS.crawlTimeoutSeconds,
+    }),
+  })
+})
+
+// 설정 초기화
+export const resetAnalysisSettingsAtom = atom(null, (_get, set) => {
+  set(analysisSettingsAtom, DEFAULT_ANALYSIS_SETTINGS)
+  localStorage.removeItem("lead-discovery-analysis-settings")
 })

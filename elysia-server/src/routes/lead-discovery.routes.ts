@@ -170,9 +170,22 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       console.log("[lead-discovery] POST /search - Route entered")
       logger.info("[lead-discovery] POST /search - Route entered")
 
-      const { query, workspaceId, sessionId: providedSessionId, locale } = body
+      const {
+        query,
+        workspaceId,
+        sessionId: providedSessionId,
+        locale,
+        crawlTimeoutSeconds,
+        useAutoTimeout,
+      } = body
 
-      console.log("[lead-discovery] Request body:", { query, workspaceId, locale })
+      console.log("[lead-discovery] Request body:", {
+        query,
+        workspaceId,
+        locale,
+        crawlTimeoutSeconds,
+        useAutoTimeout,
+      })
       logger.info(`[lead-discovery] Request: query="${query}" workspace=${workspaceId}`)
 
       const sessionId = providedSessionId || uuidv4()
@@ -203,13 +216,15 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
               data: { sessionId, timestamp: Date.now() },
             })
 
-            // Initial state
+            // Initial state (타임아웃 설정 포함)
             const initialState: Partial<LeadDiscoveryState> = {
               sessionId,
               workspaceId,
               locale: locale || "ko",
               userInput: query,
               _emitter: emitter,
+              crawlTimeoutSeconds: crawlTimeoutSeconds ?? 30, // 기본 30초
+              useAutoTimeout: useAutoTimeout ?? true, // 기본 자동 타임아웃 활성화
               messages: [
                 {
                   role: "user",
@@ -343,6 +358,20 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         workspaceId: t.String({ format: "uuid" }),
         sessionId: t.Optional(t.String()),
         locale: t.Optional(t.String()),
+        crawlTimeoutSeconds: t.Optional(
+          t.Number({
+            default: 30,
+            minimum: 5,
+            maximum: 120,
+            description: "Website crawling timeout in seconds (5-120, default: 30)",
+          }),
+        ),
+        useAutoTimeout: t.Optional(
+          t.Boolean({
+            default: true,
+            description: "Auto-adjust timeout based on site response time",
+          }),
+        ),
       }),
       detail: {
         tags: ["lead-discovery"],
@@ -1070,7 +1099,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         tags: ["lead-discovery"],
         summary: "Extend session TTL",
         description:
-          "Extend the session expiration time by 30 minutes. Updates server-side metadata.",
+          "Extend the session expiration time by 30 minutes. Updates both server-side metadata and returns new expiry time for client.",
       },
     },
   )

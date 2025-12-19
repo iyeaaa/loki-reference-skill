@@ -243,7 +243,13 @@ export async function analyzeWebsite(
     }
 
     // Step 1: 웹사이트 연결 (10%)
-    leadDiscoveryLogger.info(`[웹사이트 분석] Step 1/4 - ${websiteUrl}에 연결 중`)
+    // 사용자 설정 타임아웃 또는 기본값 사용
+    const timeoutSeconds = state.crawlTimeoutSeconds || 30
+    const useAutoTimeout = state.useAutoTimeout ?? true
+
+    leadDiscoveryLogger.info(
+      `[웹사이트 분석] Step 1/4 - ${websiteUrl}에 연결 중 (타임아웃: ${timeoutSeconds}초, 자동조절: ${useAutoTimeout})`,
+    )
     leadDiscoveryLogger.websiteAnalysisProgress("Crawling website", 10)
     if (emitter) {
       emitter.progress("analyzeWebsite", `${new URL(websiteUrl).hostname}에 연결하고 있어요`, 10)
@@ -252,7 +258,7 @@ export async function analyzeWebsite(
     const { pagesContent, httpStatus, pages, siteFavicon } = await fetchWithDepth(
       websiteUrl,
       1, // depth = 1 (main + contact/about pages)
-      30, // timeout 30 seconds
+      timeoutSeconds, // 사용자 설정 타임아웃
       onPageFound,
       onProgress,
     )

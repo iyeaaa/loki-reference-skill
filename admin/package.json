@@ -60,6 +60,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.13",
     "@uiw/react-md-editor": "^4.0.8",
     "@xyflow/react": "^12.8.6",
     "class-variance-authority": "^0.7.1",

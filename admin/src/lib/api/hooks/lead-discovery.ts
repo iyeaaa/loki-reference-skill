@@ -113,6 +113,10 @@ type SearchRequest = {
   workspaceId: string
   locale?: string
   signal?: AbortSignal
+  // 웹사이트 크롤링 타임아웃 (초)
+  crawlTimeoutSeconds?: number
+  // 자동 타임아웃 사용 여부
+  useAutoTimeout?: boolean
 }
 
 type SelectRequest = {
@@ -497,9 +501,43 @@ async function processSSEStream(
         break
       }
 
-      case "complete": {
+      // ★ 검색 결과를 즉시 처리 (complete 이벤트 전에 도착)
+      case "results": {
         const results = (data.results as BigQueryResult[]) || []
         const totalCount = (data.totalCount as number) || results.length
+
+        log.info(`Results received: ${results.length}/${totalCount}`, {
+          hasMore: data.hasMore,
+          totalAvailable: data.totalAvailable,
+        })
+
+        // 결과 콜백 호출 (CustomerTable 등에서 사용)
+        options.onResults?.(results, totalCount)
+
+        // 상태 업데이트 - 아직 complete는 아님
+        const eventData: LeadDiscoveryEventData = {
+          status: lastEventData?.status || "searching",
+          message: `${results.length}개 리드를 찾았어요`,
+          progress: 95,
+          mode: currentMode,
+          websiteAnalysis: currentAnalysis,
+          recommendations: currentRecommendations,
+          results,
+          totalCount,
+          hasMore: data.hasMore as boolean,
+          totalAvailable: data.totalAvailable as number,
+          sql: data.sql as string,
+          sessionId: sessionIdRef.current,
+        }
+        options.onStatusChange?.(eventData)
+        lastEventData = eventData
+        break
+      }
+
+      case "complete": {
+        const results = (data.results as BigQueryResult[]) || lastEventData?.results || []
+        const totalCount =
+          (data.totalCount as number) || lastEventData?.totalCount || results.length
         const selectedRec = data.selectedRecommendation as BuyerRecommendation | undefined
 
         log.info(`Complete: ${results.length}/${totalCount} results`, {
@@ -507,7 +545,10 @@ async function processSSEStream(
           hasSelectedRec: !!selectedRec,
         })
 
-        options.onResults?.(results, totalCount)
+        // results 이벤트에서 이미 onResults를 호출했으면 스킵
+        if (!lastEventData?.results?.length) {
+          options.onResults?.(results, totalCount)
+        }
 
         const eventData: LeadDiscoveryEventData = {
           status: "complete",
@@ -619,6 +660,11 @@ export function useLeadDiscoveryMutation(options: UseLeadDiscoveryMutationOption
             query: request.query,
             workspaceId: request.workspaceId,
             locale: request.locale || "ko",
+            // 타임아웃 설정 전달
+            ...(request.crawlTimeoutSeconds && {
+              crawlTimeoutSeconds: request.crawlTimeoutSeconds,
+            }),
+            ...(request.useAutoTimeout !== undefined && { useAutoTimeout: request.useAutoTimeout }),
           }),
           signal: request.signal,
         })

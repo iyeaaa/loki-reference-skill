@@ -10,6 +10,18 @@ export interface SSESession {
   closed: boolean
 }
 
+/**
+ * Thinking event data for Cursor-style thinking UI
+ */
+export interface ThinkingEventData {
+  /** 한 줄 요약 (접힌 상태에서 표시) */
+  summary: string
+  /** 상세 내용 (펼쳤을 때 표시) */
+  detail: string
+  /** 스트리밍 중 여부 */
+  isStreaming: boolean
+}
+
 export interface NodeEventEmitter {
   /**
    * Emit node start event
@@ -33,6 +45,12 @@ export interface NodeEventEmitter {
    * Call this for each chunk received from LLM
    */
   textChunk(nodeName: string, chunk: string, accumulated: string): void
+
+  /**
+   * Emit thinking event for Cursor-style thinking UI
+   * Shows AI's thought process with collapsible detail
+   */
+  thinking(nodeName: string, data: ThinkingEventData): void
 
   /**
    * Emit node complete event
@@ -124,6 +142,28 @@ export function createNodeEmitter(session: SSESession): NodeEventEmitter {
           timestamp: Date.now(),
         },
       })
+    },
+
+    thinking(nodeName: string, data: ThinkingEventData) {
+      if (session.closed) return
+
+      const success = session.push({
+        event: "thinking",
+        data: {
+          type: "thinking",
+          node: nodeName,
+          summary: data.summary,
+          detail: data.detail,
+          isStreaming: data.isStreaming,
+          timestamp: Date.now(),
+        },
+      })
+
+      if (success) {
+        chatbotLogger.debug(
+          `[Node] ${nodeName} thinking: ${data.summary} (streaming: ${data.isStreaming})`,
+        )
+      }
     },
 
     nodeComplete(nodeName: string, message: string, result?: unknown) {

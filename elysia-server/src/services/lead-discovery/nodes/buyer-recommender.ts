@@ -266,6 +266,19 @@ export async function recommendBuyers(
 
   // 상세 로그: 바이어 추천 시작
   const companyName = state.websiteAnalysis?.companyName || "알 수 없는 회사"
+
+  // 이미 선택된 추천이 있는 경우 (interrupt에서 재개) - thinking 없이 바로 진행
+  if (state.selectedRecommendation) {
+    leadDiscoveryLogger.info(
+      `[바이어 추천] 이미 선택됨 - ${state.selectedRecommendation.country} / ${state.selectedRecommendation.industry}`,
+    )
+    const duration = Date.now() - startTime
+    leadDiscoveryLogger.nodeSuccess("recommendBuyers", duration, {
+      status: "resumed_with_selection",
+    })
+    return {} // 다음 노드로 진행 (thinking 이벤트 발생하지 않음)
+  }
+
   leadDiscoveryLogger.info(`[바이어 추천] 시작 - 회사: ${companyName}`)
   leadDiscoveryLogger.nodeStart("recommendBuyers", {
     hasAnalysis: !!state.websiteAnalysis,
@@ -274,21 +287,24 @@ export async function recommendBuyers(
 
   if (emitter) {
     emitter.nodeStart("recommendBuyers", `${companyName}에 맞는 바이어를 찾고 있어요`)
+
+    // Thinking: 바이어 추천 시작
+    const analysis = state.websiteAnalysis
+    emitter.thinking("recommendBuyers", {
+      summary: `${companyName}의 잠재 바이어를 분석하고 있어요`,
+      detail: `**분석 대상 회사:** ${companyName}
+
+**고려 중인 요소:**
+- 산업 분야: ${analysis?.industry || "분석 중"}
+- 주요 제품: ${analysis?.products?.slice(0, 3).join(", ") || "분석 중"}
+- 타겟 시장: ${analysis?.targetMarkets?.slice(0, 3).join(", ") || "분석 중"}
+
+이 회사의 제품/서비스에 관심을 가질 최적의 해외 바이어를 찾기 위해 국가별, 산업별 매칭을 진행합니다.`,
+      isStreaming: true,
+    })
   }
 
   try {
-    // 이미 선택된 추천이 있는 경우 (interrupt에서 재개)
-    if (state.selectedRecommendation) {
-      leadDiscoveryLogger.info(
-        `[바이어 추천] 이미 선택됨 - ${state.selectedRecommendation.country} / ${state.selectedRecommendation.industry}`,
-      )
-      const duration = Date.now() - startTime
-      leadDiscoveryLogger.nodeSuccess("recommendBuyers", duration, {
-        status: "resumed_with_selection",
-      })
-      return {} // 다음 노드로 진행
-    }
-
     // 웹사이트 분석 기반 추천 생성
     leadDiscoveryLogger.info(`[바이어 추천] AI로 추천 바이어 생성 중`)
     if (emitter) {
@@ -336,6 +352,20 @@ export async function recommendBuyers(
 
     // 클라이언트에 추천 목록 전송 (토스 스타일)
     if (emitter) {
+      // Thinking 완료: 추천 결과 요약
+      const recommendationsSummary = recommendations
+        .map(
+          (r, i) =>
+            `**${i + 1}. ${r.country} - ${r.industry}${r.subIndustry ? ` (${r.subIndustry})` : ""}**\n   ${r.reasoning}\n   예상 리드 수: ${r.estimatedLeadCount?.toLocaleString() || "미정"}개`,
+        )
+        .join("\n\n")
+
+      emitter.thinking("recommendBuyers", {
+        summary: `${recommendations.length}개 바이어 타겟을 찾았어요`,
+        detail: `**추천 바이어 타겟**\n\n${recommendationsSummary}\n\n원하시는 타겟을 선택하시면 해당 조건에 맞는 리드를 검색합니다.`,
+        isStreaming: false,
+      })
+
       emitter.nodeComplete("recommendBuyers", "원하시는 바이어 타겟을 선택해주세요", {
         recommendations: recommendations.map((r) => ({
           id: r.id,

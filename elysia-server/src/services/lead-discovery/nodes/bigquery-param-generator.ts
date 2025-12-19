@@ -610,6 +610,11 @@ export async function generateBigQueryParams(
 
   if (emitter) {
     emitter.nodeStart("generateBigQueryParams", "검색 조건을 만들고 있어요")
+    emitter.thinking("generateBigQueryParams", {
+      summary: "선택한 바이어 타겟에 맞는 검색 조건을 준비합니다",
+      detail: `검색 모드: ${state.searchMode === "basic" ? "웹사이트 기반 추천" : "직접 검색"}\n\n선택된 조건을 분석하여 최적의 검색 쿼리를 생성합니다.`,
+      isStreaming: true,
+    })
   }
 
   try {
@@ -625,11 +630,17 @@ export async function generateBigQueryParams(
       leadDiscoveryLogger.info(`  - 산업: ${recommendation.industry}`)
 
       if (emitter) {
+        const subIndustryInfo = recommendation.subIndustry ? ` > ${recommendation.subIndustry}` : ""
         emitter.progress(
           "generateBigQueryParams",
           `${recommendation.country} ${recommendation.industry} 검색을 준비하고 있어요`,
           30,
         )
+        emitter.thinking("generateBigQueryParams", {
+          summary: `${recommendation.country}의 ${recommendation.industry}${subIndustryInfo} 바이어 검색 조건 생성`,
+          detail: `**타겟 바이어 프로필**\n- 국가: ${recommendation.country}\n- 산업: ${recommendation.industry}${subIndustryInfo}\n${recommendation.keywords?.length ? `- 키워드: ${recommendation.keywords.join(", ")}` : ""}\n\n${analysis ? `**참고 정보 (웹사이트 분석 결과)**\n- 회사명: ${analysis.companyName}\n- 주요 제품: ${analysis.products?.join(", ") || "N/A"}` : ""}`,
+          isStreaming: true,
+        })
       }
 
       const query = buildQueryFromRecommendation(
@@ -729,6 +740,14 @@ export async function generateBigQueryParams(
     if (emitter) {
       const targetDesc =
         params.country && params.industry ? `${params.country} ${params.industry}` : "검색 대상"
+
+      // Thinking 완료 이벤트
+      emitter.thinking("generateBigQueryParams", {
+        summary: `${targetDesc} 검색 조건 준비 완료`,
+        detail: `**검색 조건 생성 완료**\n- 쿼리: ${params.query}\n- 국가: ${params.country || "전체"}\n- 산업: ${params.industry || "전체"}${params.subIndustry ? `\n- 세부 산업: ${params.subIndustry}` : ""}`,
+        isStreaming: false,
+      })
+
       emitter.nodeComplete("generateBigQueryParams", `${targetDesc} 검색 조건 준비 완료`, {
         query: params.query,
         country: params.country,

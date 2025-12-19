@@ -142,6 +142,21 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
 
     leadDiscoveryLogger.info(`[입력 분석] URL 감지 결과: ${hasUrl ? detectedUrl : "URL 없음"}`)
 
+    // Thinking: URL 감지 결과
+    if (emitter) {
+      const urlThought = hasUrl
+        ? `입력된 내용에서 웹사이트 URL을 발견했어요: ${detectedUrl}\n\n이 웹사이트를 분석해서 적합한 바이어를 찾아볼게요.`
+        : `입력된 내용에서 웹사이트 URL이 발견되지 않았어요.\n\n검색 조건을 분석해서 직접 바이어를 검색할게요.`
+
+      emitter.thinking("routeMode", {
+        summary: hasUrl
+          ? `${detectedUrl} 웹사이트를 분석할 준비를 하고 있어요`
+          : "입력된 검색 조건을 분석하고 있어요",
+        detail: urlThought,
+        isStreaming: true,
+      })
+    }
+
     if (emitter && hasUrl) {
       emitter.progress("routeMode", `${detectedUrl} 웹사이트를 발견했어요`, 30)
     }
@@ -165,6 +180,23 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
     leadDiscoveryLogger.modeDetected(analysis.mode, analysis.confidence, analysis.indicators)
 
     const duration = Date.now() - startTime
+
+    // Thinking 완료: 분석 결과 설명
+    if (emitter) {
+      const modeExplanation =
+        analysis.mode === "basic"
+          ? `웹사이트 분석 모드로 진행할게요.\n\n**판별 근거:**\n${analysis.indicators.map((i) => `- ${i}`).join("\n")}\n\n**신뢰도:** ${analysis.confidence}%`
+          : `고급 검색 모드로 진행할게요.\n\n**판별 근거:**\n${analysis.indicators.map((i) => `- ${i}`).join("\n")}\n\n**신뢰도:** ${analysis.confidence}%`
+
+      emitter.thinking("routeMode", {
+        summary:
+          analysis.mode === "basic"
+            ? "웹사이트를 분석해서 바이어를 찾을게요"
+            : "검색 조건으로 바이어를 직접 찾을게요",
+        detail: modeExplanation,
+        isStreaming: false,
+      })
+    }
 
     // Emit progress (토스 스타일)
     if (emitter) {

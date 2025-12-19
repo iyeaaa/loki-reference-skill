@@ -204,6 +204,14 @@ export async function analyzeWebsite(
 
   if (emitter) {
     emitter.nodeStart("analyzeWebsite", `${websiteUrl} 분석을 시작할게요`)
+
+    // Thinking: 웹사이트 분석 시작
+    const hostname = new URL(websiteUrl).hostname
+    emitter.thinking("analyzeWebsite", {
+      summary: `${hostname} 웹사이트를 분석하고 있어요`,
+      detail: `**분석 대상:** ${websiteUrl}\n\n웹사이트의 메인 페이지와 주요 하위 페이지를 크롤링하여 다음 정보를 추출할 예정입니다:\n\n- 회사명 및 기업 개요\n- 주요 제품/서비스\n- 타겟 시장 및 고객군\n- 비즈니스 모델\n- 핵심 강점 및 차별화 포인트`,
+      isStreaming: true,
+    })
   }
 
   try {
@@ -354,6 +362,29 @@ export async function analyzeWebsite(
     }
 
     if (emitter) {
+      // Thinking 완료: 분석 결과 요약
+      const hostname = new URL(websiteUrl).hostname
+      const thinkingDetail = `**${analysis.companyName || hostname} 분석 완료**
+
+**기업 개요:**
+- 회사명: ${analysis.companyName || "추출되지 않음"}
+- 산업 분야: ${analysis.industry || "추출되지 않음"}
+- 비즈니스 모델: ${analysis.businessModel || "추출되지 않음"}
+
+**주요 제품/서비스:**
+${analysis.products?.map((p) => `- ${p}`).join("\n") || "- 정보 없음"}
+
+**타겟 시장:**
+${analysis.targetMarkets?.map((m) => `- ${m}`).join("\n") || "- 정보 없음"}
+
+**분석된 페이지:** ${pagesContent.size}개`
+
+      emitter.thinking("analyzeWebsite", {
+        summary: `${analysis.companyName || hostname} 웹사이트 분석이 완료되었어요`,
+        detail: thinkingDetail,
+        isStreaming: false,
+      })
+
       const companyInfo = analysis.companyName
         ? `${analysis.companyName} 분석을 완료했어요`
         : "웹사이트 분석을 완료했어요"

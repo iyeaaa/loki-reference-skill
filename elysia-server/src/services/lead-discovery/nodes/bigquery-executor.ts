@@ -1555,6 +1555,11 @@ export async function executeBigQuery(
     const targetInfo =
       params.country && params.industry ? `${params.country} ${params.industry}` : "전 세계"
     emitter.nodeStart("executeBigQuery", `${targetInfo} 바이어를 검색하고 있어요`)
+    emitter.thinking("executeBigQuery", {
+      summary: `Rinda 데이터베이스에서 ${targetInfo} 바이어를 검색합니다`,
+      detail: `**검색 조건**\n- 국가: ${params.country || "전체"}\n- 산업: ${params.industry || "전체"}\n- 쿼리: ${params.query}\n\n6개 데이터 소스(B2B Leads, Crunchbase, Apollo, Fresh Leads, Revation Premium, Perplexity 실시간)에서 동시에 검색을 시작합니다.`,
+      isStreaming: true,
+    })
   }
 
   // 재시도 설정
@@ -1579,8 +1584,13 @@ export async function executeBigQuery(
       const progressMsg =
         attemptNumber > 1
           ? `재검색 중... (${attemptNumber}/${MAX_RETRY_COUNT})`
-          : "네 테이블에서 검색 중..."
+          : "6개 데이터 소스에서 병렬 검색 중..."
       emitter.progress("executeBigQuery", progressMsg, 20)
+      emitter.thinking("executeBigQuery", {
+        summary: "데이터베이스 검색을 실행하고 있어요",
+        detail: `6개 데이터 소스에서 동시에 검색 중입니다:\n\n1. **B2B Leads** - 전 세계 B2B 기업 데이터\n2. **Crunchbase** - 스타트업/투자 기업 데이터\n3. **Apollo** - 영업 인텔리전스 데이터\n4. **Fresh Leads** - 최신 기업 정보\n5. **Revation Premium** - 큐레이션된 프리미엄 리드\n6. **Perplexity** - 실시간 웹 검색 결과`,
+        isStreaming: true,
+      })
     }
 
     // 네 테이블 병렬 검색 + Perplexity 실시간 검색
@@ -1875,6 +1885,11 @@ export async function executeBigQuery(
 
     if (emitter) {
       emitter.progress("executeBigQuery", `${totalCount.toLocaleString()}개 리드를 찾았어요`, 80)
+      emitter.thinking("executeBigQuery", {
+        summary: `${totalCount.toLocaleString()}개 잠재 바이어 중 상위 100개를 엄선합니다`,
+        detail: `**검색 결과 요약**\n- Perplexity (실시간): ${perplexityTotal.toLocaleString()}개\n- Revation (프리미엄): ${revationTotal.toLocaleString()}개\n- Apollo: ${apolloTotal.toLocaleString()}개\n- Fresh Leads: ${freshTotal.toLocaleString()}개\n- B2B Leads: ${b2bTotal.toLocaleString()}개\n- Crunchbase: ${crunchbaseTotal.toLocaleString()}개\n\n**총 ${totalCount.toLocaleString()}개** 잠재 바이어 중 관련도가 높은 **상위 100개**를 선별하여 표시합니다.\n\n> 💡 프리미엄 데이터와 실시간 검색 결과가 우선 노출됩니다.`,
+        isStreaming: false,
+      })
     }
 
     // 고객군 분석 없이 바로 결과 반환

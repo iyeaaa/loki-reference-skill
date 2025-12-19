@@ -184,6 +184,7 @@ export const resetAllAtom = atom(null, (_get, set) => {
   // 고객 목록 초기화
   set(customersAtom, [])
   // 스트리밍 상태는 streamingStateAtom에서 별도로 초기화 (아래에 정의)
+  // Thinking 상태 초기화는 thinkingStateAtom에서 별도로 초기화 (아래에 정의)
 })
 
 // ============================================
@@ -623,4 +624,109 @@ export const resetRetryCountAtom = atom(null, (get, set) => {
     ...current,
     retryCount: 0,
   })
+})
+
+// ============================================
+// Thinking State (Cursor Agent 스타일 Thinking UI)
+// ============================================
+
+export type ThinkingEntry = {
+  id: string
+  messageId: string // 어느 메시지에 속하는지
+  node: string
+  summary: string
+  detail: string
+  isStreaming: boolean
+  timestamp: number
+}
+
+export type ThinkingState = {
+  entries: ThinkingEntry[]
+  // 현재 스트리밍 중인 노드
+  activeNode?: string
+  // 현재 메시지 ID
+  currentMessageId?: string
+}
+
+export const initialThinkingState: ThinkingState = {
+  entries: [],
+  activeNode: undefined,
+  currentMessageId: undefined,
+}
+
+export const thinkingStateAtom = atom<ThinkingState>(initialThinkingState)
+
+// 현재 메시지 ID 설정
+export const setThinkingMessageIdAtom = atom(null, (get, set, messageId: string) => {
+  const current = get(thinkingStateAtom)
+  set(thinkingStateAtom, {
+    ...current,
+    currentMessageId: messageId,
+  })
+})
+
+// Thinking 항목 추가 또는 업데이트
+export const updateThinkingAtom = atom(
+  null,
+  (
+    get,
+    set,
+    data: {
+      node: string
+      summary: string
+      detail: string
+      isStreaming: boolean
+    },
+  ) => {
+    const current = get(thinkingStateAtom)
+    const messageId = current.currentMessageId || "unknown"
+
+    // 같은 메시지, 같은 노드에서 스트리밍 중인 항목 찾기
+    const existingIndex = current.entries.findIndex(
+      (e) => e.messageId === messageId && e.node === data.node && e.isStreaming,
+    )
+
+    if (existingIndex >= 0) {
+      // 기존 스트리밍 항목 업데이트
+      const updatedEntries = [...current.entries]
+      updatedEntries[existingIndex] = {
+        ...updatedEntries[existingIndex],
+        summary: data.summary,
+        detail: data.detail,
+        isStreaming: data.isStreaming,
+      }
+      set(thinkingStateAtom, {
+        ...current,
+        entries: updatedEntries,
+        activeNode: data.isStreaming ? data.node : undefined,
+      })
+    } else {
+      // 새 항목 추가
+      const newEntry: ThinkingEntry = {
+        id: `thinking-${data.node}-${Date.now()}`,
+        messageId,
+        node: data.node,
+        summary: data.summary,
+        detail: data.detail,
+        isStreaming: data.isStreaming,
+        timestamp: Date.now(),
+      }
+      set(thinkingStateAtom, {
+        ...current,
+        entries: [...current.entries, newEntry],
+        activeNode: data.isStreaming ? data.node : undefined,
+      })
+    }
+  },
+)
+
+// 특정 메시지의 Thinking 항목 가져오기
+export const getThinkingEntriesForMessage = (
+  entries: ThinkingEntry[],
+  messageId: string,
+): ThinkingEntry[] => entries.filter((e) => e.messageId === messageId)
+
+// Thinking 상태 리셋
+export const resetThinkingAtom = atom(null, (_get, set) => {
+  set(thinkingStateAtom, initialThinkingState)
 })

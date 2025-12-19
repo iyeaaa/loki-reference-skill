@@ -82,6 +82,14 @@ export type SessionExpiredError = {
   sessionId?: string
 }
 
+// Thinking 이벤트 데이터 타입
+export type ThinkingEventData = {
+  node: string
+  summary: string
+  detail: string
+  isStreaming: boolean
+}
+
 // Mutation 옵션 (콜백 기반)
 export type UseLeadDiscoveryMutationOptions = {
   onStatusChange?: (data: LeadDiscoveryEventData) => void
@@ -95,6 +103,8 @@ export type UseLeadDiscoveryMutationOptions = {
   onSessionExpired?: (data: SessionExpiredError) => void
   // 분석 요약 텍스트 스트리밍
   onTextChunk?: (chunk: string, accumulated: string) => void
+  // Thinking 이벤트 콜백 (Cursor Agent 스타일)
+  onThinking?: (data: ThinkingEventData) => void
 }
 
 // API 요청 타입
@@ -328,6 +338,25 @@ async function processSSEStream(
         }
         options.onStatusChange?.(eventData)
         lastEventData = eventData
+        break
+      }
+
+      case "thinking": {
+        // Cursor Agent 스타일 Thinking 이벤트
+        const node = (data.node as string) || ""
+        const summary = (data.summary as string) || ""
+        const detail = (data.detail as string) || ""
+        const isStreaming = (data.isStreaming as boolean) ?? true
+
+        log.response(`thinking:${node}`, { summary, isStreaming })
+
+        // Thinking 콜백 호출
+        options.onThinking?.({
+          node,
+          summary,
+          detail,
+          isStreaming,
+        })
         break
       }
 

@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils"
 import { ClarificationCards } from "./components/ClarificationCards"
 import { ErrorCard } from "./components/ErrorCard"
 import { FilterSearchForm } from "./components/FilterSearchForm"
-import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
+import { ThinkingBlock } from "./components/ThinkingBlock"
 import {
   addChatMessageAtom,
   bulkEnrichmentStateAtom,
@@ -60,20 +60,25 @@ import {
   finishBulkEnrichmentAtom,
   finishCreateGroupAtom,
   finishEnrichmentAtom,
+  getThinkingEntriesForMessage,
   initialStreamingState,
   recoverStateAtom,
   resetAllAtom,
   resetSearchStateAtom,
+  resetThinkingAtom,
   selectedTargetAtom,
   setCustomersAtom,
   setErrorAtom,
+  setThinkingMessageIdAtom,
   startBulkEnrichmentAtom,
   startCreateGroupAtom,
   startEnrichmentAtom,
   streamingStateAtom,
+  thinkingStateAtom,
   updateBulkEnrichmentProgressAtom,
   updateChatMessageAtom,
   updateCustomerAtom,
+  updateThinkingAtom,
 } from "./store"
 import { classifyError } from "./utils/error-classifier"
 
@@ -147,14 +152,20 @@ function formatCompletionMessage(data: {
 }): string {
   const { totalCount, displayCount, selectedRecommendation, userQuery, hasMore } = data
 
-  // 메인 메시지
-  const mainMessage = displayCount
-    ? `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에 **${displayCount.toLocaleString()}개** 결과를 표시했어요.`
-    : `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에서 결과를 확인하세요.`
+  const actualDisplayCount = displayCount || Math.min(100, totalCount)
+  const isFiltered = totalCount > actualDisplayCount
 
-  // 더 많은 데이터 안내
+  // 메인 메시지 - 필터링 여부에 따라 다른 메시지
+  let mainMessage: string
+  if (isFiltered) {
+    mainMessage = `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n이 중 관련도가 높은 **상위 ${actualDisplayCount.toLocaleString()}개**를 엄선하여 오른쪽 테이블에 표시했어요. 🎯`
+  } else {
+    mainMessage = `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에서 결과를 확인하세요.`
+  }
+
+  // 더 많은 데이터 안내 (필터링된 경우에만 표시)
   const moreDataNote =
-    hasMore || totalCount > (displayCount || 100)
+    hasMore || isFiltered
       ? "\n\n> 💡 더 많은 바이어 데이터가 필요하시면 [문의하기](mailto:info@rinda.ai)로 연락해 주세요."
       : ""
 
@@ -238,6 +249,12 @@ export function ChatRoom() {
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
 
+  // Thinking 상태 (Cursor Agent 스타일)
+  const thinkingState = useAtomValue(thinkingStateAtom)
+  const updateThinking = useSetAtom(updateThinkingAtom)
+  const resetThinking = useSetAtom(resetThinkingAtom)
+  const setThinkingMessageId = useSetAtom(setThinkingMessageIdAtom)
+
   const searchModeCopy: Record<SearchMode, { title: string; subtitle: string }> = {
     website: {
       title: "우리 회사 웹사이트 주소만 입력하세요",
@@ -315,10 +332,11 @@ export function ChatRoom() {
 
     resetAll()
     setStreamingState(initialStreamingState)
+    resetThinking() // Thinking 상태 초기화
     setInput("")
     clearError()
     setLastQuery(null)
-  }, [resetAll, setStreamingState, clearError])
+  }, [resetAll, setStreamingState, resetThinking, clearError])
 
   // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -598,6 +616,15 @@ export function ChatRoom() {
         sessionId,
       }))
     },
+    onThinking: (data) => {
+      // Cursor Agent 스타일 Thinking 업데이트
+      updateThinking({
+        node: data.node,
+        summary: data.summary,
+        detail: data.detail,
+        isStreaming: data.isStreaming,
+      })
+    },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
@@ -770,6 +797,9 @@ export function ChatRoom() {
         sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
+      // Thinking 상태에 현재 메시지 ID 설정
+      setThinkingMessageId(assistantMessageId)
+
       // 이전 요청 취소 및 새 AbortController 생성
       globalAbortController?.abort()
       globalAbortController = new AbortController()
@@ -786,7 +816,7 @@ export function ChatRoom() {
     return () => {
       window.removeEventListener("executeSearch", handleExecuteSearch as EventListener)
     }
-  }, [addMessage, searchMutation, setStreamingState])
+  }, [addMessage, searchMutation, setStreamingState, setThinkingMessageId])
 
   const selectMutation = useLeadDiscoverySelectMutation({
     onStatusChange: (data: LeadDiscoveryEventData) => {
@@ -798,6 +828,15 @@ export function ChatRoom() {
         mode: data.mode,
         customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
       }))
+    },
+    onThinking: (data) => {
+      // 바이어 선택 후 리드 검색 과정 Thinking 업데이트
+      updateThinking({
+        node: data.node,
+        summary: data.summary,
+        detail: data.detail,
+        isStreaming: data.isStreaming,
+      })
     },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Selection results:", totalCount)
@@ -1056,8 +1095,18 @@ export function ChatRoom() {
   }, [recoverState, clearError])
 
   // 파생 상태
-  const isSearching =
+  const isMutationPending =
     searchMutation.isPending || selectMutation.isPending || clarifyMutation.isPending
+
+  // 분석/검색 진행 중 여부 (mutation pending 또는 스트리밍 진행 중)
+  const isSearching =
+    isMutationPending ||
+    (streamingState.status !== "idle" &&
+      streamingState.status !== "complete" &&
+      streamingState.status !== "error" &&
+      streamingState.status !== "waiting_selection" &&
+      streamingState.status !== "waiting_clarification")
+
   const isWaitingClarification = streamingState.status === "waiting_clarification"
 
   // Markdown components for consistent styling
@@ -1212,6 +1261,9 @@ export function ChatRoom() {
       }
       addMessage(responseMessage)
 
+      // 새 메시지에 대한 Thinking 상태 설정 (기존 히스토리 유지)
+      setThinkingMessageId(responseId)
+
       // 스트리밍 상태 업데이트 - 기존 데이터 유지하면서 선택 상태만 변경
       setStreamingState((prev) => ({
         ...prev,
@@ -1252,6 +1304,7 @@ export function ChatRoom() {
       selectMutation,
       setStreamingState,
       setSelectedTarget,
+      setThinkingMessageId,
     ],
   )
 
@@ -1406,6 +1459,9 @@ export function ChatRoom() {
         sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
+      // Thinking 상태에 현재 메시지 ID 설정
+      setThinkingMessageId(assistantMessageId)
+
       // 이전 요청 취소 및 새 AbortController 생성
       globalAbortController?.abort()
       globalAbortController = new AbortController()
@@ -1425,6 +1481,7 @@ export function ChatRoom() {
       setStreamingState,
       resetSearchState,
       setPendingQuery,
+      setThinkingMessageId,
     ],
   )
 
@@ -1504,6 +1561,9 @@ export function ChatRoom() {
         sessionCreatedAt: Date.now(), // 세션 만료 체크용
       })
 
+      // Thinking 상태에 현재 메시지 ID 설정
+      setThinkingMessageId(assistantMessageId)
+
       // 이전 요청 취소 및 새 AbortController 생성
       globalAbortController?.abort()
       globalAbortController = new AbortController()
@@ -1545,6 +1605,7 @@ export function ChatRoom() {
       resetSearchState,
       setPendingQuery,
       clearError,
+      setThinkingMessageId,
     ],
   )
 
@@ -1690,7 +1751,7 @@ export function ChatRoom() {
                             input.trim() && !isValidWebsiteUrl(input) ? "true" : undefined
                           }
                           aria-label="분석할 웹사이트 주소 입력"
-                          className="min-h-[72px] w-full resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-[44px] w-full resize-none border-0 bg-transparent px-4 pt-3 pb-2 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isSearching}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={(e) => {
@@ -1701,7 +1762,7 @@ export function ChatRoom() {
                           }}
                           placeholder="https://www.example.com"
                           ref={inputRef}
-                          rows={3}
+                          rows={1}
                           value={input}
                         />
                         <div className="flex items-center justify-end px-4 pb-3">
@@ -1818,26 +1879,52 @@ export function ChatRoom() {
                           </div>
                         ) : (
                           <div className="w-full space-y-4">
-                            {/* LangGraph 진행 상태 표시 (진행 단계만, 미리보기는 오른쪽 AnalysisPanel에서) */}
-                            {message.id === streamingState.messageId && (
-                              <>
-                                {/* 진행 상태 표시 (idle, complete 제외하고 모든 상태에서 표시) */}
-                                {streamingState.status !== "idle" &&
-                                  streamingState.status !== "complete" && (
-                                    <LeadDiscoveryProgress
-                                      analyzedPages={streamingState.analyzedPages}
-                                      className="max-w-2xl"
-                                      customerAnalysisSummary={
-                                        streamingState.customerAnalysisSummary
-                                      }
-                                      hidePreview
-                                      message={streamingState.message}
-                                      mode={streamingState.mode}
-                                      status={streamingState.status}
-                                    />
-                                  )}
-                              </>
+                            {/* Thinking Block - Cursor Agent 스타일 사고 과정 표시 */}
+                            {/* 해당 메시지에 속한 Thinking entries만 표시 */}
+                            {getThinkingEntriesForMessage(thinkingState.entries, message.id)
+                              .length > 0 && (
+                              <div className="max-w-2xl space-y-2">
+                                {getThinkingEntriesForMessage(
+                                  thinkingState.entries,
+                                  message.id,
+                                ).map((entry) => (
+                                  <ThinkingBlock
+                                    autoCollapseOnComplete={false}
+                                    defaultExpanded={false}
+                                    detail={entry.detail}
+                                    isStreaming={entry.isStreaming}
+                                    key={entry.id}
+                                    node={entry.node}
+                                    summary={entry.summary}
+                                  />
+                                ))}
+                              </div>
                             )}
+
+                            {/* 바이어 선택 유도 안내 - waiting_selection 상태일 때 표시 */}
+                            {message.id === streamingState.messageId &&
+                              streamingState.status === "waiting_selection" && (
+                                <motion.div
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
+                                  initial={{ opacity: 0, y: 10 }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+                                      <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-foreground">
+                                        오른쪽 패널에서 바이어 타겟을 선택해주세요
+                                      </p>
+                                      <p className="mt-1 text-muted-foreground text-sm">
+                                        추천된 바이어 타겟 중 원하는 것을 선택하면 해당 조건에 맞는
+                                        리드를 검색합니다.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
 
                             {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
                             {message.content && (
@@ -2257,7 +2344,7 @@ export function ChatRoom() {
                 <form aria-label="리드 검색 폼" className="space-y-2" onSubmit={handleSubmit}>
                   <textarea
                     aria-label="분석할 웹사이트 주소 입력"
-                    className="min-h-[72px] w-full resize-none rounded-xl border-0 bg-transparent px-3 pt-3 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-[40px] w-full resize-none rounded-xl border-0 bg-transparent px-3 pt-2.5 pb-0 text-base outline-none placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isSearching}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -2267,7 +2354,7 @@ export function ChatRoom() {
                       }
                     }}
                     placeholder="https://www.example.com"
-                    rows={3}
+                    rows={1}
                     value={input}
                   />
 

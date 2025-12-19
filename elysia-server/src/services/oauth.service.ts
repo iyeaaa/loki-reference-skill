@@ -1,16 +1,15 @@
 import { OAuth2Client } from "google-auth-library"
+import { config } from "../config"
 import logger from "../utils/logger"
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "http://localhost:5173/trial"
+const { clientId, clientSecret, redirectUri } = config.google.oauth
 
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+if (!clientId || !clientSecret) {
   throw new Error("Google OAuth credentials are not configured")
 }
 
 // Initialize Google OAuth2 client
-const oauth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI)
+const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri)
 
 export interface GoogleUserInfo {
   id: string
@@ -49,8 +48,8 @@ export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
     logger.info(
       {
         code: `${code.substring(0, 20)}...`,
-        redirectUri: REDIRECT_URI,
-        clientId: `${GOOGLE_CLIENT_ID?.substring(0, 20)}...`,
+        redirectUri: redirectUri,
+        clientId: `${clientId?.substring(0, 20)}...`,
       },
       "Attempting to exchange code for tokens",
     )
@@ -90,7 +89,7 @@ export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         code: `${code.substring(0, 20)}...`,
-        redirectUri: REDIRECT_URI,
+        redirectUri: redirectUri,
       },
       "Failed to get Google user info",
     )
@@ -107,7 +106,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleUserIn
   try {
     const ticket = await oauth2Client.verifyIdToken({
       idToken,
-      audience: GOOGLE_CLIENT_ID,
+      audience: clientId,
     })
 
     const payload = ticket.getPayload()

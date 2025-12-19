@@ -1,14 +1,15 @@
 import { and, eq, sql } from "drizzle-orm"
 import Nylas from "nylas"
+import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emails } from "../db/schema/emails"
 import logger from "../utils/logger"
 
 // Nylas configuration
-const NYLAS_CLIENT_ID = process.env.NYLAS_CLIENT_ID || ""
-const NYLAS_API_URI = process.env.NYLAS_API_URI || "https://api.us.nylas.com"
-const NYLAS_API_KEY = process.env.NYLAS_API_KEY || ""
-const NYLAS_REDIRECT_URI = process.env.NYLAS_REDIRECT_URI || "http://localhost:5173/app/redirect"
+const NYLAS_CLIENT_ID = config.nylas.clientId
+const NYLAS_API_URI = config.nylas.apiUri
+const NYLAS_API_KEY = config.nylas.apiKey
+const NYLAS_REDIRECT_URI = config.nylas.redirectUri
 
 // Initialize Nylas client
 const nylas = new Nylas({
@@ -338,8 +339,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
  * This is needed to enable Google OAuth for your Nylas application
  */
 export async function createGoogleConnector(): Promise<void> {
-  const GCP_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-  const GCP_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
+  const { clientId: GCP_CLIENT_ID, clientSecret: GCP_CLIENT_SECRET } = config.google.oauth
 
   if (!GCP_CLIENT_ID || !GCP_CLIENT_SECRET) {
     throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required for connector setup")

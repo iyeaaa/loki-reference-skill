@@ -3,6 +3,7 @@
  * 실시간 웹 검색으로 리드 정보 가져오기
  */
 
+import { config } from "../config"
 import logger from "../utils/logger"
 
 const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions"
@@ -29,7 +30,7 @@ export async function searchLeadsWithPerplexity(
   query: string,
   count: number = 10,
 ): Promise<PerplexitySearchResult> {
-  const apiKey = process.env.PERPLEXITY_API_KEY
+  const apiKey = config.perplexity.apiKey
 
   if (!apiKey) {
     logger.warn("[Perplexity] API key not configured - skipping Perplexity search")

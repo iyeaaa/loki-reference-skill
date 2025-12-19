@@ -121,12 +121,12 @@ const AVAILABLE_SUB_INDUSTRIES = [
   "Biotechnology",
 ]
 
-// Available countries/regions (B2B Leads + Crunchbase 통합, BigQuery 실제 데이터 기준)
+// Available countries/regions (BigQuery 실제 데이터 기준)
 const AVAILABLE_COUNTRIES = [
   // B2B Leads countries (b2b_leads_all 테이블)
   "USA", // 1,235,614
   "Canada", // 13,474
-  // Crunchbase regions (crunchbase_all 테이블, count 순)
+  // Regional groupings
   "and Africa (EMEA)", // 655,975
   "Southern US", // 259,411
   "Western US", // 243,326

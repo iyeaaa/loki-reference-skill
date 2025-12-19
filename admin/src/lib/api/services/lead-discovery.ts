@@ -77,7 +77,7 @@ export const DATA_DICTIONARIES: Record<
   }
 > = {
   b2b_leads: {
-    tableName: "gen-lang-client-0140658679.test_lead_01.lead_csv_data*",
+    tableName: "sendgrinda-leads.leads.lead_csv_data*",
     columns: [
       "first_name",
       "middle_name",
@@ -155,7 +155,7 @@ export const DATA_DICTIONARIES: Record<
     ],
   },
   crunchbase: {
-    tableName: "gen-lang-client-0140658679.test_lead_01.crunchbase_all",
+    tableName: "sendgrinda-leads.leads.crunchbase_all",
     columns: [
       "first_name",
       "last_name",

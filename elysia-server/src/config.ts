@@ -113,6 +113,13 @@ export const config = {
       ttlMs: getEnvInt("LEAD_ENRICHMENT_CACHE_TTL_MS", 6 * 60 * 60 * 1000), // 6 hours
       timeoutMs: getEnvInt("LEAD_ENRICHMENT_REDIS_TIMEOUT_MS", 250),
     },
+    leadDiscovery: {
+      enabled:
+        getEnvOrDefault("LEAD_DISCOVERY_REDIS_CACHE_ENABLED", "true").toLowerCase() === "true",
+      keyPrefix: getEnvOrDefault("LEAD_DISCOVERY_REDIS_CACHE_PREFIX", "lead_discovery:v1:"),
+      ttlMs: getEnvInt("LEAD_DISCOVERY_CACHE_TTL_MS", 24 * 60 * 60 * 1000), // 24 hours
+      timeoutMs: getEnvInt("LEAD_DISCOVERY_REDIS_TIMEOUT_MS", 250),
+    },
   },
 
   // Monitoring (optional)
@@ -142,6 +149,33 @@ export const config = {
     apiKey: getEnv("HUNTER_API_KEY"),
   },
 
+  // Google Cloud / BigQuery Configuration
+  google: {
+    // Project ID for Google Cloud
+    projectId: getEnvOrDefault("GOOGLE_CLOUD_PROJECT", "sendgrinda-leads"),
+
+    // Credentials (priority order in bigquery-search.service.ts):
+    // 1. GOOGLE_CREDENTIALS_GZIP_BASE64 (gzip + base64 - shortest)
+    // 2. GOOGLE_CREDENTIALS_BASE64 (base64 only)
+    // 3. GOOGLE_APPLICATION_CREDENTIALS (file path)
+    // 4. Individual credentials (clientEmail + privateKey)
+    // 5. gcloud CLI default credentials
+    credentials: {
+      gzipBase64: getEnvOrDefault("GOOGLE_CREDENTIALS_GZIP_BASE64", ""),
+      base64: getEnvOrDefault("GOOGLE_CREDENTIALS_BASE64", ""),
+      keyFilePath: getEnvOrDefault("GOOGLE_APPLICATION_CREDENTIALS", ""),
+      clientEmail: getEnvOrDefault("BIGQUERY_CLIENT_EMAIL", ""),
+      privateKey: getEnvOrDefault("BIGQUERY_PRIVATE_KEY", ""),
+    },
+
+    // OAuth (for Google Workspace integration)
+    oauth: {
+      clientId: getEnvOrDefault("GOOGLE_CLIENT_ID", ""),
+      clientSecret: getEnvOrDefault("GOOGLE_CLIENT_SECRET", ""),
+      redirectUri: getEnvOrDefault("GOOGLE_REDIRECT_URI", "http://localhost:5173/trial"),
+    },
+  },
+
   // External APIs
   apis: {
     jina: {
@@ -169,6 +203,11 @@ export const config = {
       "NYLAS_REDIRECT_URI",
       "http://localhost:3001/api/v1/nylas/callback",
     ),
+  },
+
+  // Perplexity (AI-powered search)
+  perplexity: {
+    apiKey: getEnvOrDefault("PERPLEXITY_API_KEY", ""),
   },
 } as const
 

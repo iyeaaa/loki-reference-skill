@@ -52,7 +52,7 @@ export function getMoreResults(
 // Data Dictionaries for BigQuery tables
 // B2B Leads 테이블 (BigQuery 실제 스키마 기준)
 const B2B_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.b2b_leads_clean",
+  tableName: "sendgrinda-leads.leads.b2b_leads_clean",
   columns: [
     "company",
     "website",
@@ -185,110 +185,10 @@ const B2B_LEADS_DATA_DICTIONARY = {
   ],
 }
 
-// Crunchbase 테이블 (BigQuery 실제 데이터 기준)
-export const CRUNCHBASE_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.crunchbase_all",
-  columns: [
-    "first_name",
-    "last_name",
-    "title",
-    "email",
-    "company",
-    "website",
-    "country",
-    "industry",
-    "employees",
-    "revenue",
-    "phone",
-    "description",
-    "linkedin",
-    "facebook",
-    "twitter",
-  ],
-  // Crunchbase industry는 복합 형태 (쉼표로 구분), LIKE 검색용 주요 키워드
-  industries: [
-    "Software",
-    "Information Technology",
-    "Manufacturing",
-    "Health Care",
-    "Real Estate",
-    "Education",
-    "E-Commerce",
-    "Consulting",
-    "Financial Services",
-    "Advertising",
-    "Marketing",
-    "Construction",
-    "Internet",
-    "Banking",
-    "Finance",
-    "Logistics",
-    "Transportation",
-    "Dental",
-    "Medical",
-    "Hospital",
-    "Human Resources",
-    "Recruiting",
-    "Staffing Agency",
-    "Property Management",
-    "Accounting",
-    "Freight Service",
-    "Wholesale",
-    "Mechanical Engineering",
-    "Wellness",
-    "Biotechnology",
-    "Non Profit",
-    "Food and Beverage",
-    "Retail",
-    "Insurance",
-    "Legal",
-    "Architecture",
-    "Travel",
-    "Tourism",
-    "Automotive",
-    "Energy",
-    "Professional Services",
-    "Telecommunications",
-    "SaaS",
-    "Cyber Security",
-    "Machine Learning",
-    "Artificial Intelligence (AI)",
-  ],
-  // Crunchbase는 region 기반 (country 컬럼에 저장됨, count 순)
-  countries: [
-    "and Africa (EMEA)", // 655,975
-    "Southern US", // 259,411
-    "Western US", // 243,326
-    "Asia-Pacific (APAC)", // 192,957
-    "Northeastern US", // 167,189
-    "Midwestern US", // 138,186
-    "Latin America", // 89,887
-    "Australasia", // 63,613
-    "Middle East and North Africa (MENA)", // 37,600
-    "Southeast Asia", // 36,847
-    "Great Lakes", // 31,215
-    "Middle East", // 4,781
-    "Central America", // 107
-    "Nordic Countries", // 15
-  ],
-  employeeRanges: [
-    "c_00001_00010",
-    "c_00011_00050",
-    "c_00051_00100",
-    "c_00101_00250",
-    "c_00251_00500",
-    "c_00501_01000",
-    "c_01001_05000",
-    "c_05001_10000",
-    "c_10001_max",
-  ],
-  revenueRanges: [], // Crunchbase에는 revenue 데이터 없음
-}
-
 // Apollo Leads 테이블 (고품질 데이터 291만개 - industry 자유형식 LIKE 검색)
 // Exported for use in background services (e.g., auto-generation during signup)
 export const APOLLO_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.apollo_leads_clean",
+  tableName: "sendgrinda-leads.leads.apollo_leads_clean",
   columns: ["company", "website", "industry", "employees", "country", "industry_category"],
   // Apollo industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드, 빈도순 - 실제 데이터 분석 기반)
   industries: [
@@ -608,7 +508,7 @@ export const APOLLO_LEADS_DATA_DICTIONARY = {
 
 // Fresh Leads 테이블 (Apollo + Phone + Pitchbook 통합 데이터 24만개)
 const FRESH_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.fresh_leads_clean",
+  tableName: "sendgrinda-leads.leads.fresh_leads_clean",
   columns: ["company", "website", "industry", "employees", "country", "industry_category"],
   // industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드 - 실제 데이터 분석 기반)
   industries: [
@@ -763,7 +663,7 @@ const FRESH_LEADS_DATA_DICTIONARY = {
 
 // Revation Leads 테이블 (큐레이션된 프리미엄 리드)
 const REVATION_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.revation_leads",
+  tableName: "sendgrinda-leads.leads.revation_leads",
   columns: [
     "company",
     "website",
@@ -1481,31 +1381,10 @@ function transformRevationResults(results: Record<string, unknown>[]): BigQueryR
   }))
 }
 
-// Transform BigQuery results to our format (B2B Leads + Crunchbase 통합 지원)
+// Transform BigQuery results to our format (B2B Leads)
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
-function transformResults(
-  results: Record<string, unknown>[],
-  source: "b2b" | "crunchbase",
-): BigQueryResult[] {
+function transformResults(results: Record<string, unknown>[], source: "b2b"): BigQueryResult[] {
   return results.map((row) => {
-    if (source === "crunchbase") {
-      // Crunchbase 테이블 컬럼 매핑
-      return {
-        companyName: row.company as string | undefined,
-        webAddress: row.website as string | undefined,
-        description: row.description as string | undefined,
-        fitScore: undefined, // 추후 계산 가능
-        country: row.country as string | undefined,
-        category: undefined, // Crunchbase에는 category 없음
-        mainIndustry: row.industry as string | undefined,
-        subIndustry: "-", // Crunchbase에는 sub_industry 없음
-        email: row.email as string | undefined,
-        phone: row.phone as string | undefined,
-        employee: row.employees as string | undefined,
-        revenue: row.revenue as string | undefined,
-        source: "crunchbase",
-      }
-    }
     // B2B Leads 테이블 컬럼 매핑
     return {
       companyName: row.company as string | undefined,
@@ -1599,25 +1478,17 @@ export async function executeBigQuery(
     // Perplexity 검색용 쿼리 최적화
     const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-    const [
-      b2bResult,
-      crunchbaseResult,
-      apolloResult,
-      freshResult,
-      revationResult,
-      perplexityResult,
-    ] = await Promise.allSettled([
-      searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY), // 큐레이션된 프리미엄 리드
-      searchLeadsWithPerplexity(perplexityQuery, 10), // 상위 10개 실시간 검색
-    ])
+    const [b2bResult, apolloResult, freshResult, revationResult, perplexityResult] =
+      await Promise.allSettled([
+        searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY), // 큐레이션된 프리미엄 리드
+        searchLeadsWithPerplexity(perplexityQuery, 10), // 상위 10개 실시간 검색
+      ])
 
     return {
       b2bResult,
-      crunchbaseResult,
       apolloResult,
       freshResult,
       revationResult,
@@ -1636,20 +1507,12 @@ export async function executeBigQuery(
       attemptCount++
       searchResults = await executeSearchOnce(attemptCount)
 
-      const {
-        b2bResult,
-        crunchbaseResult,
-        apolloResult,
-        freshResult,
-        revationResult,
-        perplexityResult,
-      } = searchResults
+      const { b2bResult, apolloResult, freshResult, revationResult, perplexityResult } =
+        searchResults
 
       // 결과 수 계산
       totalResultCount = 0
       if (b2bResult.status === "fulfilled") totalResultCount += b2bResult.value.totalCount
-      if (crunchbaseResult.status === "fulfilled")
-        totalResultCount += crunchbaseResult.value.totalCount
       if (apolloResult.status === "fulfilled") totalResultCount += apolloResult.value.totalCount
       if (freshResult.status === "fulfilled") totalResultCount += freshResult.value.totalCount
       // Revation 결과 추가 (큐레이션된 프리미엄 리드)
@@ -1708,14 +1571,7 @@ export async function executeBigQuery(
     }
 
     // 결과 처리
-    const {
-      b2bResult,
-      crunchbaseResult,
-      apolloResult,
-      freshResult,
-      revationResult,
-      perplexityResult,
-    } = searchResults
+    const { b2bResult, apolloResult, freshResult, revationResult, perplexityResult } = searchResults
 
     // B2B Leads 결과 처리
     let b2bTransformed: ReturnType<typeof transformResults> = []
@@ -1728,19 +1584,6 @@ export async function executeBigQuery(
       leadDiscoveryLogger.info(`[리드 검색] b2b_leads_all: ${b2bTotal.toLocaleString()}개`)
     } else {
       leadDiscoveryLogger.warn(`[리드 검색] b2b_leads_all 검색 실패: ${b2bResult.reason}`)
-    }
-
-    // Crunchbase 결과 처리
-    let crunchbaseTransformed: ReturnType<typeof transformResults> = []
-    let crunchbaseTotal = 0
-    let crunchbaseSql = ""
-    if (crunchbaseResult.status === "fulfilled") {
-      crunchbaseTransformed = transformResults(crunchbaseResult.value.results, "crunchbase")
-      crunchbaseTotal = crunchbaseResult.value.totalCount
-      crunchbaseSql = crunchbaseResult.value.sql
-      leadDiscoveryLogger.info(`[리드 검색] crunchbase_all: ${crunchbaseTotal.toLocaleString()}개`)
-    } else {
-      leadDiscoveryLogger.warn(`[리드 검색] crunchbase_all 검색 실패: ${crunchbaseResult.reason}`)
     }
 
     // Apollo Leads 결과 처리
@@ -1833,17 +1676,16 @@ export async function executeBigQuery(
 
     // 각 테이블 결과 수 로그
     leadDiscoveryLogger.info(
-      `[셔플 전] Perplexity: ${perplexityTransformed.length}, Revation: ${revationTransformed.length}, B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
+      `[셔플 전] Perplexity: ${perplexityTransformed.length}, Revation: ${revationTransformed.length}, B2B: ${b2bTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
     )
 
-    // 결과 합치기 (Perplexity > Revation > Apollo > Fresh > B2B > Crunchbase)
+    // 결과 합치기 (Perplexity > Revation > Apollo > Fresh > B2B)
     const allResults = [
       ...perplexityTransformed, // Perplexity 실시간 검색 결과 최우선
       ...revationTransformed, // Revation 프리미엄 큐레이션 리드 (2순위)
       ...apolloTransformed, // Apollo BigQuery 결과
       ...freshTransformed,
       ...b2bTransformed,
-      ...crunchbaseTransformed,
     ]
 
     // 스마트 셔플: 검색 쿼리와 관련 있는 산업군을 앞에 배치
@@ -1864,9 +1706,8 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(
       `[더 가져오기] 전체: ${combinedResults.length}개, 반환: 100개, 남음: ${combinedResults.length - 100}개`,
     )
-    const totalCount =
-      b2bTotal + crunchbaseTotal + apolloTotal + freshTotal + revationTotal + perplexityTotal
-    const combinedSql = `-- Perplexity (실시간): ${perplexityTotal} results\n\n-- Revation (프리미엄):\n${revationSql}\n\n-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
+    const totalCount = b2bTotal + apolloTotal + freshTotal + revationTotal + perplexityTotal
+    const combinedSql = `-- Perplexity (실시간): ${perplexityTotal} results\n\n-- Revation (프리미엄):\n${revationSql}\n\n-- B2B Leads:\n${b2bSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
     const duration = Date.now() - startTime
 
@@ -1875,7 +1716,6 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(`  - Perplexity (실시간): ${perplexityTotal}개 ⭐ (상위 노출)`)
     leadDiscoveryLogger.info(`  - Revation (프리미엄): ${revationTotal}개 ⭐ (2순위)`)
     leadDiscoveryLogger.info(`  - B2B Leads: ${b2bTotal.toLocaleString()}개`)
-    leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Fresh: ${freshTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 총 결과: ${totalCount.toLocaleString()}개`)
@@ -1907,7 +1747,6 @@ export async function executeBigQuery(
           perplexityCount: perplexityTotal,
           revationCount: revationTotal,
           b2bCount: b2bTotal,
-          crunchbaseCount: crunchbaseTotal,
           apolloCount: apolloTotal,
           freshCount: freshTotal,
         },
@@ -1918,7 +1757,6 @@ export async function executeBigQuery(
       resultCount: limitedResults.length,
       totalCount: totalCount,
       b2bCount: b2bTotal,
-      crunchbaseCount: crunchbaseTotal,
       apolloCount: apolloTotal,
       freshCount: freshTotal,
     })
@@ -1927,7 +1765,7 @@ export async function executeBigQuery(
       searchResults: limitedResults,
       totalResultCount: totalCount,
       bigQuerySQL: combinedSql,
-      bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개, Fresh: ${freshTotal}개`,
+      bigQueryExplanation: `B2B: ${b2bTotal}개, Apollo: ${apolloTotal}개, Fresh: ${freshTotal}개, Revation: ${revationTotal}개`,
       executionTime: duration,
       hasMore,
       totalAvailable: combinedResults.length,

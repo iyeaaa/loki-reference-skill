@@ -656,7 +656,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         <iframe
           className="w-full border-0"
           ref={iframeRef}
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
           srcDoc={sanitizedContent.content}
           style={{ height: `${iframeHeight}px`, minHeight: "200px" }}
           title="Email content"

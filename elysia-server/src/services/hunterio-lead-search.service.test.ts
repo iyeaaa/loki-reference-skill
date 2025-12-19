@@ -421,6 +421,7 @@ describe("Hunter.io Lead Search Service", () => {
         // missing required search parameter
       }
 
+      // biome-ignore lint/suspicious/noExplicitAny: Testing invalid input handling
       const result = await searchLeadsWithHunter(invalidParams as any)
 
       expect(result).toEqual([])
@@ -432,6 +433,7 @@ describe("Hunter.io Lead Search Service", () => {
         limit: "not-a-number", // should be number
       }
 
+      // biome-ignore lint/suspicious/noExplicitAny: Testing invalid input handling
       const result = await searchLeadsWithHunter(invalidParams as any)
 
       expect(result).toEqual([])
@@ -587,6 +589,7 @@ describe("Hunter.io Lead Search Service", () => {
     it("should handle empty object parameters gracefully", async () => {
       const params = {}
 
+      // biome-ignore lint/suspicious/noExplicitAny: Testing invalid input handling
       const result = await searchLeadsWithHunter(params as any)
 
       // Should return empty array due to validation failure

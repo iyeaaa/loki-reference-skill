@@ -1383,7 +1383,7 @@ function transformRevationResults(results: Record<string, unknown>[]): BigQueryR
 
 // Transform BigQuery results to our format (B2B Leads)
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
-function transformResults(results: Record<string, unknown>[], source: "b2b"): BigQueryResult[] {
+function transformResults(results: Record<string, unknown>[], _source: "b2b"): BigQueryResult[] {
   return results.map((row) => {
     // B2B Leads 테이블 컬럼 매핑
     return {

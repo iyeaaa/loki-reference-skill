@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { onboardingGenerationQueue } from "../lib/queue/queues"
+import { addOnboardingJob } from "../lib/queue/queues"
 import * as authService from "../services/auth.service"
 import * as emailAccountService from "../services/email-account.service"
 import * as nylasService from "../services/nylas.service"
@@ -303,27 +303,17 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
               // Note: hasAllOnboardingParams already validates these fields exist
               console.log("[Auth] 🚀 Queuing auto-generate onboarding job...")
               try {
-                const job = await onboardingGenerationQueue.add(
-                  "auto-generate-onboarding",
-                  {
-                    workspaceId: workspace.id,
-                    userId: newUser.id,
-                    surveyData: {
-                      industry: industry as string,
-                      target: target as string,
-                      country: country as string,
-                      experience: experience as string,
-                      lang,
-                    },
+                const job = await addOnboardingJob({
+                  workspaceId: workspace.id,
+                  userId: newUser.id,
+                  surveyData: {
+                    industry: industry as string,
+                    target: target as string,
+                    country: country as string,
+                    experience: experience as string,
+                    lang,
                   },
-                  {
-                    attempts: 3,
-                    backoff: {
-                      type: "exponential",
-                      delay: 120000, // 2 min base delay
-                    },
-                  },
-                )
+                })
                 console.log(`[Auth] ✅ Onboarding job queued: ${job.id}`)
 
                 // Store job ID in onboarding_progress
@@ -596,27 +586,17 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 // Note: hasAllOnboardingParams already validates these fields exist
                 console.log("[Auth/Google] 🚀 Queuing auto-generate onboarding job...")
                 try {
-                  const job = await onboardingGenerationQueue.add(
-                    "auto-generate-onboarding",
-                    {
-                      workspaceId: workspace.id,
-                      userId: user.id,
-                      surveyData: {
-                        industry: industry as string,
-                        target: target as string,
-                        country: country as string,
-                        experience: experience as string,
-                        lang,
-                      },
+                  const job = await addOnboardingJob({
+                    workspaceId: workspace.id,
+                    userId: user.id,
+                    surveyData: {
+                      industry: industry as string,
+                      target: target as string,
+                      country: country as string,
+                      experience: experience as string,
+                      lang,
                     },
-                    {
-                      attempts: 3,
-                      backoff: {
-                        type: "exponential",
-                        delay: 120000, // 2 min base delay
-                      },
-                    },
-                  )
+                  })
                   console.log(`[Auth/Google] ✅ Onboarding job queued: ${job.id}`)
 
                   // Store job ID in onboarding_progress
@@ -811,27 +791,17 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 // Queue auto-generate onboarding job (background processing with resilience)
                 console.log("[Auth/Nylas] 🚀 Queuing auto-generate onboarding job...")
                 try {
-                  const job = await onboardingGenerationQueue.add(
-                    "auto-generate-onboarding",
-                    {
-                      workspaceId: workspace.id,
-                      userId: user.id,
-                      surveyData: {
-                        industry: onboardingParams.industry as string,
-                        target: onboardingParams.target as string,
-                        country: onboardingParams.country as string,
-                        experience: onboardingParams.experience as string,
-                        lang: onboardingParams.lang,
-                      },
+                  const job = await addOnboardingJob({
+                    workspaceId: workspace.id,
+                    userId: user.id,
+                    surveyData: {
+                      industry: onboardingParams.industry as string,
+                      target: onboardingParams.target as string,
+                      country: onboardingParams.country as string,
+                      experience: onboardingParams.experience as string,
+                      lang: onboardingParams.lang,
                     },
-                    {
-                      attempts: 3,
-                      backoff: {
-                        type: "exponential",
-                        delay: 120000, // 2 min base delay
-                      },
-                    },
-                  )
+                  })
                   console.log(`[Auth/Nylas] ✅ Onboarding job queued: ${job.id}`)
 
                   // Store job ID in onboarding_progress

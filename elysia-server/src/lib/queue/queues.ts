@@ -6,6 +6,7 @@ import {
   type CampaignEmailJob,
   type MetricsSyncJob,
   type OnboardingAutoGenerateJob,
+  type OnboardingAutoGenerateResult,
   QUEUE_NAMES,
   type ScheduledEmailJob,
   type TestJob,
@@ -273,4 +274,145 @@ export async function addTestJobs(
   )
 
   return addedJobs
+}
+
+// ============================================================================
+// Onboarding Queue Helper with DB Logging
+// ============================================================================
+
+/** 로그 생성 재시도 설정 */
+const LOG_RETRY_ATTEMPTS = 3
+const LOG_RETRY_DELAY_MS = 100
+
+/**
+ * 재시도 로직이 포함된 로그 생성
+ */
+async function createJobLogWithRetry(
+  params: Parameters<typeof jobLogService.createJobLog>[0],
+  maxAttempts: number = LOG_RETRY_ATTEMPTS,
+): Promise<string | null> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await jobLogService.createJobLog(params)
+    } catch (error) {
+      if (attempt === maxAttempts) {
+        logger.error(
+          { error, jobId: params.jobId, attempt },
+          "[Queue] Failed to create job log after all retries",
+        )
+        return null
+      }
+      // 짧은 대기 후 재시도
+      await new Promise((resolve) => setTimeout(resolve, LOG_RETRY_DELAY_MS * attempt))
+    }
+  }
+  return null
+}
+
+/**
+ * Onboarding Auto-Generate Job 추가 (DB 로그 자동 생성)
+ *
+ * 회원가입/온보딩 시 자동으로 리드 생성, 이메일 템플릿 생성 등을 처리하는 Job
+ * Job 생성 시점부터 DB에 로그가 기록되어 모니터링/디버깅 가능
+ *
+ * 개선사항:
+ * - workspaceId 기반 중복 Job 방지 (jobId 옵션)
+ * - DB 로그 생성 재시도 로직
+ * - surveyData 크기 제한 (민감정보 최소화)
+ *
+ * @param data - Onboarding Job 데이터 (workspaceId, userId, surveyData)
+ * @param opts - Job 옵션 (attempts, backoff 등)
+ * @returns Job 객체
+ */
+export async function addOnboardingJob(
+  data: OnboardingAutoGenerateJob,
+  opts?: JobsOptions,
+): Promise<Job<OnboardingAutoGenerateJob, OnboardingAutoGenerateResult>> {
+  const jobName = "auto-generate-onboarding"
+
+  // 중복 방지: workspaceId 기반 고유 jobId 생성
+  // 동일 workspaceId로 이미 대기 중인 Job이 있으면 해당 Job 반환
+  const deduplicationJobId = `onboarding-${data.workspaceId}`
+
+  // 기존 Job 확인 (waiting 또는 active 상태)
+  const existingJob = await onboardingGenerationQueue.getJob(deduplicationJobId)
+  if (existingJob) {
+    const state = await existingJob.getState()
+    if (state === "waiting" || state === "delayed" || state === "active") {
+      logger.info(
+        {
+          jobId: deduplicationJobId,
+          workspaceId: data.workspaceId,
+          state,
+        },
+        "[OnboardingQueue] Job already exists, returning existing job",
+      )
+      return existingJob
+    }
+    // completed, failed 상태면 새로 생성 (기존 Job 제거 후)
+    await existingJob.remove()
+    logger.debug(
+      { jobId: deduplicationJobId, state },
+      "[OnboardingQueue] Removed old job to create new one",
+    )
+  }
+
+  // Queue에 Job 추가 (중복 방지 jobId 사용)
+  const job = await onboardingGenerationQueue.add(jobName, data, {
+    jobId: deduplicationJobId,
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 120000, // 2 min base delay
+    },
+    ...opts,
+  })
+
+  // DB에 Job 로그 생성 (재시도 로직 포함)
+  if (job.id) {
+    // 민감 정보 최소화: surveyData에서 필요한 필드만 저장
+    const sanitizedInputData = {
+      workspaceId: data.workspaceId,
+      userId: data.userId,
+      surveyData: {
+        industry: data.surveyData.industry,
+        country: data.surveyData.country,
+        // target, experience는 로그에 저장하지 않음 (민감 정보)
+      },
+    }
+
+    const logId = await createJobLogWithRetry({
+      jobId: job.id,
+      queueName: QUEUE_NAMES.ONBOARDING_GENERATION,
+      jobName,
+      inputData: sanitizedInputData as unknown as Record<string, unknown>,
+      priority: opts?.priority,
+      maxAttempts: opts?.attempts ?? 3,
+      jobOptions: {
+        attempts: opts?.attempts ?? 3,
+        backoff: opts?.backoff ?? { type: "exponential", delay: 120000 },
+      } as unknown as Record<string, unknown>,
+      status: "waiting",
+    })
+
+    if (logId) {
+      logger.info(
+        {
+          jobId: job.id,
+          logId,
+          workspaceId: data.workspaceId,
+          queueName: QUEUE_NAMES.ONBOARDING_GENERATION,
+        },
+        "[OnboardingQueue] Job added with DB logging",
+      )
+    } else {
+      // 로그 생성 실패 시 경고 (Job은 이미 실행됨)
+      logger.warn(
+        { jobId: job.id, workspaceId: data.workspaceId },
+        "[OnboardingQueue] Job added but DB logging failed - job will run without tracking",
+      )
+    }
+  }
+
+  return job
 }

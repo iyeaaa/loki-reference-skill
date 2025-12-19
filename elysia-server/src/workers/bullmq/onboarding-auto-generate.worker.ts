@@ -29,8 +29,40 @@ import logger from "../../utils/logger"
 
 let onboardingWorker: Worker<OnboardingAutoGenerateJob, OnboardingAutoGenerateResult> | null = null
 
-/** Job별 시작 시간 추적 (duration 계산용) */
+/** Job별 시작 시간 추적 (duration 계산용) - WeakRef 대신 TTL 기반 cleanup */
 const jobStartTimes = new Map<string, number>()
+
+/** Memory Leak 방지: 오래된 jobStartTimes 엔트리 정리 (1시간 이상 된 엔트리) */
+const JOB_START_TIME_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+function cleanupStaleJobStartTimes(): void {
+  const now = Date.now()
+  for (const [jobId, startTime] of jobStartTimes.entries()) {
+    if (now - startTime > JOB_START_TIME_TTL_MS) {
+      jobStartTimes.delete(jobId)
+      logger.debug({ jobId }, "[OnboardingWorker] Cleaned up stale job start time entry")
+    }
+  }
+}
+
+/** Phase 순서 정의 (복구 로직에서 사용) */
+const PHASE_ORDER = [
+  "init",
+  "discovery",
+  "group",
+  "templates",
+  "sequence",
+  "previews",
+  "complete",
+] as const
+type Phase = (typeof PHASE_ORDER)[number]
+
+/** 현재 phase가 target phase보다 이전인지 확인 */
+function isPhaseBefore(current: string, target: Phase): boolean {
+  const currentIndex = PHASE_ORDER.indexOf(current as Phase)
+  const targetIndex = PHASE_ORDER.indexOf(target)
+  return currentIndex < targetIndex
+}
 
 // ============================================================================
 // Job Processor
@@ -122,6 +154,9 @@ async function processOnboardingJob(
         "[OnboardingWorker] Discovery phase complete",
       )
 
+      // Checkpoint 저장: discovery 완료
+      await workerService.saveCheckpoint(job, { phase: "discovery" })
+
       // Report progress
       await job.updateProgress({
         phase: "discovery",
@@ -156,6 +191,9 @@ async function processOnboardingJob(
       customerGroupId = await workerService.runGroupPhase(job, context, leadIds)
       logger.info({ jobId, customerGroupId }, "[OnboardingWorker] Group phase complete")
 
+      // Checkpoint 저장: group 완료 (customerGroupId 포함)
+      await workerService.saveCheckpoint(job, { phase: "group", customerGroupId })
+
       await job.updateProgress({
         phase: "group",
         customerGroupId,
@@ -172,13 +210,25 @@ async function processOnboardingJob(
       emailBodyHtml: string
     }> = []
 
-    if (checkpoint.phase === "templates" || !sequenceId) {
-      logger.info({ jobId }, "[OnboardingWorker] Starting templates phase")
+    // 수정: templates phase 조건 명확화
+    const shouldRunTemplates =
+      checkpoint.phase === "templates" ||
+      isPhaseBefore(checkpoint.phase, "templates") ||
+      !sequenceId // sequence가 없으면 templates부터 다시
+
+    if (shouldRunTemplates) {
+      logger.info(
+        { jobId, currentPhase: checkpoint.phase },
+        "[OnboardingWorker] Starting templates phase",
+      )
       templates = await workerService.runTemplatesPhase(job, context)
       logger.info(
         { jobId, templatesCount: templates.length },
         "[OnboardingWorker] Templates phase complete",
       )
+
+      // Checkpoint 저장: templates 완료
+      await workerService.saveCheckpoint(job, { phase: "templates" })
 
       await job.updateProgress({
         phase: "templates",
@@ -197,12 +247,19 @@ async function processOnboardingJob(
       emailBodyHtml: string | null
     }> = []
 
-    if (!sequenceId || checkpoint.phase === "sequence") {
+    // 수정: sequence phase 조건 명확화
+    const shouldRunSequence =
+      !sequenceId || checkpoint.phase === "sequence" || isPhaseBefore(checkpoint.phase, "sequence")
+
+    if (shouldRunSequence) {
       if (!customerGroupId) {
         throw new Error("Customer group ID missing for sequence phase")
       }
 
-      logger.info({ jobId }, "[OnboardingWorker] Starting sequence phase")
+      logger.info(
+        { jobId, currentPhase: checkpoint.phase },
+        "[OnboardingWorker] Starting sequence phase",
+      )
       const sequenceResult = await workerService.runSequencePhase(
         job,
         context,
@@ -214,6 +271,9 @@ async function processOnboardingJob(
       steps = sequenceResult.steps
       logger.info({ jobId, sequenceId }, "[OnboardingWorker] Sequence phase complete")
 
+      // Checkpoint 저장: sequence 완료 (sequenceId 포함)
+      await workerService.saveCheckpoint(job, { phase: "sequence", sequenceId })
+
       await job.updateProgress({
         phase: "sequence",
         sequenceId,
@@ -223,11 +283,11 @@ async function processOnboardingJob(
     }
 
     // Phase 5: Previews (if not completed)
-    if (checkpoint.phase === "previews" || checkpoint.phase !== "complete") {
-      if (!sequenceId) {
-        throw new Error("Sequence ID missing for previews phase")
-      }
+    // 수정: 명확한 조건 - previews phase 이전이거나 previews에서 재시작하는 경우에만 실행
+    const shouldRunPreviews =
+      checkpoint.phase === "previews" || isPhaseBefore(checkpoint.phase, "previews")
 
+    if (shouldRunPreviews && sequenceId) {
       // If steps array is empty, fetch from DB
       if (steps.length === 0) {
         const sequenceStepsData = await db
@@ -246,7 +306,10 @@ async function processOnboardingJob(
         }))
       }
 
-      logger.info({ jobId }, "[OnboardingWorker] Starting previews phase")
+      logger.info(
+        { jobId, currentPhase: checkpoint.phase },
+        "[OnboardingWorker] Starting previews phase",
+      )
       const previewCount = await workerService.runPreviewsPhase(
         job,
         context,
@@ -255,6 +318,9 @@ async function processOnboardingJob(
         leadIds,
       )
       logger.info({ jobId, previewCount }, "[OnboardingWorker] Previews phase complete")
+
+      // Checkpoint 저장: previews 완료
+      await workerService.saveCheckpoint(job, { phase: "previews" })
 
       await job.updateProgress({
         phase: "previews",
@@ -318,6 +384,33 @@ async function processOnboardingJob(
 // Worker Management
 // ============================================================================
 
+/** Memory cleanup interval reference */
+let cleanupInterval: ReturnType<typeof setInterval> | null = null
+
+/** 로그 기록 재시도 헬퍼 */
+async function logWithRetry<T>(
+  operation: () => Promise<T>,
+  context: { jobId?: string; operation: string },
+  maxAttempts: number = 3,
+): Promise<T | null> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      if (attempt === maxAttempts) {
+        logger.error(
+          { ...context, error, attempt },
+          `[OnboardingWorker] ${context.operation} failed after all retries`,
+        )
+        return null
+      }
+      // 짧은 대기 후 재시도
+      await new Promise((resolve) => setTimeout(resolve, 100 * attempt))
+    }
+  }
+  return null
+}
+
 /**
  * Onboarding Auto-Generate Worker 시작
  */
@@ -348,8 +441,16 @@ export function startOnboardingAutoGenerateWorker(): Worker<
     },
   )
 
+  // Memory Leak 방지: 주기적으로 오래된 jobStartTimes 정리 (5분마다)
+  cleanupInterval = setInterval(
+    () => {
+      cleanupStaleJobStartTimes()
+    },
+    5 * 60 * 1000,
+  )
+
   // ========================================
-  // Event Handlers with DB Logging
+  // Event Handlers with DB Logging (재시도 로직 포함)
   // ========================================
 
   /**
@@ -362,13 +463,14 @@ export function startOnboardingAutoGenerateWorker(): Worker<
     // Health 서버에 완료 기록
     recordJobCompleted()
 
-    try {
-      await jobLogService.logJobCompleted(job, result, startTime)
-    } catch (logError) {
-      logger.error({ jobId, error: logError }, "[OnboardingWorker] Failed to log job completion")
-    } finally {
-      jobStartTimes.delete(jobId)
-    }
+    // DB 로깅 (재시도 포함)
+    await logWithRetry(() => jobLogService.logJobCompleted(job, result, startTime), {
+      jobId,
+      operation: "logJobCompleted",
+    })
+
+    // Cleanup
+    jobStartTimes.delete(jobId)
 
     logger.info({ jobId, result }, "[OnboardingWorker] Job completed successfully")
   })
@@ -383,13 +485,14 @@ export function startOnboardingAutoGenerateWorker(): Worker<
     // Health 서버에 실패 기록
     recordJobFailed()
 
-    try {
-      await jobLogService.logJobFailed(job, err, startTime)
-    } catch (logError) {
-      logger.error({ jobId, error: logError }, "[OnboardingWorker] Failed to log job failure")
-    } finally {
-      if (jobId) jobStartTimes.delete(jobId)
-    }
+    // DB 로깅 (재시도 포함)
+    await logWithRetry(() => jobLogService.logJobFailed(job, err, startTime), {
+      jobId,
+      operation: "logJobFailed",
+    })
+
+    // Cleanup
+    if (jobId) jobStartTimes.delete(jobId)
 
     logger.error(
       { jobId, error: err.message, attempts: job?.attemptsMade },
@@ -401,11 +504,11 @@ export function startOnboardingAutoGenerateWorker(): Worker<
    * Job Stalled 이벤트
    */
   onboardingWorker.on("stalled", async (jobId) => {
-    try {
-      await jobLogService.logJobStalled(jobId, QUEUE_NAMES.ONBOARDING_GENERATION)
-    } catch (logError) {
-      logger.error({ jobId, error: logError }, "[OnboardingWorker] Failed to log job stall")
-    }
+    // DB 로깅 (재시도 포함)
+    await logWithRetry(
+      () => jobLogService.logJobStalled(jobId, QUEUE_NAMES.ONBOARDING_GENERATION),
+      { jobId, operation: "logJobStalled" },
+    )
 
     logger.warn({ jobId }, "[OnboardingWorker] Job stalled")
   })
@@ -415,7 +518,7 @@ export function startOnboardingAutoGenerateWorker(): Worker<
    */
   onboardingWorker.on("progress", (job, progress) => {
     const jobId = job.id || "unknown"
-    logger.info({ jobId, progress }, "[OnboardingWorker] Job progress updated")
+    logger.debug({ jobId, progress }, "[OnboardingWorker] Job progress updated")
   })
 
   /**
@@ -436,6 +539,11 @@ export function startOnboardingAutoGenerateWorker(): Worker<
    * Worker 종료 이벤트
    */
   onboardingWorker.on("closed", () => {
+    // Cleanup interval 정리
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval)
+      cleanupInterval = null
+    }
     logger.info("[OnboardingWorker] Worker has been closed")
   })
 

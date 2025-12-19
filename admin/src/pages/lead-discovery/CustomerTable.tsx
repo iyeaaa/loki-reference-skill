@@ -11,7 +11,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { useVirtualizer } from "@tanstack/react-virtual"
+import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual"
 import { motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
@@ -1631,7 +1631,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                 <tr style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
                   <td colSpan={columns.length} style={{ padding: 0, height: "100%" }}>
                     <div style={{ position: "relative", height: "100%" }}>
-                      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                      {rowVirtualizer.getVirtualItems().map((virtualRow: VirtualItem) => {
                         const row = rows[virtualRow.index]
                         return (
                           <div

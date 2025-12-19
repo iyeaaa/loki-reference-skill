@@ -210,9 +210,6 @@ export function AppSidebar({
   // 권한 컨텍스트
   const { isAdmin, hasPermission, isLoading: permissionLoading } = usePermissions()
 
-  // 현재 로그인한 유저 정보
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
-
   // 메뉴 아이템들 가져오기
   const allMenuItems = getMainMenuItems(t)
 
@@ -246,13 +243,11 @@ export function AppSidebar({
 
     return filteredItems
   }, [allMenuItems, isAdmin, hasPermission, permissionLoading])
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
-  // Trial 사용자의 경우 "전체" 옵션을 숨김
-  const workspaceOptions: WorkspaceOption[] = isTrialUser
-    ? [...workspaces]
-    : [
+  // Admin 사용자만 "전체" 옵션 표시
+  const workspaceOptions: WorkspaceOption[] = isAdmin
+    ? [
         {
           value: "all",
           label: t("sidebar.workspace.all"),
@@ -260,6 +255,7 @@ export function AppSidebar({
         },
         ...workspaces,
       ]
+    : workspaces
 
   return (
     <Sidebar collapsible="icon">

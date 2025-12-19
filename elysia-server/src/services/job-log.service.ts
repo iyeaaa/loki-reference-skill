@@ -131,6 +131,8 @@ export async function updateJobLog(
 
 /**
  * Job 시작 기록 (Worker가 Job 처리 시작)
+ *
+ * 개선: retry 시 첫 번째 시도 정보를 유지하면서 현재 시도 정보 기록
  */
 export async function logJobStarted(job: Job, workerName?: string): Promise<void> {
   if (!job.id) {
@@ -139,7 +141,35 @@ export async function logJobStarted(job: Job, workerName?: string): Promise<void
   }
 
   const serverIdentifier = getServerIdentifier()
+  const isRetry = job.attemptsMade > 0
 
+  // retry인 경우 기존 로그 조회하여 첫 시도 정보 보존
+  if (isRetry) {
+    const existingLog = await getJobLogByJobId(job.id, job.queueName)
+    if (existingLog) {
+      // retry 시에는 processedAt을 덮어쓰지 않음 (첫 번째 시도 시간 유지)
+      await updateJobLog(job.id, job.queueName, {
+        status: "active",
+        attemptsMade: job.attemptsMade + 1,
+        workerName,
+        processedBy: serverIdentifier,
+        // 이전 에러 정보는 유지 (outputData에 retry 히스토리 저장)
+        outputData: {
+          ...(existingLog.outputData as Record<string, unknown> | null),
+          lastRetryAt: new Date().toISOString(),
+          previousError: existingLog.errorMessage,
+          previousErrorCode: existingLog.errorCode,
+        },
+      })
+      logger.debug(
+        { jobId: job.id, attemptsMade: job.attemptsMade + 1 },
+        "[JobLogService] Job retry started",
+      )
+      return
+    }
+  }
+
+  // 첫 번째 시도
   await updateJobLog(job.id, job.queueName, {
     status: "active",
     attemptsMade: job.attemptsMade + 1,
@@ -349,25 +379,68 @@ export async function getErrorStats(
 
 /**
  * 오래된 Job 로그 삭제 (정리용)
+ *
+ * 개선: stalled 상태도 일정 기간 후 정리
  */
-export async function cleanupOldJobLogs(retentionDays: number = 30): Promise<number> {
+export async function cleanupOldJobLogs(retentionDays: number = 30): Promise<{
+  completed: number
+  stalled: number
+  total: number
+}> {
+  const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
+  // stalled는 더 짧은 보존 기간 (7일)
+  const stalledCutoffDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+  // completed 상태 정리
+  const completedResult = await db
+    .delete(jobLogs)
+    .where(and(lte(jobLogs.addedAt, cutoffDate), eq(jobLogs.status, "completed")))
+    .returning({ id: jobLogs.id })
+
+  // stalled 상태 정리 (복구되지 않은 오래된 stalled job)
+  const stalledResult = await db
+    .delete(jobLogs)
+    .where(and(lte(jobLogs.addedAt, stalledCutoffDate), eq(jobLogs.status, "stalled")))
+    .returning({ id: jobLogs.id })
+
+  const result = {
+    completed: completedResult.length,
+    stalled: stalledResult.length,
+    total: completedResult.length + stalledResult.length,
+  }
+
+  if (result.total > 0) {
+    logger.info(
+      { ...result, retentionDays },
+      "[JobLogService] Cleaned up old job logs (completed + stalled)",
+    )
+  }
+
+  return result
+}
+
+/**
+ * 특정 상태의 오래된 Job 로그 삭제
+ */
+export async function cleanupJobLogsByStatus(
+  status: JobStatus,
+  retentionDays: number,
+): Promise<number> {
   const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
 
   const result = await db
     .delete(jobLogs)
-    .where(
-      and(
-        lte(jobLogs.addedAt, cutoffDate),
-        // completed 상태만 삭제 (failed는 분석용으로 유지)
-        eq(jobLogs.status, "completed"),
-      ),
-    )
+    .where(and(lte(jobLogs.addedAt, cutoffDate), eq(jobLogs.status, status)))
     .returning({ id: jobLogs.id })
 
-  const deletedCount = result.length
-  logger.info({ deletedCount, retentionDays }, "[JobLogService] Cleaned up old job logs")
+  if (result.length > 0) {
+    logger.info(
+      { deletedCount: result.length, status, retentionDays },
+      `[JobLogService] Cleaned up old ${status} job logs`,
+    )
+  }
 
-  return deletedCount
+  return result.length
 }
 
 // ============================================================================
@@ -376,20 +449,109 @@ export async function cleanupOldJobLogs(retentionDays: number = 30): Promise<num
 
 /**
  * 에러 메시지에서 에러 코드 추출
+ *
+ * 개선: 더 많은 에러 패턴 지원 (BigQuery, Hunter.io, AI 서비스 등)
  */
 function extractErrorCode(error: Error): string | undefined {
   const message = error.message.toLowerCase()
+  const errorName = error.name?.toLowerCase() || ""
 
-  // 일반적인 에러 패턴 매칭
-  if (message.includes("timeout")) return "TIMEOUT"
-  if (message.includes("connection")) return "CONNECTION_ERROR"
-  if (message.includes("validation")) return "VALIDATION_ERROR"
-  if (message.includes("not found")) return "NOT_FOUND"
-  if (message.includes("unauthorized")) return "UNAUTHORIZED"
-  if (message.includes("rate limit")) return "RATE_LIMIT"
-  if (message.includes("intentional failure")) return "TEST_FAILURE"
+  // ========================================
+  // 네트워크/연결 에러
+  // ========================================
+  if (message.includes("timeout") || message.includes("timed out")) return "TIMEOUT"
+  if (message.includes("econnrefused") || message.includes("connection refused"))
+    return "CONNECTION_REFUSED"
+  if (message.includes("econnreset") || message.includes("connection reset"))
+    return "CONNECTION_RESET"
+  if (message.includes("enotfound") || message.includes("dns")) return "DNS_ERROR"
+  if (message.includes("connection") && message.includes("error")) return "CONNECTION_ERROR"
+  if (message.includes("network")) return "NETWORK_ERROR"
 
-  return undefined
+  // ========================================
+  // API/서비스 에러
+  // ========================================
+  if (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("429")
+  )
+    return "RATE_LIMIT"
+  if (message.includes("quota") || message.includes("exceeded")) return "QUOTA_EXCEEDED"
+  if (message.includes("unauthorized") || message.includes("401")) return "UNAUTHORIZED"
+  if (message.includes("forbidden") || message.includes("403")) return "FORBIDDEN"
+  if (message.includes("not found") || message.includes("404")) return "NOT_FOUND"
+  if (message.includes("bad request") || message.includes("400")) return "BAD_REQUEST"
+  if (message.includes("internal server error") || message.includes("500")) return "SERVER_ERROR"
+  if (message.includes("service unavailable") || message.includes("503"))
+    return "SERVICE_UNAVAILABLE"
+
+  // ========================================
+  // BigQuery 에러
+  // ========================================
+  if (message.includes("bigquery")) {
+    if (message.includes("invalid query")) return "BIGQUERY_INVALID_QUERY"
+    if (message.includes("access denied")) return "BIGQUERY_ACCESS_DENIED"
+    return "BIGQUERY_ERROR"
+  }
+
+  // ========================================
+  // Hunter.io / 이메일 enrichment 에러
+  // ========================================
+  if (message.includes("hunter") || message.includes("email finder")) {
+    if (message.includes("credit")) return "HUNTER_CREDIT_EXHAUSTED"
+    return "HUNTER_ERROR"
+  }
+
+  // ========================================
+  // AI/LLM 에러
+  // ========================================
+  if (message.includes("openai") || message.includes("anthropic") || message.includes("claude")) {
+    if (message.includes("context") || message.includes("token")) return "AI_CONTEXT_LIMIT"
+    if (message.includes("content filter") || message.includes("safety"))
+      return "AI_CONTENT_FILTERED"
+    return "AI_SERVICE_ERROR"
+  }
+
+  // ========================================
+  // 데이터베이스 에러
+  // ========================================
+  if (message.includes("database") || message.includes("postgres") || message.includes("sql")) {
+    if (message.includes("duplicate") || message.includes("unique")) return "DB_DUPLICATE_KEY"
+    if (message.includes("foreign key")) return "DB_FOREIGN_KEY"
+    if (message.includes("deadlock")) return "DB_DEADLOCK"
+    return "DB_ERROR"
+  }
+
+  // ========================================
+  // Redis 에러
+  // ========================================
+  if (message.includes("redis")) {
+    if (message.includes("memory")) return "REDIS_OOM"
+    return "REDIS_ERROR"
+  }
+
+  // ========================================
+  // 검증/비즈니스 로직 에러
+  // ========================================
+  if (message.includes("validation") || message.includes("invalid")) return "VALIDATION_ERROR"
+  if (message.includes("missing") && (message.includes("field") || message.includes("required")))
+    return "MISSING_REQUIRED_FIELD"
+
+  // ========================================
+  // 테스트 에러
+  // ========================================
+  if (message.includes("intentional failure") || message.includes("test failure"))
+    return "TEST_FAILURE"
+
+  // ========================================
+  // 일반 에러 타입
+  // ========================================
+  if (errorName.includes("typeerror")) return "TYPE_ERROR"
+  if (errorName.includes("syntaxerror")) return "SYNTAX_ERROR"
+  if (errorName.includes("referenceerror")) return "REFERENCE_ERROR"
+
+  return "UNKNOWN_ERROR"
 }
 
 // ============================================================================

@@ -6,6 +6,7 @@
 import { type Command, GraphInterrupt, interrupt } from "@langchain/langgraph"
 import { ChatOpenAI } from "@langchain/openai"
 import { v4 as uuidv4 } from "uuid"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { BuyerRecommendation, LeadDiscoveryState } from "../state"
 
@@ -384,6 +385,16 @@ export async function recommendBuyers(
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "recommendBuyers", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        websiteAnalysis: state.websiteAnalysis?.companyName,
+        executionTimeMs: duration,
+      },
+    })
+
     leadDiscoveryLogger.error(`[바이어 추천] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("recommendBuyers", errorMessage, duration)
 
@@ -392,7 +403,8 @@ export async function recommendBuyers(
     }
 
     return {
-      error: `바이어 추천에 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
     }
   }
 }

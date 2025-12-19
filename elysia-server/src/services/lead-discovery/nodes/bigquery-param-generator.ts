@@ -4,6 +4,7 @@
  */
 
 import { ChatOpenAI } from "@langchain/openai"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { BigQuerySearchParams, LeadDiscoveryState } from "../state"
 
@@ -748,6 +749,17 @@ export async function generateBigQueryParams(
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "generateParams", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        userInput: state.userInput,
+        selectedRecommendation: state.selectedRecommendation,
+        executionTimeMs: duration,
+      },
+    })
+
     leadDiscoveryLogger.error(`[검색 조건] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("generateBigQueryParams", errorMessage, duration)
 
@@ -759,7 +771,8 @@ export async function generateBigQueryParams(
     }
 
     return {
-      error: `검색 조건을 만드는 데 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
     }
   }
 }

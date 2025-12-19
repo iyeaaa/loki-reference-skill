@@ -7,6 +7,7 @@
 import { ChatOpenAI } from "@langchain/openai"
 import type { NodeEventEmitter } from "../../chatbot/sse-context"
 import { fetchWithDepth, type PageInfo } from "../../web-extraction.service"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { LeadDiscoveryState, WebsiteAnalysis } from "../state"
 
@@ -180,8 +181,17 @@ export async function analyzeWebsite(
 
   if (!websiteUrl) {
     leadDiscoveryLogger.nodeError("analyzeWebsite", "No website URL provided", 0)
+    const errorContext = createErrorContext(
+      new Error("Website URL is required for analysis"),
+      "analyzeWebsite",
+      {
+        sessionId: state.sessionId,
+        retryCount: state.retryCount,
+      },
+    )
     return {
       error: "Website URL is required for analysis",
+      errorContext,
       analysisProgress: 0,
       analysisStatus: "Error: No URL provided",
     }
@@ -254,8 +264,26 @@ export async function analyzeWebsite(
         `Failed to fetch: HTTP ${httpStatus}`,
         duration,
       )
+
+      // HTTP 상태 코드에 따른 에러 타입 분류
+      const errorMessage =
+        httpStatus === 403
+          ? new Error(`Website blocked access (HTTP ${httpStatus})`)
+          : new Error(`Website unreachable (HTTP ${httpStatus})`)
+
+      const errorContext = createErrorContext(errorMessage, "analyzeWebsite", {
+        sessionId: state.sessionId,
+        retryCount: state.retryCount,
+        details: {
+          websiteUrl,
+          httpStatus,
+          executionTimeMs: duration,
+        },
+      })
+
       return {
         error: `웹사이트에 접근할 수 없어요 (HTTP ${httpStatus})`,
+        errorContext,
         analysisProgress: 0,
         analysisStatus: "Error: Could not access website",
       }
@@ -354,6 +382,16 @@ export async function analyzeWebsite(
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "analyzeWebsite", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        websiteUrl,
+        executionTimeMs: duration,
+      },
+    })
+
     leadDiscoveryLogger.error(`[웹사이트 분석] 오류 발생 - ${websiteUrl}: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("analyzeWebsite", errorMessage, duration)
 
@@ -362,7 +400,8 @@ export async function analyzeWebsite(
     }
 
     return {
-      error: `웹사이트 분석에 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
       analysisProgress: 0,
       analysisStatus: `Error: ${errorMessage}`,
     }

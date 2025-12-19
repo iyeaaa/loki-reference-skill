@@ -10,6 +10,7 @@ import {
   optimizeQueryForPerplexity,
   searchLeadsWithPerplexity,
 } from "../../perplexity-search.service"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { BigQueryResult, LeadDiscoveryState } from "../state"
 
@@ -1919,18 +1920,30 @@ export async function executeBigQuery(
   } catch (error) {
     const duration = Date.now() - startTime
 
+    // InvalidQueryError는 쿼리 문법 오류
     if (error instanceof InvalidQueryError) {
       leadDiscoveryLogger.warn(`[리드 검색] 잘못된 쿼리: ${error.message}`)
+
+      const errorContext = createErrorContext(error, "executeBigQuery", {
+        sessionId: state.sessionId,
+        retryCount: state.retryCount,
+        details: {
+          queryParams: state.bigQueryParams,
+          isInvalidQuery: true,
+        },
+      })
 
       if (emitter) {
         emitter.nodeComplete("executeBigQuery", "검색 조건을 다시 확인해주세요", {
           isInvalidQuery: true,
           message: error.message,
+          errorContext,
         })
       }
 
       return {
         error: error.message,
+        errorContext,
         searchResults: [],
         totalResultCount: 0,
         executionTime: duration,
@@ -1938,6 +1951,16 @@ export async function executeBigQuery(
     }
 
     const errorMessage = error instanceof Error ? error.message : String(error)
+
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "executeBigQuery", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        queryParams: state.bigQueryParams,
+        executionTimeMs: duration,
+      },
+    })
 
     leadDiscoveryLogger.error(`[리드 검색] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.bigQueryExecutionError(errorMessage)
@@ -1948,7 +1971,8 @@ export async function executeBigQuery(
     }
 
     return {
-      error: `검색에 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
       searchResults: [],
       totalResultCount: 0,
       executionTime: duration,

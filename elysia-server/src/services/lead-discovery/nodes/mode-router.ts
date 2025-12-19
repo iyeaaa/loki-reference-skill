@@ -4,6 +4,7 @@
  */
 
 import { ChatOpenAI } from "@langchain/openai"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { LeadDiscoveryState } from "../state"
 
@@ -224,6 +225,16 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "routeMode", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        userInput: state.userInput,
+        executionTimeMs: duration,
+      },
+    })
+
     leadDiscoveryLogger.error(`[입력 분석] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("routeMode", errorMessage, duration)
 
@@ -232,7 +243,8 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
     }
 
     return {
-      error: `입력 분석에 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
       searchMode: "advanced", // Fallback to advanced mode
       isWebsiteMode: false,
     }

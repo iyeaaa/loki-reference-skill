@@ -98,6 +98,71 @@ export interface WebsiteAnalysis {
   summary?: string
 }
 
+// Error types for structured error handling
+export type LeadDiscoveryErrorType =
+  | "network"
+  | "timeout"
+  | "session_expired"
+  | "server"
+  | "validation"
+  | "rate_limit"
+  | "bigquery"
+  | "bigquery_query_invalid"
+  | "bigquery_quota"
+  | "bigquery_no_results"
+  | "ai"
+  | "ai_parse_error"
+  | "website_unreachable"
+  | "website_blocked"
+  | "user_cancelled"
+  | "unknown"
+
+// Error codes for precise error identification
+export type LeadDiscoveryErrorCode =
+  | "E_NETWORK_FAILED"
+  | "E_TIMEOUT"
+  | "E_SESSION_EXPIRED"
+  | "E_SERVER_ERROR"
+  | "E_VALIDATION_FAILED"
+  | "E_RATE_LIMITED"
+  | "E_BIGQUERY_FAILED"
+  | "E_BIGQUERY_INVALID_QUERY"
+  | "E_BIGQUERY_QUOTA_EXCEEDED"
+  | "E_BIGQUERY_NO_RESULTS"
+  | "E_AI_FAILED"
+  | "E_AI_PARSE_ERROR"
+  | "E_WEBSITE_UNREACHABLE"
+  | "E_WEBSITE_BLOCKED"
+  | "E_USER_CANCELLED"
+  | "E_UNKNOWN"
+
+// Structured error context for centralized error handling
+export interface ErrorContext {
+  type: LeadDiscoveryErrorType
+  code: LeadDiscoveryErrorCode
+  message: string
+  originalError?: string
+  node: string
+  timestamp: number
+  retryable: boolean
+  recoverable: boolean
+  maxRetries: number
+  suggestedAction?: string
+  recoveryStrategy?: ErrorRecoveryStrategy
+  details?: Record<string, unknown>
+}
+
+// Error recovery strategies
+export type ErrorRecoveryStrategy =
+  | "retry" // 단순 재시도
+  | "simplify_query" // 쿼리 단순화 (BigQuery)
+  | "fallback_source" // 대체 데이터 소스 사용
+  | "reduce_scope" // 검색 범위 축소
+  | "restart_session" // 새 세션 시작
+  | "user_intervention" // 사용자 입력 필요
+  | "skip_step" // 현재 단계 건너뛰기
+  | "none" // 복구 불가
+
 // Chat message for conversation history
 export interface LeadDiscoveryMessage {
   role: "user" | "assistant" | "system"
@@ -111,6 +176,7 @@ export interface LeadDiscoveryMessage {
     searchParams?: BigQuerySearchParams
     resultCount?: number
     error?: string
+    errorContext?: ErrorContext
   }
 }
 
@@ -161,6 +227,7 @@ export interface LeadDiscoveryState {
 
   // Error handling
   error: string | null
+  errorContext?: ErrorContext
   retryCount: number
 
   // Conversation
@@ -272,6 +339,10 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
   error: Annotation<string | null>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => null,
+  }),
+  errorContext: Annotation<ErrorContext | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
   }),
   retryCount: Annotation<number>({
     reducer: (prev, next) => (next !== undefined ? next : prev),

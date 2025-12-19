@@ -6,6 +6,11 @@
  */
 
 import { END, MemorySaver, StateGraph } from "@langchain/langgraph"
+import {
+  createErrorContext,
+  getRecoveryRecommendation,
+  NODE_RETRY_POLICIES,
+} from "./error-classifier"
 import { leadDiscoveryLogger } from "./logger"
 import { executeBigQuery } from "./nodes/bigquery-executor"
 import { generateBigQueryParams } from "./nodes/bigquery-param-generator"
@@ -13,7 +18,7 @@ import { recommendBuyers } from "./nodes/buyer-recommender"
 import { routeMode } from "./nodes/mode-router"
 import { understandQuery } from "./nodes/understand-query"
 import { analyzeWebsite } from "./nodes/website-analyzer"
-import type { LeadDiscoveryState } from "./state"
+import type { ErrorContext, LeadDiscoveryState } from "./state"
 import { LeadDiscoveryStateAnnotation } from "./state"
 
 // Node names as constants
@@ -32,27 +37,400 @@ type NodeName = (typeof NODE_NAMES)[keyof typeof NODE_NAMES]
 
 // === Helper Nodes ===
 
+/**
+ * 중앙화된 에러 핸들링 노드
+ * - 에러 타입별 복구 전략 적용
+ * - 구조화된 에러 응답 생성
+ * - 노드별 재시도 정책 관리
+ */
 async function handleError(state: LeadDiscoveryState): Promise<Partial<LeadDiscoveryState>> {
   const startTime = Date.now()
-  leadDiscoveryLogger.nodeStart("handleError", { error: state.error })
+  const emitter = state._emitter
 
-  const errorMessage = state.error || "An unexpected error occurred. Please try again."
+  leadDiscoveryLogger.nodeStart("handleError", {
+    error: state.error,
+    errorContext: state.errorContext,
+    retryCount: state.retryCount,
+  })
+
+  // 1. 에러 컨텍스트가 없으면 기본 에러 문자열로부터 생성
+  let errorContext: ErrorContext =
+    state.errorContext ||
+    createErrorContext(state.error || "An unexpected error occurred", "unknown", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+    })
+
+  // 2. 에러 타입별 처리 로직
+  const processedError = await processErrorByType(errorContext, state)
+  errorContext = processedError.errorContext
+
+  // 3. 복구 권장 사항 확인
+  const recovery = getRecoveryRecommendation(errorContext)
+
+  // 4. 사용자 메시지 생성 (구조화된 정보 포함)
+  const userMessage = buildErrorMessage(errorContext, recovery)
+
+  // 5. 이미터가 있으면 에러 이벤트 발송
+  if (emitter) {
+    emitter.error(
+      "handleError",
+      JSON.stringify({
+        message: errorContext.message,
+        errorType: errorContext.type,
+        errorCode: errorContext.code,
+        recoveryStrategy: errorContext.recoveryStrategy,
+        suggestedAction: errorContext.suggestedAction,
+        retryable: errorContext.retryable,
+      }),
+    )
+  }
 
   const duration = Date.now() - startTime
-  leadDiscoveryLogger.nodeSuccess("handleError", duration)
+  leadDiscoveryLogger.nodeSuccess("handleError", duration, {
+    errorType: errorContext.type,
+    errorCode: errorContext.code,
+    recoveryStrategy: errorContext.recoveryStrategy,
+  })
 
   return {
     messages: [
       {
         role: "assistant",
-        content: errorMessage,
+        content: userMessage,
         timestamp: new Date(),
         metadata: {
-          error: errorMessage,
+          error: errorContext.message,
+          errorContext: errorContext,
         },
       },
     ],
+    errorContext: errorContext,
+    retryCount: processedError.newRetryCount,
   }
+}
+
+/**
+ * 에러 타입별 처리 로직
+ * BigQuery 오류 → 쿼리 단순화 시도
+ * AI 오류 → 폴백 전략 적용
+ * 네트워크 오류 → 재시도 로직
+ */
+async function processErrorByType(
+  errorContext: ErrorContext,
+  state: LeadDiscoveryState,
+): Promise<{ errorContext: ErrorContext; newRetryCount: number }> {
+  const currentRetry = state.retryCount
+  const maxRetries = NODE_RETRY_POLICIES[errorContext.node]?.maxRetries || 2
+
+  // BigQuery 관련 에러 처리
+  if (
+    errorContext.type === "bigquery" ||
+    errorContext.type === "bigquery_query_invalid" ||
+    errorContext.type === "bigquery_no_results"
+  ) {
+    return handleBigQueryError(errorContext, state, currentRetry, maxRetries)
+  }
+
+  // AI 관련 에러 처리
+  if (errorContext.type === "ai" || errorContext.type === "ai_parse_error") {
+    return handleAIError(errorContext, state, currentRetry, maxRetries)
+  }
+
+  // 웹사이트 분석 에러 처리
+  if (errorContext.type === "website_unreachable" || errorContext.type === "website_blocked") {
+    return handleWebsiteError(errorContext, state)
+  }
+
+  // 네트워크/타임아웃 에러 처리
+  if (errorContext.type === "network" || errorContext.type === "timeout") {
+    return handleNetworkError(errorContext, currentRetry, maxRetries)
+  }
+
+  // Rate limit 에러 처리
+  if (errorContext.type === "rate_limit") {
+    return handleRateLimitError(errorContext, currentRetry, maxRetries)
+  }
+
+  // 세션 만료 에러
+  if (errorContext.type === "session_expired") {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "restart_session",
+        suggestedAction: "세션이 만료되었습니다. 새 검색을 시작해주세요.",
+      },
+      newRetryCount: 0,
+    }
+  }
+
+  // 기타 에러
+  return {
+    errorContext,
+    newRetryCount: currentRetry,
+  }
+}
+
+/**
+ * BigQuery 에러 처리
+ * - 쿼리 단순화 전략 권장
+ * - 검색 범위 축소 제안
+ */
+function handleBigQueryError(
+  errorContext: ErrorContext,
+  state: LeadDiscoveryState,
+  currentRetry: number,
+  maxRetries: number,
+): { errorContext: ErrorContext; newRetryCount: number } {
+  const params = state.bigQueryParams
+
+  // 쿼리가 너무 복잡한 경우 단순화 제안
+  if (errorContext.type === "bigquery_query_invalid" && params) {
+    const simplificationSuggestions: string[] = []
+
+    if (params.subIndustry) {
+      simplificationSuggestions.push("하위 산업 조건 제거")
+    }
+    if (params.employeeRange) {
+      simplificationSuggestions.push("직원 수 조건 완화")
+    }
+    if (params.revenueRange) {
+      simplificationSuggestions.push("매출 조건 제거")
+    }
+
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "simplify_query",
+        suggestedAction:
+          simplificationSuggestions.length > 0
+            ? `다음을 시도해보세요: ${simplificationSuggestions.join(", ")}`
+            : "검색 조건을 단순화해주세요",
+        details: {
+          ...errorContext.details,
+          originalParams: params,
+          simplificationSuggestions,
+        },
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  // 결과 없음 - 검색 범위 축소/확대 제안
+  if (errorContext.type === "bigquery_no_results") {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "reduce_scope",
+        suggestedAction: "검색 조건을 넓히거나 다른 키워드로 검색해주세요",
+        details: {
+          ...errorContext.details,
+          hint: "industry나 country 조건을 변경해보세요",
+        },
+      },
+      newRetryCount: currentRetry,
+    }
+  }
+
+  // 일반 BigQuery 에러 - 재시도 가능
+  if (currentRetry < maxRetries) {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "retry",
+        suggestedAction: `재시도 중입니다 (${currentRetry + 1}/${maxRetries})`,
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  return {
+    errorContext: {
+      ...errorContext,
+      recoveryStrategy: "user_intervention",
+      suggestedAction: "검색 조건을 변경하고 다시 시도해주세요",
+    },
+    newRetryCount: currentRetry,
+  }
+}
+
+/**
+ * AI 에러 처리
+ * - 파싱 에러 시 재시도
+ * - API 에러 시 폴백
+ */
+function handleAIError(
+  errorContext: ErrorContext,
+  _state: LeadDiscoveryState,
+  currentRetry: number,
+  maxRetries: number,
+): { errorContext: ErrorContext; newRetryCount: number } {
+  // AI 파싱 에러 - 재시도로 해결 가능할 수 있음
+  if (errorContext.type === "ai_parse_error" && currentRetry < maxRetries) {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "retry",
+        suggestedAction: "AI 분석을 재시도합니다",
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  // AI API 에러 - 재시도
+  if (currentRetry < maxRetries) {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "retry",
+        suggestedAction: `AI 서비스 재연결 중 (${currentRetry + 1}/${maxRetries})`,
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  return {
+    errorContext: {
+      ...errorContext,
+      recoveryStrategy: "user_intervention",
+      suggestedAction: "검색어를 단순화하거나 다시 시도해주세요",
+    },
+    newRetryCount: currentRetry,
+  }
+}
+
+/**
+ * 웹사이트 분석 에러 처리
+ * - 접근 불가 시 직접 검색 모드 제안
+ * - 차단된 경우 대안 제시
+ */
+function handleWebsiteError(
+  errorContext: ErrorContext,
+  _state: LeadDiscoveryState,
+): { errorContext: ErrorContext; newRetryCount: number } {
+  if (errorContext.type === "website_blocked") {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "skip_step",
+        suggestedAction: "이 웹사이트는 분석이 제한됩니다. 직접 검색 모드를 사용해주세요.",
+        details: {
+          ...errorContext.details,
+          alternativeMode: "advanced",
+        },
+      },
+      newRetryCount: 0,
+    }
+  }
+
+  return {
+    errorContext: {
+      ...errorContext,
+      recoveryStrategy: "user_intervention",
+      suggestedAction: "URL을 확인하거나 직접 검색 모드를 사용해주세요",
+    },
+    newRetryCount: 0,
+  }
+}
+
+/**
+ * 네트워크/타임아웃 에러 처리
+ * - 지수 백오프 재시도
+ */
+function handleNetworkError(
+  errorContext: ErrorContext,
+  currentRetry: number,
+  maxRetries: number,
+): { errorContext: ErrorContext; newRetryCount: number } {
+  if (currentRetry < maxRetries) {
+    const delayMs = 1000 * 2 ** currentRetry // 지수 백오프
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "retry",
+        suggestedAction: `네트워크 재연결 중... (${Math.round(delayMs / 1000)}초 후 재시도)`,
+        details: {
+          ...errorContext.details,
+          retryDelayMs: delayMs,
+        },
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  return {
+    errorContext: {
+      ...errorContext,
+      recoveryStrategy: "user_intervention",
+      suggestedAction: "인터넷 연결을 확인하고 다시 시도해주세요",
+    },
+    newRetryCount: currentRetry,
+  }
+}
+
+/**
+ * Rate Limit 에러 처리
+ * - 대기 시간 안내
+ */
+function handleRateLimitError(
+  errorContext: ErrorContext,
+  currentRetry: number,
+  maxRetries: number,
+): { errorContext: ErrorContext; newRetryCount: number } {
+  // Rate limit은 일정 시간 대기 후 재시도
+  const waitTimeMs = 60000 // 1분 대기
+
+  if (currentRetry < maxRetries) {
+    return {
+      errorContext: {
+        ...errorContext,
+        recoveryStrategy: "retry",
+        suggestedAction: "요청 제한에 도달했습니다. 1분 후 자동으로 재시도됩니다.",
+        details: {
+          ...errorContext.details,
+          retryDelayMs: waitTimeMs,
+        },
+      },
+      newRetryCount: currentRetry + 1,
+    }
+  }
+
+  return {
+    errorContext: {
+      ...errorContext,
+      recoveryStrategy: "user_intervention",
+      suggestedAction: "잠시 후 다시 시도해주세요",
+    },
+    newRetryCount: currentRetry,
+  }
+}
+
+/**
+ * 사용자 친화적 에러 메시지 생성
+ */
+function buildErrorMessage(
+  errorContext: ErrorContext,
+  recovery: ReturnType<typeof getRecoveryRecommendation>,
+): string {
+  const parts: string[] = []
+
+  // 1. 기본 에러 메시지
+  parts.push(`❌ ${errorContext.message}`)
+
+  // 2. 제안 행동
+  if (errorContext.suggestedAction) {
+    parts.push(`\n💡 ${errorContext.suggestedAction}`)
+  }
+
+  // 3. 대안 행동 (있는 경우)
+  if (recovery.alternativeAction && recovery.alternativeAction !== errorContext.suggestedAction) {
+    parts.push(`\n🔄 ${recovery.alternativeAction}`)
+  }
+
+  // 4. 에러 코드 (디버깅용, 작은 글씨)
+  parts.push(`\n\n_오류 코드: ${errorContext.code}_`)
+
+  return parts.join("")
 }
 
 async function formatResponse(state: LeadDiscoveryState): Promise<Partial<LeadDiscoveryState>> {

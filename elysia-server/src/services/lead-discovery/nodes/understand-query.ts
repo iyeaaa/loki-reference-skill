@@ -6,6 +6,7 @@
 
 import { type Command, GraphInterrupt, interrupt } from "@langchain/langgraph"
 import { ChatOpenAI } from "@langchain/openai"
+import { createErrorContext } from "../error-classifier"
 import { leadDiscoveryLogger } from "../logger"
 import type { ClarificationQuestion, ClarificationState, LeadDiscoveryState } from "../state"
 import { AVAILABLE_COUNTRIES, AVAILABLE_INDUSTRIES } from "./buyer-recommender"
@@ -359,6 +360,16 @@ export async function understandQuery(
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    // 구조화된 에러 컨텍스트 생성
+    const errorContext = createErrorContext(error, "understandQuery", {
+      sessionId: state.sessionId,
+      retryCount: state.retryCount,
+      details: {
+        userInput: state.userInput,
+        executionTimeMs: duration,
+      },
+    })
+
     leadDiscoveryLogger.error(`[쿼리 이해] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("understandQuery", errorMessage, duration)
 
@@ -369,7 +380,8 @@ export async function understandQuery(
     // On error, proceed without clarification to avoid blocking
     return {
       needsClarification: false,
-      error: `검색 조건 분석에 실패했어요: ${errorMessage}`,
+      error: errorContext.message,
+      errorContext,
     }
   }
 }

@@ -559,7 +559,7 @@ export async function fetchWithDepth(
     logger.info({ totalPages: pagesContent.size }, "[fetchWithDepth] Completed crawling")
     onProgress?.(`총 ${pagesContent.size}개 페이지 수집 완료`)
   } catch (error) {
-    logger.error({ error, baseUrl }, "[fetchWithDepth] Failed to fetch with depth")
+    logger.warn({ error, baseUrl }, "[fetchWithDepth] Failed to fetch with depth")
   }
 
   return { pagesContent, httpStatus, pages, siteFavicon }

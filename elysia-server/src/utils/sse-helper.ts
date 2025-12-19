@@ -71,7 +71,6 @@ export class SSESession {
       message += `data: ${dataStr}\n\n`
 
       this.controller.enqueue(this.encoder.encode(message))
-      console.log("[SSE] Push success:", event.event)
       return true
     } catch (error) {
       console.error("[SSE] Push failed:", error, "Event:", event.event)

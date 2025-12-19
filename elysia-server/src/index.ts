@@ -4,7 +4,7 @@ import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
 import { activityLogger, autoActivityLogger } from "./plugins/activity-logger.plugin"
 import { errorHandler } from "./plugins/error-handler.plugin"
-import { httpLogger } from "./plugins/http-logger.plugin"
+import { httpLogger, isScannerRequest } from "./plugins/http-logger.plugin"
 import { permissionGuard } from "./plugins/permission-guard.plugin"
 import { rateLimit } from "./plugins/rate-limit.plugin"
 import { requestId } from "./plugins/request-id.plugin"
@@ -162,8 +162,16 @@ const app = new Elysia()
   })
   .use(errorHandler) // Apply global error handler (after CORS so errors include CORS)
   .use(responseTransformer) // Apply response transformer
-  .onError(({ error }) => {
-    logger.error({ err: error }, "Application Error")
+  .onError(({ error, request }) => {
+    const path = new URL(request.url).pathname
+    const status = "status" in error && typeof error.status === "number" ? error.status : 500
+
+    // Scanner bot 404 requests → debug level (reduce noise)
+    if (status === 404 && isScannerRequest(path)) {
+      logger.debug({ err: error }, "Scanner Request (404)")
+    } else {
+      logger.error({ err: error }, "Application Error")
+    }
     throw error
   })
   .get("/", () => ({ message: "SendGrid Email Service API", version: "2.1.0" }))

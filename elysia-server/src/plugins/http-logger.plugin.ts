@@ -20,6 +20,23 @@ const formatDuration = (ms: number): string => {
 }
 
 /**
+ * Scanner bot patterns - common vulnerability scanning paths
+ */
+const SCANNER_PATTERNS = [
+  /\.(php|asp|aspx|jsp|cgi|env|git|bak|old|sql|log|key|pem|json|xml|yml|yaml|ini|conf|config|md|txt|map)$/i,
+  /\/(wp-admin|wp-content|wp-includes|wordpress|phpmyadmin|admin|administrator|backup)/i,
+  /\/(\.env|\.git|\.svn|\.htaccess|\.htpasswd|web\.config)/i,
+  /\/(database|db|config|credentials|secret|private|passwd|shadow)/i,
+  /\/(api\/v\d+\/?$)/, // Root API version paths like /api/v1/, /api/v2/
+]
+
+/**
+ * Check if request is from scanner bot
+ */
+export const isScannerRequest = (path: string): boolean =>
+  SCANNER_PATTERNS.some((pattern) => pattern.test(path))
+
+/**
  * Check if path should be logged
  */
 const shouldSkipLogging = (path: string): boolean =>
@@ -70,9 +87,14 @@ export const httpLogger = new Elysia({ name: "http-logger" })
     const status = typeof ctx.set.status === "number" ? ctx.set.status : 500
     const errorMsg = ctx.error instanceof Error ? ctx.error.message : String(ctx.error)
 
-    logger.error(
-      `${getStatusIcon(status)} ${method} ${path} ${status} ${formatDuration(duration)} | ${errorMsg}`,
-    )
+    const logMessage = `${getStatusIcon(status)} ${method} ${path} ${status} ${formatDuration(duration)} | ${errorMsg}`
+
+    // Scanner bot 404 requests → debug level (reduce noise)
+    if (status === 404 && isScannerRequest(path)) {
+      logger.debug(logMessage)
+    } else {
+      logger.error(logMessage)
+    }
 
     requestTimes.delete(ctx.request)
   })

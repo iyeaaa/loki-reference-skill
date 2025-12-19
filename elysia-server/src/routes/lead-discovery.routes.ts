@@ -23,6 +23,15 @@ import {
 import { clearCheckpoints, createLeadDiscoveryGraph } from "../services/lead-discovery/graph"
 import { leadDiscoveryLogger } from "../services/lead-discovery/logger"
 import { getMoreResults } from "../services/lead-discovery/nodes/bigquery-executor"
+import {
+  clearAllSessions as clearAllSessionMetadata,
+  createSession,
+  deleteSession,
+  extendSession,
+  SESSION_TTL_MS,
+  touchSession,
+  validateSession,
+} from "../services/lead-discovery/session-manager"
 import type { LeadDiscoveryState } from "../services/lead-discovery/state"
 import { processLeadEnrichment } from "../services/web-extraction.service"
 import { DEFAULT_EXTRACTION_CONFIG } from "../types/web-extraction.types"
@@ -168,6 +177,9 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
 
       const sessionId = providedSessionId || uuidv4()
       const startTime = Date.now()
+
+      // ⭐ 세션 메타데이터 생성 (TTL 추적)
+      createSession(sessionId, workspaceId)
 
       leadDiscoveryLogger.sessionStart(sessionId, workspaceId, "auto-detect")
 
@@ -367,6 +379,32 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 thread_id: sessionId,
               },
             }
+
+            // ⭐ 세션 TTL 검증 (서버 측 메타데이터 기반)
+            const sessionValidation = validateSession(sessionId)
+            if (sessionValidation.expired) {
+              leadDiscoveryLogger.error(`[Select] Session expired (TTL): ${sessionId}`)
+              session.push({
+                event: "error",
+                data: {
+                  type: "session_expired",
+                  message: "세션이 만료되었습니다 (30분 초과)",
+                  originalError: "Session TTL expired",
+                  retryable: false,
+                  recoverable: true,
+                  suggestedAction: "새 검색을 시작해주세요",
+                  context: {
+                    node: "select",
+                    sessionId,
+                    timestamp: Date.now(),
+                  },
+                },
+              })
+              return
+            }
+
+            // 세션 마지막 접근 시간 업데이트
+            touchSession(sessionId)
 
             // Get current state to find the selected recommendation
             const currentState = await leadDiscoveryGraph.getState(config)
@@ -577,6 +615,32 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 thread_id: sessionId,
               },
             }
+
+            // ⭐ 세션 TTL 검증 (서버 측 메타데이터 기반)
+            const sessionValidation = validateSession(sessionId)
+            if (sessionValidation.expired) {
+              leadDiscoveryLogger.error(`[Clarify] Session expired (TTL): ${sessionId}`)
+              session.push({
+                event: "error",
+                data: {
+                  type: "session_expired",
+                  message: "세션이 만료되었습니다 (30분 초과)",
+                  originalError: "Session TTL expired",
+                  retryable: false,
+                  recoverable: true,
+                  suggestedAction: "새 검색을 시작해주세요",
+                  context: {
+                    node: "clarify",
+                    sessionId,
+                    timestamp: Date.now(),
+                  },
+                },
+              })
+              return
+            }
+
+            // 세션 마지막 접근 시간 업데이트
+            touchSession(sessionId)
 
             // Get current state
             const currentState = await leadDiscoveryGraph.getState(config)
@@ -816,6 +880,21 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       leadDiscoveryLogger.info(`[Session Validate] Checking session: ${sessionId}`)
 
       try {
+        // ⭐ 세션 TTL 검증 (서버 측 메타데이터 기반)
+        const sessionValidation = validateSession(sessionId)
+
+        if (sessionValidation.expired) {
+          leadDiscoveryLogger.info(`[Session Validate] Session expired (TTL): ${sessionId}`)
+          set.status = 410 // Gone
+          return {
+            valid: false,
+            exists: true,
+            expired: true,
+            error: "세션이 만료되었습니다 (30분 초과)",
+            suggestedAction: "새 검색을 시작해주세요",
+          }
+        }
+
         const config = {
           configurable: {
             thread_id: sessionId,
@@ -833,6 +912,9 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
             error: "세션을 찾을 수 없습니다",
           }
         }
+
+        // 세션 마지막 접근 시간 업데이트
+        touchSession(sessionId)
 
         const stateValues = state.values as LeadDiscoveryState
         const isInterrupted = state.next && state.next.length > 0
@@ -871,20 +953,23 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         }
 
         leadDiscoveryLogger.info(
-          `[Session Validate] Session ${sessionId}: status=${status}, progress=${progress}, hasResults=${hasResults}`,
+          `[Session Validate] Session ${sessionId}: status=${status}, progress=${progress}, hasResults=${hasResults}, remainingMs=${sessionValidation.remainingMs}`,
         )
 
         return {
           valid: true,
           exists: true,
+          expired: false,
+          expiringSoon: sessionValidation.expiringSoon,
           status,
           progress,
           hasResults,
           resultCount: stateValues.searchResults?.length || 0,
           totalCount: stateValues.totalResultCount || 0,
           isInterrupted,
-          // 세션 만료 시간은 LangGraph MemorySaver에서 관리되지 않으므로
-          // 클라이언트 측에서 sessionCreatedAt 기반으로 관리
+          // ⭐ 세션 만료 정보 추가 (서버 측 TTL 기반)
+          remainingMs: sessionValidation.remainingMs,
+          expiresAt: sessionValidation.metadata?.expiresAt,
         }
       } catch (error) {
         logger.error({ error, sessionId }, "Failed to validate session")
@@ -903,7 +988,8 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       detail: {
         tags: ["lead-discovery"],
         summary: "Validate session",
-        description: "Check if a session exists and is valid. Returns session status and progress.",
+        description:
+          "Check if a session exists and is valid. Returns session status, progress, and TTL info.",
       },
     },
   )
@@ -917,36 +1003,54 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       leadDiscoveryLogger.info(`[Session Extend] Extending session: ${sessionId}`)
 
       try {
-        const config = {
-          configurable: {
-            thread_id: sessionId,
-          },
-        }
+        // ⭐ 서버 측 세션 메타데이터 연장
+        const extendedMetadata = extendSession(sessionId)
 
-        const state = await leadDiscoveryGraph.getState(config)
+        if (!extendedMetadata) {
+          // 메타데이터가 없는 경우 LangGraph 상태 확인
+          const config = {
+            configurable: {
+              thread_id: sessionId,
+            },
+          }
 
-        if (!state.values) {
-          leadDiscoveryLogger.info(`[Session Extend] Session not found: ${sessionId}`)
-          set.status = 404
+          const state = await leadDiscoveryGraph.getState(config)
+
+          if (!state.values) {
+            leadDiscoveryLogger.info(`[Session Extend] Session not found: ${sessionId}`)
+            set.status = 404
+            return {
+              success: false,
+              error: "세션을 찾을 수 없습니다",
+            }
+          }
+
+          // LangGraph 상태는 있지만 메타데이터가 없는 경우 (이전 버전 호환성)
+          // 새 메타데이터 생성
+          const newMetadata = createSession(sessionId)
+
+          leadDiscoveryLogger.info(
+            `[Session Extend] Created new metadata for legacy session ${sessionId}, expires at ${new Date(newMetadata.expiresAt).toISOString()}`,
+          )
+
           return {
-            success: false,
-            error: "세션을 찾을 수 없습니다",
+            success: true,
+            sessionId,
+            expiresAt: newMetadata.expiresAt,
+            remainingMs: SESSION_TTL_MS,
+            message: "세션이 30분 연장되었습니다",
           }
         }
 
-        // LangGraph MemorySaver는 TTL을 직접 지원하지 않으므로
-        // 클라이언트에서 sessionCreatedAt을 업데이트하도록 새 만료 시간 반환
-        const SESSION_TTL_MS = 30 * 60 * 1000 // 30분
-        const newExpiresAt = Date.now() + SESSION_TTL_MS
-
         leadDiscoveryLogger.info(
-          `[Session Extend] Session ${sessionId} extended until ${new Date(newExpiresAt).toISOString()}`,
+          `[Session Extend] Session ${sessionId} extended until ${new Date(extendedMetadata.expiresAt).toISOString()}`,
         )
 
         return {
           success: true,
           sessionId,
-          expiresAt: newExpiresAt,
+          expiresAt: extendedMetadata.expiresAt,
+          remainingMs: extendedMetadata.expiresAt - Date.now(),
           message: "세션이 30분 연장되었습니다",
         }
       } catch (error) {
@@ -965,7 +1069,8 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       detail: {
         tags: ["lead-discovery"],
         summary: "Extend session TTL",
-        description: "Extend the session expiration time by 30 minutes.",
+        description:
+          "Extend the session expiration time by 30 minutes. Updates server-side metadata.",
       },
     },
   )
@@ -979,13 +1084,17 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       leadDiscoveryLogger.info(`[Session Delete] Deleting session: ${sessionId}`)
 
       try {
+        // ⭐ 세션 메타데이터 삭제
+        const deleted = deleteSession(sessionId)
+
         // Note: LangGraph MemorySaver에서 개별 세션 삭제는
         // 현재 구현에서 직접 지원하지 않음
         // clearCheckpoints()는 전체 삭제만 지원
         // 향후 개선: 개별 세션 삭제 기능 추가
 
-        // 현재는 성공으로 응답하고 클라이언트에서 로컬 상태만 정리
-        leadDiscoveryLogger.info(`[Session Delete] Session ${sessionId} marked for cleanup`)
+        leadDiscoveryLogger.info(
+          `[Session Delete] Session ${sessionId} metadata deleted: ${deleted}`,
+        )
 
         return {
           success: true,
@@ -1007,7 +1116,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       detail: {
         tags: ["lead-discovery"],
         summary: "Delete session",
-        description: "Delete a specific lead discovery session.",
+        description: "Delete a specific lead discovery session and its metadata.",
       },
     },
   )
@@ -1087,6 +1196,21 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         `[더 가져오기] 세션: ${sessionId}, offset: ${offset}, limit: ${limit}`,
       )
 
+      // ⭐ 세션 TTL 검증 (서버 측 메타데이터 기반)
+      const sessionValidation = validateSession(sessionId)
+      if (sessionValidation.expired) {
+        leadDiscoveryLogger.warn(`[더 가져오기] Session expired (TTL): ${sessionId}`)
+        set.status = 410 // Gone
+        return {
+          success: false,
+          expired: true,
+          error: "세션이 만료되었습니다 (30분 초과). 새 검색을 시작해주세요.",
+        }
+      }
+
+      // 세션 마지막 접근 시간 업데이트
+      touchSession(sessionId)
+
       const moreResults = getMoreResults(sessionId, offset, limit)
 
       if (!moreResults) {
@@ -1133,7 +1257,9 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
     "/sessions",
     async () => {
       clearCheckpoints()
-      leadDiscoveryLogger.info("All sessions cleared")
+      // ⭐ 세션 메타데이터도 모두 삭제
+      clearAllSessionMetadata()
+      leadDiscoveryLogger.info("All sessions and metadata cleared")
       return {
         success: true,
         message: "All sessions cleared",
@@ -1143,7 +1269,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
       detail: {
         tags: ["lead-discovery"],
         summary: "Clear all sessions",
-        description: "Admin endpoint to clear all lead discovery sessions.",
+        description: "Admin endpoint to clear all lead discovery sessions and their metadata.",
       },
     },
   )

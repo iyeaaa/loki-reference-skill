@@ -64,7 +64,7 @@ function DashboardContent({ children }: DashboardContentProps) {
   const isTrialUser = currentUser?.trialStatus?.isTrialActive
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
 
   // Workspace를 WorkspaceOption으로 변환
   const workspaces: WorkspaceOption[] =
@@ -165,7 +165,6 @@ function DashboardContent({ children }: DashboardContentProps) {
             {/* Notification Bell */}
             {userId && (
               <NotificationBell
-                userId={userId}
                 workspaceId={selectedWorkspace !== "all" ? selectedWorkspace : undefined}
               />
             )}

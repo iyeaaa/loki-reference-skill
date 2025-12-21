@@ -151,7 +151,7 @@ export default function CompanyInformation() {
   console.log("[CompanyInformation] 1. userId:", userId)
 
   // Get user's workspace
-  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   console.log(

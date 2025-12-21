@@ -16,12 +16,12 @@ export const emailAccountKeys = {
   lists: () => [...emailAccountKeys.all, "list"] as const,
   list: (params?: EmailAccountsParams) => [...emailAccountKeys.lists(), params] as const,
   detail: (id: string) => [...emailAccountKeys.all, "detail", id] as const,
-  user: (userId: string) => [...emailAccountKeys.all, "user", userId] as const,
+  user: () => [...emailAccountKeys.all, "user"] as const,
   workspace: (workspaceId: string) => [...emailAccountKeys.all, "workspace", workspaceId] as const,
   activeWorkspace: (workspaceId: string) =>
     [...emailAccountKeys.all, "activeWorkspace", workspaceId] as const,
-  workspaceAndUser: (workspaceId: string, userId: string) =>
-    [...emailAccountKeys.all, "workspaceAndUser", workspaceId, userId] as const,
+  workspaceAndUser: (workspaceId: string) =>
+    [...emailAccountKeys.all, "workspaceAndUser", workspaceId] as const,
 }
 
 // Queries
@@ -44,10 +44,10 @@ export function useEmailAccount(accountId: string, enabled = true) {
   })
 }
 
-export function useEmailAccountsByUser(userId: string, enabled = true) {
+export function useEmailAccountsByUser(enabled = true) {
   return useQuery({
-    queryKey: emailAccountKeys.user(userId),
-    queryFn: () => emailAccountsApi.getByUser(userId),
+    queryKey: emailAccountKeys.user(),
+    queryFn: () => emailAccountsApi.getByUser(),
     enabled,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -74,15 +74,11 @@ export function useActiveEmailAccountsByWorkspace(workspaceId: string, enabled =
   })
 }
 
-export function useEmailAccountByWorkspaceAndUser(
-  workspaceId: string,
-  userId: string,
-  enabled = true,
-) {
+export function useEmailAccountByWorkspaceAndUser(workspaceId: string, enabled = true) {
   return useQuery({
-    queryKey: emailAccountKeys.workspaceAndUser(workspaceId, userId),
-    queryFn: () => emailAccountsApi.getByWorkspaceAndUser(workspaceId, userId),
-    enabled: enabled && !!workspaceId && !!userId,
+    queryKey: emailAccountKeys.workspaceAndUser(workspaceId),
+    queryFn: () => emailAccountsApi.getByWorkspaceAndUser(workspaceId),
+    enabled: enabled && !!workspaceId,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: false, // Don't retry if account not found

@@ -4,6 +4,54 @@
  */
 
 export interface paths {
+    "/api/webhook/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookInbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhook/inbound-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookInbound-store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhook/sendgrid-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiWebhookSendgrid-events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -94,54 +142,6 @@ export interface paths {
         get: operations["getApiSse-testInfo"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/webhook/inbound": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["postApiWebhookInbound"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/webhook/inbound-store": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["postApiWebhookInbound-store"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/webhook/sendgrid-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["postApiWebhookSendgrid-events"];
         delete?: never;
         options?: never;
         head?: never;
@@ -430,6 +430,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["postApiV1AuthGoogleCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/nylas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1AuthNylas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/nylas/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1AuthNylasCallback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -833,7 +865,7 @@ export interface paths {
         delete: operations["deleteApiV1WorkspacesById"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["patchApiV1WorkspacesById"];
         trace?: never;
     };
     "/api/v1/workspaces/": {
@@ -964,14 +996,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspaces/user/{userId}": {
+    "/api/v1/workspaces/user": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getApiV1WorkspacesUserByUserId"];
+        get: operations["getApiV1WorkspacesUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1408,14 +1440,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/email-accounts/workspace/{workspaceId}/user/{userId}": {
+    "/api/v1/email-accounts/workspace/{workspaceId}/user": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId"];
+        get: operations["getApiV1Email-accountsWorkspaceByWorkspaceIdUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1456,14 +1488,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/email-accounts/user/{userId}": {
+    "/api/v1/email-accounts/user": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getApiV1Email-accountsUserByUserId"];
+        get: operations["getApiV1Email-accountsUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3160,14 +3192,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/activity-logs/user/{userId}": {
+    "/api/v1/activity-logs/user": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getApiV1Activity-logsUserByUserId"];
+        get: operations["getApiV1Activity-logsUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3841,20 +3873,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/nylas/api/v1/nylas/webhooks": {
+    "/api/v1/nylas/webhooks": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getApiV1NylasApiV1NylasWebhooks"];
+        get: operations["getApiV1NylasWebhooks"];
         put?: never;
         /**
          * Nylas Webhook
          * @description Receive webhook events for email tracking (opens, clicks, thread replies)
          */
-        post: operations["postApiV1NylasApiV1NylasWebhooks"];
+        post: operations["postApiV1NylasWebhooks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3952,6 +3984,70 @@ export interface paths {
         get: operations["getApiV1Lead-discoverySessionBySessionId"];
         put?: never;
         post?: never;
+        /**
+         * Delete session
+         * @description Delete a specific lead discovery session and its metadata.
+         */
+        delete: operations["deleteApiV1Lead-discoverySessionBySessionId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/session/{sessionId}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validate session
+         * @description Check if a session exists and is valid. Returns session status, progress, and TTL info.
+         */
+        get: operations["getApiV1Lead-discoverySessionBySessionIdValidate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/session/{sessionId}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extend session TTL
+         * @description Extend the session expiration time by 30 minutes. Updates both server-side metadata and returns new expiry time for client.
+         */
+        post: operations["postApiV1Lead-discoverySessionBySessionIdExtend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lead-discovery/session/{sessionId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get session status (lightweight)
+         * @description Get minimal session status for polling purposes.
+         */
+        get: operations["getApiV1Lead-discoverySessionBySessionIdStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3990,7 +4086,7 @@ export interface paths {
         post?: never;
         /**
          * Clear all sessions
-         * @description Admin endpoint to clear all lead discovery sessions.
+         * @description Admin endpoint to clear all lead discovery sessions and their metadata.
          */
         delete: operations["deleteApiV1Lead-discoverySessions"];
         options?: never;
@@ -4614,6 +4710,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding/workspace/{workspaceId}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1OnboardingWorkspaceByWorkspaceIdStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/onboarding/workspace/{workspaceId}/survey": {
         parameters: {
             query?: never;
@@ -4768,6 +4880,118 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1NotificationsStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1Notifications"];
+        put?: never;
+        post: operations["postApiV1Notifications"];
+        delete: operations["deleteApiV1Notifications"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1NotificationsUnread-count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notificationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1NotificationsByNotificationId"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteApiV1NotificationsByNotificationId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1NotificationsByNotificationIdRead"];
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchApiV1NotificationsRead-all"];
+        trace?: never;
+    };
+    "/api/v1/notifications/cleanup-expired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1NotificationsCleanup-expired"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5106,6 +5330,57 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    postApiWebhookInbound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiWebhookInbound-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiWebhookSendgrid-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getIndex: {
         parameters: {
             query?: never;
@@ -5192,57 +5467,6 @@ export interface operations {
         };
     };
     "getApiSse-testInfo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    postApiWebhookInbound: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "postApiWebhookInbound-store": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "postApiWebhookSendgrid-events": {
         parameters: {
             query?: never;
             header?: never;
@@ -5493,7 +5717,6 @@ export interface operations {
         parameters: {
             query: {
                 workspaceId: string;
-                userId: string;
             };
             header?: never;
             path?: never;
@@ -5520,17 +5743,14 @@ export interface operations {
             content: {
                 "application/json": {
                     workspaceId: string;
-                    userId: string;
                     title?: string;
                 };
                 "multipart/form-data": {
                     workspaceId: string;
-                    userId: string;
                     title?: string;
                 };
                 "text/plain": {
                     workspaceId: string;
-                    userId: string;
                     title?: string;
                 };
             };
@@ -5895,6 +6115,55 @@ export interface operations {
                     country?: string;
                     experience?: string;
                     lang?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1AuthNylas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1AuthNylasCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    state?: string;
+                };
+                "multipart/form-data": {
+                    code: string;
+                    state?: string;
+                };
+                "text/plain": {
+                    code: string;
+                    state?: string;
                 };
             };
         };
@@ -6678,7 +6947,6 @@ export interface operations {
                 isActive?: string;
                 search?: string;
                 ownerIds?: string;
-                userId?: string;
             };
             header?: never;
             path?: never;
@@ -6787,6 +7055,70 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1WorkspacesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: (string | null) | null;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "multipart/form-data": {
+                    name?: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: (string | null) | null;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+                "text/plain": {
+                    name?: string;
+                    description?: string;
+                    /** Format: uuid */
+                    ownerId?: string;
+                    isActive?: boolean;
+                    companyName?: string;
+                    companyWebsite?: (string | null) | null;
+                    companyPhone?: string;
+                    industry?: string;
+                    companySize?: string;
+                    companyAddress?: string;
+                    companyDescription?: string;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -7108,13 +7440,11 @@ export interface operations {
             };
         };
     };
-    getApiV1WorkspacesUserByUserId: {
+    getApiV1WorkspacesUser: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                userId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -8201,13 +8531,12 @@ export interface operations {
             };
         };
     };
-    "getApiV1Email-accountsWorkspaceByWorkspaceIdUserByUserId": {
+    "getApiV1Email-accountsWorkspaceByWorkspaceIdUser": {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 workspaceId: string;
-                userId: string;
             };
             cookie?: never;
         };
@@ -8259,13 +8588,11 @@ export interface operations {
             };
         };
     };
-    "getApiV1Email-accountsUserByUserId": {
+    "getApiV1Email-accountsUser": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                userId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -8461,7 +8788,6 @@ export interface operations {
         parameters: {
             query?: {
                 includeInactive?: boolean;
-                userId?: string;
             };
             header?: never;
             path?: never;
@@ -8481,7 +8807,6 @@ export interface operations {
         parameters: {
             query?: {
                 workspaceId?: string;
-                userId?: string;
             };
             header?: never;
             path?: never;
@@ -8617,9 +8942,7 @@ export interface operations {
     };
     "patchApiV1Email-signaturesByIdSet-default": {
         parameters: {
-            query?: {
-                userId?: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 id: string;
@@ -10585,6 +10908,7 @@ export interface operations {
     getApiV1Leads: {
         parameters: {
             query?: {
+                ids?: string;
                 limit?: string;
                 offset?: string;
             };
@@ -12765,16 +13089,14 @@ export interface operations {
             };
         };
     };
-    "getApiV1Activity-logsUserByUserId": {
+    "getApiV1Activity-logsUser": {
         parameters: {
             query?: {
                 limit?: string;
                 offset?: string;
             };
             header?: never;
-            path: {
-                userId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -15977,7 +16299,7 @@ export interface operations {
             };
         };
     };
-    getApiV1NylasApiV1NylasWebhooks: {
+    getApiV1NylasWebhooks: {
         parameters: {
             query?: never;
             header?: never;
@@ -15994,7 +16316,7 @@ export interface operations {
             };
         };
     };
-    postApiV1NylasApiV1NylasWebhooks: {
+    postApiV1NylasWebhooks: {
         parameters: {
             query?: never;
             header?: never;
@@ -16044,6 +16366,16 @@ export interface operations {
                     workspaceId: string;
                     sessionId?: string;
                     locale?: string;
+                    /**
+                     * @description Website crawling timeout in seconds (5-120, default: 30)
+                     * @default 30
+                     */
+                    crawlTimeoutSeconds?: number;
+                    /**
+                     * @description Auto-adjust timeout based on site response time
+                     * @default true
+                     */
+                    useAutoTimeout?: boolean;
                 };
                 "multipart/form-data": {
                     /** @description Search query or website URL */
@@ -16052,6 +16384,16 @@ export interface operations {
                     workspaceId: string;
                     sessionId?: string;
                     locale?: string;
+                    /**
+                     * @description Website crawling timeout in seconds (5-120, default: 30)
+                     * @default 30
+                     */
+                    crawlTimeoutSeconds?: number;
+                    /**
+                     * @description Auto-adjust timeout based on site response time
+                     * @default true
+                     */
+                    useAutoTimeout?: boolean;
                 };
                 "text/plain": {
                     /** @description Search query or website URL */
@@ -16060,6 +16402,16 @@ export interface operations {
                     workspaceId: string;
                     sessionId?: string;
                     locale?: string;
+                    /**
+                     * @description Website crawling timeout in seconds (5-120, default: 30)
+                     * @default 30
+                     */
+                    crawlTimeoutSeconds?: number;
+                    /**
+                     * @description Auto-adjust timeout based on site response time
+                     * @default true
+                     */
+                    useAutoTimeout?: boolean;
                 };
             };
         };
@@ -16185,6 +16537,82 @@ export interface operations {
             };
         };
     };
+    "deleteApiV1Lead-discoverySessionBySessionId": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Lead-discoverySessionBySessionIdValidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1Lead-discoverySessionBySessionIdExtend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1Lead-discoverySessionBySessionIdStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "postApiV1Lead-discoveryMore": {
         parameters: {
             query?: never;
@@ -16280,6 +16708,10 @@ export interface operations {
                         email?: (string | null) | null;
                         phone?: (string | null) | null;
                         web_address?: (string | null) | null;
+                        description?: (string | null) | null;
+                        company_type?: (string | null) | null;
+                        http_status?: (number | null) | null;
+                        verified?: boolean;
                         country?: (string | null) | null;
                         industry?: (string | null) | null;
                         sub_industry?: (string | null) | null;
@@ -16300,6 +16732,7 @@ export interface operations {
                         industry: string;
                     };
                     userQuery?: string;
+                    workspaceId?: string;
                 };
                 "multipart/form-data": {
                     leads: {
@@ -16308,6 +16741,10 @@ export interface operations {
                         email?: (string | null) | null;
                         phone?: (string | null) | null;
                         web_address?: (string | null) | null;
+                        description?: (string | null) | null;
+                        company_type?: (string | null) | null;
+                        http_status?: (number | null) | null;
+                        verified?: boolean;
                         country?: (string | null) | null;
                         industry?: (string | null) | null;
                         sub_industry?: (string | null) | null;
@@ -16328,6 +16765,7 @@ export interface operations {
                         industry: string;
                     };
                     userQuery?: string;
+                    workspaceId?: string;
                 };
                 "text/plain": {
                     leads: {
@@ -16336,6 +16774,10 @@ export interface operations {
                         email?: (string | null) | null;
                         phone?: (string | null) | null;
                         web_address?: (string | null) | null;
+                        description?: (string | null) | null;
+                        company_type?: (string | null) | null;
+                        http_status?: (number | null) | null;
+                        verified?: boolean;
                         country?: (string | null) | null;
                         industry?: (string | null) | null;
                         sub_industry?: (string | null) | null;
@@ -16356,6 +16798,7 @@ export interface operations {
                         industry: string;
                     };
                     userQuery?: string;
+                    workspaceId?: string;
                 };
             };
         };
@@ -18239,6 +18682,25 @@ export interface operations {
             };
         };
     };
+    getApiV1OnboardingWorkspaceByWorkspaceIdStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     postApiV1OnboardingWorkspaceByWorkspaceIdSurvey: {
         parameters: {
             query?: never;
@@ -18547,6 +19009,242 @@ export interface operations {
             path: {
                 workspaceId: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NotificationsStream: {
+        parameters: {
+            query?: {
+                token?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1Notifications: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                type?: string;
+                read?: string;
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1Notifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userId: string;
+                    workspaceId?: string;
+                    type: "onboarding" | "system" | "success" | "error" | "info" | "warning";
+                    priority?: "low" | "normal" | "high" | "urgent";
+                    title: string;
+                    message: string;
+                    metadata?: unknown;
+                    entityType?: string;
+                    entityId?: string;
+                };
+                "multipart/form-data": {
+                    userId: string;
+                    workspaceId?: string;
+                    type: "onboarding" | "system" | "success" | "error" | "info" | "warning";
+                    priority?: "low" | "normal" | "high" | "urgent";
+                    title: string;
+                    message: string;
+                    metadata?: unknown;
+                    entityType?: string;
+                    entityId?: string;
+                };
+                "text/plain": {
+                    userId: string;
+                    workspaceId?: string;
+                    type: "onboarding" | "system" | "success" | "error" | "info" | "warning";
+                    priority?: "low" | "normal" | "high" | "urgent";
+                    title: string;
+                    message: string;
+                    metadata?: unknown;
+                    entityType?: string;
+                    entityId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1Notifications: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1NotificationsUnread-count": {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1NotificationsByNotificationId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1NotificationsByNotificationId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchApiV1NotificationsByNotificationIdRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "patchApiV1NotificationsRead-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceId?: string;
+                };
+                "multipart/form-data": {
+                    workspaceId?: string;
+                };
+                "text/plain": {
+                    workspaceId?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1NotificationsCleanup-expired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

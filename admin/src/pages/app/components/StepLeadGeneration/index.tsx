@@ -52,7 +52,7 @@ export function StepLeadGeneration() {
   }, [])
   const userId = currentUser?.id || ""
 
-  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   // Get onboarding progress from DB

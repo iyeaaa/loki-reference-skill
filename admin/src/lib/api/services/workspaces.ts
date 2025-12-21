@@ -54,6 +54,7 @@ export type EnrichmentEventHandler = {
 
 export const workspacesApi = {
   // List workspaces with pagination and filters
+  // userId is extracted from JWT token on the server for permission filtering
   list: async (params?: WorkspacesParams): Promise<WorkspacesResponse> => {
     const searchParams = new URLSearchParams()
 
@@ -72,9 +73,6 @@ export const workspacesApi = {
     }
     if (params?.ownerIds?.length) {
       searchParams.append("ownerIds", params.ownerIds.join(","))
-    }
-    if (params?.userId) {
-      searchParams.append("userId", params.userId)
     }
 
     const query = searchParams.toString()
@@ -152,9 +150,9 @@ export const workspacesApi = {
   getByOwner: async (ownerId: string): Promise<Workspace[]> =>
     apiFetch<Workspace[]>(`/api/v1/workspaces/owner/${ownerId}`),
 
-  // Get user's workspaces (owned or member)
-  getUserWorkspaces: async (userId: string): Promise<Workspace[]> =>
-    apiFetch<Workspace[]>(`/api/v1/workspaces/user/${userId}`),
+  // Get user's workspaces (owned or member) - userId extracted from auth token
+  getUserWorkspaces: async (): Promise<Workspace[]> =>
+    apiFetch<Workspace[]>("/api/v1/workspaces/user"),
 
   // Get workspace members
   getMembers: async (workspaceId: string): Promise<WorkspaceMember[]> =>

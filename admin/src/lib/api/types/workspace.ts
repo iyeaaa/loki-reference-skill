@@ -41,7 +41,7 @@ export type WorkspacesParams = {
   isActive?: boolean
   search?: string
   ownerIds?: string[]
-  userId?: string // 권한 기반 필터링용 (관리자가 아니면 자신이 속한 워크스페이스만)
+  // userId is extracted from JWT token on the server for permission filtering
 }
 
 export type WorkspacesResponse = {

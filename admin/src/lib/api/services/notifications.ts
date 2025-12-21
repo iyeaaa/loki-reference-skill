@@ -49,7 +49,6 @@ export type NotificationListResponse = {
 }
 
 export type NotificationFilter = {
-  userId: string
   workspaceId?: string
   type?: NotificationType
   read?: boolean
@@ -68,7 +67,6 @@ export const notificationsApi = {
    */
   getNotifications: (filter: NotificationFilter) => {
     const params = new URLSearchParams()
-    params.set("userId", filter.userId)
     if (filter.workspaceId) {
       params.set("workspaceId", filter.workspaceId)
     }
@@ -85,68 +83,70 @@ export const notificationsApi = {
       params.set("offset", String(filter.offset))
     }
 
-    return apiFetch<NotificationListResponse>(`/api/v1/notifications?${params.toString()}`)
+    const queryString = params.toString()
+    return apiFetch<NotificationListResponse>(
+      `/api/v1/notifications${queryString ? `?${queryString}` : ""}`,
+    )
   },
 
   /**
    * 읽지 않은 알림 개수 조회
    */
-  getUnreadCount: (userId: string, workspaceId?: string) => {
+  getUnreadCount: (workspaceId?: string) => {
     const params = new URLSearchParams()
-    params.set("userId", userId)
     if (workspaceId) {
       params.set("workspaceId", workspaceId)
     }
 
+    const queryString = params.toString()
     return apiFetch<{ unreadCount: number }>(
-      `/api/v1/notifications/unread-count?${params.toString()}`,
+      `/api/v1/notifications/unread-count${queryString ? `?${queryString}` : ""}`,
     ).then((res) => res.unreadCount)
   },
 
   /**
    * 알림 상세 조회
    */
-  getNotification: (notificationId: string, userId: string) =>
-    apiFetch<Notification>(`/api/v1/notifications/${notificationId}?userId=${userId}`),
+  getNotification: (notificationId: string) =>
+    apiFetch<Notification>(`/api/v1/notifications/${notificationId}`),
 
   /**
    * 알림 읽음 처리
    */
-  markAsRead: (notificationId: string, userId: string) =>
+  markAsRead: (notificationId: string) =>
     apiFetch<{ success: boolean }>(`/api/v1/notifications/${notificationId}/read`, {
       method: "PATCH",
-      body: JSON.stringify({ userId }),
     }).then((res) => res.success),
 
   /**
    * 모든 알림 읽음 처리
    */
-  markAllAsRead: (userId: string, workspaceId?: string) =>
+  markAllAsRead: (workspaceId?: string) =>
     apiFetch<{ success: boolean; count: number }>("/api/v1/notifications/read-all", {
       method: "PATCH",
-      body: JSON.stringify({ userId, workspaceId }),
+      body: JSON.stringify({ workspaceId }),
     }),
 
   /**
    * 알림 삭제
    */
-  deleteNotification: (notificationId: string, userId: string) =>
-    apiFetch<{ success: boolean }>(`/api/v1/notifications/${notificationId}?userId=${userId}`, {
+  deleteNotification: (notificationId: string) =>
+    apiFetch<{ success: boolean }>(`/api/v1/notifications/${notificationId}`, {
       method: "DELETE",
     }).then((res) => res.success),
 
   /**
    * 모든 알림 삭제
    */
-  deleteAllNotifications: (userId: string, workspaceId?: string) => {
+  deleteAllNotifications: (workspaceId?: string) => {
     const params = new URLSearchParams()
-    params.set("userId", userId)
     if (workspaceId) {
       params.set("workspaceId", workspaceId)
     }
 
+    const queryString = params.toString()
     return apiFetch<{ success: boolean; count: number }>(
-      `/api/v1/notifications?${params.toString()}`,
+      `/api/v1/notifications${queryString ? `?${queryString}` : ""}`,
       { method: "DELETE" },
     )
   },

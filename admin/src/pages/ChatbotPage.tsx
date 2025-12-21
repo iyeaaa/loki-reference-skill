@@ -23,9 +23,9 @@ export default function ChatbotPage() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
 
   // Queries and mutations
+  // userId is extracted from JWT token on the server
   const { data: conversations = [], isLoading: isLoadingConversations } = useConversations(
     selectedWorkspace?.id || "",
-    user?.id || "",
     !!selectedWorkspace?.id && selectedWorkspace.id !== "all" && !!user?.id,
   )
 
@@ -65,6 +65,7 @@ export default function ChatbotPage() {
   )
 
   // Called when a new conversation is created from ChatInterface
+  // userId is extracted from JWT token on the server
   const handleConversationCreated = useCallback(
     async (conversationId: string, firstMessage: string): Promise<string | undefined> => {
       if (!(selectedWorkspace?.id && user?.id)) {
@@ -75,7 +76,6 @@ export default function ChatbotPage() {
         // Create conversation in database
         const newConversation = await createConversation.mutateAsync({
           workspaceId: selectedWorkspace.id,
-          userId: user.id,
         })
 
         // Update the conversation ID in ChatInterface

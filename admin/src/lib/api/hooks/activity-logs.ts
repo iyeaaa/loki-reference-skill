@@ -13,7 +13,7 @@ export const activityLogKeys = {
     [...activityLogKeys.all, "recent", limit, workspaceId] as const,
   entity: (entityType: string, entityId: string) =>
     [...activityLogKeys.all, "entity", entityType, entityId] as const,
-  user: (userId: string) => [...activityLogKeys.all, "user", userId] as const,
+  user: () => [...activityLogKeys.all, "user"] as const,
 }
 
 // Queries
@@ -62,10 +62,10 @@ export function useActivityLogsByEntity(
   })
 }
 
-export function useActivityLogsByUser(userId: string, limit = 50, offset = 0, enabled = true) {
+export function useActivityLogsByUser(limit = 50, offset = 0, enabled = true) {
   return useQuery({
-    queryKey: activityLogKeys.user(userId),
-    queryFn: () => activityLogsApi.getByUser(userId, limit, offset),
+    queryKey: activityLogKeys.user(),
+    queryFn: () => activityLogsApi.getByUser(limit, offset),
     enabled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,

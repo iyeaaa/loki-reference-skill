@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils"
 // ============================================================================
 
 type NotificationBellProps = {
-  userId: string
   workspaceId?: string
   className?: string
 }
@@ -254,7 +253,7 @@ function DateGroup({ group, onMarkAsRead, onDelete }: DateGroupProps) {
 // Main Component
 // ============================================================================
 
-export function NotificationBell({ userId, workspaceId, className }: NotificationBellProps) {
+export function NotificationBell({ workspaceId, className }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const {
@@ -266,7 +265,7 @@ export function NotificationBell({ userId, workspaceId, className }: Notificatio
     markAllAsRead,
     deleteNotification,
     refetch,
-  } = useNotificationsManager(userId, workspaceId, {
+  } = useNotificationsManager(workspaceId, {
     limit: 50,
     enableSSE: true,
   })

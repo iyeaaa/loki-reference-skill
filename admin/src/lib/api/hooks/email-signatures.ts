@@ -127,8 +127,7 @@ export function useSetDefaultEmailSignature() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, userId }: { id: string; userId: string }) =>
-      emailSignaturesApi.setDefault(id, userId),
+    mutationFn: (id: string) => emailSignaturesApi.setDefault(id),
     onSuccess: () => {
       // 모든 관련 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })

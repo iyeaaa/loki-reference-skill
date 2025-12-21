@@ -52,10 +52,7 @@ export function SequenceForm({
   const { selectedWorkspace } = useWorkspace()
 
   // Fetch user's workspaces only (owned or member)
-  // Use a dummy UUID if user is not available to satisfy the hook call rules
-  const { data: allWorkspaces = [] } = useSuspenseUserWorkspaces(
-    user?.id || "00000000-0000-0000-0000-000000000000",
-  )
+  const { data: allWorkspaces = [] } = useSuspenseUserWorkspaces()
 
   // Only use workspaces if user exists
   const workspaces = user?.id ? allWorkspaces : []

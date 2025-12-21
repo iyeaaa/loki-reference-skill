@@ -27,10 +27,7 @@ export function StepEmailLink() {
   const isKorean = i18n.language === "ko"
 
   // Get user's workspace
-  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(
-    userId,
-    !!userId,
-  )
+  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(!!userId)
   const workspace = userWorkspaces?.[0]
 
   // Get email accounts for this workspace and user
@@ -39,7 +36,7 @@ export function StepEmailLink() {
     isLoading: isLoadingEmailAccounts,
     // isRefetchError,
     // error: emailAccountError,
-  } = useEmailAccountByWorkspaceAndUser(workspace?.id || "", userId, !!workspace?.id && !!userId)
+  } = useEmailAccountByWorkspaceAndUser(workspace?.id || "", !!workspace?.id)
 
   // console.log(isRefetchError, emailAccountError)
 
@@ -92,7 +89,6 @@ export function StepEmailLink() {
         isAddingMore={isLoading}
         onAddMore={handleConnect}
         onNext={handleNextStep}
-        userId={userId}
         workspaceId={workspace.id}
       />
     )
@@ -175,7 +171,6 @@ export function StepEmailLink() {
 type LinkedEmailAccountsViewProps = {
   emailAccount: UserEmailAccount
   workspaceId: string
-  userId: string
   onAddMore: () => void
   onNext: () => void
   isAddingMore: boolean
@@ -184,7 +179,6 @@ type LinkedEmailAccountsViewProps = {
 function LinkedEmailAccountsView({
   emailAccount,
   workspaceId,
-  userId,
   onAddMore,
   onNext,
   isAddingMore,
@@ -193,7 +187,7 @@ function LinkedEmailAccountsView({
   const deleteEmailAccountMutation = useDeleteEmailAccount()
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const { refetch } = useEmailAccountByWorkspaceAndUser(workspaceId, userId, true)
+  const { refetch } = useEmailAccountByWorkspaceAndUser(workspaceId, !!workspaceId)
 
   const handleDelete = async () => {
     // Confirm deletion

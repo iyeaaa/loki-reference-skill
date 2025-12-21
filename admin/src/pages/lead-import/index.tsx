@@ -73,7 +73,7 @@ export default function LeadImportPage() {
   const userId = currentUser?.id || ""
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기 (참여/소유한 것만)
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
 
   // Workspace 배열로 변환
   const workspaces = userWorkspaces || []

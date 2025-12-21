@@ -36,7 +36,7 @@ export function StepLeadCheck() {
   })()
   const userId = currentUser?.id || ""
 
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   // Get onboarding progress from DB

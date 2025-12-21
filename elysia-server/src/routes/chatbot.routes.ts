@@ -9,6 +9,7 @@ import { createChatbotGraph } from "../services/chatbot"
 import { createNodeEmitter } from "../services/chatbot/sse-context"
 import type { ChatbotState } from "../services/chatbot/state"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 import { chatbotLogger } from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
@@ -756,15 +757,20 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
   // GET /api/chatbot/conversations - List user's conversations
   .get(
     "/conversations",
-    async ({ query }) => {
+    async ({ query, headers, set }) => {
       const startTime = Date.now()
       chatbotLogger.routeStart("GET", "/api/chatbot/conversations")
 
       try {
-        const { workspaceId, userId } = query
+        const userId = await getUserIdFromToken(headers.authorization)
+        if (!userId) {
+          set.status = 401
+          return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+        }
 
-        if (!workspaceId || !userId) {
-          return errorResponse("workspaceId and userId are required")
+        const { workspaceId } = query
+        if (!workspaceId) {
+          return errorResponse("workspaceId is required")
         }
 
         const conversations = await db
@@ -794,19 +800,24 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
     {
       query: t.Object({
         workspaceId: t.String(),
-        userId: t.String(),
       }),
     },
   )
   // POST /api/chatbot/conversations - Create new conversation
   .post(
     "/conversations",
-    async ({ body }) => {
+    async ({ body, headers, set }) => {
       const startTime = Date.now()
       chatbotLogger.routeStart("POST", "/api/chatbot/conversations")
 
       try {
-        const { workspaceId, userId, title } = body
+        const userId = await getUserIdFromToken(headers.authorization)
+        if (!userId) {
+          set.status = 401
+          return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+        }
+
+        const { workspaceId, title } = body
 
         const [conversation] = await db
           .insert(chatConversations)
@@ -832,7 +843,6 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
     {
       body: t.Object({
         workspaceId: t.String(),
-        userId: t.String(),
         title: t.Optional(t.String()),
       }),
     },

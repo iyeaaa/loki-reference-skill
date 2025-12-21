@@ -38,7 +38,7 @@ export function NylasRedirect() {
   // Get user's workspace (fallback only for email linking)
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const fallbackWorkspaceId = userWorkspaces?.[0]?.id
 
   useEffect(() => {

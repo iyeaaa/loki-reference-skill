@@ -10,6 +10,7 @@ import { Elysia, t } from "elysia"
 import { createNotificationSubscriber } from "../lib/redis/notification-events"
 import * as notificationService from "../services/notification.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 import logger from "../utils/logger"
 
 export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" })
@@ -23,11 +24,25 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   })
 
   // ====================================
-  // 실시간 알림 SSE 스트림
+  // 실시간 알림 SSE 스트림 (token via query param for EventSource compatibility)
   // ====================================
   .get(
-    "/stream/:userId",
-    async ({ params: { userId } }) => {
+    "/stream",
+    async ({ headers, query }) => {
+      // Try auth header first (for clients that can send auth headers)
+      // Then fall back to token query param (for EventSource which doesn't support headers)
+      let userId = await getUserIdFromToken(headers.authorization)
+      if (!userId && query.token) {
+        userId = await getUserIdFromToken(`Bearer ${query.token}`)
+      }
+
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "인증이 필요합니다." }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+
       logger.info({ userId }, "[Notification SSE] Client connected")
 
       const stream = new ReadableStream({
@@ -93,8 +108,8 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
       })
     },
     {
-      params: t.Object({
-        userId: t.String(),
+      query: t.Object({
+        token: t.Optional(t.String()),
       }),
     },
   )
@@ -104,11 +119,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .get(
     "/",
-    async ({ query }) => {
-      const { userId, workspaceId, type, read, limit, offset } = query
+    async ({ headers, query, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      const { workspaceId, type, read, limit, offset } = query
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const result = await notificationService.getNotifications({
@@ -124,7 +141,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
     },
     {
       query: t.Object({
-        userId: t.String(),
         workspaceId: t.Optional(t.String()),
         type: t.Optional(t.String()),
         read: t.Optional(t.String()),
@@ -139,11 +155,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .get(
     "/unread-count",
-    async ({ query }) => {
-      const { userId, workspaceId } = query
+    async ({ headers, query, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      const { workspaceId } = query
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const unreadCount = await notificationService.getUnreadCount(userId, workspaceId)
@@ -152,7 +170,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
     },
     {
       query: t.Object({
-        userId: t.String(),
         workspaceId: t.Optional(t.String()),
       }),
     },
@@ -163,12 +180,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .get(
     "/:notificationId",
-    async ({ params, query }) => {
+    async ({ params, headers, set }) => {
       const { notificationId } = params
-      const { userId } = query
+      const userId = await getUserIdFromToken(headers.authorization)
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const notification = await notificationService.getNotificationById(notificationId, userId)
@@ -183,9 +201,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
       params: t.Object({
         notificationId: t.String({ format: "uuid" }),
       }),
-      query: t.Object({
-        userId: t.String(),
-      }),
     },
   )
 
@@ -194,12 +209,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .patch(
     "/:notificationId/read",
-    async ({ params, body }) => {
+    async ({ params, headers, set }) => {
       const { notificationId } = params
-      const { userId } = body
+      const userId = await getUserIdFromToken(headers.authorization)
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const success = await notificationService.markAsRead(notificationId, userId)
@@ -214,9 +230,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
       params: t.Object({
         notificationId: t.String({ format: "uuid" }),
       }),
-      body: t.Object({
-        userId: t.String(),
-      }),
     },
   )
 
@@ -225,11 +238,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .patch(
     "/read-all",
-    async ({ body }) => {
-      const { userId, workspaceId } = body
+    async ({ headers, body, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      const { workspaceId } = body
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const count = await notificationService.markAllAsRead(userId, workspaceId)
@@ -238,7 +253,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
     },
     {
       body: t.Object({
-        userId: t.String(),
         workspaceId: t.Optional(t.String()),
       }),
     },
@@ -249,12 +263,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .delete(
     "/:notificationId",
-    async ({ params, query }) => {
+    async ({ params, headers, set }) => {
       const { notificationId } = params
-      const { userId } = query
+      const userId = await getUserIdFromToken(headers.authorization)
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const success = await notificationService.deleteNotification(notificationId, userId)
@@ -269,9 +284,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
       params: t.Object({
         notificationId: t.String({ format: "uuid" }),
       }),
-      query: t.Object({
-        userId: t.String(),
-      }),
     },
   )
 
@@ -280,11 +292,13 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
   // ====================================
   .delete(
     "/",
-    async ({ query }) => {
-      const { userId, workspaceId } = query
+    async ({ headers, query, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      const { workspaceId } = query
 
       if (!userId) {
-        return errorResponse("userId is required", ResponseCode.BAD_REQUEST)
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
       }
 
       const count = await notificationService.deleteAllNotifications(userId, workspaceId)
@@ -293,7 +307,6 @@ export const notificationRoutes = new Elysia({ prefix: "/api/v1/notifications" }
     },
     {
       query: t.Object({
-        userId: t.String(),
         workspaceId: t.Optional(t.String()),
       }),
     },

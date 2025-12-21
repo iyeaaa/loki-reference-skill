@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as emailAccountService from "../services/email-account.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 
 const emailAccountSchema = t.Object({
   userId: t.String({ format: "uuid" }),
@@ -187,10 +188,16 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     },
   )
 
-  // Get email account by workspace and user (MUST be before /workspace/:workspaceId)
+  // Get email account by workspace and user (userId extracted from auth token)
   .get(
-    "/workspace/:workspaceId/user/:userId",
-    async ({ params: { workspaceId, userId }, set }) => {
+    "/workspace/:workspaceId/user",
+    async ({ params: { workspaceId }, headers, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      if (!userId) {
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+      }
+
       const account = await emailAccountService.getEmailAccountByWorkspaceAndUser(
         workspaceId,
         userId,
@@ -207,7 +214,6 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     {
       params: t.Object({
         workspaceId: t.String({ format: "uuid" }),
-        userId: t.String({ format: "uuid" }),
       }),
     },
   )
@@ -240,19 +246,17 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     },
   )
 
-  // Get email accounts by user
-  .get(
-    "/user/:userId",
-    async ({ params: { userId } }) => {
-      const accounts = await emailAccountService.getEmailAccountsByUser(userId)
-      return accounts
-    },
-    {
-      params: t.Object({
-        userId: t.String({ format: "uuid" }),
-      }),
-    },
-  )
+  // Get email accounts by user (userId extracted from auth token)
+  .get("/user", async ({ headers, set }) => {
+    const userId = await getUserIdFromToken(headers.authorization)
+    if (!userId) {
+      set.status = 401
+      return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+    }
+
+    const accounts = await emailAccountService.getEmailAccountsByUser(userId)
+    return accounts
+  })
 
   // Set as default
   .patch(

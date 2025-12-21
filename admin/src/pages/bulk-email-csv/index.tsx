@@ -90,7 +90,7 @@ export default function BulkEmailCSVPage() {
     data: emailAccountInfo,
     isLoading: isLoadingEmailAccount,
     error: emailAccountError,
-  } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, selectedSendUser)
+  } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, !!selectedSendWorkspace)
 
   // 워크스페이스를 사이드바 선택값 또는 첫 번째 항목으로 자동 선택
   useEffect(() => {

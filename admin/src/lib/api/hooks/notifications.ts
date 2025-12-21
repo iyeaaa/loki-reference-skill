@@ -9,7 +9,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef } from "react"
 import toast from "react-hot-toast"
-import { API_BASE_URL } from "../client"
+import { API_BASE_URL, getToken } from "../client"
 import {
   type Notification,
   type NotificationFilter,
@@ -47,8 +47,8 @@ type NotificationEvent = {
 export const notificationKeys = {
   all: ["notifications"] as const,
   list: (filter: Partial<NotificationFilter>) => [...notificationKeys.all, "list", filter] as const,
-  unreadCount: (userId: string, workspaceId?: string) =>
-    [...notificationKeys.all, "unreadCount", userId, workspaceId] as const,
+  unreadCount: (workspaceId?: string) =>
+    [...notificationKeys.all, "unreadCount", workspaceId] as const,
   detail: (notificationId: string) => [...notificationKeys.all, "detail", notificationId] as const,
 }
 
@@ -66,7 +66,7 @@ export function useNotifications(
   return useQuery({
     queryKey: notificationKeys.list(filter),
     queryFn: () => notificationsApi.getNotifications(filter),
-    enabled: options?.enabled !== false && !!filter.userId,
+    enabled: options?.enabled !== false,
     refetchInterval: options?.refetchInterval,
     staleTime: 10 * 1000, // 10 seconds
   })
@@ -76,14 +76,13 @@ export function useNotifications(
  * 읽지 않은 알림 개수 조회 훅
  */
 export function useUnreadCount(
-  userId: string,
   workspaceId?: string,
   options?: { enabled?: boolean; refetchInterval?: number | false },
 ) {
   return useQuery({
-    queryKey: notificationKeys.unreadCount(userId, workspaceId),
-    queryFn: () => notificationsApi.getUnreadCount(userId, workspaceId),
-    enabled: options?.enabled !== false && !!userId,
+    queryKey: notificationKeys.unreadCount(workspaceId),
+    queryFn: () => notificationsApi.getUnreadCount(workspaceId),
+    enabled: options?.enabled !== false,
     refetchInterval: options?.refetchInterval ?? 30_000, // 30 seconds
     staleTime: 5 * 1000, // 5 seconds
   })
@@ -92,11 +91,11 @@ export function useUnreadCount(
 /**
  * 알림 상세 조회 훅
  */
-export function useNotification(notificationId: string, userId: string, enabled = true) {
+export function useNotification(notificationId: string, enabled = true) {
   return useQuery({
     queryKey: notificationKeys.detail(notificationId),
-    queryFn: () => notificationsApi.getNotification(notificationId, userId),
-    enabled: enabled && !!notificationId && !!userId,
+    queryFn: () => notificationsApi.getNotification(notificationId),
+    enabled: enabled && !!notificationId,
   })
 }
 
@@ -111,9 +110,8 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ notificationId, userId }: { notificationId: string; userId: string }) =>
-      notificationsApi.markAsRead(notificationId, userId),
-    onSuccess: (_, _variables) => {
+    mutationFn: (notificationId: string) => notificationsApi.markAsRead(notificationId),
+    onSuccess: () => {
       // Invalidate all notification queries
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
@@ -130,8 +128,7 @@ export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ userId, workspaceId }: { userId: string; workspaceId?: string }) =>
-      notificationsApi.markAllAsRead(userId, workspaceId),
+    mutationFn: (workspaceId?: string) => notificationsApi.markAllAsRead(workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
@@ -149,8 +146,7 @@ export function useDeleteNotification() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ notificationId, userId }: { notificationId: string; userId: string }) =>
-      notificationsApi.deleteNotification(notificationId, userId),
+    mutationFn: (notificationId: string) => notificationsApi.deleteNotification(notificationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
@@ -168,8 +164,7 @@ export function useDeleteAllNotifications() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ userId, workspaceId }: { userId: string; workspaceId?: string }) =>
-      notificationsApi.deleteAllNotifications(userId, workspaceId),
+    mutationFn: (workspaceId?: string) => notificationsApi.deleteAllNotifications(workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
       toast.success("모든 알림이 삭제되었습니다")
@@ -191,7 +186,7 @@ export function useDeleteAllNotifications() {
  * TanStack Query 캐시를 실시간으로 업데이트
  */
 export function useNotificationSSE(
-  userId: string,
+  _userId?: string, // Kept for backwards compatibility but no longer used (token is used instead)
   _workspaceId?: string,
   options?: {
     enabled?: boolean
@@ -288,7 +283,14 @@ export function useNotificationSSE(
   )
 
   const connect = useCallback(() => {
-    if (!(userId && enabled)) {
+    if (!enabled) {
+      return
+    }
+
+    // Get auth token for SSE connection
+    const token = getToken()
+    if (!token) {
+      console.warn("[NotificationSSE] No auth token available")
       return
     }
 
@@ -297,7 +299,8 @@ export function useNotificationSSE(
       eventSourceRef.current.close()
     }
 
-    const url = `${API_BASE_URL}/api/v1/notifications/stream/${userId}`
+    // Use token as query param since EventSource doesn't support Authorization headers
+    const url = `${API_BASE_URL}/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
     console.log("[NotificationSSE] Connecting to:", url)
 
     const eventSource = new EventSource(url)
@@ -336,11 +339,11 @@ export function useNotificationSSE(
         }, delay)
       }
     }
-  }, [userId, enabled, handleEvent])
+  }, [enabled, handleEvent])
 
   // 연결 설정
   useEffect(() => {
-    if (enabled && userId) {
+    if (enabled) {
       connect()
     }
 
@@ -354,7 +357,7 @@ export function useNotificationSSE(
         reconnectTimeoutRef.current = null
       }
     }
-  }, [connect, enabled, userId])
+  }, [connect, enabled])
 
   return {
     isConnected: eventSourceRef.current?.readyState === EventSource.OPEN,
@@ -373,7 +376,6 @@ export function useNotificationSSE(
  * SSE를 통한 실시간 업데이트 지원
  */
 export function useNotificationsManager(
-  userId: string,
   workspaceId?: string,
   options?: {
     limit?: number
@@ -384,18 +386,18 @@ export function useNotificationsManager(
   const { limit = 20, refetchInterval = false, enableSSE = true } = options ?? {}
 
   // SSE 연결 (실시간 업데이트)
-  useNotificationSSE(userId, workspaceId, {
-    enabled: enableSSE && !!userId,
+  useNotificationSSE(undefined, workspaceId, {
+    enabled: enableSSE,
   })
 
   // 알림 목록 (SSE가 활성화되면 polling 비활성화)
   const notificationsQuery = useNotifications(
-    { userId, workspaceId, limit },
+    { workspaceId, limit },
     { refetchInterval: enableSSE ? false : refetchInterval },
   )
 
   // 읽지 않은 개수 (SSE가 활성화되면 polling 비활성화)
-  const unreadCountQuery = useUnreadCount(userId, workspaceId, {
+  const unreadCountQuery = useUnreadCount(workspaceId, {
     refetchInterval: enableSSE ? false : refetchInterval,
   })
 
@@ -417,11 +419,10 @@ export function useNotificationsManager(
     isFetching: notificationsQuery.isFetching || unreadCountQuery.isFetching,
 
     // Actions
-    markAsRead: (notificationId: string) => markAsRead.mutate({ notificationId, userId }),
-    markAllAsRead: () => markAllAsRead.mutate({ userId, workspaceId }),
-    deleteNotification: (notificationId: string) =>
-      deleteNotification.mutate({ notificationId, userId }),
-    deleteAllNotifications: () => deleteAllNotifications.mutate({ userId, workspaceId }),
+    markAsRead: (notificationId: string) => markAsRead.mutate(notificationId),
+    markAllAsRead: () => markAllAsRead.mutate(workspaceId),
+    deleteNotification: (notificationId: string) => deleteNotification.mutate(notificationId),
+    deleteAllNotifications: () => deleteAllNotifications.mutate(workspaceId),
 
     // Refetch
     refetch: () => {

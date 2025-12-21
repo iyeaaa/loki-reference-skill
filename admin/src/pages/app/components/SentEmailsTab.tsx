@@ -36,7 +36,7 @@ export function SentEmailsTab() {
   const isAllWorkspaces = selectedWorkspace?.id === "all"
 
   // Get user's workspaces to find the actual workspace ID
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const userWorkspaceId = userWorkspaces?.[0]?.id || ""
 
   // Use user's actual workspace ID for email account queries
@@ -46,8 +46,7 @@ export function SentEmailsTab() {
   // Check if user has a trial preview account
   const { data: emailAccount, isLoading: emailAccountLoading } = useEmailAccountByWorkspaceAndUser(
     workspaceId || "",
-    userId,
-    !!workspaceId && !!userId,
+    !!workspaceId,
   )
   const isTrialPreviewAccount = emailAccount?.apiKey === "TRIAL_PREVIEW"
 

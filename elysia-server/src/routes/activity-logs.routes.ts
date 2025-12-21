@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as activityLogService from "../services/activity-log.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 
 const activityLogSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
@@ -116,10 +117,16 @@ export const activityLogRoutes = new Elysia({ prefix: "/api/v1/activity-logs" })
     },
   )
 
-  // Get logs by user
+  // Get logs by user (userId extracted from auth token)
   .get(
-    "/user/:userId",
-    async ({ params: { userId }, query }) => {
+    "/user",
+    async ({ headers, query, set }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+      if (!userId) {
+        set.status = 401
+        return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+      }
+
       const limit = parseInt(query.limit || "50", 10)
       const offset = parseInt(query.offset || "0", 10)
 
@@ -132,9 +139,6 @@ export const activityLogRoutes = new Elysia({ prefix: "/api/v1/activity-logs" })
       }
     },
     {
-      params: t.Object({
-        userId: t.String({ format: "uuid" }),
-      }),
       query: t.Object({
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),

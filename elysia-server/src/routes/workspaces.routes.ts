@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 import { createSSEResponse } from "../utils/sse-helper"
 
 const workspaceSchema = t.Object({
@@ -65,11 +66,13 @@ const _workspaceMemberSchema = t.Object({
 
 export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   // Search workspaces with filters (must be before /:id route)
-  // userId 파라미터가 있으면 해당 사용자가 관리자인지 확인 후
+  // 인증된 사용자가 관리자인지 확인 후
   // 관리자가 아니면 해당 사용자가 속한 워크스페이스만 반환
   .get(
     "/search",
-    async ({ query }) => {
+    async ({ query, headers }) => {
+      const userId = await getUserIdFromToken(headers.authorization)
+
       const limit = parseInt(query.limit || "10", 10)
       const offset = parseInt(query.offset || "0", 10)
 
@@ -78,11 +81,11 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
 
       // 사용자 권한 체크: userId가 있으면 관리자 여부 확인
       let userWorkspaceIds: string[] | undefined
-      if (query.userId) {
-        const isAdmin = await workspaceService.isUserAdmin(query.userId)
+      if (userId) {
+        const isAdmin = await workspaceService.isUserAdmin(userId)
         if (!isAdmin) {
           // 관리자가 아니면 사용자가 속한 워크스페이스 ID만 조회
-          userWorkspaceIds = await workspaceService.getUserWorkspaceIds(query.userId)
+          userWorkspaceIds = await workspaceService.getUserWorkspaceIds(userId)
         }
       }
 
@@ -110,7 +113,6 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         isActive: t.Optional(t.String()),
         search: t.Optional(t.String()),
         ownerIds: t.Optional(t.String()),
-        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
@@ -461,24 +463,22 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
     },
   )
 
-  // Get user's workspaces (owned or member)
-  .get(
-    "/user/:userId",
-    async ({ params: { userId } }) => {
-      console.log("[Workspaces API] GET /user/:userId called:", { userId })
-      const workspaces = await workspaceService.getAllUserRelatedWorkspaces(userId)
-      console.log("[Workspaces API] Found workspaces:", {
-        count: workspaces.length,
-        workspaceIds: workspaces.map((w) => w.id),
-      })
-      return workspaces
-    },
-    {
-      params: t.Object({
-        userId: t.String({ format: "uuid" }),
-      }),
-    },
-  )
+  // Get user's workspaces (owned or member) - userId extracted from auth token
+  .get("/user", async ({ headers, set }) => {
+    const userId = await getUserIdFromToken(headers.authorization)
+    if (!userId) {
+      set.status = 401
+      return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
+    }
+
+    console.log("[Workspaces API] GET /user called:", { userId })
+    const workspaces = await workspaceService.getAllUserRelatedWorkspaces(userId)
+    console.log("[Workspaces API] Found workspaces:", {
+      count: workspaces.length,
+      workspaceIds: workspaces.map((w) => w.id),
+    })
+    return workspaces
+  })
 
 // Admin bulk update routes
 export const adminWorkspaceRoutes = new Elysia({

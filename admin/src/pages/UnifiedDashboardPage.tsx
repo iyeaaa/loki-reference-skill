@@ -27,7 +27,7 @@ export default function UnifiedDashboardPage() {
   const userId = currentUser?.id || ""
 
   // Get user's workspace
-  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   // Get onboarding progress

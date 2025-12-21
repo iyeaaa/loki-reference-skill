@@ -96,10 +96,7 @@ export function StepCompanyInfo() {
   const userId = currentUser?.id || ""
   console.log("[StepCompanyInfo] 1. userId:", userId)
 
-  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(
-    userId,
-    !!userId,
-  )
+  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(!!userId)
 
   // Get the first workspace (trial users have one workspace)
   const workspace = userWorkspaces?.[0]

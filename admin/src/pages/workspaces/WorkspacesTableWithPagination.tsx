@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,17 +31,8 @@ export function WorkspacesTableWithPagination({
   const [pageInputValue, setPageInputValue] = useState("1")
   const limit = 10
 
-  // 현재 로그인한 사용자 ID 가져오기
-  const currentUser = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "{}")
-    } catch {
-      return {}
-    }
-  }, [])
-  const userId = currentUser?.id || ""
-
   // Build params for API call
+  // userId is extracted from JWT token on the server for permission filtering
   const params: WorkspacesParams = {
     page: currentPage,
     limit,
@@ -53,7 +44,6 @@ export function WorkspacesTableWithPagination({
           : undefined,
     search: searchQuery || undefined,
     ownerIds: selectedOwners.length > 0 ? selectedOwners : undefined,
-    userId: userId || undefined, // 권한 기반 필터링용
   }
 
   // Use React Query hook for fetching workspaces

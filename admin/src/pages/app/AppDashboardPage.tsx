@@ -28,7 +28,7 @@ export default function AppDashboardPage() {
   // Get workspace
   const { selectedWorkspace } = useWorkspace()
   const isAllWorkspaces = selectedWorkspace?.id === "all"
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const userWorkspaceId = userWorkspaces?.[0]?.id || ""
   const workspaceId =
     isAllWorkspaces || !selectedWorkspace?.id ? userWorkspaceId : selectedWorkspace.id

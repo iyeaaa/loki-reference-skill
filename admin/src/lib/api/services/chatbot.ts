@@ -450,10 +450,11 @@ export const chatbotApi = {
 
   /**
    * Get all conversations for a user in a workspace
+   * userId is extracted from JWT token on the server
    */
-  async getConversations(workspaceId: string, userId: string): Promise<ChatConversation[]> {
+  async getConversations(workspaceId: string): Promise<ChatConversation[]> {
     const token = getToken()
-    const params = new URLSearchParams({ workspaceId, userId })
+    const params = new URLSearchParams({ workspaceId })
     const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations?${params}`, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -470,12 +471,9 @@ export const chatbotApi = {
 
   /**
    * Create a new conversation
+   * userId is extracted from JWT token on the server
    */
-  async createConversation(
-    workspaceId: string,
-    userId: string,
-    title?: string,
-  ): Promise<ChatConversation> {
+  async createConversation(workspaceId: string, title?: string): Promise<ChatConversation> {
     const token = getToken()
     const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations`, {
       method: "POST",
@@ -483,7 +481,7 @@ export const chatbotApi = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ workspaceId, userId, title }),
+      body: JSON.stringify({ workspaceId, title }),
     })
 
     if (!response.ok) {

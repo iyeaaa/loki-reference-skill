@@ -115,7 +115,7 @@ export default function EmailSendTestPage() {
     data: emailAccountInfo,
     isLoading: isLoadingEmailAccount,
     error: emailAccountError,
-  } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, selectedSendUser)
+  } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, !!selectedSendWorkspace)
 
   // 워크스페이스를 첫 번째 항목으로 자동 선택
   useEffect(() => {

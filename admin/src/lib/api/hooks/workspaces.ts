@@ -19,7 +19,7 @@ export const workspaceKeys = {
   detail: (id: string) => [...workspaceKeys.all, "detail", id] as const,
   withProducts: (id: string) => [...workspaceKeys.all, "with-products", id] as const,
   byOwner: (ownerId: string) => [...workspaceKeys.all, "owner", ownerId] as const,
-  byUser: (userId: string) => [...workspaceKeys.all, "user", userId] as const,
+  byUser: () => [...workspaceKeys.all, "user"] as const,
   members: (workspaceId: string) => [...workspaceKeys.all, "members", workspaceId] as const,
   products: (workspaceId: string) => [...workspaceKeys.all, "products", workspaceId] as const,
   product: (workspaceId: string, productId: string) =>
@@ -65,20 +65,20 @@ export function useWorkspacesByOwner(ownerId: string, enabled = true) {
   })
 }
 
-export function useUserWorkspaces(userId: string, enabled = true) {
+export function useUserWorkspaces(enabled = true) {
   return useQuery({
-    queryKey: workspaceKeys.byUser(userId),
-    queryFn: () => workspacesApi.getUserWorkspaces(userId),
+    queryKey: workspaceKeys.byUser(),
+    queryFn: () => workspacesApi.getUserWorkspaces(),
     enabled,
     staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
 
-export function useSuspenseUserWorkspaces(userId: string) {
+export function useSuspenseUserWorkspaces() {
   return useSuspenseQuery({
-    queryKey: workspaceKeys.byUser(userId),
-    queryFn: () => workspacesApi.getUserWorkspaces(userId),
+    queryKey: workspaceKeys.byUser(),
+    queryFn: () => workspacesApi.getUserWorkspaces(),
     staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })

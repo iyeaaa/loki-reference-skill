@@ -83,14 +83,14 @@ export const activityLogsApi = {
     ).then((response) => response.data)
   },
 
-  getByUser: (userId: string, limit = 50, offset = 0) => {
+  getByUser: (limit = 50, offset = 0) => {
     const searchParams = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString(),
     })
 
     return apiFetch<{ data: ActivityLog[]; limit: number; offset: number }>(
-      `/api/v1/activity-logs/user/${userId}?${searchParams.toString()}`,
+      `/api/v1/activity-logs/user?${searchParams.toString()}`,
     ).then((response) => response.data)
   },
 }

@@ -111,8 +111,7 @@ export const emailAccountsApi = {
       body: JSON.stringify(data),
     }),
 
-  getByUser: (userId: string) =>
-    apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/user/${userId}`),
+  getByUser: () => apiFetch<UserEmailAccount[]>("/api/v1/email-accounts/user"),
 
   getByWorkspace: (workspaceId: string) =>
     apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}`),
@@ -120,6 +119,6 @@ export const emailAccountsApi = {
   getActiveByWorkspace: (workspaceId: string) =>
     apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}/active`),
 
-  getByWorkspaceAndUser: (workspaceId: string, userId: string) =>
-    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/workspace/${workspaceId}/user/${userId}`),
+  getByWorkspaceAndUser: (workspaceId: string) =>
+    apiFetch<UserEmailAccount>(`/api/v1/email-accounts/workspace/${workspaceId}/user`),
 }

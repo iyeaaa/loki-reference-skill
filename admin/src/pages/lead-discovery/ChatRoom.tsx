@@ -371,7 +371,7 @@ export function ChatRoom() {
   // 워크스페이스
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace()
   const { user } = useAuth()
-  const { data: userWorkspaces } = useUserWorkspaces(user?.id || "", !!user?.id)
+  const { data: userWorkspaces } = useUserWorkspaces(!!user?.id)
   const workspaces = userWorkspaces || []
 
   // 워크스페이스 선택 핸들러 (pendingQuery가 있으면 자동 검색 실행)

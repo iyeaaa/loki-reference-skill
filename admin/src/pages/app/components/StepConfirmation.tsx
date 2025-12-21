@@ -53,14 +53,13 @@ export function StepConfirmation() {
 
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
   const userId = currentUser?.id || ""
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
   const { data: emailAccount } = useEmailAccountByWorkspaceAndUser(
     workspace?.id || "",
-    userId,
-    !!workspace?.id && !!userId,
+    !!workspace?.id,
   )
 
   const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)

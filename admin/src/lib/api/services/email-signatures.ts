@@ -9,15 +9,11 @@ const BASE_PATH = "/api/v1/email-signatures"
 
 export const emailSignaturesApi = {
   // Get all signatures (workspaceId 무관, 모든 서명 조회)
-  list: async (
-    params: { includeInactive?: boolean; userId?: string } = {},
-  ): Promise<EmailSignature[]> => {
+  // userId is extracted from JWT token on the server
+  list: async (params: { includeInactive?: boolean } = {}): Promise<EmailSignature[]> => {
     const searchParams = new URLSearchParams()
     if (params.includeInactive !== undefined) {
       searchParams.append("includeInactive", params.includeInactive.toString())
-    }
-    if (params.userId) {
-      searchParams.append("userId", params.userId)
     }
 
     const response = await apiFetch<{ code: number; data: EmailSignature[] }>(
@@ -55,23 +51,18 @@ export const emailSignaturesApi = {
     }
   },
 
-  // Create a new signature (workspaceId, userId 선택적)
+  // Create a new signature (workspaceId 선택적)
+  // userId is extracted from JWT token on the server
   create: async (
     body: CreateEmailSignatureRequest,
-    params?: { workspaceId?: string; userId?: string },
+    params?: { workspaceId?: string },
   ): Promise<EmailSignature> => {
     const searchParams = new URLSearchParams()
     if (params?.workspaceId) {
       searchParams.append("workspaceId", params.workspaceId)
     }
-    if (params?.userId) {
-      searchParams.append("userId", params.userId)
-    }
 
-    const url =
-      params && (params.workspaceId || params.userId)
-        ? `${BASE_PATH}?${searchParams.toString()}`
-        : BASE_PATH
+    const url = params?.workspaceId ? `${BASE_PATH}?${searchParams.toString()}` : BASE_PATH
 
     const response = await apiFetch<{ code: number; data: EmailSignature }>(url, {
       method: "POST",
@@ -106,10 +97,10 @@ export const emailSignaturesApi = {
     })
   },
 
-  // Set signature as default (userId를 쿼리 파라미터로 전달)
-  setDefault: async (id: string, userId: string): Promise<void> => {
+  // Set signature as default (userId extracted from auth token)
+  setDefault: async (id: string): Promise<void> => {
     try {
-      await apiFetch<void>(`${BASE_PATH}/${id}/set-default?userId=${userId}`, {
+      await apiFetch<void>(`${BASE_PATH}/${id}/set-default`, {
         method: "PATCH",
       })
     } catch (error) {

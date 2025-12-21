@@ -1,6 +1,5 @@
 import { Check, Edit2, Mail, Plus, Trash2, X } from "lucide-react"
 import { useId, useState } from "react"
-import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -161,14 +160,7 @@ export function EmailSignatureManagement() {
   }
 
   const handleSetDefault = async (signatureId: string) => {
-    if (!user?.id) {
-      toast.error("사용자 정보를 찾을 수 없습니다")
-      return
-    }
-    await setDefaultMutation.mutateAsync({
-      id: signatureId,
-      userId: user.id,
-    })
+    await setDefaultMutation.mutateAsync(signatureId)
   }
 
   if (isLoading) {

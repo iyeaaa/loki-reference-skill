@@ -12,8 +12,8 @@ import { chatbotApi } from "../services/chatbot"
 export const chatbotKeys = {
   all: ["chatbot"] as const,
   history: (conversationId: string) => [...chatbotKeys.all, "history", conversationId] as const,
-  conversations: (workspaceId: string, userId: string) =>
-    [...chatbotKeys.all, "conversations", workspaceId, userId] as const,
+  conversations: (workspaceId: string) =>
+    [...chatbotKeys.all, "conversations", workspaceId] as const,
 }
 
 // 2. Queries
@@ -107,12 +107,13 @@ export type { ChatConversation } from "../services/chatbot"
 
 /**
  * Query hook to fetch all conversations for a user in a workspace
+ * userId is extracted from JWT token on the server
  */
-export function useConversations(workspaceId: string, userId: string, enabled = true) {
+export function useConversations(workspaceId: string, enabled = true) {
   return useQuery({
-    queryKey: chatbotKeys.conversations(workspaceId, userId),
-    queryFn: () => chatbotApi.getConversations(workspaceId, userId),
-    enabled: enabled && !!workspaceId && !!userId,
+    queryKey: chatbotKeys.conversations(workspaceId),
+    queryFn: () => chatbotApi.getConversations(workspaceId),
+    enabled: enabled && !!workspaceId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
   })
@@ -120,24 +121,18 @@ export function useConversations(workspaceId: string, userId: string, enabled = 
 
 /**
  * Mutation hook to create a new conversation
+ * userId is extracted from JWT token on the server
  */
 export function useCreateConversation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      workspaceId,
-      userId,
-      title,
-    }: {
-      workspaceId: string
-      userId: string
-      title?: string
-    }) => chatbotApi.createConversation(workspaceId, userId, title),
+    mutationFn: ({ workspaceId, title }: { workspaceId: string; title?: string }) =>
+      chatbotApi.createConversation(workspaceId, title),
     onSuccess: (_data, variables) => {
       // Invalidate conversations list to refetch
       queryClient.invalidateQueries({
-        queryKey: chatbotKeys.conversations(variables.workspaceId, variables.userId),
+        queryKey: chatbotKeys.conversations(variables.workspaceId),
       })
     },
   })

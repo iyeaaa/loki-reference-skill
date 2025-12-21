@@ -65,13 +65,10 @@ export const emailSignatureRoutes = new Elysia({
     "/",
     async ({ query, headers }) => {
       try {
-        const { includeInactive, userId: queryUserId } = query
+        const { includeInactive } = query
 
-        // 쿼리 파라미터에서 userId를 받거나, 없으면 JWT에서 추출 (기본 서명 표시용)
-        let currentUserId: string | null = queryUserId || null
-        if (!currentUserId) {
-          currentUserId = await getUserIdFromToken(headers.authorization)
-        }
+        // JWT에서 userId 추출 (기본 서명 표시용)
+        const currentUserId = await getUserIdFromToken(headers.authorization)
 
         const conditions = []
 
@@ -143,7 +140,6 @@ export const emailSignatureRoutes = new Elysia({
     {
       query: t.Object({
         includeInactive: t.Optional(t.Boolean()),
-        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
@@ -219,15 +215,11 @@ export const emailSignatureRoutes = new Elysia({
     "/",
     async ({ body, query, headers }) => {
       try {
-        const { workspaceId, userId } = query
+        const { workspaceId } = query
         const { name, signatureHtml, signatureText, isActive } = body
 
-        // userId는 선택적 (생성자 추적용)
-        // JWT에서 가져오거나 쿼리에서 제공받거나 null 가능
-        let actualUserId: string | null = userId || null
-        if (!actualUserId) {
-          actualUserId = await getUserIdFromToken(headers.authorization)
-        }
+        // JWT에서 userId 추출 (생성자 추적용)
+        const actualUserId = await getUserIdFromToken(headers.authorization)
 
         const [newSignature] = await db
           .insert(emailSignatures)
@@ -263,7 +255,6 @@ export const emailSignatureRoutes = new Elysia({
       body: emailSignatureSchema,
       query: t.Object({
         workspaceId: t.Optional(t.String({ format: "uuid" })),
-        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
@@ -365,22 +356,17 @@ export const emailSignatureRoutes = new Elysia({
     },
   )
 
-  // Set signature as default (userId를 쿼리 파라미터로 받거나 JWT에서 추출)
+  // Set signature as default (userId extracted from auth token)
   .patch(
     "/:id/set-default",
-    async ({ params, query, headers }) => {
+    async ({ params, headers, set }) => {
       try {
         const { id } = params
-        const { userId: queryUserId } = query
-
-        // 쿼리 파라미터에서 userId를 받거나, 없으면 JWT에서 추출
-        let userId: string | null = queryUserId || null
-        if (!userId) {
-          userId = await getUserIdFromToken(headers.authorization)
-        }
+        const userId = await getUserIdFromToken(headers.authorization)
 
         if (!userId) {
-          return errorResponse("인증 토큰이 없거나 유효하지 않습니다.", ResponseCode.UNAUTHORIZED)
+          set.status = 401
+          return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
         }
 
         // Check if signature exists
@@ -430,9 +416,6 @@ export const emailSignatureRoutes = new Elysia({
     {
       params: t.Object({
         id: t.String({ format: "uuid" }),
-      }),
-      query: t.Object({
-        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )

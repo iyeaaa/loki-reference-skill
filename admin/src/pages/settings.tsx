@@ -159,7 +159,7 @@ export default function SettingsPage() {
 
   // 온보딩 상태 확인
   const userId = currentUser?.id || ""
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const userWorkspaceId = userWorkspaces?.[0]?.id || ""
   const { data: onboardingProgress } = useOnboardingProgress(userWorkspaceId, !!userWorkspaceId)
   const isOnboardingComplete = !!onboardingProgress?.completedAt

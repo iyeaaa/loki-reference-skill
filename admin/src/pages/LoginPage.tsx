@@ -468,7 +468,7 @@ export default function AdminLoginPage() {
                   onClick={() => navigate("/trial/survey/1")}
                   variant="outline"
                 >
-                  7일 무료 체험 시작하기
+                  30일 무료 체험 시작하기
                 </Button>
               </div>
             </div>

@@ -248,6 +248,15 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
   const sanitizedContent = useMemo(() => {
     console.log("📧 EmailBody rendering - bodyHtml:", !!bodyHtml, "bodyText:", !!bodyText)
 
+    // Configure DOMPurify to add target="_blank" to all links
+    DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+      // Set all links to open in new tab
+      if (node.tagName === "A") {
+        node.setAttribute("target", "_blank")
+        node.setAttribute("rel", "noopener noreferrer")
+      }
+    })
+
     // Prefer HTML content if available
     if (bodyHtml) {
       console.log("📧 Processing bodyHtml...")
@@ -605,14 +614,18 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
       return { type: "text" as const, content: decoded }
     }
 
+    // Remove the hook after processing to prevent memory leaks
+    DOMPurify.removeHook("afterSanitizeAttributes")
+
     return { type: "empty" as const, content: "" }
   }, [bodyHtml, bodyText])
 
   // State for iframe height auto-adjustment
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [iframeHeight, setIframeHeight] = useState(200)
+  const contentRef = useRef<HTMLDivElement>(null)
 
-  // Adjust iframe height based on content
+  // Adjust iframe height and set links to open in new tab
   useEffect(() => {
     if (sanitizedContent.type !== "html" || !sanitizedContent.hasFullHtml) {
       return
@@ -631,6 +644,13 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           if (height > 0) {
             setIframeHeight(Math.min(height + 20, 2000)) // Max 2000px
           }
+
+          // Set all links in iframe to open in new tab
+          const links = doc.querySelectorAll("a")
+          links.forEach((link) => {
+            link.setAttribute("target", "_blank")
+            link.setAttribute("rel", "noopener noreferrer")
+          })
         }
       } catch (_e) {
         // Cross-origin errors are expected, ignore
@@ -643,6 +663,24 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     // Also try after a short delay for slow-loading content
     const timeout = setTimeout(adjustHeight, 500)
     return () => clearTimeout(timeout)
+  }, [sanitizedContent])
+
+  // Set all links in regular HTML content to open in new tab
+  useEffect(() => {
+    if (sanitizedContent.type !== "html" || sanitizedContent.hasFullHtml) {
+      return
+    }
+
+    const contentDiv = contentRef.current
+    if (!contentDiv) {
+      return
+    }
+
+    const links = contentDiv.querySelectorAll("a")
+    links.forEach((link) => {
+      link.setAttribute("target", "_blank")
+      link.setAttribute("rel", "noopener noreferrer")
+    })
   }, [sanitizedContent])
 
   if (sanitizedContent.type === "empty") {
@@ -670,6 +708,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         className="prose prose-sm max-w-none break-words [&_a]:text-blue-600 [&_a]:underline [&_img]:h-auto [&_img]:max-w-full"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized with DOMPurify
         dangerouslySetInnerHTML={{ __html: sanitizedContent.content }}
+        ref={contentRef}
       />
     )
   }

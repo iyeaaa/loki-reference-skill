@@ -251,6 +251,7 @@ This email contains confidential information that is protected by law or under t
     messageId?: string
     sendgridMessageId?: string
     nylasMessageId?: string
+    nylasThreadId?: string
     error?: string
   }> {
     try {
@@ -451,6 +452,7 @@ This email contains confidential information that is protected by law or under t
     messageId?: string
     sendgridMessageId?: string
     nylasMessageId?: string
+    nylasThreadId?: string
     error?: string
   }> {
     try {
@@ -529,7 +531,12 @@ This email contains confidential information that is protected by law or under t
       }
 
       logger.info(
-        { grantId, nylasMessageId: result.messageId, generatedMessageId },
+        {
+          grantId,
+          nylasMessageId: result.messageId,
+          nylasThreadId: result.threadId,
+          generatedMessageId,
+        },
         "Email sent via Nylas successfully",
       )
 
@@ -538,6 +545,7 @@ This email contains confidential information that is protected by law or under t
         messageId: generatedMessageId,
         sendgridMessageId: result.messageId, // Store Nylas messageId in sendgridMessageId for webhook matching
         nylasMessageId: result.messageId,
+        nylasThreadId: result.threadId,
       }
     } catch (error) {
       logger.error({ err: error, grantId }, "Failed to send email via Nylas")

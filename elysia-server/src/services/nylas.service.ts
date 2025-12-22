@@ -240,6 +240,7 @@ export interface SendEmailOptions {
 export interface SendEmailResult {
   success: boolean
   messageId?: string
+  threadId?: string
   error?: string
 }
 
@@ -317,13 +318,19 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     })
 
     logger.info(
-      { grantId, messageId: message.data?.id, trackingEnabled: !disableTracking },
+      {
+        grantId,
+        messageId: message.data?.id,
+        threadId: message.data?.threadId,
+        trackingEnabled: !disableTracking,
+      },
       `Email sent via Nylas${disableTracking ? "" : " with tracking"}`,
     )
 
     return {
       success: true,
       messageId: message.data?.id || "",
+      threadId: message.data?.threadId || "",
     }
   } catch (error) {
     logger.error({ err: error, grantId }, "Error sending email via Nylas")

@@ -426,35 +426,41 @@ async function sendSequenceEmail(execution: {
 
     const sendgridMessageId = sendResult.sendgridMessageId || sendResult.nylasMessageId
     const messageId = sendResult.messageId || sendResult.nylasMessageId // RFC 2822 Message-ID
+    const nylasThreadId = sendResult.nylasThreadId // Nylas thread ID (if sent via Nylas)
 
     logger.info(
       {
         executionId: execution.executionId,
         messageId,
         sendgridMessageId,
+        nylasThreadId,
       },
       "✅ [STEP-WORKER-V2] Email sent successfully",
     )
 
-    // If this is the first email, save the Message-ID as firstThreadId
-    if (isFirstEmail && messageId) {
+    // Determine the thread ID to use:
+    // - For Nylas: use nylasThreadId from send result
+    // - For SendGrid first email: messageId becomes threadId
+    // - For SendGrid follow-up: use firstThreadId from enrollment
+    const threadId = nylasThreadId || (isFirstEmail ? messageId : enrollment.firstThreadId)
+
+    // If this is the first email, save the thread ID as firstThreadId for follow-up emails
+    if (isFirstEmail && threadId) {
       await db
         .update(sequenceEnrollments)
-        .set({ firstThreadId: messageId })
+        .set({ firstThreadId: threadId })
         .where(eq(sequenceEnrollments.id, execution.enrollmentId))
 
       logger.info(
         {
           executionId: execution.executionId,
           enrollmentId: execution.enrollmentId,
-          firstThreadId: messageId,
+          firstThreadId: threadId,
+          isNylasThread: !!nylasThreadId,
         },
         "🧵 [STEP-WORKER-V2] Saved firstThreadId for enrollment",
       )
     }
-
-    // Determine threadId for this email record
-    const threadId = isFirstEmail ? messageId : enrollment.firstThreadId
 
     let emailRecordId: string
 

@@ -11,12 +11,7 @@ import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } fro
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
 import { useAuth } from "@/lib/auth-provider"
-import {
-  clearSurveyStorage,
-  getSurveyFromStorage,
-  isValidSurveyData,
-  type SurveyData,
-} from "@/store/survey"
+import { clearSurveyStorage, getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
 
 type GoogleAuthResponse = {
   token: string
@@ -51,7 +46,7 @@ export default function NewTrialPage() {
    * OAuth/Email 로그인 성공 후 처리
    */
   const handleLoginSuccess = useCallback(
-    (response: GoogleAuthResponse, surveyData: SurveyData | null) => {
+    (response: GoogleAuthResponse) => {
       const authUser = {
         id: response.user.id,
         email: response.user.email,
@@ -78,18 +73,8 @@ export default function NewTrialPage() {
       // Clear survey data from localStorage after successful login
       clearSurveyStorage()
 
-      // Navigate based on survey completion
-      if (isValidSurveyData(surveyData)) {
-        const params = new URLSearchParams({
-          industry: surveyData.industry || "",
-          target: surveyData.target || "",
-          country: surveyData.country || "",
-          experience: surveyData.experience || "",
-        })
-        navigate(`/trial/result?${params.toString()}`)
-      } else {
-        navigate("/company")
-      }
+      // Navigate directly to /company (skip TrialResultPage)
+      navigate("/company")
     },
     [login, navigate],
   )
@@ -123,7 +108,7 @@ export default function NewTrialPage() {
           body: JSON.stringify(requestBody),
         })
 
-        handleLoginSuccess(response, surveyData)
+        handleLoginSuccess(response)
       } catch (error) {
         console.error("[NewTrialPage] Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")

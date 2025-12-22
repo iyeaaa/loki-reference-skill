@@ -15,15 +15,15 @@ import {
   Bell,
   Check,
   CheckCircle2,
-  Loader2,
   MoreHorizontal,
   RefreshCw,
   Trash2,
   Users,
   XCircle,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -52,6 +52,93 @@ type GroupedNotifications = {
 }
 
 // ============================================================================
+// Fake Progress Hook (Step 2와 동일한 로직)
+// ============================================================================
+
+/**
+ * Fake Progress Hook
+ *
+ * UX Best Practice (Harrison et al., CMU 2007 & Nielsen Norman Group):
+ * - "Fast start, slow finish" reduces perceived wait time by ~11%
+ * - Users prefer progress that starts quickly and decelerates
+ * - First 20% of progress has the most psychological impact
+ *
+ * Algorithm: Ease-out Cubic with optimized timing
+ * - 시작: 5% (즉시 진행 중임을 보여줌)
+ * - 0-5초: 5% → 12% (빠른 시작, 체감 속도 ↑)
+ * - 5-15초: 12% → 14.5% (점진적 감속)
+ * - 15-30초: 14.5% → 15% (거의 멈춤, 실제 데이터 대기)
+ *
+ * Formula: progress = minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
+ */
+function useFakeProgress(
+  realProgress: number,
+  isActive: boolean,
+  maxFakeProgress = 15,
+  minFakeProgress = 5,
+): number {
+  const [fakeProgress, setFakeProgress] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isActive) {
+      setFakeProgress(0)
+      startTimeRef.current = null
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      return
+    }
+
+    // Start fake progress animation (항상 시작, realProgress와 무관)
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+    const animate = () => {
+      if (!startTimeRef.current) {
+        return
+      }
+
+      const elapsed = Date.now() - startTimeRef.current
+      const duration = 30_000 // 30 seconds to reach maxFakeProgress
+      const t = Math.min(elapsed / duration, 1)
+
+      // Ease-out Cubic: fast start, slow finish
+      // Formula: minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
+      // At t=0 (0초): 5% (즉시 시작)
+      // At t=0.17 (5초): ~12% (빠른 초기 진행)
+      // At t=0.5 (15초): ~14% (점진적 감속)
+      // At t=1.0 (30초): 15% (최대)
+      const easeOutCubic = 1 - (1 - t) ** 3
+      const progressRange = maxFakeProgress - minFakeProgress
+      const easedProgress = minFakeProgress + easeOutCubic * progressRange
+
+      setFakeProgress(easedProgress)
+
+      // fake progress가 max에 도달하거나 real progress보다 높아질 때까지 계속
+      if (t < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate)
+      }
+    }
+
+    animationFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [isActive, maxFakeProgress, minFakeProgress]) // realProgress 의존성 제거 (animation 중단 방지)
+
+  // isActive일 때 최소 minFakeProgress부터 시작 (즉시 진행 중 표시)
+  const effectiveProgress = isActive ? Math.max(fakeProgress, minFakeProgress) : fakeProgress
+  // 항상 둘 중 큰 값 반환 (역전 방지)
+  return Math.max(realProgress, effectiveProgress)
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -59,39 +146,43 @@ function getNotificationIcon(type: Notification["type"], metadata?: Notification
   // 온보딩 완료 상태 체크
   const isOnboardingComplete = metadata?.phase === "complete"
 
+  // 컴팩트 스타일: 36x36 컨테이너, rounded-xl
+  const baseClass = "flex h-9 w-9 items-center justify-center rounded-xl"
+  const iconClass = "h-[18px] w-[18px]"
+
   switch (type) {
     case "success":
       return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <div className={`${baseClass} bg-green-100 dark:bg-green-900/30`}>
+          <CheckCircle2 className={`${iconClass} text-green-600 dark:text-green-400`} />
         </div>
       )
     case "error":
       return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-          <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <div className={`${baseClass} bg-red-100 dark:bg-red-900/30`}>
+          <XCircle className={`${iconClass} text-red-600 dark:text-red-400`} />
         </div>
       )
     case "warning":
       return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-          <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+        <div className={`${baseClass} bg-amber-100 dark:bg-amber-900/30`}>
+          <AlertCircle className={`${iconClass} text-amber-600 dark:text-amber-400`} />
         </div>
       )
     case "onboarding":
       return isOnboardingComplete ? (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <div className={`${baseClass} bg-green-100 dark:bg-green-900/30`}>
+          <Users className={`${iconClass} text-green-600 dark:text-green-400`} />
         </div>
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
+        <div className={`${baseClass} bg-blue-100 dark:bg-blue-900/30`}>
+          <StarSpinner size={18} />
         </div>
       )
     default:
       return (
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-          <Bell className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+        <div className={`${baseClass} bg-gray-100 dark:bg-gray-800`}>
+          <Bell className={`${iconClass} text-gray-600 dark:text-gray-400`} />
         </div>
       )
   }
@@ -167,11 +258,14 @@ function groupNotificationsByDate(notifications: Notification[]): GroupedNotific
   }
 
   return Array.from(groups.entries())
-    .sort((a, b) => b[0].localeCompare(a[0])) // 최신순 정렬
+    .sort((a, b) => b[0].localeCompare(a[0])) // 날짜 최신순 정렬
     .map(([dateKey, items]) => ({
       dateKey,
       dateLabel: formatDateLabel(items[0]?.createdAt || ""),
-      notifications: items,
+      // 그룹 내 알림을 시간순(최신순) 정렬
+      notifications: items.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
     }))
 }
 
@@ -205,10 +299,17 @@ function NotificationItem({
   } | null
 
   const phase = metadata?.phase
-  const progressPercent = metadata?.progressPercent
+  const rawProgressPercent = metadata?.progressPercent ?? 0
   const isComplete = phase === "complete" || notification.type === "success"
   const isError = phase === "error" || notification.type === "error"
   const isInProgress = notification.type === "onboarding" && !isComplete && !isError
+
+  // Fake progress 적용 (Step 2 UI와 동일한 로직)
+  const displayProgress = useFakeProgress(
+    rawProgressPercent,
+    isInProgress,
+    15, // Max fake progress before real data arrives
+  )
 
   // 상세 정보 포맷팅
   const detailsText = formatOnboardingDetails(notification.metadata)
@@ -276,18 +377,18 @@ function NotificationItem({
         </div>
 
         {/* Progress bar for in-progress onboarding */}
-        {isInProgress && progressPercent !== undefined && progressPercent > 0 && (
+        {isInProgress && (
           <div className="mt-2">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className={cn(
                   "h-full transition-all duration-500 ease-out",
-                  progressPercent >= 100 ? "bg-green-500" : "bg-blue-500",
+                  displayProgress >= 100 ? "bg-green-500" : "bg-blue-500",
                 )}
-                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                style={{ width: `${Math.min(displayProgress, 100)}%` }}
               />
             </div>
-            <p className="mt-1 text-muted-foreground text-xs">{progressPercent}%</p>
+            <p className="mt-1 text-muted-foreground text-xs">{Math.round(displayProgress)}%</p>
           </div>
         )}
 
@@ -311,8 +412,8 @@ function NotificationItem({
           </Button>
         )}
 
-        {/* Time */}
-        <p className="mt-1.5 text-muted-foreground/70 text-xs">
+        {/* Time - 왼쪽 하단 */}
+        <p className="mt-1.5 text-[11px] text-muted-foreground/50">
           {formatTime(notification.createdAt)}
         </p>
       </div>
@@ -413,6 +514,10 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     setIsOpen(open)
     if (open) {
       refetch()
+      // 알림 메뉴 열 때 모든 알림 읽음 처리
+      if (hasUnread) {
+        markAllAsRead()
+      }
     }
   }
 
@@ -470,7 +575,7 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
         <ScrollArea className="h-[360px]">
           {isLoading ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <StarSpinner size={24} />
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 py-8">

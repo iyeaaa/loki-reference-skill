@@ -700,7 +700,11 @@ export const INDUSTRY_NAMES: Record<string, string> = {
 
 /**
  * Replace template variables with lead data
- * Handles language-appropriate fallbacks based on template language
+ * Handles language-appropriate fallbacks based on target language
+ *
+ * @param template - Email template with placeholders
+ * @param lead - Lead data for replacement
+ * @param targetLanguage - Target language for fallbacks (optional, auto-detected if not provided)
  */
 function replaceVariables(
   template: string,
@@ -710,10 +714,22 @@ function replaceVariables(
     websiteUrl?: string | null
     country?: string | null
   },
+  targetLanguage?: string,
 ): string {
-  // Detect if template is primarily Korean or English
-  const koreanCharCount = (template.match(/[\u3131-\uD79D]/g) || []).length
-  const isKorean = koreanCharCount > 10
+  // Determine language for fallbacks
+  // Priority: 1) explicit targetLanguage, 2) lead's country, 3) template detection
+  let isKorean = false
+
+  if (targetLanguage) {
+    isKorean = targetLanguage === "Korean"
+  } else if (lead.country) {
+    const countryLanguage = COUNTRY_TO_LANGUAGE[lead.country]
+    isKorean = countryLanguage === "Korean"
+  } else {
+    // Fallback to template detection (legacy behavior)
+    const koreanCharCount = (template.match(/[\u3131-\uD79D]/g) || []).length
+    isKorean = koreanCharCount > 10
+  }
 
   // Language-appropriate fallbacks
   const companyFallback = isKorean ? "귀사" : "your company"
@@ -803,8 +819,8 @@ export async function generatePreviewEmailsForSequence(
   const emailsToCreate = []
   const aiService = getAITemplateGenerationService()
 
-  // Base time for scheduling (now + 2 minutes for immediate sending)
-  const baseTime = new Date(Date.now() + 2 * 60 * 1000)
+  // Base time for scheduling (now + 1 minute for immediate sending)
+  const baseTime = new Date(Date.now() + 1 * 60 * 1000)
 
   // Cache for translated templates by language
   // Key: `${stepOrder}-${language}`, Value: translated template
@@ -827,15 +843,15 @@ export async function generatePreviewEmailsForSequence(
     const leadCountry = lead.country || ""
     const targetLanguage = COUNTRY_TO_LANGUAGE[leadCountry] || "English"
 
-    // Check if translation is needed
-    const needsTranslation = targetLanguage !== originalLanguage && targetLanguage !== "English"
+    // Check if translation is needed (translate when source and target languages differ)
+    const needsTranslation = targetLanguage !== originalLanguage
 
     for (const step of stepTemplates) {
       let subject = step.emailSubject
       let bodyText = step.emailBodyText
       let bodyHtml = step.emailBodyHtml
 
-      // Translate if needed (and cache the result)
+      // Translate if needed (cache results per step + language)
       if (needsTranslation) {
         const cacheKey = `${step.stepOrder}-${targetLanguage}`
         let translated = translationCache.get(cacheKey)
@@ -844,27 +860,20 @@ export async function generatePreviewEmailsForSequence(
           console.log(
             `[PreviewEmails] Translating step ${step.stepOrder} to ${targetLanguage} for lead ${lead.companyName}`,
           )
-          try {
-            const translatedTemplate = await aiService.translateEmailTemplate({
-              subject: step.emailSubject,
-              bodyText: step.emailBodyText,
-              bodyHtml: step.emailBodyHtml,
-              targetLanguage,
-            })
-            translated = {
-              subject: translatedTemplate.subject,
-              bodyText: translatedTemplate.bodyText,
-              bodyHtml: translatedTemplate.bodyHtml,
-            }
-            translationCache.set(cacheKey, translated)
-          } catch (error) {
-            console.error(`[PreviewEmails] Translation failed, using original:`, error)
-            translated = {
-              subject: step.emailSubject,
-              bodyText: step.emailBodyText,
-              bodyHtml: step.emailBodyHtml,
-            }
+          const translatedTemplate = await aiService.translateEmailTemplate({
+            subject: step.emailSubject,
+            bodyText: step.emailBodyText,
+            bodyHtml: step.emailBodyHtml,
+            targetLanguage,
+          })
+
+          translated = {
+            subject: translatedTemplate.subject,
+            bodyText: translatedTemplate.bodyText,
+            bodyHtml: translatedTemplate.bodyHtml,
           }
+          translationCache.set(cacheKey, translated)
+          console.log(`[PreviewEmails] ✅ Translation cached for ${cacheKey}`)
         }
 
         subject = translated.subject
@@ -872,10 +881,10 @@ export async function generatePreviewEmailsForSequence(
         bodyHtml = translated.bodyHtml
       }
 
-      // Replace placeholders with lead data
-      subject = replaceVariables(subject, lead)
-      bodyText = replaceVariables(bodyText, lead)
-      bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead) : null
+      // Replace placeholders with lead data (pass targetLanguage for accurate fallbacks)
+      subject = replaceVariables(subject, lead, targetLanguage)
+      bodyText = replaceVariables(bodyText, lead, targetLanguage)
+      bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead, targetLanguage) : null
 
       // Calculate scheduled time: base + lead offset + delay days
       const scheduledAt = new Date(

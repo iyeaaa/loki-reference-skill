@@ -7,7 +7,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { API_BASE_URL, getToken } from "../client"
 import {
@@ -181,9 +181,20 @@ export function useDeleteAllNotifications() {
 // ============================================================================
 
 /**
+ * SSE 연결 상태
+ */
+export type SSEConnectionState =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "error"
+
+/**
  * SSE 연결을 통한 실시간 알림 업데이트 훅
  *
  * TanStack Query 캐시를 실시간으로 업데이트
+ * useState 기반 상태 관리로 UI 동기화 보장
  */
 export function useNotificationSSE(
   _userId?: string, // Kept for backwards compatibility but no longer used (token is used instead)
@@ -191,6 +202,7 @@ export function useNotificationSSE(
   options?: {
     enabled?: boolean
     onNotification?: (event: NotificationEvent) => void
+    onConnectionChange?: (state: SSEConnectionState) => void
   },
 ) {
   const queryClient = useQueryClient()
@@ -198,7 +210,20 @@ export function useNotificationSSE(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 5
-  const { enabled = true, onNotification } = options ?? {}
+
+  // ✅ useState로 연결 상태 관리 (리렌더링 트리거)
+  const [connectionState, setConnectionState] = useState<SSEConnectionState>("disconnected")
+
+  const { enabled = true, onNotification, onConnectionChange } = options ?? {}
+
+  // 상태 변경 시 콜백 호출
+  const updateConnectionState = useCallback(
+    (newState: SSEConnectionState) => {
+      setConnectionState(newState)
+      onConnectionChange?.(newState)
+    },
+    [onConnectionChange],
+  )
 
   const invalidateQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: notificationKeys.all })
@@ -206,7 +231,7 @@ export function useNotificationSSE(
 
   const handleEvent = useCallback(
     (event: NotificationEvent) => {
-      console.log("[NotificationSSE] Event received:", event.type, event)
+      console.log("[NotificationSSE] Event received:", event.type)
 
       // 콜백 호출
       onNotification?.(event)
@@ -214,19 +239,12 @@ export function useNotificationSSE(
       // TanStack Query 캐시 업데이트
       switch (event.type) {
         case "created":
-          // 새 알림 생성 시 목록 및 카운트 갱신
-          invalidateQueries()
-          break
-
         case "updated":
-          // 알림 업데이트 시 목록 갱신
           invalidateQueries()
           break
 
         case "read":
-          // 단일 읽음 처리 - optimistic update 가능
           if (event.notification?.id) {
-            // 목록에서 해당 알림 읽음 처리
             queryClient.setQueriesData<NotificationListResponse>(
               { queryKey: notificationKeys.all },
               (old) => {
@@ -242,7 +260,6 @@ export function useNotificationSSE(
                 }
               },
             )
-            // 읽지 않은 개수 갱신
             queryClient.setQueriesData<number>(
               { queryKey: [...notificationKeys.all, "unreadCount"] },
               (old) => Math.max(0, (old ?? 0) - 1),
@@ -251,7 +268,6 @@ export function useNotificationSSE(
           break
 
         case "read_all":
-          // 전체 읽음 처리
           queryClient.setQueriesData<NotificationListResponse>(
             { queryKey: notificationKeys.all },
             (old) => {
@@ -272,7 +288,6 @@ export function useNotificationSSE(
           break
 
         case "deleted":
-          // 삭제 시 목록에서 제거
           if (event.notification?.id) {
             invalidateQueries()
           }
@@ -282,24 +297,37 @@ export function useNotificationSSE(
     [invalidateQueries, onNotification, queryClient],
   )
 
+  // 연결 해제 함수
+  const disconnect = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+  }, [])
+
+  // 연결 함수
   const connect = useCallback(() => {
     if (!enabled) {
       return
     }
 
-    // Get auth token for SSE connection
     const token = getToken()
     if (!token) {
       console.warn("[NotificationSSE] No auth token available")
+      updateConnectionState("error")
       return
     }
 
     // 기존 연결 정리
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
-    }
+    disconnect()
 
-    // Use token as query param since EventSource doesn't support Authorization headers
+    // 연결 중 상태 설정
+    updateConnectionState(reconnectAttemptsRef.current > 0 ? "reconnecting" : "connecting")
+
     const url = `${API_BASE_URL}/api/v1/notifications/stream?token=${encodeURIComponent(token)}`
     console.log("[NotificationSSE] Connecting to:", url)
 
@@ -309,6 +337,7 @@ export function useNotificationSSE(
     eventSource.onopen = () => {
       console.log("[NotificationSSE] Connected")
       reconnectAttemptsRef.current = 0
+      updateConnectionState("connected") // ✅ 연결됨
     }
 
     eventSource.addEventListener("connected", (e) => {
@@ -328,40 +357,50 @@ export function useNotificationSSE(
       console.error("[NotificationSSE] Connection error:", error)
       eventSource.close()
       eventSourceRef.current = null
+      updateConnectionState("disconnected") // ✅ 연결 끊김
 
       // 재연결 시도
       if (reconnectAttemptsRef.current < maxReconnectAttempts && enabled) {
         const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30_000)
-        console.log(`[NotificationSSE] Reconnecting in ${delay}ms...`)
+        console.log(
+          `[NotificationSSE] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`,
+        )
+
         reconnectTimeoutRef.current = setTimeout(() => {
           reconnectAttemptsRef.current++
           connect()
         }, delay)
+      } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+        updateConnectionState("error") // ✅ 최대 재시도 초과
       }
     }
-  }, [enabled, handleEvent])
+  }, [enabled, handleEvent, disconnect, updateConnectionState])
 
   // 연결 설정
   useEffect(() => {
     if (enabled) {
       connect()
+    } else {
+      disconnect()
+      updateConnectionState("disconnected")
     }
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-        eventSourceRef.current = null
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-        reconnectTimeoutRef.current = null
-      }
+      disconnect()
     }
-  }, [connect, enabled])
+  }, [connect, disconnect, enabled, updateConnectionState])
 
   return {
-    isConnected: eventSourceRef.current?.readyState === EventSource.OPEN,
+    // ✅ 상태 기반 반환값 (리렌더링 트리거됨)
+    connectionState,
+    isConnected: connectionState === "connected",
+    isConnecting: connectionState === "connecting" || connectionState === "reconnecting",
+    isError: connectionState === "error",
+    reconnectAttempts: reconnectAttemptsRef.current,
+
+    // Actions
     reconnect: connect,
+    disconnect,
   }
 }
 
@@ -390,16 +429,12 @@ export function useNotificationsManager(
     enabled: enableSSE,
   })
 
-  // 알림 목록 (SSE가 활성화되면 polling 비활성화)
+  // 알림 목록 + unreadCount 통합 조회 (SSE가 활성화되면 polling 비활성화)
+  // getNotifications API가 notifications, total, unreadCount를 모두 반환
   const notificationsQuery = useNotifications(
     { workspaceId, limit },
     { refetchInterval: enableSSE ? false : refetchInterval },
   )
-
-  // 읽지 않은 개수 (SSE가 활성화되면 polling 비활성화)
-  const unreadCountQuery = useUnreadCount(workspaceId, {
-    refetchInterval: enableSSE ? false : refetchInterval,
-  })
 
   // Mutations
   const markAsRead = useMarkAsRead()
@@ -407,16 +442,19 @@ export function useNotificationsManager(
   const deleteNotification = useDeleteNotification()
   const deleteAllNotifications = useDeleteAllNotifications()
 
+  // unreadCount를 notificationsQuery에서 직접 가져옴 (별도 API 호출 제거)
+  const unreadCount = notificationsQuery.data?.unreadCount ?? 0
+
   return {
     // Data
     notifications: notificationsQuery.data?.notifications ?? [],
     total: notificationsQuery.data?.total ?? 0,
-    unreadCount: unreadCountQuery.data ?? 0,
-    hasUnread: (unreadCountQuery.data ?? 0) > 0,
+    unreadCount,
+    hasUnread: unreadCount > 0,
 
     // Loading states
-    isLoading: notificationsQuery.isLoading || unreadCountQuery.isLoading,
-    isFetching: notificationsQuery.isFetching || unreadCountQuery.isFetching,
+    isLoading: notificationsQuery.isLoading,
+    isFetching: notificationsQuery.isFetching,
 
     // Actions
     markAsRead: (notificationId: string) => markAsRead.mutate(notificationId),
@@ -427,7 +465,6 @@ export function useNotificationsManager(
     // Refetch
     refetch: () => {
       notificationsQuery.refetch()
-      unreadCountQuery.refetch()
     },
   }
 }

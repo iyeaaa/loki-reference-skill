@@ -105,7 +105,9 @@ export async function createNotification(params: CreateNotificationParams): Prom
 }
 
 /**
- * 사용자의 알림 목록 조회
+ * 사용자의 알림 목록 조회 (단일 쿼리 최적화)
+ *
+ * PostgreSQL 윈도우 함수를 사용하여 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회
  */
 export async function getNotifications(filter: NotificationFilter): Promise<{
   notifications: Notification[]
@@ -114,54 +116,94 @@ export async function getNotifications(filter: NotificationFilter): Promise<{
 }> {
   const { userId, workspaceId, type, read, limit = 50, offset = 0 } = filter
 
-  // 필터 조건 구성
-  const conditions = [eq(notifications.userId, userId)]
+  // 동적 필터 조건 구성 - CTE에서 사용하기 위해 raw 컬럼명 사용
+  const workspaceCondition = workspaceId ? sql`AND workspace_id = ${workspaceId}` : sql``
+  const typeCondition = type ? sql`AND type = ${type}` : sql``
+  const readCondition = read !== undefined ? sql`AND read = ${read}` : sql``
 
-  if (workspaceId) {
-    conditions.push(eq(notifications.workspaceId, workspaceId))
-  }
-
-  if (type) {
-    conditions.push(eq(notifications.type, type))
-  }
-
-  if (read !== undefined) {
-    conditions.push(eq(notifications.read, read))
-  }
-
-  // 만료되지 않은 알림만 조회
-  conditions.push(
-    or(isNull(notifications.expiresAt), lt(sql`NOW()`, notifications.expiresAt)) ?? sql`true`,
-  )
-
-  // 알림 목록 조회
-  const notificationList = await db
-    .select()
-    .from(notifications)
-    .where(and(...conditions))
-    .orderBy(desc(notifications.createdAt))
-    .limit(limit)
-    .offset(offset)
-
-  // 전체 개수 조회
-  const totalResult = await db
-    .select({ total: count() })
-    .from(notifications)
-    .where(and(...conditions))
-  const total = totalResult[0]?.total ?? 0
-
-  // 읽지 않은 알림 개수 조회
-  const unreadResult = await db
-    .select({ unreadCount: count() })
-    .from(notifications)
-    .where(
-      and(
-        eq(notifications.userId, userId),
-        eq(notifications.read, false),
-        or(isNull(notifications.expiresAt), lt(sql`NOW()`, notifications.expiresAt)) ?? sql`true`,
-      ),
+  // 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회
+  const result = await db.execute<{
+    id: string
+    user_id: string
+    workspace_id: string | null
+    type: string
+    priority: string
+    title: string
+    message: string
+    read: boolean
+    read_at: Date | null
+    metadata: Record<string, unknown> | null
+    entity_type: string | null
+    entity_id: string | null
+    expires_at: Date | null
+    created_at: Date
+    updated_at: Date
+    total: string
+    unread_count: string
+  }>(sql`
+    WITH base_filter AS (
+      SELECT *
+      FROM ${notifications}
+      WHERE user_id = ${userId}
+        AND (expires_at IS NULL OR NOW() < expires_at)
+    ),
+    counts AS (
+      SELECT
+        COUNT(*) FILTER (WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}) as total,
+        COUNT(*) FILTER (WHERE read = false ${workspaceCondition}) as unread_count
+      FROM base_filter
     )
-  const unreadCount = unreadResult[0]?.unreadCount ?? 0
+    SELECT
+      n.*,
+      c.total,
+      c.unread_count
+    FROM base_filter n
+    CROSS JOIN counts c
+    WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}
+    ORDER BY n.created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `)
+
+  // 결과가 없는 경우 개수만 조회
+  if (result.rows.length === 0) {
+    const countResult = await db.execute<{ total: string; unread_count: string }>(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}) as total,
+        COUNT(*) FILTER (WHERE read = false ${workspaceCondition}) as unread_count
+      FROM ${notifications}
+      WHERE user_id = ${userId}
+        AND (expires_at IS NULL OR NOW() < expires_at)
+    `)
+
+    return {
+      notifications: [],
+      total: Number(countResult.rows[0]?.total ?? 0),
+      unreadCount: Number(countResult.rows[0]?.unread_count ?? 0),
+    }
+  }
+
+  // 첫 번째 row에서 total, unread_count 추출
+  const total = Number(result.rows[0]?.total ?? 0)
+  const unreadCount = Number(result.rows[0]?.unread_count ?? 0)
+
+  // snake_case → camelCase 변환
+  const notificationList: Notification[] = result.rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
+    type: row.type as Notification["type"],
+    priority: row.priority as Notification["priority"],
+    title: row.title,
+    message: row.message,
+    read: row.read,
+    readAt: row.read_at,
+    metadata: row.metadata,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }))
 
   return {
     notifications: notificationList,

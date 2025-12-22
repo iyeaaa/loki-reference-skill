@@ -12,7 +12,7 @@
  */
 
 import { ArrowLeft, ArrowRight, CheckCircle2, Mail, Sparkles, Users, XCircle } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { StarSpinner } from "@/components/chatbot/StarSpinner"
@@ -34,12 +34,26 @@ type ViewState = "loading" | "initial" | "generating" | "complete" | "error"
 
 /**
  * Fake Progress Hook
- * UX Best Practice: Progress bar should never stop (Nielsen Norman Group)
- * - Slowly increases from 0% to maxFakeProgress while waiting for real data
- * - Uses easing: starts slow, speeds up over time
- * - Transitions smoothly to real progress when SSE data arrives
+ *
+ * UX Best Practice (Harrison et al., CMU 2007 & Nielsen Norman Group):
+ * - "Fast start, slow finish" reduces perceived wait time by ~11%
+ * - Users prefer progress that starts quickly and decelerates
+ * - First 20% of progress has the most psychological impact
+ *
+ * Algorithm: Ease-out Cubic with optimized timing
+ * - 시작: 5% (즉시 진행 중임을 보여줌)
+ * - 0-5초: 5% → 12% (빠른 시작, 체감 속도 ↑)
+ * - 5-15초: 12% → 14.5% (점진적 감속)
+ * - 15-30초: 14.5% → 15% (거의 멈춤, 실제 데이터 대기)
+ *
+ * Formula: progress = minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
  */
-function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgress = 15): number {
+function useFakeProgress(
+  realProgress: number,
+  isActive: boolean,
+  maxFakeProgress = 15,
+  minFakeProgress = 5,
+): number {
   const [fakeProgress, setFakeProgress] = useState(0)
   const startTimeRef = useRef<number | null>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -54,13 +68,7 @@ function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgres
       return
     }
 
-    // If real progress arrived, use it
-    if (realProgress > 0) {
-      setFakeProgress(0) // Reset fake progress
-      return
-    }
-
-    // Start fake progress animation
+    // Start fake progress animation (항상 시작, realProgress와 무관)
     if (!startTimeRef.current) {
       startTimeRef.current = Date.now()
     }
@@ -71,15 +79,23 @@ function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgres
       }
 
       const elapsed = Date.now() - startTimeRef.current
-      // Easing: slow start, accelerates over time (ease-in-quad)
-      // Reaches maxFakeProgress in ~30 seconds
-      const duration = 30_000
+      const duration = 30_000 // 30 seconds to reach maxFakeProgress
       const t = Math.min(elapsed / duration, 1)
-      const easedProgress = t * t * maxFakeProgress // Quadratic easing
+
+      // Ease-out Cubic: fast start, slow finish
+      // Formula: minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
+      // At t=0 (0초): 5% (즉시 시작)
+      // At t=0.17 (5초): ~12% (빠른 초기 진행)
+      // At t=0.5 (15초): ~14% (점진적 감속)
+      // At t=1.0 (30초): 15% (최대)
+      const easeOutCubic = 1 - (1 - t) ** 3
+      const progressRange = maxFakeProgress - minFakeProgress
+      const easedProgress = minFakeProgress + easeOutCubic * progressRange
 
       setFakeProgress(easedProgress)
 
-      if (t < 1 && realProgress === 0) {
+      // fake progress가 max에 도달할 때까지 계속
+      if (t < 1) {
         animationFrameRef.current = requestAnimationFrame(animate)
       }
     }
@@ -91,10 +107,12 @@ function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgres
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [isActive, realProgress, maxFakeProgress])
+  }, [isActive, maxFakeProgress, minFakeProgress]) // realProgress 의존성 제거 (animation 중단 방지)
 
-  // Return real progress if available, otherwise fake progress
-  return realProgress > 0 ? realProgress : fakeProgress
+  // isActive일 때 최소 minFakeProgress부터 시작 (즉시 진행 중 표시)
+  const effectiveProgress = isActive ? Math.max(fakeProgress, minFakeProgress) : fakeProgress
+  // 항상 둘 중 큰 값 반환 (역전 방지)
+  return Math.max(realProgress, effectiveProgress)
 }
 
 // Target counts for progress calculation
@@ -104,6 +122,7 @@ export function StepLeadGeneration() {
   const { i18n } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [viewState, setViewState] = useState<ViewState>("loading") // Start with loading
+  const [showDetails, setShowDetails] = useState(false) // For detail view toggle in complete state
 
   // Check if job was just started from Step 1
   const jobStartedFromStep1 = searchParams.get("jobStarted") === "true"
@@ -128,8 +147,20 @@ export function StepLeadGeneration() {
   const {
     data: onboardingData,
     isLoading: onboardingLoading,
+    isFetching: onboardingFetching,
     refetch: refetchOnboarding,
   } = useOnboardingProgress(workspaceId, !!workspaceId)
+
+  // Track if we've received initial server data (not just cache)
+  // This prevents flickering when cached data shows "complete" but server returns "waiting/active"
+  const hasReceivedInitialData = useRef(false)
+
+  // Detect when first fetch completes (after mount)
+  useLayoutEffect(() => {
+    if (!(onboardingLoading || onboardingFetching) && onboardingData && workspaceId) {
+      hasReceivedInitialData.current = true
+    }
+  }, [onboardingLoading, onboardingFetching, onboardingData, workspaceId])
 
   // Fetch generated emails from DB
   const sequenceId = onboardingData?.generatedSequenceId || ""
@@ -205,6 +236,13 @@ export function StepLeadGeneration() {
       return
     }
 
+    // Wait for initial server response (not just cached data)
+    // This prevents flickering: cache(completed) → server(waiting) transition
+    if (!hasReceivedInitialData.current && onboardingFetching) {
+      setViewState("loading")
+      return
+    }
+
     // Once data is loaded, determine the appropriate state
     const jobStatus = onboardingData?.jobStatus
 
@@ -231,6 +269,7 @@ export function StepLeadGeneration() {
   }, [
     workspacesLoading,
     onboardingLoading,
+    onboardingFetching,
     onboardingData?.jobStatus,
     jobStartedFromStep1,
     setSearchParams,
@@ -358,92 +397,148 @@ export function StepLeadGeneration() {
     )
   }
 
-  // Complete State (성취감 + 다음 단계 안내)
+  // Complete State (성취감 + 다음 단계 안내) - 간결한 토스 스타일
   if (viewState === "complete") {
     return (
-      <div className="mx-auto max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <CheckCircle2 className="h-7 w-7 text-green-500" />
-              {isKorean ? "다 됐어요!" : "All done!"}
-            </CardTitle>
-            <p className="mt-1 text-gray-600 text-sm">
+      <div className="mx-auto max-w-lg">
+        <Card className="border-0 bg-white shadow-gray-200/50 shadow-lg">
+          <CardContent className="flex flex-col items-center px-8 py-12 text-center">
+            {/* 성공 아이콘 */}
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-emerald-100">
+              <CheckCircle2 className="h-10 w-10 text-green-500" />
+            </div>
+
+            {/* 성공 메시지 */}
+            <h2 className="mb-2 font-bold text-2xl text-gray-900">
+              {isKorean ? `바이어 ${leadCount}명을 찾았어요!` : `Found ${leadCount} buyers!`}
+            </h2>
+            <p className="mb-8 text-gray-500">
               {isKorean
-                ? "바이어와 이메일이 준비됐어요. 이제 발송만 하면 돼요"
-                : "Buyers and emails are ready. Just connect your email to start sending"}
+                ? `맞춤 이메일 ${emailCount}개가 준비됐어요`
+                : `${emailCount} personalized emails ready`}
             </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-                <Users className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="font-bold text-2xl text-blue-600">{leadCount}</p>
-                  <p className="text-gray-600 text-sm">{isKorean ? "바이어" : "Buyers"}</p>
+
+            {/* 핵심 통계 */}
+            <div className="mb-8 grid w-full max-w-xs grid-cols-2 gap-4">
+              <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-5 text-center">
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
+                  <Users className="h-5 w-5 text-blue-600" />
                 </div>
+                <p className="font-bold text-2xl text-gray-900">{leadCount}</p>
+                <p className="text-gray-500 text-xs">{isKorean ? "바이어" : "Buyers"}</p>
               </div>
-              <div className="flex items-center gap-3 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-4">
-                <Mail className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="font-bold text-2xl text-green-600">{emailCount}</p>
-                  <p className="text-gray-600 text-sm">{isKorean ? "이메일" : "Emails"}</p>
+              <div className="rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 p-5 text-center">
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
+                  <Mail className="h-5 w-5 text-green-600" />
+                </div>
+                <p className="font-bold text-2xl text-gray-900">{emailCount}</p>
+                <p className="text-gray-500 text-xs">{isKorean ? "이메일" : "Emails"}</p>
+              </div>
+            </div>
+
+            {/* 다음 단계 안내 */}
+            <div className="mb-6 w-full max-w-xs rounded-xl bg-gray-50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                  <Mail className="h-4 w-4 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900 text-sm">
+                    {isKorean ? "다음: Gmail 연동" : "Next: Connect Gmail"}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {isKorean ? "연결하면 바로 발송이 시작돼요" : "Connect to start sending emails"}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Lead Cards with Emails */}
-            <div className="space-y-3">
-              <h3 className="font-medium text-gray-900">
-                {isKorean ? "찾은 바이어 목록" : "Found buyers"}
-              </h3>
-              <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                {leads.length > 0
-                  ? leads.map((lead) => (
-                      <LeadCard
-                        emails={displayEmails.filter((e) => e.leadId === lead.leadId)}
-                        isKorean={isKorean}
-                        key={lead.leadId}
-                        lead={lead}
-                      />
-                    ))
-                  : // Fallback: group emails by leadName if we don't have lead data
-                    Array.from(new Set(displayEmails.map((e) => e.leadId))).map((leadId) => {
-                      const leadEmails = displayEmails.filter((e) => e.leadId === leadId)
-                      const firstEmail = leadEmails[0]
-                      return (
-                        <LeadCard
-                          emails={leadEmails}
-                          isKorean={isKorean}
-                          key={leadId}
-                          lead={{
-                            leadId,
-                            companyName: firstEmail?.leadName || "Unknown",
-                            status: "done",
-                            emailCount: leadEmails.length,
-                          }}
-                        />
-                      )
-                    })}
-              </div>
-            </div>
+            {/* CTA 버튼 */}
+            <Button
+              className="mb-4 h-12 w-full max-w-xs rounded-xl bg-blue-600 font-medium hover:bg-blue-700"
+              onClick={handleNext}
+              size="lg"
+            >
+              {isKorean ? "Gmail 연동하기" : "Connect Gmail"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between pt-4">
+            {/* 이전 + 상세보기 */}
+            <div className="flex w-full max-w-xs items-center justify-between">
               <Button
-                className="text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                className="text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 onClick={handleBack}
                 variant="ghost"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 {isKorean ? "이전" : "Back"}
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
-                {isKorean ? "Gmail 연동하기" : "Connect Gmail"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <button
+                className="text-gray-400 text-sm transition-colors hover:text-gray-600"
+                onClick={() => setShowDetails(!showDetails)}
+                type="button"
+              >
+                {showDetails
+                  ? isKorean
+                    ? "접기"
+                    : "Hide"
+                  : isKorean
+                    ? "상세 보기"
+                    : "View details"}
+              </button>
             </div>
+
+            {/* 상세 보기 (토글) */}
+            {showDetails && (
+              <div className="mt-6 w-full max-w-xs">
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                  <h3 className="mb-3 font-medium text-gray-900 text-sm">
+                    {isKorean ? "찾은 바이어" : "Found buyers"}
+                  </h3>
+                  <div className="max-h-[200px] space-y-2 overflow-y-auto">
+                    {leads.length > 0
+                      ? leads.slice(0, 10).map((lead) => (
+                          <div
+                            className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
+                            key={lead.leadId}
+                          >
+                            <span className="truncate text-gray-700 text-sm">
+                              {lead.companyName}
+                            </span>
+                            <span className="flex-shrink-0 text-gray-400 text-xs">
+                              ✉️ {lead.emailCount || 2}
+                            </span>
+                          </div>
+                        ))
+                      : displayEmails.length > 0 &&
+                        Array.from(new Set(displayEmails.map((e) => e.leadId)))
+                          .slice(0, 10)
+                          .map((leadId) => {
+                            const leadEmails = displayEmails.filter((e) => e.leadId === leadId)
+                            return (
+                              <div
+                                className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
+                                key={leadId}
+                              >
+                                <span className="truncate text-gray-700 text-sm">
+                                  {leadEmails[0]?.leadName || "Unknown"}
+                                </span>
+                                <span className="flex-shrink-0 text-gray-400 text-xs">
+                                  ✉️ {leadEmails.length}
+                                </span>
+                              </div>
+                            )
+                          })}
+                  </div>
+                  {leads.length > 10 && (
+                    <p className="mt-2 text-center text-gray-400 text-xs">
+                      +{leads.length - 10}
+                      {isKorean ? "개 더" : " more"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

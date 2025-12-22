@@ -169,7 +169,7 @@ Your philosophy: "The best cold email doesn't feel cold. It feels like someone d
 WHO IS SENDING THIS EMAIL
 ═══════════════════════════════════════════════════════════════
 Company: ${workspaceName}
-${workspaceDescription ? `What we do: ${workspaceDescription}` : ""}
+${workspaceDescription ? `What we do (translate to ${isEnglishTarget ? "English" : `the primary language of ${country}`} if not already): ${workspaceDescription}` : ""}
 
 ═══════════════════════════════════════════════════════════════
 TARGET AUDIENCE
@@ -248,6 +248,8 @@ WHAT MAKES EMAILS GET REPLIES (Data-Backed)
 STRICT PROHIBITIONS
 ═══════════════════════════════════════════════════════════════
 ❌ Language mixing (kills trust instantly)
+❌ Using Korean words in English emails (translate everything!)
+❌ Copying company description in original language without translating
 ❌ "담당자", "귀사", "당사" in English emails
 ❌ "I hope this finds you well" (screams mass email)
 ❌ Signatures or placeholders like [Your Name]
@@ -304,7 +306,7 @@ REMEMBER:
 - Use {{company_name}} for company name (will be replaced with real data)
 - Start with "Hi there," or "Hello," - do NOT use contact name variable
 - End naturally - no signature needed
-${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}`
+${workspaceDescription ? `- Company description to incorporate (TRANSLATE to ${isEnglishTarget ? "English" : `the primary language of ${country}`} first, then naturally weave into the email as a value proposition): "${workspaceDescription}"` : ""}`
 
       // 2. AI API 호출
       console.log(`[AITemplate] Calling OpenAI API...`)
@@ -524,14 +526,14 @@ ${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}
     subject: string
     bodyText: string
     bodyHtml: string | null
-    targetLanguage: string // e.g., "Japanese", "Korean", "Chinese"
+    targetLanguage: string // e.g., "Japanese", "Korean", "Chinese", "English"
     model?: string
     temperature?: number
   }): Promise<GeneratedTemplate> {
     const {
       subject,
       bodyText,
-      bodyHtml,
+      bodyHtml: _bodyHtml,
       targetLanguage,
       model = "gpt-4.1-mini",
       temperature = 0.3, // Lower temperature for more consistent translations
@@ -539,15 +541,35 @@ ${workspaceDescription ? `- Naturally weave in: "${workspaceDescription}"` : ""}
 
     console.log(`[AITemplate] Translating email to ${targetLanguage}`)
 
+    // Determine if target is English (for placeholder mapping and language validation)
+    const isEnglishTarget = targetLanguage === "English"
+    const isKoreanTarget = targetLanguage === "Korean"
+
+    // Placeholder mapping instructions
+    const placeholderInstruction = isEnglishTarget
+      ? `Convert Korean placeholders to English:
+   - {{회사명}} → {{company_name}}
+   - {{담당자명}} → {{contact_name}}`
+      : isKoreanTarget
+        ? `Convert English placeholders to Korean:
+   - {{company_name}} → {{회사명}}
+   - {{contact_name}} → {{담당자명}}`
+        : `Keep placeholders as {{company_name}} and {{contact_name}}`
+
     try {
       const systemPrompt = `You are a professional translator specializing in business emails.
 Translate the following email to ${targetLanguage}.
 
-IMPORTANT RULES:
+CRITICAL RULES:
 1. Keep the same tone and style as the original
-2. Preserve all placeholders exactly as they are (e.g., {{company_name}}, {{회사명}})
+2. ${placeholderInstruction}
 3. Make the translation sound natural, not literal
 4. Keep the email concise and professional
+5. ⚠️ NEVER MIX LANGUAGES - Write EVERYTHING in ${targetLanguage}
+   - Do NOT keep any words from the original language
+   - Translate ALL content including greetings and closings
+   ${isEnglishTarget ? '- Use "Hi there," or "Hello," for greetings (NOT Korean greetings)' : ""}
+   ${isKoreanTarget ? '- Use "안녕하세요," for greetings (NOT English greetings)' : ""}
 
 OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON):
 Respond ONLY with a valid JSON object. No other text.
@@ -612,6 +634,26 @@ ${bodyText}`
         }
       }
 
+      // Post-process: Force placeholder conversion based on target language
+      // This ensures placeholders are correct even if AI didn't convert them properly
+      if (isEnglishTarget) {
+        // Convert Korean placeholders to English
+        translatedSubject = translatedSubject
+          .replace(/\{\{회사명\}\}/g, "{{company_name}}")
+          .replace(/\{\{담당자명\}\}/g, "{{contact_name}}")
+        translatedBodyText = translatedBodyText
+          .replace(/\{\{회사명\}\}/g, "{{company_name}}")
+          .replace(/\{\{담당자명\}\}/g, "{{contact_name}}")
+      } else if (isKoreanTarget) {
+        // Convert English placeholders to Korean
+        translatedSubject = translatedSubject
+          .replace(/\{\{company_name\}\}/gi, "{{회사명}}")
+          .replace(/\{\{contact_name\}\}/gi, "{{담당자명}}")
+        translatedBodyText = translatedBodyText
+          .replace(/\{\{company_name\}\}/gi, "{{회사명}}")
+          .replace(/\{\{contact_name\}\}/gi, "{{담당자명}}")
+      }
+
       // Generate HTML version
       const translatedBodyHtml = translatedBodyText
         .split("\n\n")
@@ -637,6 +679,10 @@ ${bodyText}`
         Indonesian: "id",
       }
 
+      console.log(
+        `[AITemplate] ✅ Translation complete to ${targetLanguage} - subject: "${translatedSubject.substring(0, 50)}"`,
+      )
+
       return {
         subject: translatedSubject,
         bodyText: translatedBodyText,
@@ -645,13 +691,7 @@ ${bodyText}`
       }
     } catch (error) {
       console.error(`[AITemplate] Translation failed:`, error)
-      // Return original if translation fails
-      return {
-        subject,
-        bodyText,
-        bodyHtml: bodyHtml || "",
-        detectedLanguage: "en",
-      }
+      throw error
     }
   }
 }

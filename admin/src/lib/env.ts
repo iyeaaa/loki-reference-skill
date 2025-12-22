@@ -93,6 +93,21 @@ export const isProduction = env.PROD || env.MODE === "production"
 
 /**
  * API base URL - use this for all API requests
- * Defaults to empty string to use Vite proxy in development
+ * - Development: Use Vite proxy (empty string or localhost:3001)
+ * - Production: Use current origin (nginx will proxy /api/ to elysia-server)
  */
-export const API_BASE_URL = env.VITE_API_URL
+export const API_BASE_URL = (() => {
+  // If VITE_API_URL is explicitly set, use it
+  // if (env.VITE_API_URL) {
+  //   return env.VITE_API_URL
+  // }
+
+  // In production, use current origin so nginx can proxy
+  // This allows both sendgrinda.cloud and app.rinda.ai to work
+  if (isProduction && typeof window !== "undefined") {
+    return window.location.origin
+  }
+
+  // In development, use empty string for Vite proxy
+  return ""
+})()

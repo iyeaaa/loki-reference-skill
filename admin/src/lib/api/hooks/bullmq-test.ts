@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { API_BASE_URL } from "@/lib/env"
 import { bullmqTestApi } from "../services/bullmq-test"
 import type {
   AddJobRequest,
@@ -336,8 +337,7 @@ export function useBullMQSSE(options: UseBullMQSSEOptions = {}) {
     const signal = abortControllerRef.current.signal
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || ""
-      const response = await fetch(`${baseUrl}/api/v1/bullmq-test/stream`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/bullmq-test/stream`, {
         signal,
         headers: {
           Accept: "text/event-stream",

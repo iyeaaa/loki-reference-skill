@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { API_BASE_URL } from "@/lib/env"
 import { type OnboardingSurveyData, onboardingApi } from "../services/onboarding"
 
 // ====================================
@@ -407,8 +408,7 @@ export function useOnboardingSSE(
     const signal = abortControllerRef.current.signal
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || ""
-      const url = `${baseUrl}/api/v1/onboarding/workspace/${workspaceId}/stream`
+      const url = `${API_BASE_URL}/api/v1/onboarding/workspace/${workspaceId}/stream`
 
       const response = await fetch(url, {
         signal,

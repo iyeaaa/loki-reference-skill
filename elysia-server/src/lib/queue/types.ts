@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   WORKFLOW_STEP: "workflow-step",
   METRICS_SYNC: "metrics-sync",
   ONBOARDING_GENERATION: "onboarding-generation",
+  UNIPILE_INBOX_POLL: "unipile-inbox-poll", // Unipile inbox polling for replied emails
   TEST_QUEUE: "test-queue", // For testing purposes
 } as const
 
@@ -121,6 +122,27 @@ export interface TestJobResult {
   processedAt: string
   message: string
   receivedData?: Record<string, unknown>
+}
+
+/**
+ * Unipile Inbox Poll Job - polls Unipile accounts for new inbound emails
+ */
+export interface UnipileInboxPollJob {
+  /** Trigger type: 'scheduled' for automatic polling, 'manual' for on-demand */
+  trigger: "scheduled" | "manual"
+  /** Optional: specific account ID to poll (if not provided, polls all active Unipile accounts) */
+  accountId?: string
+}
+
+export interface UnipileInboxPollResult {
+  success: boolean
+  accountsPolled: number
+  newEmailsFound: number
+  repliesDetected: number
+  errors: Array<{
+    accountId: string
+    error: string
+  }>
 }
 
 // Job Options

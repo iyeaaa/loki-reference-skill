@@ -23,7 +23,9 @@ export const emailAccountStatusEnum = pgEnum("email_account_status_enum", [
   "suspended",
 ])
 
-// User email accounts table (SendGrid only)
+export const emailProviderEnum = pgEnum("email_provider_enum", ["sendgrid", "nylas", "unipile"])
+
+// User email accounts table (supports SendGrid, Nylas, Unipile)
 export const userEmailAccounts = pgTable(
   "user_email_accounts",
   {
@@ -35,10 +37,11 @@ export const userEmailAccounts = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
 
-    // SendGrid Or Nylas Email configuration
+    // Multi-provider Email configuration
+    provider: emailProviderEnum("provider").notNull().default("sendgrid"),
     emailAddress: varchar("email_address", { length: 255 }).notNull(),
     displayName: varchar("display_name", { length: 255 }),
-    apiKey: text("api_key").notNull(), // SendGrid API key (starts with "SG") OR Nylas grantId
+    apiKey: text("api_key").notNull(), // SendGrid API key (starts with "SG") OR Nylas grantId OR Unipile account_id
     sendgridVerifiedSenderId: varchar("sendgrid_verified_sender_id", { length: 255 }),
 
     // Status and verification
@@ -65,6 +68,7 @@ export const userEmailAccounts = pgTable(
     emailIdx: index("user_email_accounts_email_address_idx").on(table.emailAddress),
     statusIdx: index("user_email_accounts_status_idx").on(table.status),
     isDefaultIdx: index("user_email_accounts_is_default_idx").on(table.isDefault),
+    providerIdx: index("user_email_accounts_provider_idx").on(table.provider),
   }),
 )
 

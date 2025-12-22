@@ -778,6 +778,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
               const newEmailAccount = await emailAccountService.createEmailAccount({
                 userId: user.id,
                 workspaceId: workspace.id,
+                provider: "nylas",
                 emailAddress: email,
                 displayName: user.username, // Use username as display name
                 apiKey: grantId, // Store grantId as apiKey

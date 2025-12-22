@@ -11,7 +11,7 @@ import {
   useEmailAccountByWorkspaceAndUser,
 } from "@/lib/api/hooks/email-accounts"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import { deleteGrant, getNylasAuthUrl } from "@/lib/api/services/nylas"
+import { deleteUnipileAccount, getUnipileAuthUrl } from "@/lib/api/services/unipile"
 import type { UserEmailAccount } from "@/lib/api/types/email-account"
 
 export function StepEmailLink() {
@@ -45,11 +45,11 @@ export function StepEmailLink() {
     setError(null)
 
     try {
-      // Get OAuth URL from backend with workspaceId in state
-      const response = await getNylasAuthUrl(workspace?.id)
+      // Get hosted auth URL from backend with workspaceId in state
+      const response = await getUnipileAuthUrl(workspace?.id)
 
-      // Redirect to Google OAuth
-      window.location.href = response.url
+      // Redirect to Unipile hosted authentication
+      window.location.href = response.hostedAuthUrl
     } catch (err) {
       console.error("Failed to get auth URL:", err)
       setError(
@@ -163,8 +163,8 @@ export function StepEmailLink() {
                   ? "연결 중..."
                   : "Connecting..."
                 : isKorean
-                  ? "Gmail 연동하기"
-                  : "Connect Gmail"}
+                  ? "이메일 연동하기"
+                  : "Connect Email"}
             </Button>
 
             {/* Back Button */}
@@ -218,12 +218,12 @@ function LinkedEmailAccountsView({
 
     setIsDeleting(true)
     try {
-      // Try to delete Nylas grant first (may fail if already deleted or invalid)
+      // Try to delete Unipile account first (may fail if already deleted or invalid)
       try {
-        await deleteGrant(emailAccount.id)
-      } catch (grantError) {
-        // Grant deletion failure is not critical - continue with email account deletion
-        console.warn("Failed to delete Nylas grant (may already be deleted):", grantError)
+        await deleteUnipileAccount(emailAccount.id)
+      } catch (accountError) {
+        // Account deletion failure is not critical - continue with email account deletion
+        console.warn("Failed to delete Unipile account (may already be deleted):", accountError)
       }
 
       // Then delete the email account from database

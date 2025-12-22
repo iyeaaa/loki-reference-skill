@@ -1,0 +1,804 @@
+import { eq } from "drizzle-orm"
+import { config } from "../config"
+import { db } from "../db"
+import { emailEvents, emails } from "../db/schema/emails"
+import logger from "../utils/logger"
+
+// Unipile configuration
+const UNIPILE_API_KEY = config.unipile.apiKey
+const UNIPILE_API_URL = config.unipile.apiUrl
+const UNIPILE_REDIRECT_URI = config.unipile.redirectUri
+
+export interface UnipileAuthUrlResponse {
+  url: string
+  hostedAuthUrl: string
+}
+
+export interface UnipileAccountResponse {
+  accountId: string
+  email: string
+  provider: string
+}
+
+export interface SendEmailOptions {
+  accountId: string
+  to: string
+  subject: string
+  body: string
+  cc?: string[]
+  bcc?: string[]
+  attachments?: Array<{
+    content: string // Base64
+    filename: string
+    contentType: string
+  }>
+}
+
+export interface SendEmailResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
+/**
+ * Get Unipile hosted authentication URL
+ * Initialize hosted auth session and get redirect URL
+ */
+export async function getUnipileAuthUrl(
+  provider: string = "GOOGLE",
+): Promise<UnipileAuthUrlResponse> {
+  if (!UNIPILE_API_KEY) {
+    throw new Error("UNIPILE_API_KEY is not configured")
+  }
+
+  try {
+    // Calculate expiration time (1 hour from now)
+    const expiresOn = new Date()
+    expiresOn.setHours(expiresOn.getHours() + 1)
+    const expiresOnISO = expiresOn.toISOString()
+
+    // POST to initialize hosted auth session
+    const requestBody = {
+      type: "create",
+      providers: [provider],
+      api_url: UNIPILE_API_URL,
+      expiresOn: expiresOnISO,
+      success_redirect_url: UNIPILE_REDIRECT_URI,
+      failure_redirect_url: `${UNIPILE_REDIRECT_URI}?error=true`,
+    }
+
+    logger.info({ requestBody, apiUrl: UNIPILE_API_URL }, "Requesting Unipile hosted auth URL")
+
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/hosted/accounts/link`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error(
+        { status: response.status, statusText: response.statusText, errorText },
+        "Unipile API error response",
+      )
+      let errorData: { message?: string; detail?: string } = { message: errorText }
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { message: errorText }
+      }
+      throw new Error(
+        errorData.message || errorData.detail || `Unipile API error: ${response.statusText}`,
+      )
+    }
+
+    const data = (await response.json()) as { url: string }
+
+    logger.info(
+      { redirectUri: UNIPILE_REDIRECT_URI, hostedUrl: data.url },
+      "Generated Unipile hosted auth URL",
+    )
+
+    return {
+      url: data.url,
+      hostedAuthUrl: data.url,
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Error generating Unipile hosted auth URL")
+    throw error
+  }
+}
+
+// Remove connectAccount - not needed as hosted auth returns account_id directly
+
+/**
+ * Get account info by account ID
+ */
+export async function getAccountInfo(accountId: string): Promise<UnipileAccountResponse | null> {
+  try {
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/accounts/${accountId}`, {
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null
+      }
+      throw new Error(`Unipile API error: ${response.statusText}`)
+    }
+
+    interface UnipileAccountData {
+      id: string
+      name?: string
+      email?: string
+      type?: string
+      connection_params?: {
+        mail?: {
+          username?: string
+          id?: string
+        }
+      }
+    }
+    const data = (await response.json()) as UnipileAccountData
+
+    // Log full response to debug email field
+    logger.info({ accountId, responseData: data }, "Unipile getAccountInfo response")
+
+    // Extract email from various possible fields
+    const email =
+      data.name || // Unipile stores email in 'name' field
+      data.connection_params?.mail?.username ||
+      data.connection_params?.mail?.id ||
+      data.email ||
+      ""
+
+    return {
+      accountId: data.id,
+      email: email,
+      provider: data.type || "GMAIL", // Use 'type' field (e.g., "GOOGLE_OAUTH")
+    }
+  } catch (error) {
+    logger.error({ err: error, accountId }, "Error getting Unipile account info")
+    return null
+  }
+}
+
+/**
+ * Delete account from Unipile
+ */
+export async function deleteAccount(accountId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/accounts/${accountId}`, {
+      method: "DELETE",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    logger.info({ accountId, success: response.ok }, "Unipile account deletion attempted")
+    return response.ok
+  } catch (error) {
+    logger.error({ err: error, accountId }, "Error deleting Unipile account")
+    return false
+  }
+}
+
+/**
+ * Register webhook for email events
+ * Creates or updates webhook for receiving mail_received events in real-time
+ */
+export async function registerEmailWebhook(
+  webhookUrl: string,
+  accountIds?: string[],
+): Promise<{ success: boolean; webhookId?: string; error?: string }> {
+  try {
+    const requestBody = {
+      request_url: webhookUrl,
+      name: "Rinda Email Webhook",
+      source: "email",
+      format: "json",
+      enabled: true,
+      events: ["mail_received"], // Real-time notification for new emails
+      account_ids: accountIds, // Optional: specific accounts, or omit for all accounts
+    }
+
+    logger.info(
+      { webhookUrl, accountIds: accountIds?.length || "all" },
+      "Registering Unipile email webhook",
+    )
+
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/webhooks`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error(
+        { status: response.status, error: errorText },
+        "Failed to register Unipile webhook",
+      )
+      return {
+        success: false,
+        error: `Failed to register webhook: ${response.statusText}`,
+      }
+    }
+
+    const data = (await response.json()) as { webhook_id?: string }
+    logger.info({ webhookId: data.webhook_id }, "Unipile email webhook registered successfully")
+
+    return {
+      success: true,
+      webhookId: data.webhook_id,
+    }
+  } catch (error) {
+    logger.error({ error }, "Error registering Unipile email webhook")
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * Get all registered webhooks
+ */
+export async function listWebhooks(): Promise<{
+  success: boolean
+  webhooks?: Array<{
+    id: string
+    name: string
+    request_url: string
+    enabled: boolean
+    events: string[]
+  }>
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/webhooks`, {
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error({ status: response.status, error: errorText }, "Failed to list webhooks")
+      return {
+        success: false,
+        error: `Failed to list webhooks: ${response.statusText}`,
+      }
+    }
+
+    interface WebhookItem {
+      id: string
+      name: string
+      request_url: string
+      enabled: boolean
+      events: string[]
+    }
+    const data = (await response.json()) as { items?: WebhookItem[] }
+    return {
+      success: true,
+      webhooks: data.items || [],
+    }
+  } catch (error) {
+    logger.error({ error }, "Error listing Unipile webhooks")
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * Delete webhook
+ */
+export async function deleteWebhook(webhookId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/webhooks/${webhookId}`, {
+      method: "DELETE",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    logger.info({ webhookId, success: response.ok }, "Unipile webhook deletion attempted")
+    return response.ok
+  } catch (error) {
+    logger.error({ error, webhookId }, "Error deleting Unipile webhook")
+    return false
+  }
+}
+
+/**
+ * Send email via Unipile
+ */
+export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
+  const { accountId, to, subject, body, cc, bcc, attachments } = options
+
+  try {
+    const requestBody: Record<string, unknown> = {
+      account_id: accountId, // ← Unipile requires account_id in body
+      to: [{ identifier: to }], // ← Unipile uses 'identifier' instead of 'email'
+      subject,
+      body,
+    }
+
+    if (cc && cc.length > 0) {
+      requestBody.cc = cc.map((email) => ({ identifier: email }))
+    }
+
+    if (bcc && bcc.length > 0) {
+      requestBody.bcc = bcc.map((email) => ({ identifier: email }))
+    }
+
+    if (attachments && attachments.length > 0) {
+      requestBody.attachments = attachments
+    }
+
+    logger.info(
+      {
+        accountId,
+        endpoint: `${UNIPILE_API_URL}/api/v1/emails`,
+        requestBody,
+      },
+      "Sending email to Unipile API",
+    )
+
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      let errorData: { message?: string; detail?: string } = { message: errorText }
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { message: errorText }
+      }
+
+      logger.error(
+        {
+          accountId,
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        },
+        "Unipile API error response",
+      )
+
+      throw new Error(
+        errorData.message || errorData.detail || `Unipile API error: ${response.statusText}`,
+      )
+    }
+
+    interface EmailSentResponse {
+      object?: string
+      tracking_id?: string
+      provider_id?: string
+      id?: string
+    }
+    const data = (await response.json()) as EmailSentResponse
+
+    // Response format: { object: "EmailSent", tracking_id: string, provider_id: string | null }
+    const messageId = data.tracking_id || data.provider_id || data.id
+
+    logger.info(
+      { accountId, trackingId: data.tracking_id, providerId: data.provider_id },
+      "Email sent via Unipile successfully",
+    )
+
+    return {
+      success: true,
+      messageId,
+    }
+  } catch (error) {
+    logger.error({ err: error, accountId }, "Error sending email via Unipile")
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to send email via Unipile",
+    }
+  }
+}
+
+/**
+ * Sync account emails (fetch inbox for new messages)
+ * Used for replied-emails feature
+ * - Fetches new inbound emails from Unipile
+ * - Detects replies by matching message IDs
+ * - Updates original email repliedAt timestamp
+ * - Saves reply to email_replies table
+ */
+export async function syncAccountEmails(
+  accountId: string,
+  lastSyncedAt?: string,
+): Promise<{ success: boolean; newEmails: number; repliesDetected: number }> {
+  try {
+    // Build query parameters according to Unipile API spec
+    const params = new URLSearchParams({
+      account_id: accountId,
+      limit: "100", // Max 250, using 100 for reasonable batch size
+      include_headers: "true", // Include headers to get in_reply_to and references
+    })
+
+    if (lastSyncedAt) {
+      // lastSyncedAt should be ISO 8601 format: YYYY-MM-DDTHH:MM:SS.sssZ
+      params.append("after", lastSyncedAt)
+    }
+
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails?${params.toString()}`, {
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error({ accountId, status: response.status, error: errorText }, "Unipile API error")
+      throw new Error(`Unipile API error: ${response.statusText}`)
+    }
+
+    // Unipile email response type
+    interface UnipileEmail {
+      role?: string
+      origin?: string
+      message_id?: string
+      id?: string
+      in_reply_to?: { message_id?: string }
+      headers?: Array<{ name?: string; value?: string }>
+      from_attendee?: { identifier?: string }
+      subject?: string
+      body?: string
+      body_plain?: string
+      date?: string
+    }
+
+    const data = (await response.json()) as { items?: UnipileEmail[] }
+    const allEmails = data.items || []
+
+    // Filter to get only inbox emails from external sources
+    // (role and origin are properties of the response, not query parameters)
+    const inboxEmails = allEmails.filter(
+      (email: UnipileEmail) => email.role === "inbox" && email.origin === "external",
+    )
+
+    logger.info(
+      { accountId, total: allEmails.length, filtered: inboxEmails.length },
+      `Synced ${inboxEmails.length} inbox emails from Unipile (${allEmails.length} total)`,
+    )
+
+    let newEmails = 0
+    let repliesDetected = 0
+
+    // Process each inbox email
+    for (const inboxEmail of inboxEmails) {
+      try {
+        // in_reply_to is an object with message_id and id fields
+        const inReplyToMessageId = inboxEmail.in_reply_to?.message_id
+
+        // Extract References header from headers array
+        const referencesHeader = inboxEmail.headers?.find(
+          (h: { name?: string; value?: string }) => h.name?.toLowerCase() === "references",
+        )
+        const references = referencesHeader?.value
+          ? referencesHeader.value.split(/\s+/).filter((ref: string) => ref.trim())
+          : []
+
+        // from_attendee.identifier contains the email address
+        const from = inboxEmail.from_attendee?.identifier || ""
+        const subject = inboxEmail.subject || ""
+        const receivedAt = inboxEmail.date ? new Date(inboxEmail.date) : new Date()
+
+        // Check if this is a reply to one of our sent emails
+        let originalEmailId: string | null = null
+
+        // Try to find original email by In-Reply-To message_id
+        if (inReplyToMessageId) {
+          const originalEmail = await db.query.emails.findFirst({
+            where: (emails, { or, like }) =>
+              or(
+                like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
+                like(emails.messageId, `%${inReplyToMessageId}%`),
+              ),
+            columns: { id: true, workspaceId: true },
+          })
+
+          if (originalEmail) {
+            originalEmailId = originalEmail.id
+
+            // Update original email repliedAt
+            await db
+              .update(emails)
+              .set({
+                repliedAt: receivedAt,
+                status: "replied",
+                updatedAt: new Date(),
+              })
+              .where(eq(emails.id, originalEmailId))
+
+            repliesDetected++
+
+            logger.info({ accountId, originalEmailId, from, subject }, "Reply detected and saved")
+          }
+        }
+
+        // If not a reply, check references header for thread matching
+        if (!originalEmailId && references.length > 0) {
+          for (const refId of references) {
+            const originalEmail = await db.query.emails.findFirst({
+              where: (emails, { or, like }) =>
+                or(
+                  like(emails.sendgridMessageId, `%${refId}%`),
+                  like(emails.messageId, `%${refId}%`),
+                ),
+              columns: { id: true, workspaceId: true },
+            })
+
+            if (originalEmail) {
+              originalEmailId = originalEmail.id
+
+              // Update original email repliedAt
+              await db
+                .update(emails)
+                .set({
+                  repliedAt: receivedAt,
+                  status: "replied",
+                  updatedAt: new Date(),
+                })
+                .where(eq(emails.id, originalEmailId))
+
+              repliesDetected++
+
+              logger.info(
+                { accountId, originalEmailId, from, subject, refId },
+                "Reply detected and saved via References header",
+              )
+
+              break // Found match, no need to check other references
+            }
+          }
+        }
+
+        // Count as new email (regardless of whether it's a reply or not)
+        newEmails++
+      } catch (emailError) {
+        logger.error(
+          { accountId, error: emailError, email: inboxEmail },
+          "Error processing inbox email",
+        )
+      }
+    }
+
+    logger.info({ accountId, newEmails, repliesDetected }, "Inbox sync completed")
+
+    return {
+      success: true,
+      newEmails,
+      repliesDetected,
+    }
+  } catch (error) {
+    logger.error({ err: error, accountId }, "Error syncing Unipile emails")
+    return {
+      success: false,
+      newEmails: 0,
+      repliesDetected: 0,
+    }
+  }
+}
+
+/**
+ * Process Unipile webhook events
+ * Similar to Nylas webhook handling
+ */
+export async function processUnipileWebhook(payload: unknown): Promise<{ success: boolean }> {
+  try {
+    const event = payload as Record<string, unknown>
+
+    logger.info(
+      {
+        eventType: event.type,
+        accountId: event.account_id,
+      },
+      "Processing Unipile webhook event",
+    )
+
+    // TODO: Implement webhook handlers based on event type
+    // Unipile webhook events:
+    // - email.sent
+    // - email.delivered
+    // - email.opened
+    // - email.clicked
+    // - email.bounced
+    // - email.replied
+
+    switch (event.type) {
+      case "email.sent":
+        // Handle email sent
+        break
+      case "email.delivered":
+        // Handle email delivered
+        break
+      case "email.opened":
+        // Handle email opened
+        await handleEmailOpened(event)
+        break
+      case "email.clicked":
+        // Handle email clicked
+        await handleEmailClicked(event)
+        break
+      case "email.bounced":
+        // Handle email bounced
+        break
+      case "email.replied":
+        // Handle email replied
+        await handleEmailReplied(event)
+        break
+      default:
+        logger.warn({ eventType: event.type }, "Unknown Unipile webhook event type")
+    }
+
+    return { success: true }
+  } catch (error) {
+    logger.error({ err: error }, "Error processing Unipile webhook")
+    return { success: false }
+  }
+}
+
+/**
+ * Handle email opened webhook
+ */
+async function handleEmailOpened(event: Record<string, unknown>): Promise<void> {
+  const messageId = event.message_id as string
+
+  if (!messageId) {
+    logger.warn("Email opened event missing message_id")
+    return
+  }
+
+  try {
+    // Find email by Unipile message ID
+    const [email] = await db
+      .select({ id: emails.id, status: emails.status })
+      .from(emails)
+      .where(eq(emails.sendgridMessageId, messageId))
+      .limit(1)
+
+    if (!email) {
+      logger.warn({ messageId }, "Email not found for opened event")
+      return
+    }
+
+    // Update email status
+    await db
+      .update(emails)
+      .set({
+        status: "opened",
+        openedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    // Record event
+    await db.insert(emailEvents).values({
+      emailId: email.id,
+      eventType: "open",
+      timestamp: new Date(),
+      rawEventData: event as Record<string, unknown>,
+    })
+
+    logger.info({ emailId: email.id, messageId }, "Email opened event processed")
+  } catch (error) {
+    logger.error({ err: error, messageId }, "Error handling email opened event")
+  }
+}
+
+/**
+ * Handle email clicked webhook
+ */
+async function handleEmailClicked(event: Record<string, unknown>): Promise<void> {
+  const messageId = event.message_id as string
+
+  if (!messageId) {
+    logger.warn("Email clicked event missing message_id")
+    return
+  }
+
+  try {
+    const [email] = await db
+      .select({ id: emails.id })
+      .from(emails)
+      .where(eq(emails.sendgridMessageId, messageId))
+      .limit(1)
+
+    if (!email) {
+      logger.warn({ messageId }, "Email not found for clicked event")
+      return
+    }
+
+    await db
+      .update(emails)
+      .set({
+        status: "clicked",
+        clickedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    await db.insert(emailEvents).values({
+      emailId: email.id,
+      eventType: "click",
+      timestamp: new Date(),
+      url: (event.url as string) || "",
+      rawEventData: event as Record<string, unknown>,
+    })
+
+    logger.info({ emailId: email.id, messageId }, "Email clicked event processed")
+  } catch (error) {
+    logger.error({ err: error, messageId }, "Error handling email clicked event")
+  }
+}
+
+/**
+ * Handle email replied webhook
+ */
+async function handleEmailReplied(event: Record<string, unknown>): Promise<void> {
+  const originalMessageId = event.original_message_id as string
+
+  if (!originalMessageId) {
+    logger.warn("Email replied event missing original_message_id")
+    return
+  }
+
+  try {
+    const [email] = await db
+      .select({ id: emails.id, leadId: emails.leadId })
+      .from(emails)
+      .where(eq(emails.sendgridMessageId, originalMessageId))
+      .limit(1)
+
+    if (!email) {
+      logger.warn({ originalMessageId }, "Original email not found for reply event")
+      return
+    }
+
+    await db
+      .update(emails)
+      .set({
+        repliedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    logger.info({ emailId: email.id, originalMessageId }, "Email replied event processed")
+
+    // TODO: Stop active sequence enrollments for this lead
+    // Similar to Nylas handleThreadReplied
+  } catch (error) {
+    logger.error({ err: error, originalMessageId }, "Error handling email replied event")
+  }
+}
+
+export default {
+  getUnipileAuthUrl,
+  getAccountInfo,
+  deleteAccount,
+  sendEmail,
+  syncAccountEmails,
+  processUnipileWebhook,
+}

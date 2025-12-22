@@ -11,6 +11,7 @@ import {
   type ScheduledEmailJob,
   type TestJob,
   type TestJobResult,
+  type UnipileInboxPollJob,
   type WorkflowStepJob,
 } from "./types"
 
@@ -107,6 +108,32 @@ export const onboardingGenerationQueue = new Queue<OnboardingAutoGenerateJob>(
 )
 
 /**
+ * Unipile Inbox Poll Queue
+ * Polls Unipile accounts for new inbound emails and replies
+ * Runs on a 5-minute schedule to detect replied emails
+ */
+export const unipileInboxPollQueue = new Queue<UnipileInboxPollJob>(
+  QUEUE_NAMES.UNIPILE_INBOX_POLL,
+  {
+    connection: redisConnection,
+    defaultJobOptions: {
+      attempts: 2, // Retry once on failure
+      backoff: {
+        type: "fixed",
+        delay: 30000, // 30 seconds between retries
+      },
+      removeOnComplete: {
+        age: 3600, // Keep completed jobs for 1 hour
+        count: 100,
+      },
+      removeOnFail: {
+        age: 24 * 3600, // Keep failed jobs for 24 hours
+      },
+    },
+  },
+)
+
+/**
  * Test Queue
  * For testing BullMQ functionality
  * DB에 로그가 저장되므로 Redis 보존 기간은 짧게 유지
@@ -139,6 +166,7 @@ export function getAllQueues() {
     [QUEUE_NAMES.WORKFLOW_STEP]: workflowStepQueue,
     [QUEUE_NAMES.METRICS_SYNC]: metricsSyncQueue,
     [QUEUE_NAMES.ONBOARDING_GENERATION]: onboardingGenerationQueue,
+    [QUEUE_NAMES.UNIPILE_INBOX_POLL]: unipileInboxPollQueue,
     [QUEUE_NAMES.TEST_QUEUE]: testQueue,
   }
 }
@@ -153,6 +181,7 @@ export async function closeAllQueues(): Promise<void> {
     workflowStepQueue.close(),
     metricsSyncQueue.close(),
     onboardingGenerationQueue.close(),
+    unipileInboxPollQueue.close(),
     testQueue.close(),
   ])
 }

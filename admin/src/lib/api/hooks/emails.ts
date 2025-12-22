@@ -152,6 +152,19 @@ export function useSendNylasTestEmail() {
   })
 }
 
+export function useSendUnipileTestEmail() {
+  return useMutation({
+    mutationFn: (data: { toEmail: string; subject: string; content: string; accountId: string }) =>
+      emailsApi.sendUnipileTestEmail(data),
+    onSuccess: () => {
+      toast.success("Unipile 테스트 이메일이 전송되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Unipile 테스트 이메일 전송에 실패했습니다")
+    },
+  })
+}
+
 export function useCreateEmail() {
   const queryClient = useQueryClient()
 

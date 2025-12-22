@@ -187,6 +187,7 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
         const emailAccount = await createEmailAccount({
           userId,
           workspaceId,
+          provider: "nylas",
           emailAddress: grant.email,
           displayName,
           apiKey: grant.grantId, // Store Nylas grantId in apiKey field

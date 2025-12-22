@@ -89,6 +89,14 @@ const nylasTestSendEmailSchema = t.Object({
   grantId: t.String({ minLength: 1 }),
 })
 
+// Unipile Test Send Email Schema (one-off accountId based, no DB email-account required)
+const unipileTestSendEmailSchema = t.Object({
+  toEmail: t.String({ format: "email", maxLength: 255 }),
+  subject: t.String({ minLength: 1, maxLength: 500 }),
+  content: t.String({ minLength: 1 }),
+  accountId: t.String({ minLength: 1 }),
+})
+
 export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
   // Send test email via Nylas using one-off grantId (no email account required)
   .post(
@@ -165,6 +173,100 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       body: nylasTestSendEmailSchema,
     },
   )
+
+  // Send test email via Unipile using one-off accountId (no email account required)
+  .post(
+    "/send-unipile-test",
+    async ({ body, headers, set }) => {
+      try {
+        // Require authentication to prevent open relay
+        const userId = await getUserIdFromToken(headers.authorization)
+        if (!userId) {
+          set.status = 401
+          return errorResponse("Authentication required", ResponseCode.UNAUTHORIZED)
+        }
+
+        // Get email account from DB (contains email_address)
+        const emailAccount = await db.query.userEmailAccounts.findFirst({
+          where: (accounts, { eq, and }) =>
+            and(eq(accounts.apiKey, body.accountId), eq(accounts.provider, "unipile")),
+        })
+
+        if (!emailAccount) {
+          set.status = 400
+          return errorResponse(
+            "유효하지 않은 accountId 입니다. DB에서 해당 계정을 찾을 수 없습니다.",
+            ResponseCode.VALIDATION_ERROR,
+          )
+        }
+
+        if (!emailAccount.emailAddress || emailAccount.emailAddress.trim() === "") {
+          set.status = 400
+          return errorResponse(
+            "이메일 주소가 설정되지 않았습니다. 계정을 다시 연동해주세요.",
+            ResponseCode.VALIDATION_ERROR,
+          )
+        }
+
+        const fromEmail = emailAccount.emailAddress
+
+        // Minimal HTML render (escape + newline to <br>)
+        const escaped = body.content
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")
+        const html = `<p>${escaped.replaceAll("\n", "<br>")}</p>`
+
+        logger.info(
+          {
+            userId,
+            accountId: body.accountId,
+            fromEmail,
+            toEmail: body.toEmail,
+            subject: body.subject,
+          },
+          "Sending Unipile test email",
+        )
+
+        const sendResult = await emailService.sendEmail({
+          fromEmail,
+          fromName: fromEmail,
+          toEmail: body.toEmail,
+          subject: body.subject,
+          bodyText: body.content,
+          bodyHtml: html,
+          apiKey: body.accountId, // Unipile accountId
+          provider: "unipile",
+          includeSignature: false,
+        })
+
+        if (!sendResult.success) {
+          set.status = 500
+          return errorResponse(
+            sendResult.error || "이메일 발송에 실패했습니다.",
+            ResponseCode.INTERNAL_ERROR,
+          )
+        }
+
+        return {
+          success: true,
+          message: "Unipile 테스트 이메일이 발송되었습니다.",
+          messageId: sendResult.messageId,
+          unipileMessageId: sendResult.unipileMessageId,
+        }
+      } catch (error: unknown) {
+        logger.error({ err: error }, "Failed to send Unipile test email")
+        set.status = 500
+        return errorResponse("이메일 발송 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: unipileTestSendEmailSchema,
+    },
+  )
+
   // Get today's sent email count
   .get(
     "/stats/today-sent",

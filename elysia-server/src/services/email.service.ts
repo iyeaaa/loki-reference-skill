@@ -11,6 +11,7 @@ import type { Attachment, SendGridAttachment } from "../models/email.model"
 import { htmlToText } from "../utils/email.util"
 import logger from "../utils/logger"
 import * as nylasService from "./nylas.service"
+import * as unipileService from "./unipile.service"
 
 class EmailService {
   constructor() {
@@ -241,7 +242,8 @@ This email contains confidential information that is protected by law or under t
     inReplyTo?: string
     references?: string[]
     attachments?: SendGridAttachment[] // 첨부 파일 (Base64 인코딩된 파일)
-    apiKey?: string // SendGrid API Key (starts with "SG") OR Nylas grantId
+    apiKey?: string // SendGrid API Key (starts with "SG") OR Nylas grantId OR Unipile accountId
+    provider?: "sendgrid" | "nylas" | "unipile" // Email provider
     includeSignature?: boolean // 서명 포함 여부 (기본값: true)
     userId?: string // 서명 생성을 위한 사용자 ID
     workspaceId?: string // 서명 생성을 위한 워크스페이스 ID
@@ -251,11 +253,13 @@ This email contains confidential information that is protected by law or under t
     messageId?: string
     sendgridMessageId?: string
     nylasMessageId?: string
+    unipileMessageId?: string
     nylasThreadId?: string
     error?: string
   }> {
     try {
       const apiKey = data.apiKey || config.sendgrid.apiKey
+      const provider = data.provider
 
       // Trial preview emails - don't actually send, return mock success
       // These are preview emails created during trial signup with dummy apiKey
@@ -271,8 +275,12 @@ This email contains confidential information that is protected by law or under t
         }
       }
 
-      // Route to Nylas if apiKey doesn't start with "SG" (it's a Nylas grantId)
-      if (apiKey && !apiKey.startsWith("SG")) {
+      // Route based on provider
+      if (provider === "unipile") {
+        return await this.sendEmailViaUnipile(data, apiKey)
+      }
+
+      if (provider === "nylas" || (!apiKey.startsWith("SG") && !provider)) {
         return await this.sendEmailViaNylas(data, apiKey)
       }
 
@@ -552,6 +560,117 @@ This email contains confidential information that is protected by law or under t
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to send email via Nylas",
+      }
+    }
+  }
+
+  /**
+   * Send email via Unipile
+   * Used when provider is "unipile"
+   */
+  private async sendEmailViaUnipile(
+    data: {
+      fromEmail: string
+      fromName?: string
+      toEmail: string
+      subject: string
+      bodyText?: string
+      bodyHtml?: string
+      ccEmails?: string[]
+      bccEmails?: string[]
+      attachments?: SendGridAttachment[]
+      includeSignature?: boolean
+      userId?: string
+      workspaceId?: string
+      signatureHtml?: string
+    },
+    accountId: string,
+  ): Promise<{
+    success: boolean
+    messageId?: string
+    sendgridMessageId?: string
+    unipileMessageId?: string
+    error?: string
+  }> {
+    try {
+      // Generate Message-ID for tracking
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const domain = data.fromEmail.split("@")[1] || "mail.grinda.ai"
+      const generatedMessageId = `<${timestamp}.${randomString}@${domain}>`
+
+      // Handle signature (reuse existing logic)
+      let finalBodyHtml = data.bodyHtml || ""
+      const includeSignature = data.includeSignature !== false
+
+      if (includeSignature) {
+        try {
+          let signatureHtml = ""
+
+          if (data.signatureHtml) {
+            signatureHtml = data.signatureHtml
+          } else if (data.userId && data.workspaceId) {
+            const userSignature = await this.generateUserSignature(data.userId, data.workspaceId)
+            signatureHtml = userSignature.signatureHtml
+          } else {
+            const defaultSignature = this.generateGrindaSignature(
+              "김규동 Gyudong Kim",
+              "Project Lead",
+            )
+            signatureHtml = defaultSignature.signatureHtml
+          }
+
+          if (finalBodyHtml && signatureHtml) {
+            finalBodyHtml = this.appendSignatureToEmail(finalBodyHtml, signatureHtml, "", true)
+          }
+        } catch (error) {
+          logger.warn({ err: error }, "Failed to add signature to Unipile email")
+        }
+      }
+
+      // Convert attachments to Unipile format
+      // SendGrid: { content, filename, type, disposition, content_id }
+      // Unipile: { content, filename, contentType }
+      const unipileAttachments = data.attachments?.map((att) => ({
+        content: att.content,
+        filename: att.filename,
+        contentType: att.type || "application/octet-stream",
+      }))
+
+      // Send via Unipile
+      const result = await unipileService.sendEmail({
+        accountId,
+        to: data.toEmail,
+        subject: data.subject,
+        body: finalBodyHtml || data.bodyText || "",
+        cc: data.ccEmails,
+        bcc: data.bccEmails,
+        attachments: unipileAttachments,
+      })
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || "Failed to send email via Unipile",
+        }
+      }
+
+      logger.info(
+        { accountId, unipileMessageId: result.messageId, generatedMessageId },
+        "Email sent via Unipile successfully",
+      )
+
+      return {
+        success: true,
+        messageId: generatedMessageId,
+        sendgridMessageId: result.messageId, // Store Unipile messageId for webhook matching
+        unipileMessageId: result.messageId,
+      }
+    } catch (error) {
+      logger.error({ err: error, accountId }, "Failed to send email via Unipile")
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to send email via Unipile",
       }
     }
   }

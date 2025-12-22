@@ -205,6 +205,16 @@ export const config = {
     ),
   },
 
+  // Unipile (Email Integration - Multi-provider)
+  unipile: {
+    apiKey: getEnvOrDefault("UNIPILE_API_KEY", ""),
+    apiUrl: getEnvOrDefault("UNIPILE_API_URL", "https://api.unipile.com:13129"),
+    redirectUri: getEnvOrDefault("UNIPILE_REDIRECT_URI", "http://localhost:5173/app/redirect"),
+  },
+
+  // Application URL (for webhooks)
+  appUrl: getEnvOrDefault("APP_URL", "http://localhost:3001"),
+
   // Perplexity (AI-powered search)
   perplexity: {
     apiKey: getEnvOrDefault("PERPLEXITY_API_KEY", ""),

@@ -54,6 +54,7 @@ import { BullMQTestPage } from "./settings/BullMQTestPage"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 import { JobLogsPage } from "./settings/job-logs"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
+import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
 import WorkspacesPage from "./workspaces/WorkspacesPage"
@@ -330,6 +331,12 @@ export default function SettingsPage() {
         permission: "admin-only",
       },
       {
+        id: "unipile-email-test",
+        label: t("settings.unipileTest.title"),
+        icon: <Mail className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
         id: "web-extraction",
         label: t("settings.system.webExtraction.title"),
         icon: <Globe className="h-4 w-4" />,
@@ -563,6 +570,8 @@ export default function SettingsPage() {
         return <WebDataExtraction />
       case "nylas-email-test":
         return <NylasEmailTest />
+      case "unipile-email-test":
+        return <UnipileEmailTest />
       // IAM Pages
       case "iam-policies":
         return <PoliciesPage />

@@ -256,6 +256,22 @@ export const emailsApi = {
       body: JSON.stringify(data),
     }),
 
+  sendUnipileTestEmail: (data: {
+    toEmail: string
+    subject: string
+    content: string
+    accountId: string
+  }) =>
+    apiFetch<{
+      success: boolean
+      message: string
+      messageId?: string
+      unipileMessageId?: string
+    }>("/api/v1/emails/send-unipile-test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   create: (data: CreateEmailRequest) =>
     apiFetch<Email>("/api/v1/emails", {
       method: "POST",

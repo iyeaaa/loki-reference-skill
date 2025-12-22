@@ -52,6 +52,7 @@ export async function getEmailAccount(id: string) {
 export async function createEmailAccount(data: {
   userId: string
   workspaceId: string
+  provider: "sendgrid" | "nylas" | "unipile"
   emailAddress: string
   displayName?: string
   apiKey: string
@@ -67,6 +68,7 @@ export async function createEmailAccount(data: {
     .values({
       userId: data.userId,
       workspaceId: data.workspaceId,
+      provider: data.provider,
       emailAddress: data.emailAddress,
       displayName: data.displayName || null,
       apiKey: data.apiKey,
@@ -141,6 +143,83 @@ export async function updateEmailAccount(
 
 // DeleteEmailAccount :exec
 export async function deleteEmailAccount(id: string) {
+  // 0. 이메일 계정 정보 조회 (Unipile 연동 확인용)
+  const emailAccount = await db.query.userEmailAccounts.findFirst({
+    where: eq(userEmailAccounts.id, id),
+    columns: {
+      id: true,
+      provider: true,
+      apiKey: true,
+      emailAddress: true,
+    },
+  })
+
+  if (!emailAccount) {
+    logger.warn({ emailAccountId: id }, "Email account not found for deletion")
+    return
+  }
+
+  // 0-1. Unipile 계정이면 Unipile API에서도 삭제
+  if (emailAccount.provider === "unipile") {
+    try {
+      const unipileAccountId = emailAccount.apiKey
+      const { deleteAccount } = await import("./unipile.service")
+      const deleted = await deleteAccount(unipileAccountId)
+
+      if (deleted) {
+        logger.info(
+          { emailAccountId: id, unipileAccountId },
+          "✅ Unipile account deleted from Unipile API",
+        )
+      } else {
+        logger.warn(
+          { emailAccountId: id, unipileAccountId },
+          "⚠️ Failed to delete Unipile account from Unipile API (continuing with local deletion)",
+        )
+      }
+
+      // Unipile 계정이 모두 삭제되었는지 확인 (webhook 정리용)
+      const remainingUnipileAccounts = await db.query.userEmailAccounts.findMany({
+        where: and(
+          eq(userEmailAccounts.provider, "unipile"),
+          sql`${userEmailAccounts.id} != ${id}`, // 현재 삭제 중인 계정 제외
+        ),
+        columns: { id: true },
+      })
+
+      if (remainingUnipileAccounts.length === 0) {
+        // 마지막 Unipile 계정 → webhook 삭제
+        try {
+          const { listWebhooks, deleteWebhook } = await import("./unipile.service")
+          const { config } = await import("../config")
+          const webhooksResult = await listWebhooks()
+          const webhookUrl = `${config.appUrl}/api/v1/unipile/webhook`
+
+          const existingWebhook = webhooksResult.webhooks?.find(
+            (wh) => wh.request_url === webhookUrl && wh.events?.includes("mail_received"),
+          )
+
+          if (existingWebhook) {
+            const webhookDeleted = await deleteWebhook(existingWebhook.id)
+            if (webhookDeleted) {
+              logger.info(
+                { webhookId: existingWebhook.id },
+                "✅ Unipile webhook deleted (no accounts remaining)",
+              )
+            }
+          }
+        } catch (webhookError) {
+          logger.warn({ err: webhookError }, "⚠️ Error cleaning up Unipile webhook (non-critical)")
+        }
+      }
+    } catch (unipileError) {
+      logger.error(
+        { err: unipileError, emailAccountId: id },
+        "❌ Error deleting Unipile account (continuing with local deletion)",
+      )
+    }
+  }
+
   // 1. 연관된 시퀀스 등록(sequence_enrollments)을 먼저 삭제 (FK 제약 조건 때문)
   const deletedEnrollments = await db
     .delete(sequenceEnrollments)

@@ -6,6 +6,7 @@ import { getUserIdFromToken } from "../utils/auth.util"
 const emailAccountSchema = t.Object({
   userId: t.String({ format: "uuid" }),
   workspaceId: t.String({ format: "uuid" }),
+  provider: t.Union([t.Literal("sendgrid"), t.Literal("nylas"), t.Literal("unipile")]),
   emailAddress: t.String({ format: "email", maxLength: 255 }),
   displayName: t.Optional(t.String({ maxLength: 255 })),
   apiKey: t.String({ minLength: 1 }),

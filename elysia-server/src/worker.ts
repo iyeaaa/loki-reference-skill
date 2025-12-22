@@ -17,15 +17,19 @@
 
 import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
+import { unipileInboxPollQueue } from "./lib/queue/queues"
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
 import {
   getOnboardingAutoGenerateWorkerStatus,
   getTestWorkerStatus,
+  getUnipileInboxPollWorkerStatus,
   startOnboardingAutoGenerateWorker,
   startTestWorker,
+  startUnipileInboxPollWorker,
   stopOnboardingAutoGenerateWorker,
   stopTestWorker,
+  stopUnipileInboxPollWorker,
 } from "./workers/bullmq"
 
 // ============================================================================
@@ -82,6 +86,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
     await stopOnboardingAutoGenerateWorker()
     logger.info("[Worker] OnboardingWorker stopped")
+
+    await stopUnipileInboxPollWorker()
+    logger.info("[Worker] UnipileInboxPollWorker stopped")
 
     // Close Redis connection
     await redisConnection.quit()
@@ -160,7 +167,7 @@ async function main(): Promise<void> {
   Environment:   ${config.nodeEnv}
   Redis Host:    ${config.redis.host}:${config.redis.port}
   Health Port:   ${HEALTH_SERVER_PORT}
-  Workers:       TestWorker, OnboardingAutoGenerateWorker
+  Workers:       TestWorker, OnboardingAutoGenerateWorker, UnipileInboxPollWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 
@@ -215,6 +222,37 @@ async function main(): Promise<void> {
     { running: onboardingStatus.running, concurrency: onboardingStatus.concurrency },
     "[Worker] OnboardingAutoGenerateWorker started",
   )
+
+  // Start Unipile Inbox Poll Worker (only if enabled)
+  const unipileWorker = startUnipileInboxPollWorker()
+  const unipileStatus = getUnipileInboxPollWorkerStatus()
+  if (unipileWorker) {
+    logger.info(
+      { running: unipileStatus.running, enabled: unipileStatus.enabled },
+      "[Worker] UnipileInboxPollWorker started",
+    )
+
+    // Schedule recurring inbox poll as backup (every 1 hour)
+    // Primary method is webhook (real-time), polling is backup for missed events
+    await unipileInboxPollQueue.add(
+      "scheduled-poll",
+      { trigger: "scheduled" },
+      {
+        repeat: {
+          pattern: "0 * * * *", // Every hour at minute 0
+        },
+        jobId: "unipile-inbox-poll-recurring", // Prevent duplicates
+      },
+    )
+    logger.info(
+      "[Worker] Unipile inbox poll scheduled as backup (every 1 hour, primary method is webhook)",
+    )
+  } else {
+    logger.info(
+      { enabled: unipileStatus.enabled },
+      "[Worker] UnipileInboxPollWorker not started (disabled)",
+    )
+  }
 
   // 4. Start internal health check interval
   startInternalHealthCheck()

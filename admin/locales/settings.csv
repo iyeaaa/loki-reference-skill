@@ -148,10 +148,10 @@ dangerZone.phase5Desc,최종 삭제 완료 및 확인 이메일 발송,Final del
 dangerZone.phase5Title,5단계: 완료,Phase 5: Completion
 dangerZone.confirmInputLabelEmail,삭제를 확인하려면 아래에 본인의 이메일 주소를 입력하세요,Enter your email address below to confirm deletion
 openaiApiKeys.title,OpenAI API 키 관리,OpenAI API Key Management
-openaiApiKeys.description,"웹 데이터 추출에 사용할 OpenAI API 키를 관리합니다. 여러 개의 키를 추가하면 순차적으로 사용됩니다.","Manage OpenAI API keys for web data extraction. Multiple keys will be used sequentially."
+openaiApiKeys.description,웹 데이터 추출에 사용할 OpenAI API 키를 관리합니다. 여러 개의 키를 추가하면 순차적으로 사용됩니다.,Manage OpenAI API keys for web data extraction. Multiple keys will be used sequentially.
 openaiApiKeys.addKey,API 키 추가,Add API Key
 openaiApiKeys.selectWorkspaceTitle,워크스페이스를 선택해주세요,Please select a workspace
-openaiApiKeys.selectWorkspaceDescription,"API 키 관리 기능을 사용하려면 특정 워크스페이스를 선택해야 합니다. 상단 메뉴에서 워크스페이스를 선택해주세요.","To use the API key management feature, you must select a specific workspace. Please select a workspace from the top menu."
+openaiApiKeys.selectWorkspaceDescription,API 키 관리 기능을 사용하려면 특정 워크스페이스를 선택해야 합니다. 상단 메뉴에서 워크스페이스를 선택해주세요.,"To use the API key management feature, you must select a specific workspace. Please select a workspace from the top menu."
 openaiApiKeys.noKeys,등록된 API 키가 없습니다,No API keys registered
 openaiApiKeys.noKeysDescription,API 키를 추가하지 않으면 서버의 환경 변수에 설정된 기본 키가 사용됩니다,"If no API key is added, the default key set in the server environment variables will be used"
 openaiApiKeys.active,활성,Active
@@ -184,3 +184,15 @@ openaiApiKeys.add,추가,Add
 openaiApiKeys.deleteTitle,API 키 삭제,Delete API Key
 openaiApiKeys.deleteDescription,이 작업은 되돌릴 수 없습니다. API 키가 영구적으로 삭제됩니다.,This action cannot be undone. The API key will be permanently deleted.
 common.error,오류,Error
+unipileTest.title,Unipile 이메일 테스트,Unipile Email Test
+unipileTest.description,accountId를 1회성으로 입력해 테스트 이메일을 발송합니다.,Send a test email by entering a one-off accountId.
+unipileTest.toEmail,수신자(To),Recipient (To)
+unipileTest.subject,제목,Subject
+unipileTest.subjectPlaceholder,테스트 이메일 제목,Test email subject
+unipileTest.content,내용,Content
+unipileTest.contentPlaceholder,테스트 이메일 내용을 입력하세요.,Enter test email content.
+unipileTest.accountId,Unipile accountId,Unipile accountId
+unipileTest.accountIdPlaceholder,trial step4에서 발급된 accountId를 붙여넣으세요.,Paste the accountId issued from trial step4.
+unipileTest.accountIdHint,이 값은 저장되지 않으며 발송 후 자동으로 비워집니다.,This value is not saved and will be cleared after sending.
+unipileTest.send,발송,Send
+unipileTest.sending,발송 중...,Sending...

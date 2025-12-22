@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { exchangeCodeForGrant } from "@/lib/api/services/nylas"
+import { processUnipileCallback } from "@/lib/api/services/unipile"
 
 export function NylasRedirect() {
   const { t } = useTranslation()
@@ -20,29 +21,62 @@ export function NylasRedirect() {
 
   useEffect(() => {
     const code = searchParams.get("code")
+    const accountId = searchParams.get("account_id")
+    const errorParam = searchParams.get("error")
+
     // Get workspaceId from state parameter (passed from OAuth URL)
     const stateWorkspaceId = searchParams.get("state")
     const workspaceId = stateWorkspaceId || fallbackWorkspaceId
 
-    if (!code || hasProcessed || !workspaceId) {
+    // Check for error from auth provider
+    if (errorParam) {
+      toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
+      navigate("/company?step=3", { replace: true })
       return
     }
 
-    setHasProcessed(true)
+    // Check if already processed or missing required params
+    if (hasProcessed || !workspaceId) {
+      return
+    }
 
-    exchangeCodeForGrant(code, workspaceId)
-      .then((grant) => {
-        console.log("Nylas grant received:", grant)
-        toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
-        // Go to step 4 (confirmation) after successful email linking
-        navigate("/company?step=4", { replace: true })
-      })
-      .catch((error) => {
-        console.error("Failed to exchange code:", error)
-        toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
-        // Go back to step 3 (email linking) on failure
-        navigate("/company?step=3", { replace: true })
-      })
+    // Handle Unipile callback (account_id present)
+    if (accountId) {
+      setHasProcessed(true)
+
+      console.log("Processing Unipile callback:", { accountId, workspaceId })
+
+      processUnipileCallback(accountId, workspaceId)
+        .then((account) => {
+          console.log("Unipile account connected:", account)
+          toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
+          navigate("/company?step=4", { replace: true })
+        })
+        .catch((error) => {
+          console.error("Failed to process Unipile callback:", error)
+          toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
+          navigate("/company?step=3", { replace: true })
+        })
+      return
+    }
+
+    // Handle Nylas callback (code present)
+    if (code) {
+      setHasProcessed(true)
+
+      exchangeCodeForGrant(code, workspaceId)
+        .then((grant) => {
+          console.log("Nylas grant received:", grant)
+          toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
+          navigate("/company?step=4", { replace: true })
+        })
+        .catch((error) => {
+          console.error("Failed to exchange code:", error)
+          toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
+          navigate("/company?step=3", { replace: true })
+        })
+      return
+    }
   }, [searchParams, navigate, hasProcessed, t, fallbackWorkspaceId])
 
   return (

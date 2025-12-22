@@ -40,6 +40,9 @@ import {
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
+import { searchDomainWithHunter } from "./hunterio-domain-search.service"
+import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
+import { generateHunterioQuery } from "./hunterio-query-generator.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
 import { upsertOnboardingProgressNotification } from "./notification.service"
@@ -61,10 +64,12 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 20 // Changed from 300 to 20 for faster onboarding
+const TARGET_LEADS = 250 // Target 250 leads with BigQuery + Hunter.io fallback
 const ENRICHMENT_BATCH_SIZE = 20
-const BIGQUERY_BATCH_SIZE = 100 // Reduced from 500 since we only need 20 leads
-const MAX_SEARCH_ITERATIONS = 2 // Reduced from 5 since we only need 20 leads
+const BIGQUERY_BATCH_SIZE = 100
+const MAX_SEARCH_ITERATIONS = 3
+const HUNTERIO_MAX_PER_PAGE = 100
+const HUNTERIO_MAX_EMAIL_COUNT = 100 // Skip companies with too many emails (proxy for large companies)
 
 // ====================================
 // SSE + DB NOTIFICATION WRAPPER
@@ -228,6 +233,111 @@ export async function addCheckpointError(
 // ====================================
 // PHASE FUNCTIONS
 // ====================================
+
+/**
+ * Hunter.io discovered lead interface
+ */
+interface HunterDiscoveredLead {
+  companyName: string
+  websiteUrl: string
+  primaryEmail: string
+  leadSource: "hunterio-discover"
+}
+
+/**
+ * Discover leads using Hunter.io Discover API as fallback
+ * Called when BigQuery doesn't return enough leads
+ */
+async function discoverLeadsWithHunterIO(
+  context: JobContext,
+  existingLeadCount: number,
+  existingDomains: Set<string>,
+): Promise<HunterDiscoveredLead[]> {
+  console.log(
+    `[HunterIO Discovery] Starting fallback discovery. Current leads: ${existingLeadCount}, Target: ${TARGET_LEADS}`,
+  )
+
+  const leads: HunterDiscoveredLead[] = []
+
+  try {
+    // 1. Generate Hunter.io params via LLM
+    const baseParams = await generateHunterioQuery(context.surveyData)
+    console.log("[HunterIO Discovery] Generated params:", baseParams)
+
+    let offset = 0
+    let hasMoreResults = true
+
+    // 2. Paginate until target reached or no more results
+    while (hasMoreResults && existingLeadCount + leads.length < TARGET_LEADS) {
+      const params = { ...baseParams, limit: HUNTERIO_MAX_PER_PAGE, offset }
+      console.log(`[HunterIO Discovery] Fetching page at offset ${offset}`)
+
+      const companies = await searchLeadsWithHunter(params)
+
+      if (companies.length === 0) {
+        console.log("[HunterIO Discovery] No more results from Hunter.io")
+        hasMoreResults = false
+        break
+      }
+
+      console.log(`[HunterIO Discovery] Found ${companies.length} companies`)
+
+      // 3. Process each company
+      for (const company of companies) {
+        // Skip if already processed
+        if (existingDomains.has(company.domain.toLowerCase())) {
+          console.log(`[HunterIO Discovery] Skipping duplicate domain: ${company.domain}`)
+          continue
+        }
+
+        // Skip big companies based on emails count as proxy
+        // If company has too many indexed emails, it's likely a large company
+        if (company.emailsCount.total > HUNTERIO_MAX_EMAIL_COUNT) {
+          console.log(
+            `[HunterIO Discovery] Skipping large company (${company.emailsCount.total} emails): ${company.organization}`,
+          )
+          continue
+        }
+
+        // 4. Get emails via Domain Search API (rate-limited via PQueue)
+        const emailResult = await searchDomainWithHunter({ domain: company.domain })
+
+        if (emailResult.genericEmail) {
+          leads.push({
+            companyName: company.organization,
+            websiteUrl: `https://${company.domain}`,
+            primaryEmail: emailResult.genericEmail,
+            leadSource: "hunterio-discover",
+          })
+          existingDomains.add(company.domain.toLowerCase())
+
+          console.log(
+            `[HunterIO Discovery] Added lead: ${company.organization} (${emailResult.genericEmail})`,
+          )
+        }
+
+        // Check if target reached
+        if (existingLeadCount + leads.length >= TARGET_LEADS) {
+          console.log("[HunterIO Discovery] Target reached!")
+          break
+        }
+      }
+
+      offset += HUNTERIO_MAX_PER_PAGE
+
+      // If fewer results than limit, no more pages
+      if (companies.length < HUNTERIO_MAX_PER_PAGE) {
+        hasMoreResults = false
+      }
+    }
+
+    console.log(`[HunterIO Discovery] Complete. Found ${leads.length} new leads.`)
+    return leads
+  } catch (error) {
+    console.error("[HunterIO Discovery] Error:", error)
+    return leads // Return what we have so far
+  }
+}
 
 /**
  * Phase 1: Discovery + Enrichment (combined)
@@ -491,6 +601,49 @@ export async function runDiscoveryPhase(
       const afterIterationCount = await countLeadsWithEmails(workspaceId)
       if (afterIterationCount >= TARGET_LEADS) {
         break
+      }
+    }
+
+    // ============================================
+    // STEP 2: Hunter.io Fallback (if < 250 leads)
+    // ============================================
+    const afterBigQueryCount = await countLeadsWithEmails(workspaceId)
+    console.log(
+      `[DiscoveryPhase] BigQuery complete. Lead count: ${afterBigQueryCount}/${TARGET_LEADS}`,
+    )
+
+    if (afterBigQueryCount < TARGET_LEADS) {
+      console.log("[DiscoveryPhase] Starting Hunter.io fallback discovery")
+
+      // Hunter.io fallback
+      const hunterLeads = await discoverLeadsWithHunterIO(
+        context,
+        afterBigQueryCount,
+        processedWebsites,
+      )
+
+      // Save Hunter.io leads to DB
+      if (hunterLeads.length > 0) {
+        console.log(`[DiscoveryPhase] Saving ${hunterLeads.length} leads from Hunter.io`)
+
+        const leadsToCreate = hunterLeads.map((lead) => ({
+          companyName: lead.companyName,
+          foundCompanyName: lead.companyName,
+          websiteUrl: lead.websiteUrl,
+          primaryEmail: lead.primaryEmail,
+          leadSource: "hunterio-discover" as const,
+          leadStatus: "new" as const,
+        }))
+
+        const { stats } = await bulkCreateLeads({
+          workspaceId,
+          leads: leadsToCreate,
+          createdBy: userId,
+        })
+
+        console.log(
+          `[DiscoveryPhase] Hunter.io leads saved: ${stats.created} new (${stats.skipped} duplicates)`,
+        )
       }
     }
 

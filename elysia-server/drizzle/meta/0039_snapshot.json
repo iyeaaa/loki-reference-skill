@@ -2365,31 +2365,7 @@
           "name": "reply_email_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
-        },
-        "from_email": {
-          "name": "from_email",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subject": {
-          "name": "subject",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "received_at": {
-          "name": "received_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "sentiment": {
           "name": "sentiment",
@@ -2412,13 +2388,6 @@
         },
         "is_read": {
           "name": "is_read",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_archived": {
-          "name": "is_archived",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

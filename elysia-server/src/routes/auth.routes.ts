@@ -1,5 +1,4 @@
 import { Elysia, t } from "elysia"
-import { addOnboardingJob } from "../lib/queue/queues"
 import * as authService from "../services/auth.service"
 import * as emailAccountService from "../services/email-account.service"
 import * as nylasService from "../services/nylas.service"
@@ -298,32 +297,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 newUser.id,
               )
               console.log("[Auth] ✅ Survey data saved to onboarding_progress")
-
-              // Queue auto-generate onboarding job (background processing with resilience)
-              // Note: hasAllOnboardingParams already validates these fields exist
-              console.log("[Auth] 🚀 Queuing auto-generate onboarding job...")
-              try {
-                const job = await addOnboardingJob({
-                  workspaceId: workspace.id,
-                  userId: newUser.id,
-                  surveyData: {
-                    industry: industry as string,
-                    target: target as string,
-                    country: country as string,
-                    experience: experience as string,
-                    lang,
-                  },
-                })
-                console.log(`[Auth] ✅ Onboarding job queued: ${job.id}`)
-
-                // Store job ID in onboarding_progress
-                if (job.id) {
-                  await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
-                }
-              } catch (queueError) {
-                console.error("[Auth] ❌ Failed to queue onboarding job:", queueError)
-                // Don't throw - onboarding can be done manually
-              }
+              // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
             } catch (surveyError) {
               console.error("[Auth] ❌ Failed to save survey data:", surveyError)
               // saveSurveyData already calls findOrCreateAndLinkSalesStrategy internally
@@ -581,32 +555,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                   user.id,
                 )
                 console.log("[Auth/Google] ✅ Survey data saved")
-
-                // Queue auto-generate onboarding job (background processing with resilience)
-                // Note: hasAllOnboardingParams already validates these fields exist
-                console.log("[Auth/Google] 🚀 Queuing auto-generate onboarding job...")
-                try {
-                  const job = await addOnboardingJob({
-                    workspaceId: workspace.id,
-                    userId: user.id,
-                    surveyData: {
-                      industry: industry as string,
-                      target: target as string,
-                      country: country as string,
-                      experience: experience as string,
-                      lang,
-                    },
-                  })
-                  console.log(`[Auth/Google] ✅ Onboarding job queued: ${job.id}`)
-
-                  // Store job ID in onboarding_progress
-                  if (job.id) {
-                    await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
-                  }
-                } catch (queueError) {
-                  console.error("[Auth/Google] ❌ Failed to queue onboarding job:", queueError)
-                  // Don't throw - onboarding can be done manually
-                }
+                // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
               }
             } catch (onboardingError) {
               console.error("[Auth/Google] ❌ Failed to setup onboarding:", onboardingError)
@@ -787,31 +736,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 console.log("[Auth/Nylas] Saving survey data to onboarding_progress...")
                 await onboardingService.saveSurveyData(workspace.id, onboardingParams, user.id)
                 console.log("[Auth/Nylas] ✅ Survey data saved")
-
-                // Queue auto-generate onboarding job (background processing with resilience)
-                console.log("[Auth/Nylas] 🚀 Queuing auto-generate onboarding job...")
-                try {
-                  const job = await addOnboardingJob({
-                    workspaceId: workspace.id,
-                    userId: user.id,
-                    surveyData: {
-                      industry: onboardingParams.industry as string,
-                      target: onboardingParams.target as string,
-                      country: onboardingParams.country as string,
-                      experience: onboardingParams.experience as string,
-                      lang: onboardingParams.lang,
-                    },
-                  })
-                  console.log(`[Auth/Nylas] ✅ Onboarding job queued: ${job.id}`)
-
-                  // Store job ID in onboarding_progress
-                  if (job.id) {
-                    await onboardingService.updateJobInfo(workspace.id, job.id, "waiting")
-                  }
-                } catch (queueError) {
-                  console.error("[Auth/Nylas] ❌ Failed to queue onboarding job:", queueError)
-                  // Don't throw - onboarding can be done manually
-                }
+                // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
               }
             } catch (onboardingError) {
               console.error("[Auth/Nylas] ❌ Failed to setup onboarding:", onboardingError)

@@ -6,6 +6,7 @@
  */
 
 import { Elysia, t } from "elysia"
+import { addOnboardingJob } from "../lib/queue/queues"
 import {
   createOnboardingSubscriber,
   type OnboardingProgressEvent,
@@ -380,6 +381,79 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
     {
       params: t.Object({
         workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // ====================================
+  // 바이어 검색 Job 시작
+  // ====================================
+
+  // 바이어 검색 Job 시작 (Step 1 완료 후 호출)
+  .post(
+    "/workspace/:workspaceId/start-discovery",
+    async ({ params: { workspaceId }, body, set }) => {
+      const { userId, surveyData } = body
+
+      logger.info({ workspaceId, userId, surveyData }, "[Onboarding] Starting discovery job")
+
+      try {
+        // Validate required survey data
+        if (
+          !surveyData.industry ||
+          !surveyData.target ||
+          !surveyData.country ||
+          !surveyData.experience
+        ) {
+          set.status = 400
+          return errorResponse("필수 설문 데이터가 누락되었습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        // Queue the onboarding job
+        const job = await addOnboardingJob({
+          workspaceId,
+          userId,
+          surveyData: {
+            industry: surveyData.industry,
+            target: surveyData.target,
+            country: surveyData.country,
+            experience: surveyData.experience,
+            lang: surveyData.lang,
+          },
+        })
+
+        logger.info({ workspaceId, jobId: job.id }, "[Onboarding] Discovery job queued")
+
+        // Store job ID in onboarding_progress
+        if (job.id) {
+          await onboardingService.updateJobInfo(workspaceId, job.id, "waiting")
+        }
+
+        return {
+          data: {
+            jobId: job.id,
+            message: "바이어 검색이 시작되었습니다.",
+          },
+        }
+      } catch (error) {
+        logger.error({ workspaceId, error }, "[Onboarding] Failed to start discovery job")
+        set.status = 500
+        return errorResponse("바이어 검색 시작에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        userId: t.String({ format: "uuid" }),
+        surveyData: t.Object({
+          industry: t.String(),
+          target: t.String(),
+          country: t.String(),
+          experience: t.String(),
+          lang: t.Optional(t.String()),
+        }),
       }),
     },
   )

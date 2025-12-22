@@ -61,6 +61,7 @@ export default function OnboardingPage() {
   })
 
   // Redirect logic: invalid step or trying to skip ahead
+  // data 상태 기반으로 검증 (localStorage 재호출 제거 - 동기화 문제 해결)
   useEffect(() => {
     const stepNum = Number(step)
 
@@ -69,13 +70,13 @@ export default function OnboardingPage() {
       return
     }
 
-    const lastCompleted = getLastCompletedStep(getSurveyFromStorage())
+    const lastCompleted = getLastCompletedStep(data)
     const maxAllowedStep = lastCompleted + 1
 
     if (stepNum > maxAllowedStep) {
       navigate(`/trial/survey/${maxAllowedStep}`, { replace: true })
     }
-  }, [step, navigate])
+  }, [step, navigate, data])
 
   const progress = (currentStep / TOTAL_STEPS) * 100
 

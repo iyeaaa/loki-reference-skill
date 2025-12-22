@@ -219,7 +219,8 @@ export function createDiscoveryStartEvent(
   })
 }
 
-const TARGET_LEADS_FOR_PROGRESS = 300
+// Must match TARGET_LEADS in onboarding-worker.service.ts
+const TARGET_LEADS_FOR_PROGRESS = 20
 
 export function createDiscoveryBatchEvent(
   workspaceId: string,

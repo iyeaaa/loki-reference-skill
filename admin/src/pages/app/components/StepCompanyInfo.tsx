@@ -278,6 +278,33 @@ export function StepCompanyInfo() {
         console.error("Failed to complete step 1:", error)
       }
 
+      // 4. 바이어 검색 Job 시작 (수정된 데이터 기반)
+      console.log(
+        `[StepCompanyInfo] 🚀 Starting discovery job at /api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
+      )
+      try {
+        const discoveryResponse = await apiFetch(
+          `/api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              userId,
+              surveyData: {
+                industry: editedData.industry,
+                target: editedData.target,
+                country: editedData.country,
+                experience: editedData.experience,
+                lang: i18n.language,
+              },
+            }),
+          },
+        )
+        console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
+      } catch (discoveryError) {
+        console.error("[StepCompanyInfo] ❌ Failed to start discovery job:", discoveryError)
+        // 실패해도 다음 단계로 진행 (수동으로 리드 탐색 가능)
+      }
+
       // 다음 단계로 이동
       setSearchParams({ step: "2" })
     } catch (error) {

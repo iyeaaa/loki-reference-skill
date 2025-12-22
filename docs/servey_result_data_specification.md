@@ -231,3 +231,19 @@ json
 * **Market Trend:** ROI-focused, Spec verification, Supply chain stability.
 * **Sales Strategy:** "Prove with Data." Use Whitepapers/Case Studies. Direct approach (Cost reduction).
 * **Checklist:** Tech Sheet/Spec, ISO Certifications, English Website, Reference List.
+
+
+1일차 - 시퀀스 A, 1스텝
+2일차 - 시퀀스 B, 1스텝
+3일차 - 시퀀스 C, 1스텝
+4일차 - 시퀀스 A, 2스텝
+5일차 - 시퀀스 B, 2스텝
+6일차 - 시퀀스 C, 2스텝
+
+
+7일차 - 시퀀스 D, 1스텝
+8일차 - 시퀀스 E, 1스텝
+9일차 - 시퀀스 F, 1스텝
+10일차 - 시퀀스 D, 2스텝
+11일차 - 시퀀스 E, 2스텝
+12일차 - 시퀀스 F, 2스텝

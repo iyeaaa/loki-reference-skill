@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { config } from "../config"
 import { db } from "../db/index"
-import { emails } from "../db/schema/emails"
+import { emailReplies, emails } from "../db/schema/emails"
 import {
   createEmailAccount,
   deleteEmailAccount,
@@ -485,6 +485,7 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         const emailId = webhookBody.email_id
         const fromAttendee = webhookBody.from_attendee
         const subject = webhookBody.subject || ""
+        const bodyContent = webhookBody.body || webhookBody.body_plain || ""
         const dateStr = webhookBody.date
         const inReplyTo = webhookBody.in_reply_to
         const role = webhookBody.role
@@ -517,18 +518,57 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         const inReplyToMessageId = inReplyTo?.message_id
 
         if (inReplyToMessageId) {
-          // Find original email by message ID (using sendgridMessageId and messageId fields)
+          // Find original email by message ID
           const originalEmail = await db.query.emails.findFirst({
             where: (emails, { or, like }) =>
               or(
                 like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
                 like(emails.messageId, `%${inReplyToMessageId}%`),
               ),
-            columns: { id: true, workspaceId: true },
+            columns: {
+              id: true,
+              workspaceId: true,
+              userEmailAccountId: true,
+              leadId: true,
+              sequenceId: true,
+              leadName: true,
+              sequenceName: true,
+              threadId: true,
+              fromEmail: true,
+            },
           })
 
           if (originalEmail) {
-            // Update original email repliedAt
+            // 1. Store reply as inbound email in emails table
+            const [inboundEmail] = await db
+              .insert(emails)
+              .values({
+                workspaceId: originalEmail.workspaceId,
+                userEmailAccountId: originalEmail.userEmailAccountId,
+                leadId: originalEmail.leadId,
+                sequenceId: originalEmail.sequenceId,
+                direction: "inbound",
+                fromEmail: from,
+                toEmail: originalEmail.fromEmail, // Reply is sent to original sender
+                subject: subject,
+                bodyText: bodyContent,
+                status: "delivered",
+                sentAt: receivedAt,
+                deliveredAt: receivedAt,
+                messageId: emailId, // Unipile email ID
+                inReplyTo: inReplyToMessageId,
+                threadId: originalEmail.threadId || inReplyToMessageId,
+                leadName: originalEmail.leadName,
+                sequenceName: originalEmail.sequenceName,
+              })
+              .returning({ id: emails.id })
+
+            if (!inboundEmail) {
+              logger.error("[Unipile Webhook] Failed to save inbound email")
+              return errorResponse("Failed to save inbound email", ResponseCode.INTERNAL_ERROR)
+            }
+
+            // 2. Update original email repliedAt
             await db
               .update(emails)
               .set({
@@ -538,18 +578,29 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
               })
               .where(eq(emails.id, originalEmail.id))
 
+            // 3. Create email_reply record linking original and reply
+            await db.insert(emailReplies).values({
+              workspaceId: originalEmail.workspaceId,
+              originalEmailId: originalEmail.id,
+              replyEmailId: inboundEmail.id, // Reference to emails table
+              sentiment: null,
+              isRead: false,
+            })
+
             logger.info(
               {
                 originalEmailId: originalEmail.id,
+                replyEmailId: inboundEmail.id,
                 from,
                 subject,
               },
-              "[Unipile Webhook] Reply detected and email status updated",
+              "[Unipile Webhook] Reply saved as inbound email",
             )
 
             return successResponse({
               message: "Reply processed successfully",
               replyDetected: true,
+              inboundEmailId: inboundEmail.id,
             })
           }
         }

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
-import { emailEvents, emails } from "../db/schema/emails"
+import { emailEvents, emailReplies, emails } from "../db/schema/emails"
 import logger from "../utils/logger"
 
 // Unipile configuration
@@ -503,6 +503,7 @@ export async function syncAccountEmails(
         // from_attendee.identifier contains the email address
         const from = inboxEmail.from_attendee?.identifier || ""
         const subject = inboxEmail.subject || ""
+        const body = inboxEmail.body || inboxEmail.body_plain || ""
         const receivedAt = inboxEmail.date ? new Date(inboxEmail.date) : new Date()
 
         // Check if this is a reply to one of our sent emails
@@ -516,13 +517,52 @@ export async function syncAccountEmails(
                 like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
                 like(emails.messageId, `%${inReplyToMessageId}%`),
               ),
-            columns: { id: true, workspaceId: true },
+            columns: {
+              id: true,
+              workspaceId: true,
+              userEmailAccountId: true,
+              leadId: true,
+              sequenceId: true,
+              leadName: true,
+              sequenceName: true,
+              threadId: true,
+              fromEmail: true,
+            },
           })
 
           if (originalEmail) {
             originalEmailId = originalEmail.id
 
-            // Update original email repliedAt
+            // 1. Store reply as inbound email in emails table
+            const [inboundEmail] = await db
+              .insert(emails)
+              .values({
+                workspaceId: originalEmail.workspaceId,
+                userEmailAccountId: originalEmail.userEmailAccountId,
+                leadId: originalEmail.leadId,
+                sequenceId: originalEmail.sequenceId,
+                direction: "inbound",
+                fromEmail: from,
+                toEmail: originalEmail.fromEmail,
+                subject: subject,
+                bodyText: body,
+                status: "delivered",
+                sentAt: receivedAt,
+                deliveredAt: receivedAt,
+                messageId: inboxEmail.id,
+                inReplyTo: inReplyToMessageId,
+                threadId: originalEmail.threadId || inReplyToMessageId,
+                leadName: originalEmail.leadName,
+                sequenceName: originalEmail.sequenceName,
+              })
+              .returning({ id: emails.id })
+
+            if (!inboundEmail) {
+              logger.error({ accountId }, "Failed to save inbound email")
+              continue
+            }
+
+            // 2. Update original email repliedAt
             await db
               .update(emails)
               .set({
@@ -532,7 +572,17 @@ export async function syncAccountEmails(
               })
               .where(eq(emails.id, originalEmailId))
 
+            // 3. Create email_reply record
+            await db.insert(emailReplies).values({
+              workspaceId: originalEmail.workspaceId,
+              originalEmailId,
+              replyEmailId: inboundEmail.id,
+              sentiment: null,
+              isRead: false,
+            })
+
             repliesDetected++
+            newEmails++
 
             logger.info({ accountId, originalEmailId, from, subject }, "Reply detected and saved")
           }
@@ -547,13 +597,52 @@ export async function syncAccountEmails(
                   like(emails.sendgridMessageId, `%${refId}%`),
                   like(emails.messageId, `%${refId}%`),
                 ),
-              columns: { id: true, workspaceId: true },
+              columns: {
+                id: true,
+                workspaceId: true,
+                userEmailAccountId: true,
+                leadId: true,
+                sequenceId: true,
+                leadName: true,
+                sequenceName: true,
+                threadId: true,
+                fromEmail: true,
+              },
             })
 
             if (originalEmail) {
               originalEmailId = originalEmail.id
 
-              // Update original email repliedAt
+              // 1. Store reply as inbound email
+              const [inboundEmail] = await db
+                .insert(emails)
+                .values({
+                  workspaceId: originalEmail.workspaceId,
+                  userEmailAccountId: originalEmail.userEmailAccountId,
+                  leadId: originalEmail.leadId,
+                  sequenceId: originalEmail.sequenceId,
+                  direction: "inbound",
+                  fromEmail: from,
+                  toEmail: originalEmail.fromEmail,
+                  subject: subject,
+                  bodyText: body,
+                  status: "delivered",
+                  sentAt: receivedAt,
+                  deliveredAt: receivedAt,
+                  messageId: inboxEmail.id,
+                  inReplyTo: refId,
+                  threadId: originalEmail.threadId || refId,
+                  leadName: originalEmail.leadName,
+                  sequenceName: originalEmail.sequenceName,
+                })
+                .returning({ id: emails.id })
+
+              if (!inboundEmail) {
+                logger.error({ accountId }, "Failed to save inbound email via References")
+                break
+              }
+
+              // 2. Update original email
               await db
                 .update(emails)
                 .set({
@@ -563,7 +652,17 @@ export async function syncAccountEmails(
                 })
                 .where(eq(emails.id, originalEmailId))
 
+              // 3. Create email_reply record
+              await db.insert(emailReplies).values({
+                workspaceId: originalEmail.workspaceId,
+                originalEmailId,
+                replyEmailId: inboundEmail.id,
+                sentiment: null,
+                isRead: false,
+              })
+
               repliesDetected++
+              newEmails++
 
               logger.info(
                 { accountId, originalEmailId, from, subject, refId },

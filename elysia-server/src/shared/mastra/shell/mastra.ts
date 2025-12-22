@@ -1,6 +1,7 @@
 import { Mastra } from "@mastra/core"
 import { LibSQLStore } from "@mastra/libsql"
 import { config } from "../../../config"
+import { createB2BCustomerIndustryAgent } from "./agents/b2b-customer-industry-agent"
 import { createEmailDraftAgent } from "./agents/email-draft-agent"
 import { createEmailReplyAgent } from "./agents/email-reply-agent"
 import { createGeneralAssistantAgent } from "./agents/general-assistant"
@@ -47,6 +48,7 @@ function createMastra(): Mastra {
       sequenceEmailAgent: createSequenceEmailAgent(),
       structuredExtractionAgent,
       onboardingResearchAgent,
+      b2bCustomerIndustryAgent: createB2BCustomerIndustryAgent(),
     },
     workflows: {
       searchCompanyWorkflow,

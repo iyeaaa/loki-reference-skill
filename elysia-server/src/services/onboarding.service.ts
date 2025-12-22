@@ -8,6 +8,7 @@
  */
 
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { z } from "zod"
 import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -17,6 +18,8 @@ import { leads as leadsTable } from "../db/schema/leads"
 import { type OnboardingStatus, onboardingProgress } from "../db/schema/onboarding"
 import { sequenceSteps } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
+import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
+import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { createLog } from "./activity-log.service"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
 import { searchBigQuery } from "./bigquery-search.service"
@@ -914,6 +917,64 @@ export async function generatePreviewEmailsForSequence(
 }
 
 /**
+ * Get B2B customer industries using AI agent
+ * Takes the seller's industry and country, returns 1-3 target customer industries
+ *
+ * @param industryName - The seller's industry name
+ * @param countryName - The country name
+ * @returns Array of 1-3 target customer industry names
+ */
+async function getB2BCustomerIndustries(
+  industryName: string,
+  countryName: string,
+): Promise<string[]> {
+  try {
+    console.log(
+      `[B2BAgent] Analyzing target customer industries for: ${industryName} in ${countryName}`,
+    )
+
+    // Step 1: Generate analysis using B2B agent
+    const agent = createB2BCustomerIndustryAgent()
+    const prompt = generateB2BCustomerIndustryPrompt(industryName, countryName)
+    const response = await agent.generate(prompt)
+
+    console.log(`[B2BAgent] Agent response: ${response.text}`)
+
+    // Step 2: Extract structured output using structured extraction agent
+    const structured = await structuredExtractionAgent.generate(
+      [
+        {
+          role: "user",
+          content: `Extract the target industries from the following analysis. Return only the industry names as a JSON array.
+
+Analysis:
+${response.text}
+
+Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
+        },
+      ],
+      {
+        output: z.object({
+          targetIndustries: z
+            .array(z.string())
+            .min(1)
+            .max(3)
+            .describe("1-3 target customer industries"),
+        }),
+      },
+    )
+
+    const industries = structured.object.targetIndustries
+    console.log(`[B2BAgent] Extracted target industries: ${industries.join(", ")}`)
+
+    return industries
+  } catch (error) {
+    console.error("[B2BAgent] Agent failed, falling back to original industry", error)
+    return [industryName] // Fallback to original behavior
+  }
+}
+
+/**
  * Non-interactive lead discovery for auto-generation
  * Calls BigQuery directly without SSE/LangGraph for background processing
  *
@@ -942,6 +1003,10 @@ async function discoverLeadsForOnboarding(
   // Map codes to actual Apollo BigQuery values
   const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
   const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
+
+  // Get target customer industries from B2B agent (1-3 industries that would BUY from this industry)
+  const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
+  console.log(`[LeadDiscovery] Target customer industries: ${targetIndustries.join(", ")}`)
 
   // In-memory state tracking
   const uniqueLeadsByWebsite = new Map<
@@ -992,51 +1057,64 @@ async function discoverLeadsForOnboarding(
         break
       }
 
-      // Generate unique search query
-      const query = generateUniqueQuery(
-        industryName,
-        countryName,
-        BATCH_SIZE,
-        iteration,
-        usedQueries,
-      )
+      // Generate 1-3 queries (one for each target customer industry) and search BigQuery
+      let totalNewLeadsAdded = 0
+      for (const targetIndustry of targetIndustries) {
+        // Generate unique search query using target customer industry
+        const query = generateUniqueQuery(
+          targetIndustry, // Use target customer industry, not seller's industry
+          countryName,
+          BATCH_SIZE,
+          iteration,
+          usedQueries,
+        )
 
-      if (!query) {
-        console.warn("[LeadDiscovery] No more unique queries to generate, stopping")
-        break
-      }
+        if (!query) {
+          console.warn(
+            `[LeadDiscovery] No more unique queries for industry "${targetIndustry}", skipping`,
+          )
+          continue
+        }
 
-      console.log(`[LeadDiscovery] Query: "${query}"`)
+        console.log(`[LeadDiscovery] Query for "${targetIndustry}": "${query}"`)
 
-      // Search BigQuery
-      const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+        // Search BigQuery
+        const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
 
-      if (!result.results.length) {
-        console.log("[LeadDiscovery] No results from BigQuery")
-        continue
-      }
+        if (!result.results.length) {
+          console.log(`[LeadDiscovery] No results from BigQuery for "${targetIndustry}"`)
+          continue
+        }
 
-      console.log(`[LeadDiscovery] Found ${result.results.length} results from BigQuery`)
+        console.log(
+          `[LeadDiscovery] Found ${result.results.length} results for "${targetIndustry}"`,
+        )
 
-      // Add leads to unique leads in-memory state
-      let newLeadsAdded = 0
-      for (const row of result.results) {
-        const website = row.website as string
-        if (!website || uniqueLeadsByWebsite.has(website)) continue
+        // Add leads to unique leads in-memory state
+        let newLeadsAdded = 0
+        for (const row of result.results) {
+          const website = row.website as string
+          if (!website || uniqueLeadsByWebsite.has(website)) continue
 
-        uniqueLeadsByWebsite.set(website, {
-          company: row.company as string,
-          website,
-          industry: row.industry as string,
-          employees: row.employees?.toString() || "",
-          country: row.country as string,
-        })
-        newLeadsAdded++
+          uniqueLeadsByWebsite.set(website, {
+            company: row.company as string,
+            website,
+            industry: row.industry as string,
+            employees: row.employees?.toString() || "",
+            country: row.country as string,
+          })
+          newLeadsAdded++
+        }
+
+        console.log(
+          `[LeadDiscovery] Added ${newLeadsAdded} new leads from "${targetIndustry}" ` +
+            `(${result.results.length - newLeadsAdded} duplicates)`,
+        )
+        totalNewLeadsAdded += newLeadsAdded
       }
 
       console.log(
-        `[LeadDiscovery] Added ${newLeadsAdded} new unique leads ` +
-          `(${result.results.length - newLeadsAdded} duplicates). ` +
+        `[LeadDiscovery] Total new leads this iteration: ${totalNewLeadsAdded}. ` +
           `Total unique: ${uniqueLeadsByWebsite.size}`,
       )
 

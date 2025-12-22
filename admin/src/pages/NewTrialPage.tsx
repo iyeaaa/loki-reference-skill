@@ -1,70 +1,187 @@
 import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { DashboardPreview } from "@/components/trial/DashboardPreview"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } from "@/lib/animations"
 import { apiFetch } from "@/lib/api/client"
-import { getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
+import { authApi } from "@/lib/api/services/auth"
+import { useAuth } from "@/lib/auth-provider"
+import {
+  clearSurveyStorage,
+  getSurveyFromStorage,
+  isValidSurveyData,
+  type SurveyData,
+} from "@/store/survey"
+
+type GoogleAuthResponse = {
+  token: string
+  user: {
+    id: string
+    username: string
+    email: string
+    userRole: string
+    isActive: boolean
+    authProvider: string
+    profilePicture?: string
+    trialStatus?: {
+      isTrialActive: boolean
+      daysRemaining: number
+      trialEndDate: string
+    }
+  }
+}
 
 export default function NewTrialPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { login } = useAuth()
   const { t } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
+  const [isProcessingCallback, setIsProcessingCallback] = useState(false)
 
-  // Handle OAuth error
+  // Ref to prevent duplicate OAuth processing
+  const processedCodeRef = useRef<string | null>(null)
+
+  /**
+   * OAuth/Email 로그인 성공 후 처리
+   */
+  const handleLoginSuccess = useCallback(
+    (response: GoogleAuthResponse, surveyData: SurveyData | null) => {
+      const authUser = {
+        id: response.user.id,
+        email: response.user.email,
+        username: response.user.username,
+        userRole: response.user.userRole,
+        isActive: response.user.isActive,
+        trialStatus: response.user.trialStatus,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      // Store auth data
+      authApi.storeAuthData(response.token, authUser)
+
+      // Update auth context
+      login(response.token, authUser, true)
+
+      toast.success(`환영합니다, ${response.user.username}님!`)
+
+      if (response.user.trialStatus?.isTrialActive) {
+        toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
+      }
+
+      // Clear survey data from localStorage after successful login
+      clearSurveyStorage()
+
+      // Navigate based on survey completion
+      if (isValidSurveyData(surveyData)) {
+        const params = new URLSearchParams({
+          industry: surveyData.industry || "",
+          target: surveyData.target || "",
+          country: surveyData.country || "",
+          experience: surveyData.experience || "",
+        })
+        navigate(`/trial/result?${params.toString()}`)
+      } else {
+        navigate("/company")
+      }
+    },
+    [login, navigate],
+  )
+
+  /**
+   * Google OAuth Callback 처리
+   * - Hydration-safe하게 localStorage 직접 접근
+   */
+  const handleGoogleCallback = useCallback(
+    async (code: string) => {
+      setIsProcessingCallback(true)
+
+      try {
+        // Hydration-safe: 직접 localStorage에서 읽기
+        const surveyData = getSurveyFromStorage()
+
+        const requestBody: Record<string, string> = { code }
+
+        if (isValidSurveyData(surveyData)) {
+          requestBody.industry = surveyData.industry
+          requestBody.target = surveyData.target
+          requestBody.country = surveyData.country
+          requestBody.experience = surveyData.experience
+          if (surveyData.lang) {
+            requestBody.lang = surveyData.lang
+          }
+        }
+
+        const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google/callback", {
+          method: "POST",
+          body: JSON.stringify(requestBody),
+        })
+
+        handleLoginSuccess(response, surveyData)
+      } catch (error) {
+        console.error("[NewTrialPage] Google OAuth callback error:", error)
+        toast.error("Google 로그인 처리 중 오류가 발생했습니다.")
+        navigate("/trial", { replace: true })
+      } finally {
+        setIsProcessingCallback(false)
+      }
+    },
+    [handleLoginSuccess, navigate],
+  )
+
+  // Handle OAuth callback - runs once on mount if code is present
   useEffect(() => {
+    const code = searchParams.get("code")
     const error = searchParams.get("error")
 
     if (error) {
-      toast.error("로그인이 취소되었습니다.")
+      toast.error("Google 로그인이 취소되었습니다.")
       navigate("/trial", { replace: true })
+      return
     }
-  }, [searchParams, navigate])
+
+    // Process OAuth callback (only once per code)
+    if (code && code !== processedCodeRef.current && !isProcessingCallback) {
+      processedCodeRef.current = code
+      handleGoogleCallback(code)
+    }
+  }, [searchParams, isProcessingCallback, handleGoogleCallback, navigate])
 
   /**
-   * Nylas OAuth 로그인 시작 (Google via Nylas)
+   * Google 로그인 시작
    */
-  const handleNylasLogin = async () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true)
     try {
-      // Get survey data from localStorage
-      const surveyData = getSurveyFromStorage()
-
-      // Build query params for onboarding data
-      const params = new URLSearchParams()
-      if (isValidSurveyData(surveyData)) {
-        if (surveyData.industry) {
-          params.append("industry", surveyData.industry)
-        }
-        if (surveyData.target) {
-          params.append("target", surveyData.target)
-        }
-        if (surveyData.country) {
-          params.append("country", surveyData.country)
-        }
-        if (surveyData.experience) {
-          params.append("experience", surveyData.experience)
-        }
-        if (surveyData.lang) {
-          params.append("lang", surveyData.lang)
-        }
-      }
-
-      const queryString = params.toString()
-      const url = queryString ? `/api/v1/auth/nylas?${queryString}` : "/api/v1/auth/nylas"
-
-      const response = await apiFetch<{ authUrl: string }>(url)
+      const response = await apiFetch<{ authUrl: string }>("/api/v1/auth/google")
       window.location.href = response.authUrl
     } catch (error) {
-      console.error("[NewTrialPage] Nylas OAuth error:", error)
-      toast.error("로그인 URL을 가져오는데 실패했습니다.")
+      console.error("[NewTrialPage] Google OAuth error:", error)
+      toast.error("Google 로그인 URL을 가져오는데 실패했습니다.")
       setIsLoading(false)
     }
+  }
+
+  // Show loading state during OAuth processing
+  if (isProcessingCallback) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2" />
+              <p className="text-gray-600 text-sm">Google 로그인 처리 중...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -104,12 +221,12 @@ export default function NewTrialPage() {
             <p className="text-gray-600 text-sm sm:text-base">{t("trial.new.subtitle")}</p>
           </motion.div>
 
-          {/* Google Login Button (via Nylas) */}
+          {/* Google Login Button */}
           <motion.div className="mb-6" variants={shouldReduceMotion() ? {} : staggerItemVariants}>
             <Button
               className="h-11 w-full border border-gray-300 bg-white text-gray-900 text-sm shadow-sm hover:bg-gray-50 sm:h-12 sm:text-base"
               disabled={isLoading}
-              onClick={handleNylasLogin}
+              onClick={handleGoogleLogin}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

@@ -45,8 +45,8 @@ export function StepEmailLink() {
     setError(null)
 
     try {
-      // Get OAuth URL from backend
-      const response = await getNylasAuthUrl()
+      // Get OAuth URL from backend with workspaceId in state
+      const response = await getNylasAuthUrl(workspace?.id)
 
       // Redirect to Google OAuth
       window.location.href = response.url
@@ -218,13 +218,23 @@ function LinkedEmailAccountsView({
 
     setIsDeleting(true)
     try {
-      // The apiKey field stores the Nylas grantId
-      await deleteGrant(emailAccount.id)
+      // Try to delete Nylas grant first (may fail if already deleted or invalid)
+      try {
+        await deleteGrant(emailAccount.id)
+      } catch (grantError) {
+        // Grant deletion failure is not critical - continue with email account deletion
+        console.warn("Failed to delete Nylas grant (may already be deleted):", grantError)
+      }
+
       // Then delete the email account from database
       await deleteEmailAccountMutation.mutateAsync(emailAccount.id)
 
-      // Refetch to refresh the list
-      await refetch()
+      // Refetch to refresh the list (may 404 if account was deleted, which is expected)
+      try {
+        await refetch()
+      } catch {
+        // Expected - account no longer exists after deletion
+      }
 
       toast.success(t("app.onboarding.step1.deleteSuccess", "이메일 계정이 삭제되었습니다"))
     } catch (error) {

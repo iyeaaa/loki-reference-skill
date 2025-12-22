@@ -96,7 +96,7 @@ function LoginRedirect() {
  * Trial 페이지 라우팅 로직 (Hydration-safe)
  *
  * 우선순위:
- * 1. OAuth callback (code/error param) → Redirect to /app/redirect (Nylas callback handler)
+ * 1. OAuth callback (code/error param) → NewTrialPage (로그인 처리)
  * 2. 로그아웃에서 온 경우 → NewTrialPage
  * 3. Survey 완료된 경우 → NewTrialPage (로그인 대기)
  * 4. Survey 미완료 → /trial/survey/1 리다이렉트
@@ -114,10 +114,9 @@ function TrialRedirect() {
   const isOAuthCallback = searchParams.has("code")
   const hasError = searchParams.has("error")
 
-  // 1. OAuth callback → redirect to /app/redirect (Nylas callback handler)
+  // 1. OAuth callback → always show NewTrialPage
   if (isOAuthCallback || hasError) {
-    const params = new URLSearchParams(searchParams)
-    return <Navigate replace to={`/app/redirect?${params.toString()}`} />
+    return <NewTrialPage />
   }
 
   // 2. User logged out → show login page
@@ -193,7 +192,13 @@ export const router = createBrowserRouter([
       },
       {
         path: "app/redirect",
-        element: <NylasRedirect />,
+        element: (
+          <UserProtectedRoute>
+            <DashboardLayout>
+              <NylasRedirect />
+            </DashboardLayout>
+          </UserProtectedRoute>
+        ),
       },
       // Backward compatibility redirects
       {

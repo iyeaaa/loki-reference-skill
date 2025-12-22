@@ -1,8 +1,11 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
+import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
+import logger from "../utils/logger"
 
 // ====================================
 // EMAIL ACCOUNT CRUD OPERATIONS
@@ -138,7 +141,35 @@ export async function updateEmailAccount(
 
 // DeleteEmailAccount :exec
 export async function deleteEmailAccount(id: string) {
+  // 1. 연관된 시퀀스 등록(sequence_enrollments)을 먼저 삭제 (FK 제약 조건 때문)
+  const deletedEnrollments = await db
+    .delete(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.userEmailAccountId, id))
+    .returning({ id: sequenceEnrollments.id })
+
+  if (deletedEnrollments.length > 0) {
+    logger.info(
+      { emailAccountId: id, deletedEnrollmentsCount: deletedEnrollments.length },
+      "Deleted sequence enrollments associated with email account",
+    )
+  }
+
+  // 2. 연관된 이메일들을 삭제 (FK 제약 조건 때문)
+  const deletedEmails = await db
+    .delete(emails)
+    .where(eq(emails.userEmailAccountId, id))
+    .returning({ id: emails.id })
+
+  if (deletedEmails.length > 0) {
+    logger.info(
+      { emailAccountId: id, deletedEmailsCount: deletedEmails.length },
+      "Deleted emails associated with email account",
+    )
+  }
+
+  // 3. 이메일 계정 삭제
   await db.delete(userEmailAccounts).where(eq(userEmailAccounts.id, id))
+  logger.info({ emailAccountId: id }, "Deleted email account")
 }
 
 // ====================================

@@ -513,7 +513,7 @@ function Step4({
           {EXPORT_EXPERIENCES.map((experience) => (
             <Button
               className={cn(
-                "h-auto w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                "h-auto w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all",
                 selected === experience
                   ? "border-blue-500 bg-blue-50 hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
@@ -525,7 +525,7 @@ function Step4({
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100">
                 {experienceLabels[experience].icon}
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span
                   className={cn(
                     "font-medium",

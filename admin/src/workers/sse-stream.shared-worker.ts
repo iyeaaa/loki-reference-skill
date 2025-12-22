@@ -23,7 +23,7 @@ type IncomingMessage =
   | { type: "clarify"; payload: ClarifyPayload }
   | { type: "abort"; sessionId: string }
   | { type: "get_status"; sessionId: string }
-  | { type: "poll_session"; sessionId: string }
+  | { type: "poll_session"; sessionId: string; baseUrl: string }
 
 type OutgoingMessage =
   | { type: "status_update"; sessionId: string; data: SSEEventData }
@@ -194,7 +194,7 @@ function handleMessage(message: IncomingMessage, port: MessagePort) {
     }
 
     case "poll_session":
-      pollSessionStatus(message.sessionId, port)
+      pollSessionStatus(message.sessionId, message.baseUrl, port)
       break
   }
 }
@@ -598,7 +598,7 @@ async function submitClarification(payload: ClarifyPayload, port: MessagePort) {
 /**
  * 세션 상태 폴링 (SSE 연결 끊김 시 폴백)
  */
-async function pollSessionStatus(sessionId: string, port: MessagePort) {
+async function pollSessionStatus(sessionId: string, baseUrl: string, port: MessagePort) {
   // 로컬 세션 상태 확인
   const localSession = sessions.get(sessionId)
 
@@ -618,14 +618,56 @@ async function pollSessionStatus(sessionId: string, port: MessagePort) {
   }
 
   // 로컬에 없으면 서버에 세션 상태 확인 요청 가능
-  // (백엔드 /api/v1/lead-discovery/session/:id 엔드포인트 필요)
-  port.postMessage({
-    type: "poll_result",
-    sessionId,
-    data: {
-      exists: false,
-    },
-  } as OutgoingMessage)
+  // 서버 폴링: SharedWorker가 종료/재시작되거나, 다른 탭에서 시작한 세션을 복구할 때 사용
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3000)
+
+    const response = await fetch(`${baseUrl}/api/v1/lead-discovery/session/${sessionId}/status`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        port.postMessage({
+          type: "poll_result",
+          sessionId,
+          data: { exists: false },
+        } as OutgoingMessage)
+        return
+      }
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = (await response.json()) as {
+      status?: string
+      progress?: number
+      hasResults?: boolean
+      resultCount?: number
+    }
+
+    port.postMessage({
+      type: "poll_result",
+      sessionId,
+      data: {
+        exists: true,
+        status: data.status,
+        progress: data.progress,
+        hasResults: data.hasResults,
+        resultCount: data.resultCount,
+      },
+    } as OutgoingMessage)
+  } catch {
+    // 서버 폴링 실패 시 "없음"으로 처리 (클라이언트가 재시도/backoff 가능)
+    port.postMessage({
+      type: "poll_result",
+      sessionId,
+      data: { exists: false },
+    } as OutgoingMessage)
+  }
 }
 
 /**

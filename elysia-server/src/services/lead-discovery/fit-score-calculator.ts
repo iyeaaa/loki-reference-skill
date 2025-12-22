@@ -353,6 +353,86 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return parsed
 }
 
+function truncateForPrompt(value: string | undefined | null, maxChars: number): string {
+  const v = (value ?? "").toString().trim().replaceAll(/\s+/g, " ")
+  if (!v) return ""
+  if (v.length <= maxChars) return v
+  return `${v.slice(0, maxChars)}…`
+}
+
+/**
+ * LLM 프롬프트용 “초압축” 리드 표현
+ * - 한 줄 = 한 리드
+ * - pipe(|) 구분 고정 컬럼
+ */
+function formatLeadForPrompt(lead: LeadForScoring): string {
+  const company = truncateForPrompt(lead.company_name, 40) || "N/A"
+  const type = truncateForPrompt(lead.company_type, 24) || "N/A"
+  const country = truncateForPrompt(lead.country, 24) || "N/A"
+  const industry = truncateForPrompt(lead.industry, 28) || "N/A"
+  const sub = truncateForPrompt(lead.sub_industry, 28) || "N/A"
+  const title = truncateForPrompt(lead.title, 24) || "N/A"
+  const employees = truncateForPrompt(lead.employee, 16) || "N/A"
+  const desc = truncateForPrompt(lead.description, 90) || "N/A"
+  const hasEmail = lead.email ? "1" : "0"
+  const hasPhone = lead.phone ? "1" : "0"
+  const hasWebsite = lead.web_address ? "1" : "0"
+  const http = lead.http_status ?? -1
+  const verified = lead.verified ? "1" : "0"
+
+  // Columns:
+  // id|company|type|country|industry|subIndustry|title|employees|hasEmail|hasPhone|hasWebsite|httpStatus|verified|desc
+  return [
+    lead.id,
+    company,
+    type,
+    country,
+    industry,
+    sub,
+    title,
+    employees,
+    hasEmail,
+    hasPhone,
+    hasWebsite,
+    String(http),
+    verified,
+    desc,
+  ].join("|")
+}
+
+function chunkLeadsForPrompt(
+  leads: LeadForScoring[],
+  options: { maxBatchSize: number; maxPromptChars: number },
+): LeadForScoring[][] {
+  const batches: LeadForScoring[][] = []
+  const { maxBatchSize, maxPromptChars } = options
+
+  let current: LeadForScoring[] = []
+  let currentChars = 0
+
+  for (const lead of leads) {
+    const line = formatLeadForPrompt(lead)
+    const nextChars = currentChars + line.length + 1 // + newline
+    const wouldExceedChars = current.length > 0 && nextChars > maxPromptChars
+    const wouldExceedCount = current.length >= maxBatchSize
+
+    if (wouldExceedChars || wouldExceedCount) {
+      batches.push(current)
+      current = []
+      currentChars = 0
+    }
+
+    current.push(lead)
+    currentChars += line.length + 1
+  }
+
+  if (current.length > 0) {
+    batches.push(current)
+  }
+
+  return batches
+}
+
 function isMaterialsSearchQuery(userQuery: string): boolean {
   return /building materials?|construction materials?|건축\s*자재|건자재|인테리어\s*자재|외장\s*자재|interior.*materials?|remodel.*materials?|flooring|tile|cabinet|lumber|concrete/i.test(
     userQuery,
@@ -643,7 +723,7 @@ function extractCountryFromQuery(query: string): string | null {
 }
 
 /**
- * 배치로 리드 적합도 계산 (10개씩)
+ * 배치로 리드 적합도 계산 (최대 100개 단위, 프롬프트 길이에 따라 자동 축소)
  */
 export async function calculateFitScores(
   leads: LeadForScoring[],
@@ -668,7 +748,13 @@ export async function calculateFitScores(
     return
   }
 
-  const BATCH_SIZE = parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_SIZE, 10)
+  // 요청 배치 사이즈 (최대 100) - 실제 LLM 프롬프트 길이에 따라 자동으로 더 작아질 수 있음
+  const requestedBatchSize = parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_SIZE, 100)
+  const maxBatchSize = Math.max(1, Math.min(100, requestedBatchSize))
+  const maxPromptChars = parsePositiveInt(
+    process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_MAX_PROMPT_CHARS,
+    45000,
+  )
   const concurrency =
     effectiveLeads.length >= 100
       ? parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CONCURRENCY, 3)
@@ -775,11 +861,11 @@ export async function calculateFitScores(
 
   if (remainingForLlm.length === 0) return
 
-  // 2) 10개 배치를 동시성 제한(concurrency)으로 병렬 처리 → 100+ 리드 성능 개선
-  const batches: LeadForScoring[][] = []
-  for (let i = 0; i < remainingForLlm.length; i += BATCH_SIZE) {
-    batches.push(remainingForLlm.slice(i, i + BATCH_SIZE))
-  }
+  // 4) LLM 배치는 프롬프트 길이 제한을 고려해 “최대 100개”에서 자동으로 잘라 처리
+  const batches = chunkLeadsForPrompt(remainingForLlm, {
+    maxBatchSize,
+    maxPromptChars,
+  })
 
   let nextBatchIndex = 0
   const workers = Array.from(
@@ -864,24 +950,9 @@ async function calculateBatchScores(
   selectedTarget: { country: string; industry: string },
   userQuery?: string,
 ): Promise<FitScoreResult[]> {
-  const leadsInfo = leads
-    .map(
-      (lead, idx) =>
-        `${idx + 1}. ID: ${lead.id}
-   - Company: ${lead.company_name || "N/A"}
-   - Company Type: ${lead.company_type || "N/A"}
-   - Description: ${(lead.description || "N/A").toString().slice(0, 160)}
-   - Industry: ${lead.industry || "N/A"} / ${lead.sub_industry || "N/A"}
-   - Country: ${lead.country || "N/A"}
-   - Title: ${lead.title || "N/A"}
-   - Employees: ${lead.employee || "N/A"}
-   - Has Email: ${lead.email ? "Yes" : "No"}
-   - Has Phone: ${lead.phone ? "Yes" : "No"}
-   - Has Website: ${lead.web_address ? "Yes" : "No"}
-   - Website HTTP Status: ${lead.http_status ?? "N/A"}
-   - Enriched Profile: ${lead.verified ? "Yes" : "No"}`,
-    )
-    .join("\n\n")
+  // 배치 크기를 키우기 위해, 리드 정보를 매우 압축된 포맷으로 구성한다.
+  // (길이가 커지면 모델 컨텍스트 한계를 빠르게 초과하므로 필드/설명을 축약)
+  const leadsInfo = leads.map(formatLeadForPrompt).join("\n")
 
   // userQuery가 있으면 검색 쿼리 기반 평가, 없으면 판매자 정보 기반 평가
   const searchCriteria = userQuery
@@ -924,6 +995,11 @@ ${searchCriteria}
 ${extractedCountry ? `- User Requested Country (from query): ${extractedCountry}` : ""}
 
 ## Leads to Evaluate:
+Each line is one lead, with pipe-delimited columns:
+id|company|companyType|country|industry|subIndustry|title|employees|hasEmail|hasPhone|hasWebsite|httpStatus|verified|description
+- hasEmail/hasPhone/hasWebsite/verified are 0 or 1
+- httpStatus is a number (or -1 when unknown)
+- description is truncated
 ${leadsInfo}
 
 ## ⚠️ CRITICAL: SEARCH INTENT UNDERSTANDING

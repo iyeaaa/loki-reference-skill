@@ -7,6 +7,11 @@
 
 import { atom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
+import {
+  deleteCustomers as deleteCustomersFromIDB,
+  getCustomers as getCustomersFromIDB,
+  saveCustomers as saveCustomersToIDB,
+} from "@/lib/idb/session-store"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
@@ -222,6 +227,8 @@ export const goBackToSearchAtom = atom(null, (_get, set) => {
 
 // 전체 초기화 (완전히 새로 시작) - 모든 상태를 초기화
 export const resetAllAtom = atom(null, (_get, set) => {
+  // ★ 활성 세션 ID 초기화 (새 검색 시작 시 이전 세션과 분리)
+  set(activeSessionIdAtom, null)
   // 채팅 메시지 초기화
   set(chatMessagesAtom, [])
   localStorage.removeItem("lead-discovery-chat-messages")
@@ -406,6 +413,34 @@ export const initialFitScoreState: FitScoreState = {
 
 // 적합도 점수 상태 atom
 export const fitScoreStateAtom = atom<FitScoreState>(initialFitScoreState)
+
+// 적합도 점수 업데이트 (배치)
+export const updateFitScoresAtom = atom(
+  null,
+  (get, set, updates: Array<{ leadId: string; score: number; signature?: string }>) => {
+    if (updates.length === 0) {
+      return
+    }
+    const current = get(fitScoreStateAtom)
+
+    const nextScores = { ...current.scores }
+    const nextSignatures = { ...current.signatures }
+
+    for (const u of updates) {
+      nextScores[u.leadId] = u.score
+      if (u.signature) {
+        nextSignatures[u.leadId] = u.signature
+      }
+    }
+
+    set(fitScoreStateAtom, {
+      ...current,
+      scores: nextScores,
+      // signatures는 signature가 들어온 경우에만 갱신되지만, batch 처리에서는 전체를 한 번에 세팅
+      signatures: nextSignatures,
+    })
+  },
+)
 
 // 적합도 점수 업데이트 (단일)
 export const updateFitScoreAtom = atom(
@@ -1040,6 +1075,9 @@ export type SearchSession = {
   industry?: string
   subIndustry?: string
   employeeRange?: string
+
+  // ★ IndexedDB 저장용 메타데이터 (localStorage 용량 제한 회피)
+  _customerCount?: number // 고객 수 (UI 표시용, 실제 데이터는 IndexedDB)
 }
 
 // 최대 동시 검색 수
@@ -1049,9 +1087,11 @@ const MAX_CONCURRENT_SEARCHES = 3
 type StoredSearchSession = Omit<SearchSession, "customers" | "messages"> & {
   customers: StoredCustomer[]
   messages: StoredChatMessage[]
+  _customerCount?: number // IndexedDB에 저장된 고객 수 (UI 표시용)
 }
 
 // 검색 세션 로컬스토리지 커스텀 스토리지
+// ★ 고객 데이터는 IndexedDB에 별도 저장 (localStorage 5MB 제한 회피)
 const searchSessionsStorage = {
   getItem: (key: string): SearchSession[] => {
     const stored = localStorage.getItem(key)
@@ -1062,32 +1102,67 @@ const searchSessionsStorage = {
       const parsed: StoredSearchSession[] = JSON.parse(stored)
       return parsed.map((s) => ({
         ...s,
-        customers: (s.customers || []).map((c) => ({
-          ...c,
-          createdAt: new Date(c.createdAt),
-        })),
+        // ★ localStorage에서는 고객 데이터 없이 로드 (빈 배열)
+        // 실제 고객 데이터는 switchToSessionAtom에서 IndexedDB로부터 로드
+        customers: [],
         messages: (s.messages || []).map((m) => ({
           ...m,
           timestamp: new Date(m.timestamp),
         })),
+        // 메타데이터로 고객 수만 저장 (UI 표시용)
+        _customerCount: s._customerCount || (s.customers?.length ?? 0),
       }))
     } catch {
       return []
     }
   },
   setItem: (key: string, value: SearchSession[]): void => {
+    // ★ 고객 데이터는 IndexedDB에 별도 저장
+    for (const session of value) {
+      if (session.customers.length > 0) {
+        // 비동기로 IndexedDB에 저장 (실패해도 메인 플로우에 영향 없음)
+        saveCustomersToIDB(
+          session.id,
+          session.customers.map((c) => ({
+            ...c,
+            createdAt: c.createdAt.toISOString(),
+          })),
+        ).catch((err) => {
+          console.error("[store] IndexedDB 고객 데이터 저장 실패:", session.id, err)
+        })
+      }
+    }
+
+    // localStorage에는 메타데이터만 저장 (고객 데이터 제외)
     const toStore: StoredSearchSession[] = value.map((s) => ({
       ...s,
-      customers: s.customers.map((c) => ({
-        ...c,
-        createdAt: c.createdAt.toISOString(),
-      })),
+      customers: [], // ★ 고객 데이터 제외
+      _customerCount: s.customers.length, // UI 표시용 고객 수만 저장
       messages: s.messages.map((m) => ({
         ...m,
         timestamp: m.timestamp.toISOString(),
       })),
     }))
-    localStorage.setItem(key, JSON.stringify(toStore))
+
+    try {
+      localStorage.setItem(key, JSON.stringify(toStore))
+    } catch (err) {
+      console.error("[store] localStorage 저장 실패:", err)
+      // 용량 초과 시 오래된 세션 삭제 후 재시도
+      try {
+        const oldSessions = JSON.parse(localStorage.getItem(key) || "[]") as StoredSearchSession[]
+        // 최근 10개만 유지
+        const trimmed = toStore.slice(0, 10)
+        localStorage.setItem(key, JSON.stringify(trimmed))
+        // 삭제된 세션의 IndexedDB 데이터도 정리
+        const removedIds = oldSessions.slice(10).map((s) => s.id)
+        for (const id of removedIds) {
+          deleteCustomersFromIDB(id).catch(() => {})
+        }
+      } catch {
+        console.error("[store] localStorage 저장 재시도 실패")
+      }
+    }
   },
   removeItem: (key: string): void => {
     localStorage.removeItem(key)
@@ -1246,6 +1321,11 @@ export const removeSearchSessionAtom = atom(null, (get, set, sessionId: string) 
     sessions.filter((s) => s.id !== sessionId),
   )
 
+  // ★ IndexedDB에서 고객 데이터도 삭제
+  deleteCustomersFromIDB(sessionId).catch((err) => {
+    console.error("[store] IndexedDB 고객 데이터 삭제 실패:", err)
+  })
+
   // 삭제된 세션이 활성 세션이었으면 초기화
   if (activeId === sessionId) {
     set(activeSessionIdAtom, null)
@@ -1268,6 +1348,9 @@ export const clearAllSessionsAtom = atom(null, (_get, set) => {
   localStorage.removeItem("lead-discovery-search-sessions")
 })
 
+// ★ IndexedDB에서 고객 데이터 로드 상태
+export const isLoadingCustomersAtom = atom(false)
+
 // ★ 세션 전환 (현재 세션 저장 + 새 세션 데이터 로드)
 export const switchToSessionAtom = atom(
   null,
@@ -1286,8 +1369,11 @@ export const switchToSessionAtom = atom(
 
     // 같은 세션이면 무시
     if (currentActiveId === targetSessionId) {
+      console.log("[store] 같은 세션으로 전환 시도, 무시:", targetSessionId)
       return null
     }
+
+    console.log("[store] 세션 전환 시작:", { from: currentActiveId, to: targetSessionId })
 
     // 1. 현재 세션의 메시지 및 Fit Score 저장 (있는 경우)
     if (currentActiveId) {
@@ -1317,17 +1403,50 @@ export const switchToSessionAtom = atom(
     // 3. 활성 세션 ID 변경
     set(activeSessionIdAtom, targetSessionId)
 
-    // 4. 고객 목록 로드
+    // 4. 고객 목록 로드 - ★ IndexedDB에서 비동기로 로드
+    // 먼저 빈 배열 또는 메모리에 있는 데이터로 설정
     set(customersAtom, targetSession.customers)
+
+    // ★ IndexedDB에서 고객 데이터 비동기 로드
+    if (targetSession.customers.length === 0) {
+      set(isLoadingCustomersAtom, true)
+      getCustomersFromIDB(targetSessionId)
+        .then((storedCustomers) => {
+          if (storedCustomers && storedCustomers.length > 0) {
+            // IndexedDB에서 가져온 데이터를 Customer 타입으로 변환
+            const customers: Customer[] = (storedCustomers as StoredCustomer[]).map((c) => ({
+              ...c,
+              createdAt: new Date(c.createdAt),
+            }))
+            set(customersAtom, customers)
+            // 세션에도 고객 데이터 업데이트 (메모리 캐시)
+            set(
+              searchSessionsAtom,
+              get(searchSessionsAtom).map((s) =>
+                s.id === targetSessionId ? { ...s, customers, updatedAt: Date.now() } : s,
+              ),
+            )
+            console.log(`[store] IndexedDB에서 ${customers.length}개 고객 데이터 로드 완료`)
+          }
+        })
+        .catch((err) => {
+          console.error("[store] IndexedDB 고객 데이터 로드 실패:", err)
+        })
+        .finally(() => {
+          set(isLoadingCustomersAtom, false)
+        })
+    }
 
     // 5. 채팅 메시지 로드
     // - 과거 세션에 메시지가 저장되지 않은 경우(구버전/버그), 기본 메시지를 생성해서 복원
     const hasMessages = targetSession.messages.length > 0
+    // ★ _customerCount 사용 (IndexedDB 저장 시 저장된 고객 수)
+    const resultCount =
+      targetSession.totalCount || targetSession._customerCount || targetSession.customers.length
     const restoredMessages: ChatMessage[] = hasMessages
       ? targetSession.messages
       : (() => {
           const now = Date.now()
-          const resultCount = targetSession.totalCount || targetSession.customers.length
           const userMsg: ChatMessage = {
             id: `msg-${now}-restored-user`,
             role: "user",

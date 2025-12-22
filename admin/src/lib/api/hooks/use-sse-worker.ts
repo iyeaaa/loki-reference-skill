@@ -20,7 +20,7 @@ type WorkerMessage =
   | { type: "clarify"; payload: ClarifyPayload }
   | { type: "abort"; sessionId: string }
   | { type: "get_status"; sessionId: string }
-  | { type: "poll_session"; sessionId: string }
+  | { type: "poll_session"; sessionId: string; baseUrl: string }
 
 type SearchPayload = {
   baseUrl: string
@@ -111,7 +111,7 @@ function getSharedWorker(): SharedWorker | null {
   if (!sharedWorker) {
     try {
       sharedWorker = new SharedWorker(
-        new URL("../../workers/sse-stream.shared-worker.ts", import.meta.url),
+        new URL("../../../workers/sse-stream.shared-worker.ts", import.meta.url),
         { type: "module", name: "lead-discovery-sse" },
       )
     } catch (error) {
@@ -315,6 +315,7 @@ export function useSSEWorker(callbacks: SSEWorkerCallbacks) {
       portRef.current?.postMessage({
         type: "poll_session",
         sessionId,
+        baseUrl: API_BASE_URL,
       } as WorkerMessage)
 
       // 타임아웃 (5초)

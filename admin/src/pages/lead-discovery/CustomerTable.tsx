@@ -80,7 +80,7 @@ import {
   startEnrichmentAtom,
   streamingStateAtom,
   updateCustomerAtom,
-  updateFitScoreAtom,
+  updateFitScoresAtom,
   updateSearchSessionAtom,
   updateStreamingStateAtom,
 } from "./store"
@@ -507,8 +507,24 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 적합도 점수 상태
   const fitScoreState = useAtomValue(fitScoreStateAtom)
-  const updateFitScore = useSetAtom(updateFitScoreAtom)
+  const updateFitScores = useSetAtom(updateFitScoresAtom)
   const setFitScoreLoading = useSetAtom(setFitScoreLoadingAtom)
+
+  // FitScore 점수 업데이트를 배치로 처리해서 대량 업데이트 시 리렌더/정렬 스파이크를 줄인다.
+  const pendingFitScoreUpdatesRef = useRef<
+    Array<{ leadId: string; score: number; signature?: string }>
+  >([])
+  const fitScoreFlushTimerRef = useRef<number | null>(null)
+
+  const flushFitScoreUpdates = useCallback(() => {
+    fitScoreFlushTimerRef.current = null
+    const batch = pendingFitScoreUpdatesRef.current
+    if (batch.length === 0) {
+      return
+    }
+    pendingFitScoreUpdatesRef.current = []
+    updateFitScores(batch)
+  }, [updateFitScores])
 
   const getResolvedFitScore = useCallback(
     (leadId: string, fallback?: number) => {
@@ -728,13 +744,22 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       },
       {
         onScore: (leadId, score) => {
-          updateFitScore({ leadId, score, signature: signatureByLeadId.get(leadId) })
+          const signature = signatureByLeadId.get(leadId)
+          pendingFitScoreUpdatesRef.current.push({ leadId, score, signature })
+
+          // 50ms 단위로 flush → FitScore가 수백개일 때 setState 폭주 방지
+          if (fitScoreFlushTimerRef.current === null) {
+            fitScoreFlushTimerRef.current = window.setTimeout(() => {
+              flushFitScoreUpdates()
+            }, 50)
+          }
         },
         onProgress: (progress) => {
           setFitScoreLoading({ isLoading: true, progress })
         },
         onComplete: () => {
           console.log("[FitScore] 적합도 계산 완료")
+          flushFitScoreUpdates()
           setFitScoreLoading({ isLoading: false, progress: 100 })
           isCalculatingRef.current = false
 
@@ -749,6 +774,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
         onError: (error) => {
           console.error("[FitScore] 적합도 계산 에러:", error)
+          flushFitScoreUpdates()
           setFitScoreLoading({ isLoading: false, progress: 0 })
           isCalculatingRef.current = false
         },
@@ -768,12 +794,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     selectedTarget,
     streamingState.analysisSummary,
     streamingState.userQuery,
-    updateFitScore,
     setFitScoreLoading,
     workspaceId,
     makeFitScoreSignature,
     activeSessionId,
     updateSearchSession,
+    flushFitScoreUpdates,
     // fitScoreState.scores와 signatures는 의존성에서 제외 - 점수가 업데이트될 때마다 재실행되면 abort됨
   ])
 
@@ -1458,12 +1484,16 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         return 1
       }
 
-      // 2순위: fit_score (높은 것이 위로) - fitScoreState.scores에서 가져옴
-      const scoreA = getResolvedFitScore(a.id, a.fit_score) ?? -1
-      const scoreB = getResolvedFitScore(b.id, b.fit_score) ?? -1
+      // 2순위: fit_score (높은 것이 위로)
+      // - FitScore 스트리밍 중에는 행이 계속 재정렬되면 UX/성능이 나빠져서,
+      //   로딩 중에는 기존(fallback) 값으로만 정렬한다.
+      const scoreA =
+        (fitScoreState.isLoading ? a.fit_score : getResolvedFitScore(a.id, a.fit_score)) ?? -1
+      const scoreB =
+        (fitScoreState.isLoading ? b.fit_score : getResolvedFitScore(b.id, b.fit_score)) ?? -1
       return scoreB - scoreA
     })
-  }, [customers, getResolvedFitScore])
+  }, [customers, fitScoreState.isLoading, getResolvedFitScore])
 
   const resolvedColumnOrder = useMemo(() => sanitizeColumnOrder(columnOrder), [columnOrder])
 

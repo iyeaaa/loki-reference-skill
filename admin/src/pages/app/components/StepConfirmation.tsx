@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   ArrowRight,
   Calendar,
   CheckCircle2,
@@ -142,7 +143,7 @@ export function StepConfirmation() {
     setExecutionProgress(0)
 
     try {
-      setExecutionStatus(isKorean ? "리드 등록 중..." : "Enrolling leads...")
+      setExecutionStatus(isKorean ? "리드 등록 중" : "Enrolling leads")
       setExecutionProgress(20)
 
       const leadIds = leads.map((lead) => lead.id)
@@ -162,7 +163,7 @@ export function StepConfirmation() {
       console.log("Enrollment result:", enrollResult)
       setExecutionProgress(60)
 
-      setExecutionStatus(isKorean ? "캠페인 활성화 중..." : "Activating campaign...")
+      setExecutionStatus(isKorean ? "캠페인 활성화 중" : "Activating campaign")
 
       await apiFetch(`/api/v1/sequences/${sequenceInfo.id}/activate-step-based`, {
         method: "POST",
@@ -196,6 +197,11 @@ export function StepConfirmation() {
       setExecutionProgress(0)
       setExecutionStatus("")
     }
+  }
+
+  const handleBack = () => {
+    // Go back to step 3 (email link)
+    setSearchParams({ step: "3" })
   }
 
   const handleSkipToDashboard = async () => {
@@ -271,7 +277,7 @@ export function StepConfirmation() {
     )
   }
 
-  // 실행 중 상태 (AI 에이전틱)
+  // 실행 중 상태
   if (isExecuting) {
     return (
       <div className="mx-auto max-w-lg px-4">
@@ -287,10 +293,10 @@ export function StepConfirmation() {
 
               <div className="space-y-2">
                 <h2 className="font-bold text-[22px] text-gray-900 tracking-tight">
-                  {isKorean ? "캠페인을 준비하고 있어요" : "Setting up your campaign"}
+                  {isKorean ? "캠페인 준비 중" : "Setting up campaign"}
                 </h2>
                 <p className="text-gray-500">
-                  {executionStatus || (isKorean ? "잠시만 기다려주세요" : "Please wait a moment")}
+                  {executionStatus || (isKorean ? "잠시만요" : "Just a moment")}
                 </p>
               </div>
 
@@ -349,7 +355,7 @@ export function StepConfirmation() {
     )
   }
 
-  // 에러 상태 (친근한 에러 메시지)
+  // 에러 상태
   if (executionError) {
     return (
       <div className="mx-auto max-w-lg px-4">
@@ -360,13 +366,10 @@ export function StepConfirmation() {
                 <Zap className="h-7 w-7 text-red-600" />
               </div>
               <h2 className="mb-2 font-bold text-[22px] text-gray-900 tracking-tight">
-                {isKorean ? "앗, 문제가 생겼어요" : "Oops, something went wrong"}
+                {isKorean ? "잠깐 문제가 생겼어요" : "Something went wrong"}
               </h2>
               <p className="mb-8 max-w-sm text-gray-500 leading-relaxed">
-                {executionError ||
-                  (isKorean
-                    ? "일시적인 오류예요. 다시 시도해주세요"
-                    : "This is temporary. Please try again")}
+                {isKorean ? "다시 시도해 주세요" : "Please try again"}
               </p>
               <div className="flex w-full gap-3">
                 <Button
@@ -374,7 +377,7 @@ export function StepConfirmation() {
                   onClick={() => setExecutionError(null)}
                   variant="outline"
                 >
-                  {isKorean ? "다시 시도하기" : "Try again"}
+                  {isKorean ? "다시 시도" : "Try again"}
                 </Button>
                 <Button
                   className="h-12 flex-1 rounded-xl bg-gray-900 hover:bg-gray-800"
@@ -534,22 +537,32 @@ export function StepConfirmation() {
           </div>
 
           {/* 액션 버튼 */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              className="h-12 flex-1 rounded-xl border-gray-200 font-medium text-gray-600"
+          <div className="space-y-3 pt-2">
+            <div className="flex gap-3">
+              <Button
+                className="h-12 flex-1 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                onClick={handleBack}
+                variant="ghost"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {isKorean ? "이전" : "Back"}
+              </Button>
+              <Button
+                className="h-12 flex-[2] rounded-xl bg-blue-500 font-semibold text-white hover:bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400"
+                disabled={isExecuting || !emailAccount}
+                onClick={handleExecute}
+              >
+                {isKorean ? "지금 시작하기" : "Start now"}
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+            <button
+              className="w-full py-2 text-center text-gray-400 text-sm transition-colors hover:text-gray-600"
               onClick={handleSkipToDashboard}
-              variant="outline"
+              type="button"
             >
               {isKorean ? "나중에 할게요" : "Maybe later"}
-            </Button>
-            <Button
-              className="h-12 flex-[2] rounded-xl bg-blue-500 font-semibold text-white hover:bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400"
-              disabled={isExecuting || !emailAccount}
-              onClick={handleExecute}
-            >
-              {isKorean ? "지금 시작하기" : "Start now"}
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </CardContent>
       </Card>

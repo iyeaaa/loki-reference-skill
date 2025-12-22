@@ -9,8 +9,21 @@
 
 import { format, isToday, isYesterday } from "date-fns"
 import { ko } from "date-fns/locale"
-import { Bell, Check, CheckCircle2, Loader2, MoreHorizontal, Trash2, XCircle } from "lucide-react"
+import {
+  AlertCircle,
+  ArrowRight,
+  Bell,
+  Check,
+  CheckCircle2,
+  Loader2,
+  MoreHorizontal,
+  RefreshCw,
+  Trash2,
+  Users,
+  XCircle,
+} from "lucide-react"
 import { useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -42,7 +55,10 @@ type GroupedNotifications = {
 // Helper Functions
 // ============================================================================
 
-function getNotificationIcon(type: Notification["type"]) {
+function getNotificationIcon(type: Notification["type"], metadata?: Notification["metadata"]) {
+  // 온보딩 완료 상태 체크
+  const isOnboardingComplete = metadata?.phase === "complete"
+
   switch (type) {
     case "success":
       return (
@@ -59,11 +75,15 @@ function getNotificationIcon(type: Notification["type"]) {
     case "warning":
       return (
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-          <Bell className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+          <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
         </div>
       )
     case "onboarding":
-      return (
+      return isOnboardingComplete ? (
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+          <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+        </div>
+      ) : (
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
           <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400" />
         </div>
@@ -75,6 +95,36 @@ function getNotificationIcon(type: Notification["type"]) {
         </div>
       )
   }
+}
+
+/**
+ * 온보딩 알림 상세 정보 포맷팅
+ */
+function formatOnboardingDetails(metadata: Notification["metadata"]): string | null {
+  if (!metadata) {
+    return null
+  }
+
+  const { leadsFound, previewsGenerated, totalPreviews, phase } = metadata as {
+    leadsFound?: number
+    previewsGenerated?: number
+    totalPreviews?: number
+    phase?: string
+  }
+
+  if (phase === "complete" && leadsFound && previewsGenerated) {
+    return `바이어 ${leadsFound}명 · 이메일 ${previewsGenerated}개`
+  }
+
+  if (phase === "discovery" && leadsFound) {
+    return `${leadsFound}명 찾는 중...`
+  }
+
+  if (phase === "previews" && previewsGenerated && totalPreviews) {
+    return `이메일 ${previewsGenerated}/${totalPreviews}개 작성 중`
+  }
+
+  return null
 }
 
 function formatDateLabel(dateString: string): string {
@@ -133,10 +183,60 @@ type NotificationItemProps = {
   notification: Notification
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
+  onAction?: (url: string) => void
 }
 
-function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
-  const [showActions, setShowActions] = useState(false)
+function NotificationItem({
+  notification,
+  onMarkAsRead,
+  onDelete,
+  onAction,
+}: NotificationItemProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const metadata = notification.metadata as {
+    phase?: string
+    progressPercent?: number
+    leadsFound?: number
+    previewsGenerated?: number
+    totalPreviews?: number
+    actionUrl?: string
+    actionLabel?: string
+  } | null
+
+  const phase = metadata?.phase
+  const progressPercent = metadata?.progressPercent
+  const isComplete = phase === "complete" || notification.type === "success"
+  const isError = phase === "error" || notification.type === "error"
+  const isInProgress = notification.type === "onboarding" && !isComplete && !isError
+
+  // 상세 정보 포맷팅
+  const detailsText = formatOnboardingDetails(notification.metadata)
+
+  // CTA 버튼 정보
+  const actionUrl = metadata?.actionUrl
+  const actionLabel = metadata?.actionLabel
+
+  // 기본 CTA 설정 (체험판 유저는 결과 확인 불가)
+  const getDefaultAction = () => {
+    if (isError) {
+      return { url: "/app/trial?step=2", label: "다시 시도" }
+    }
+    return null
+  }
+
+  const ctaAction = actionUrl
+    ? { url: actionUrl, label: actionLabel || "확인하기" }
+    : getDefaultAction()
+
+  const handleCtaClick = () => {
+    if (ctaAction?.url && onAction) {
+      if (!notification.read) {
+        onMarkAsRead(notification.id)
+      }
+      onAction(ctaAction.url)
+    }
+  }
 
   return (
     <li
@@ -145,77 +245,108 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
         "hover:bg-muted/50",
         !notification.read && "bg-blue-50/50 dark:bg-blue-950/20",
       )}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
       {/* Thumbnail Icon */}
-      <div className="flex-shrink-0">{getNotificationIcon(notification.type)}</div>
+      <div className="flex-shrink-0">
+        {getNotificationIcon(notification.type, notification.metadata)}
+      </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p
-            className={cn(
-              "line-clamp-2 text-sm leading-snug",
-              !notification.read && "font-medium text-foreground",
-              notification.read && "text-muted-foreground",
-            )}
-          >
-            {notification.message || notification.title}
-          </p>
+          <div className="flex-1">
+            {/* Title */}
+            <p
+              className={cn(
+                "text-sm leading-snug",
+                !notification.read && "font-medium text-foreground",
+                notification.read && "text-muted-foreground",
+              )}
+            >
+              {notification.title || notification.message}
+            </p>
+
+            {/* Details (바이어 수, 이메일 수 등) */}
+            {detailsText && <p className="mt-0.5 text-muted-foreground text-xs">{detailsText}</p>}
+          </div>
+
           {!notification.read && (
             <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500" />
           )}
         </div>
 
-        {/* Time */}
-        <p className="mt-1 text-muted-foreground/70 text-xs">
-          {formatTime(notification.createdAt)}
-        </p>
-
-        {/* Progress bar for onboarding notifications */}
-        {notification.type === "onboarding" && notification.metadata?.progressPercent && (
+        {/* Progress bar for in-progress onboarding */}
+        {isInProgress && progressPercent !== undefined && progressPercent > 0 && (
           <div className="mt-2">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${notification.metadata.progressPercent}%` }}
+                className={cn(
+                  "h-full transition-all duration-500 ease-out",
+                  progressPercent >= 100 ? "bg-green-500" : "bg-blue-500",
+                )}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
               />
             </div>
-            <p className="mt-1 text-muted-foreground text-xs">
-              {notification.metadata.progressPercent}% 완료
-            </p>
+            <p className="mt-1 text-muted-foreground text-xs">{progressPercent}%</p>
           </div>
         )}
+
+        {/* CTA Button for complete/error states */}
+        {ctaAction && (isComplete || isError) && (
+          <Button
+            className={cn(
+              "mt-2 h-7 px-3 text-xs",
+              isError && "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700",
+            )}
+            onClick={handleCtaClick}
+            size="sm"
+            variant="outline"
+          >
+            {isError ? (
+              <RefreshCw className="mr-1.5 h-3 w-3" />
+            ) : (
+              <ArrowRight className="mr-1.5 h-3 w-3" />
+            )}
+            {ctaAction.label}
+          </Button>
+        )}
+
+        {/* Time */}
+        <p className="mt-1.5 text-muted-foreground/70 text-xs">
+          {formatTime(notification.createdAt)}
+        </p>
       </div>
 
-      {/* Actions */}
-      {showActions && (
-        <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="h-7 w-7" size="icon" variant="ghost">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {!notification.read && (
-                <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
-                  <Check className="mr-2 h-4 w-4" />
-                  읽음으로 표시
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-red-600 focus:text-red-600"
-                onClick={() => onDelete(notification.id)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                삭제
+      {/* Actions Menu */}
+      <div
+        className={cn(
+          "absolute top-2 right-2 transition-opacity",
+          isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
+      >
+        <DropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button className="h-7 w-7" size="icon" variant="ghost">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {!notification.read && (
+              <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
+                <Check className="mr-2 h-4 w-4" />
+                읽음으로 표시
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
+            )}
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onClick={() => onDelete(notification.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              삭제
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </li>
   )
 }
@@ -224,9 +355,10 @@ type DateGroupProps = {
   group: GroupedNotifications
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
+  onAction: (url: string) => void
 }
 
-function DateGroup({ group, onMarkAsRead, onDelete }: DateGroupProps) {
+function DateGroup({ group, onMarkAsRead, onDelete, onAction }: DateGroupProps) {
   return (
     <div>
       {/* Date Header */}
@@ -240,6 +372,7 @@ function DateGroup({ group, onMarkAsRead, onDelete }: DateGroupProps) {
           <NotificationItem
             key={notification.id}
             notification={notification}
+            onAction={onAction}
             onDelete={onDelete}
             onMarkAsRead={onMarkAsRead}
           />
@@ -255,6 +388,7 @@ function DateGroup({ group, onMarkAsRead, onDelete }: DateGroupProps) {
 
 export function NotificationBell({ workspaceId, className }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
 
   const {
     notifications,
@@ -282,21 +416,39 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     }
   }
 
+  const handleAction = (url: string) => {
+    setIsOpen(false)
+    navigate(url)
+  }
+
   return (
     <Popover onOpenChange={handleOpenChange} open={isOpen}>
       <PopoverTrigger asChild>
         <button
+          aria-label={`알림 ${hasUnread ? `(${unreadCount}개 읽지 않음)` : ""}`}
           className={cn(
-            "relative flex h-8 w-8 items-center justify-center rounded-full",
-            "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700",
-            "transition-colors",
+            "relative inline-flex items-center justify-center",
+            "h-9 w-9 rounded-md",
+            "text-muted-foreground hover:text-foreground",
+            "hover:bg-accent",
+            "transition-colors duration-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
           type="button"
         >
-          <Bell className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          <Bell className="h-5 w-5" strokeWidth={1.75} />
           {hasUnread && (
-            <span className="-top-0.5 -right-0.5 absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 font-medium text-[10px] text-white">
+            <span
+              className={cn(
+                "absolute flex items-center justify-center",
+                "rounded-full bg-red-500 font-medium text-white",
+                "ring-2 ring-background",
+                unreadCount > 9
+                  ? "-right-0.5 top-0.5 h-4 min-w-4 px-1 text-[10px]"
+                  : "top-1 right-1 h-3.5 w-3.5 text-[9px]",
+              )}
+            >
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
@@ -333,6 +485,7 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
                 <DateGroup
                   group={group}
                   key={group.dateKey}
+                  onAction={handleAction}
                   onDelete={deleteNotification}
                   onMarkAsRead={markAsRead}
                 />

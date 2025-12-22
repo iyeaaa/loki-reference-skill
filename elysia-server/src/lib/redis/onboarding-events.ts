@@ -214,8 +214,22 @@ export function createDiscoveryStartEvent(
     jobId,
     phase: "discovery",
     progressPercent: 5,
-    message: "Finding potential buyers for you...",
-    messageKr: "맞춤 바이어를 찾고 있어요",
+    message: "Starting buyer search...",
+    messageKr: "바이어 찾기 시작",
+  })
+}
+
+export function createDiscoverySearchingEvent(
+  workspaceId: string,
+  jobId: string,
+): OnboardingProgressEvent {
+  return createProgressEvent({
+    workspaceId,
+    jobId,
+    phase: "discovery",
+    progressPercent: 10,
+    message: "Searching database...",
+    messageKr: "데이터베이스 검색 중",
   })
 }
 
@@ -230,16 +244,26 @@ export function createDiscoveryBatchEvent(
   leadsFound: number,
   leadsEnriched: number,
 ): OnboardingProgressEvent {
-  // 300개 목표 기준 실제 퍼센트 표시 (0% ~ 100% 범위)
+  // 20개 목표 기준 실제 퍼센트 표시 (0% ~ 100% 범위)
   const progressPercent = Math.min(Math.round((leadsFound / TARGET_LEADS_FOR_PROGRESS) * 100), 100)
+
+  // 진행 상황에 따른 자연스러운 메시지
+  let messageKr: string
+  if (leadsFound === 0) {
+    messageKr = "바이어 찾고 있어요"
+  } else if (leadsFound < 10) {
+    messageKr = `${leadsFound}명 찾았어요`
+  } else {
+    messageKr = `벌써 ${leadsFound}명이에요`
+  }
 
   return createProgressEvent({
     workspaceId,
     jobId,
     phase: "discovery",
     progressPercent,
-    message: `Finding buyers... ${leadsFound} of ${TARGET_LEADS_FOR_PROGRESS}`,
-    messageKr: `바이어를 찾고 있어요 (${leadsFound}/${TARGET_LEADS_FOR_PROGRESS})`,
+    message: `Found ${leadsFound} buyers`,
+    messageKr,
     details: {
       leadsFound,
       leadsEnriched,
@@ -258,7 +282,7 @@ export function createDiscoveryCompleteEvent(
     phase: "discovery",
     progressPercent: 30,
     message: `Found ${leadsFound} buyers`,
-    messageKr: `${leadsFound}명의 바이어를 찾았어요`,
+    messageKr: `${leadsFound}명 다 찾았어요 ✓`,
     details: {
       leadsFound,
       leadsEnriched: leadsFound,
@@ -273,8 +297,8 @@ export function createGroupStartEvent(workspaceId: string, jobId: string): Onboa
     jobId,
     phase: "group",
     progressPercent: 35,
-    message: "Organizing your buyer list...",
-    messageKr: "바이어 리스트를 정리하고 있어요",
+    message: "Organizing buyer list...",
+    messageKr: "리스트 정리하는 중",
   })
 }
 
@@ -288,8 +312,8 @@ export function createGroupCompleteEvent(
     jobId,
     phase: "group",
     progressPercent: 40,
-    message: `Buyer list ready with ${leadCount} contacts`,
-    messageKr: `${leadCount}개의 바이어가 리스트에 담겼어요`,
+    message: `${leadCount} buyers organized`,
+    messageKr: `${leadCount}명 리스트 완료 ✓`,
   })
 }
 
@@ -304,8 +328,8 @@ export function createTemplatesStartEvent(
     jobId,
     phase: "templates",
     progressPercent: 45,
-    message: "Crafting personalized emails...",
-    messageKr: "맞춤형 이메일을 작성하고 있어요",
+    message: "Writing emails...",
+    messageKr: "이메일 쓰는 중",
     details: {
       templatesGenerated: 0,
       totalTemplates,
@@ -321,14 +345,14 @@ export function createTemplateProgressEvent(
   templateName: string,
 ): OnboardingProgressEvent {
   const templateProgress = (current / total) * 20 // 45% to 65%
-  const templateNameKr = templateName === "introduction" ? "첫 인사 이메일" : "팔로업 이메일"
+  const templateNameKr = templateName === "introduction" ? "첫 번째" : "두 번째"
   return createProgressEvent({
     workspaceId,
     jobId,
     phase: "templates",
     progressPercent: Math.round(45 + templateProgress),
     message: `Writing email ${current} of ${total}...`,
-    messageKr: `${templateNameKr}을 작성했어요 (${current}/${total})`,
+    messageKr: `${templateNameKr} 이메일 완료`,
     details: {
       templatesGenerated: current,
       totalTemplates: total,
@@ -347,8 +371,8 @@ export function createTemplatesCompleteEvent(
     jobId,
     phase: "templates",
     progressPercent: 65,
-    message: "Email templates are ready",
-    messageKr: "이메일 템플릿이 준비됐어요",
+    message: "Email templates ready",
+    messageKr: "템플릿 준비 완료 ✓",
     details: {
       templatesGenerated: totalTemplates,
       totalTemplates,
@@ -366,8 +390,8 @@ export function createSequenceStartEvent(
     jobId,
     phase: "sequence",
     progressPercent: 70,
-    message: "Setting up your email campaign...",
-    messageKr: "발송 일정을 설정하고 있어요",
+    message: "Setting up campaign...",
+    messageKr: "발송 일정 설정 중",
   })
 }
 
@@ -381,8 +405,8 @@ export function createSequenceCompleteEvent(
     jobId,
     phase: "sequence",
     progressPercent: 75,
-    message: `Campaign ready with ${stepsCount} email steps`,
-    messageKr: `${stepsCount}단계 캠페인이 준비됐어요`,
+    message: `${stepsCount}-step campaign ready`,
+    messageKr: `${stepsCount}단계 캠페인 완료 ✓`,
   })
 }
 
@@ -391,17 +415,16 @@ export function createPreviewsStartEvent(
   workspaceId: string,
   jobId: string,
   totalPreviews: number,
-  leadCount?: number,
-  stepCount?: number,
+  _leadCount?: number,
+  _stepCount?: number,
 ): OnboardingProgressEvent {
-  const leadsInfo = leadCount && stepCount ? `${leadCount}명 × ${stepCount}단계` : ""
   return createProgressEvent({
     workspaceId,
     jobId,
     phase: "previews",
     progressPercent: 78,
-    message: `Creating ${totalPreviews} personalized emails...`,
-    messageKr: `맞춤 이메일을 생성하고 있어요 (${leadsInfo})`,
+    message: `Writing ${totalPreviews} emails...`,
+    messageKr: "이메일 쓰는 중",
     details: {
       previewsGenerated: 0,
       totalPreviews,
@@ -414,20 +437,18 @@ export function createPreviewProgressEvent(
   jobId: string,
   generated: number,
   total: number,
-  currentStep?: number,
+  _currentStep?: number,
   _totalSteps?: number,
 ): OnboardingProgressEvent {
   const previewProgress = (generated / total) * 17 // 78% to 95%
-  const stepInfo = currentStep ? (currentStep === 1 ? "첫 번째" : "두 번째") : ""
+  const remaining = total - generated
   return createProgressEvent({
     workspaceId,
     jobId,
     phase: "previews",
     progressPercent: Math.round(78 + previewProgress),
-    message: `Generated ${generated} of ${total} emails`,
-    messageKr: stepInfo
-      ? `${stepInfo} 이메일 생성 중 (${generated}/${total})`
-      : `이메일 생성 중 (${generated}/${total})`,
+    message: `${generated} of ${total} emails done`,
+    messageKr: `${generated}개 완료, ${remaining}개 남았어요`,
     details: {
       previewsGenerated: generated,
       totalPreviews: total,
@@ -447,8 +468,8 @@ export function createPreviewsCompleteEvent(
     jobId,
     phase: "previews",
     progressPercent: 95,
-    message: `Created ${totalPreviews} personalized emails`,
-    messageKr: `${totalPreviews}개의 맞춤 이메일이 준비됐어요`,
+    message: `${totalPreviews} emails ready`,
+    messageKr: `${totalPreviews}개 이메일 완료 ✓`,
     details: {
       previewsGenerated: totalPreviews,
       totalPreviews,
@@ -504,8 +525,8 @@ export function createLeadEnrichingEvent(
     jobId,
     phase: "discovery",
     progressPercent,
-    message: `Finding email for ${lead.companyName}...`,
-    messageKr: `${lead.companyName} 이메일 찾는 중...`,
+    message: `Finding contact for ${lead.companyName}...`,
+    messageKr: `${lead.companyName} 담당자 찾는 중`,
     details: {
       leadsFound: allLeads.length,
       leadsEnriched: enrichedCount,
@@ -532,8 +553,8 @@ export function createLeadEnrichedEvent(
     jobId,
     phase: "discovery",
     progressPercent,
-    message: `Found email for ${lead.companyName}`,
-    messageKr: `${lead.companyName} 이메일 확보`,
+    message: `Found contact for ${lead.companyName}`,
+    messageKr: `${lead.companyName} 담당자 찾았어요`,
     details: {
       leadsFound: allLeads.length,
       leadsEnriched: enrichedCount,
@@ -561,7 +582,7 @@ export function createEmailGeneratingEvent(
     phase: "previews",
     progressPercent,
     message: `Writing email for ${lead.companyName}...`,
-    messageKr: `${lead.companyName}에게 보낼 이메일 작성 중...`,
+    messageKr: `${lead.companyName} 이메일 쓰는 중`,
     details: {
       previewsGenerated: emailsGenerated,
       totalPreviews: totalEmails,
@@ -589,8 +610,8 @@ export function createEmailGeneratedEvent(
     jobId,
     phase: "previews",
     progressPercent,
-    message: `Created email for ${lead.companyName}`,
-    messageKr: `${lead.companyName} 이메일 완료`,
+    message: `Email ready for ${lead.companyName}`,
+    messageKr: `${lead.companyName} 이메일 완료 ✓`,
     details: {
       previewsGenerated: allEmails.length,
       totalPreviews: totalEmails,
@@ -617,8 +638,8 @@ export function createCompleteWithDetailsEvent(
     jobId,
     phase: "complete",
     progressPercent: 100,
-    message: `Ready! ${leadsWithEmail} buyers with ${emails.length} emails`,
-    messageKr: `준비 완료! ${leadsWithEmail}명의 바이어, ${emails.length}개 이메일`,
+    message: `Done! ${leadsWithEmail} buyers, ${emails.length} emails`,
+    messageKr: `다 됐어요! 바이어 ${leadsWithEmail}명, 이메일 ${emails.length}개 준비 완료`,
     details: {
       leadsFound: leadsWithEmail,
       previewsGenerated: emails.length,
@@ -640,8 +661,8 @@ export function createCompleteEvent(
     jobId,
     phase: "complete",
     progressPercent: 100,
-    message: `All set! ${leadsCount} buyers ready to reach out`,
-    messageKr: `준비 완료! ${leadsCount}개의 바이어에게 연락할 수 있어요`,
+    message: `Done! ${leadsCount} buyers ready`,
+    messageKr: `다 됐어요! 바이어 ${leadsCount}명 준비 완료`,
     details: {
       leadsFound: leadsCount,
     },
@@ -653,26 +674,15 @@ export function createErrorEvent(
   workspaceId: string,
   jobId: string,
   error: string,
-  phase: OnboardingPhase,
+  _phase: OnboardingPhase,
 ): OnboardingProgressEvent {
-  // 사용자 친화적 에러 메시지 매핑
-  const phaseNameKr: Record<OnboardingPhase, string> = {
-    init: "초기화",
-    discovery: "바이어 탐색",
-    group: "리스트 생성",
-    templates: "이메일 작성",
-    sequence: "캠페인 설정",
-    previews: "미리보기 생성",
-    complete: "완료 처리",
-    error: "처리",
-  }
   return createProgressEvent({
     workspaceId,
     jobId,
     phase: "error",
     progressPercent: -1,
     message: "Something went wrong. Please try again.",
-    messageKr: `${phaseNameKr[phase]} 중 문제가 발생했어요. 다시 시도해 주세요.`,
+    messageKr: "잠깐 문제가 생겼어요. 다시 시도해 주세요",
     details: {
       error,
     },

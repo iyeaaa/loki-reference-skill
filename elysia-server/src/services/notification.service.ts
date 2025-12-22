@@ -372,6 +372,70 @@ export async function cleanupExpiredNotifications(): Promise<number> {
 // ============================================================================
 
 /**
+ * 온보딩 알림 메시지 템플릿
+ */
+function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
+  type: NotificationType
+  priority: NotificationPriority
+  title: string
+  message: string
+  actionUrl?: string
+  actionLabel?: string
+} {
+  const { phase, details } = event
+  const leadsFound = details.leadsFound || 0
+  const previewsGenerated = details.previewsGenerated || 0
+
+  switch (phase) {
+    case "complete":
+      return {
+        type: "success",
+        priority: "high",
+        title: "바이어 찾기 완료! 🎉",
+        message: `바이어 ${leadsFound}명과 이메일 ${previewsGenerated}개가 준비되었습니다`,
+        // 체험판 유저는 결과 확인 불가하므로 CTA 제거
+      }
+
+    case "error":
+      return {
+        type: "error",
+        priority: "urgent",
+        title: "잠깐 문제가 생겼어요",
+        message: details.error || "다시 시도해 주세요",
+        actionUrl: "/app/trial?step=2",
+        actionLabel: "다시 시도",
+      }
+
+    case "discovery":
+      return {
+        type: "onboarding",
+        priority: "normal",
+        title: "바이어 찾는 중",
+        message: leadsFound > 0 ? `${leadsFound}명 찾았어요` : "바이어 검색 중...",
+      }
+
+    case "previews": {
+      const totalPreviews = details.totalPreviews || 0
+      return {
+        type: "onboarding",
+        priority: "normal",
+        title: "이메일 작성 중",
+        message:
+          totalPreviews > 0 ? `${previewsGenerated}/${totalPreviews}개 완료` : "이메일 생성 중...",
+      }
+    }
+
+    default:
+      return {
+        type: "onboarding",
+        priority: "normal",
+        title: "바이어 찾는 중",
+        message: event.messageKr || event.message,
+      }
+  }
+}
+
+/**
  * 온보딩 SSE 이벤트로부터 알림 생성
  */
 export async function createOnboardingNotification(
@@ -381,28 +445,17 @@ export async function createOnboardingNotification(
   const isComplete = event.phase === "complete"
   const isError = event.phase === "error"
 
-  let type: NotificationType
-  let priority: NotificationPriority
-  let title: string
-
-  if (isComplete) {
-    type = "success"
-    priority = "high"
-    title = "맞춤 리드 생성 완료"
-  } else if (isError) {
-    type = "error"
-    priority = "urgent"
-    title = "리드 생성 중 문제 발생"
-  } else {
-    type = "onboarding"
-    priority = "normal"
-    title = "맞춤 리드 생성 중"
-  }
+  const content = getOnboardingNotificationContent(event)
 
   const metadata: NotificationMetadata = {
     phase: event.phase,
     progressPercent: event.progressPercent,
     jobId: event.jobId,
+    leadsFound: event.details.leadsFound,
+    previewsGenerated: event.details.previewsGenerated,
+    totalPreviews: event.details.totalPreviews,
+    actionUrl: content.actionUrl,
+    actionLabel: content.actionLabel,
     ...event.details,
   }
 
@@ -416,10 +469,10 @@ export async function createOnboardingNotification(
   return createNotification({
     userId,
     workspaceId: event.workspaceId,
-    type,
-    priority,
-    title,
-    message: event.messageKr || event.message,
+    type: content.type,
+    priority: content.priority,
+    title: content.title,
+    message: content.message,
     metadata,
     entityType: "onboarding",
     entityId: event.workspaceId,
@@ -429,6 +482,11 @@ export async function createOnboardingNotification(
 
 /**
  * 진행 중인 온보딩 알림 업데이트 (기존 알림 대체)
+ *
+ * 최적화:
+ * - 완료/오류 시 기존 진행 알림 삭제 후 새 알림 생성
+ * - 진행 중일 때는 기존 알림 업데이트 (스팸 방지)
+ * - 의미있는 변화만 업데이트 (10% 이상 변화 또는 phase 변경)
  */
 export async function upsertOnboardingProgressNotification(
   userId: string,
@@ -458,19 +516,38 @@ export async function upsertOnboardingProgressNotification(
     return createOnboardingNotification(userId, event)
   }
 
-  // 기존 알림 업데이트 또는 새로 생성
+  // 기존 알림이 있으면 업데이트
   if (existing) {
+    const existingMetadata = existing.metadata as NotificationMetadata | null
+    const existingProgress = (existingMetadata?.progressPercent as number) || 0
+    const existingPhase = existingMetadata?.phase as string | undefined
+
+    // 의미있는 변화인지 확인 (10% 이상 변화 또는 phase 변경)
+    const progressDiff = Math.abs(event.progressPercent - existingProgress)
+    const phaseChanged = existingPhase !== event.phase
+    const shouldUpdate = progressDiff >= 10 || phaseChanged
+
+    if (!shouldUpdate) {
+      // 변화가 미미하면 업데이트 스킵 (SSE 이벤트도 발행하지 않음)
+      return existing
+    }
+
+    const content = getOnboardingNotificationContent(event)
     const metadata: NotificationMetadata = {
       phase: event.phase,
       progressPercent: event.progressPercent,
       jobId: event.jobId,
+      leadsFound: event.details.leadsFound,
+      previewsGenerated: event.details.previewsGenerated,
+      totalPreviews: event.details.totalPreviews,
       ...event.details,
     }
 
     await db
       .update(notifications)
       .set({
-        message: event.messageKr || event.message,
+        title: content.title,
+        message: content.message,
         metadata,
         read: false, // 업데이트 시 다시 안읽음 처리
         readAt: null,
@@ -479,8 +556,11 @@ export async function upsertOnboardingProgressNotification(
 
     const updatedNotification = {
       ...existing,
-      message: event.messageKr || event.message,
+      title: content.title,
+      message: content.message,
       metadata,
+      read: false,
+      readAt: null,
     } as Notification
 
     // 실시간 SSE 이벤트 발행 (업데이트)
@@ -488,16 +568,26 @@ export async function upsertOnboardingProgressNotification(
       createNotificationUpdatedEvent(userId, event.workspaceId, {
         id: existing.id,
         type: existing.type,
-        title: existing.title,
-        message: event.messageKr || event.message,
+        title: content.title,
+        message: content.message,
         read: false,
         metadata,
         createdAt: existing.createdAt.toISOString(),
       }),
     )
 
+    logger.debug(
+      {
+        notificationId: existing.id,
+        phase: event.phase,
+        progress: event.progressPercent,
+      },
+      "[Notification] Onboarding progress updated",
+    )
+
     return updatedNotification
   }
 
+  // 기존 알림이 없으면 새로 생성
   return createOnboardingNotification(userId, event)
 }

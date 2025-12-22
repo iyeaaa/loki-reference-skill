@@ -1,6 +1,5 @@
-import { ArrowLeft, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 
 type OnboardingStepperProps = {
@@ -10,7 +9,6 @@ type OnboardingStepperProps = {
 
 export function OnboardingStepper({ currentStep, completedSteps = [] }: OnboardingStepperProps) {
   const { t } = useTranslation()
-  const [, setSearchParams] = useSearchParams()
 
   // Updated: 5 steps → 4 steps (combined lead discovery + email generation)
   // 토스 스타일: 사용자 행동/결과 중심의 친근한 라벨
@@ -20,12 +18,6 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
     { number: 3, label: t("app.onboarding.step3.labelNew", "발송 연결") },
     { number: 4, label: t("app.onboarding.step4.labelNew", "시작하기") },
   ]
-
-  const handleGoBack = () => {
-    if (currentStep > 1) {
-      setSearchParams({ step: String(currentStep - 1) })
-    }
-  }
 
   return (
     <div className="mx-auto mb-8 max-w-2xl">
@@ -67,20 +59,6 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
           )
         })}
       </div>
-
-      {/* Back button - only show on step 2+, positioned below stepper */}
-      {currentStep > 1 && (
-        <div className="mt-4 flex justify-start">
-          <button
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-gray-500 text-sm transition-colors hover:bg-gray-100 hover:text-gray-700"
-            onClick={handleGoBack}
-            type="button"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("app.onboarding.back", "이전")}
-          </button>
-        </div>
-      )}
     </div>
   )
 }

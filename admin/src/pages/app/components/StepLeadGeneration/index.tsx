@@ -11,10 +11,11 @@
  * - Seamless transition from discovery to email generation
  */
 
-import { ArrowRight, CheckCircle2, Loader2, Mail, Sparkles, Users, XCircle } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Mail, Sparkles, Users, XCircle } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
+import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -31,13 +32,81 @@ import { PhaseChecklist } from "./PhaseChecklist"
 
 type ViewState = "loading" | "initial" | "generating" | "complete" | "error"
 
+/**
+ * Fake Progress Hook
+ * UX Best Practice: Progress bar should never stop (Nielsen Norman Group)
+ * - Slowly increases from 0% to maxFakeProgress while waiting for real data
+ * - Uses easing: starts slow, speeds up over time
+ * - Transitions smoothly to real progress when SSE data arrives
+ */
+function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgress = 15): number {
+  const [fakeProgress, setFakeProgress] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isActive) {
+      setFakeProgress(0)
+      startTimeRef.current = null
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      return
+    }
+
+    // If real progress arrived, use it
+    if (realProgress > 0) {
+      setFakeProgress(0) // Reset fake progress
+      return
+    }
+
+    // Start fake progress animation
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+    const animate = () => {
+      if (!startTimeRef.current) {
+        return
+      }
+
+      const elapsed = Date.now() - startTimeRef.current
+      // Easing: slow start, accelerates over time (ease-in-quad)
+      // Reaches maxFakeProgress in ~30 seconds
+      const duration = 30_000
+      const t = Math.min(elapsed / duration, 1)
+      const easedProgress = t * t * maxFakeProgress // Quadratic easing
+
+      setFakeProgress(easedProgress)
+
+      if (t < 1 && realProgress === 0) {
+        animationFrameRef.current = requestAnimationFrame(animate)
+      }
+    }
+
+    animationFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [isActive, realProgress, maxFakeProgress])
+
+  // Return real progress if available, otherwise fake progress
+  return realProgress > 0 ? realProgress : fakeProgress
+}
+
 // Target counts for progress calculation
 const TARGET_LEADS = 20
 
 export function StepLeadGeneration() {
   const { i18n } = useTranslation()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [viewState, setViewState] = useState<ViewState>("loading") // Start with loading
+
+  // Check if job was just started from Step 1
+  const jobStartedFromStep1 = searchParams.get("jobStarted") === "true"
   const [leads, setLeads] = useState<LeadProgressItem[]>([])
   const [emails, setEmails] = useState<EmailProgressItem[]>([])
   const isKorean = i18n.language === "ko"
@@ -71,15 +140,15 @@ export function StepLeadGeneration() {
   })
 
   // SSE for real-time progress updates
-  // Enable SSE when job is active/waiting (from DB) or when viewState is generating
+  // Enable SSE when job is active/waiting (from DB), when viewState is generating, or when job was just started from Step 1
   const shouldEnableSSE =
     !!workspaceId &&
     (viewState === "generating" ||
+      jobStartedFromStep1 ||
       onboardingData?.jobStatus === "active" ||
       onboardingData?.jobStatus === "waiting")
 
   const {
-    progress: sseProgress,
     phase,
     progressPercent,
     message,
@@ -148,12 +217,24 @@ export function StepLeadGeneration() {
     } else if (jobStatus === "failed") {
       // Job failed - show error state
       setViewState("error")
+    } else if (jobStartedFromStep1) {
+      // Job was just started from Step 1 but DB hasn't updated yet
+      // Start in generating state and wait for SSE/polling to update
+      setViewState("generating")
+      // Clear the jobStarted param to avoid confusion on refresh
+      setSearchParams({ step: "2" }, { replace: true })
     } else {
       // No job or unknown status - show initial state
       // This should rarely happen since job is auto-queued on registration
       setViewState("initial")
     }
-  }, [workspacesLoading, onboardingLoading, onboardingData?.jobStatus])
+  }, [
+    workspacesLoading,
+    onboardingLoading,
+    onboardingData?.jobStatus,
+    jobStartedFromStep1,
+    setSearchParams,
+  ])
 
   // Handle SSE state changes
   useEffect(() => {
@@ -167,9 +248,21 @@ export function StepLeadGeneration() {
     }
   }, [sseComplete, sseError, viewState, refetchOnboarding, refetchEmails])
 
+  // UX: Fake progress for initial loading (prevents 0% stall)
+  const displayProgress = useFakeProgress(
+    progressPercent,
+    viewState === "generating",
+    15, // Max fake progress before real data arrives
+  )
+
   const handleStartGeneration = useCallback(() => {
     setViewState("generating")
   }, [])
+
+  const handleBack = useCallback(() => {
+    // Go back to step 1 (company info)
+    setSearchParams({ step: "1" })
+  }, [setSearchParams])
 
   const handleNext = useCallback(() => {
     // Go to step 3 (email linking)
@@ -229,7 +322,9 @@ export function StepLeadGeneration() {
       <div className="mx-auto max-w-4xl">
         <Card>
           <CardContent className="flex flex-col items-center px-8 py-16">
-            <Loader2 className="mb-4 h-12 w-12 animate-spin text-blue-500" />
+            <div className="mb-4">
+              <StarSpinner size={48} />
+            </div>
             <p className="text-gray-500 text-sm">
               {isKorean ? "준비 중이에요..." : "Getting ready..."}
             </p>
@@ -249,16 +344,13 @@ export function StepLeadGeneration() {
               <XCircle className="h-10 w-10 text-red-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "앗, 문제가 생겼어요" : "Oops, something went wrong"}
+              {isKorean ? "잠깐 문제가 생겼어요" : "Something went wrong"}
             </h2>
             <p className="mb-6 text-center text-gray-500 text-sm">
-              {sseProgress?.details?.error ||
-                (isKorean
-                  ? "일시적인 오류예요. 다시 시도해주세요"
-                  : "This is temporary. Please try again")}
+              {isKorean ? "다시 시도해 주세요" : "Please try again"}
             </p>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRetry}>
-              {isKorean ? "다시 시도하기" : "Try again"}
+              {isKorean ? "다시 시도" : "Try again"}
             </Button>
           </CardContent>
         </Card>
@@ -274,11 +366,11 @@ export function StepLeadGeneration() {
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl">
               <CheckCircle2 className="h-7 w-7 text-green-500" />
-              {isKorean ? "준비 완료!" : "All set!"}
+              {isKorean ? "다 됐어요!" : "All done!"}
             </CardTitle>
             <p className="mt-1 text-gray-600 text-sm">
               {isKorean
-                ? "바이어와 이메일이 모두 준비됐어요. 이제 발송만 하면 돼요"
+                ? "바이어와 이메일이 준비됐어요. 이제 발송만 하면 돼요"
                 : "Buyers and emails are ready. Just connect your email to start sending"}
             </p>
           </CardHeader>
@@ -337,10 +429,18 @@ export function StepLeadGeneration() {
               </div>
             </div>
 
-            {/* Next Button */}
-            <div className="flex justify-end pt-4">
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-4">
+              <Button
+                className="text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                onClick={handleBack}
+                variant="ghost"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {isKorean ? "이전" : "Back"}
+              </Button>
               <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
-                {isKorean ? "발송 계정 연결하기" : "Connect email account"}
+                {isKorean ? "Gmail 연동하기" : "Connect Gmail"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -350,24 +450,19 @@ export function StepLeadGeneration() {
     )
   }
 
-  // Generating State (AI 에이전틱 UX)
+  // Generating State
   if (viewState === "generating") {
     return (
       <div className="mx-auto max-w-4xl">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl">
-              <div className="relative">
-                <Sparkles className="h-6 w-6 text-blue-500" />
-                <div className="-inset-1 absolute animate-ping rounded-full bg-blue-400/30" />
-              </div>
-              {isKorean ? "AI가 일하고 있어요" : "AI is working"}
+              <StarSpinner size={24} />
+              {isKorean ? "바이어 찾는 중" : "Finding buyers"}
             </CardTitle>
             <p className="mt-1 text-gray-600 text-sm">
               {message ||
-                (isKorean
-                  ? "잠시만 기다려주세요, 딱 맞는 바이어를 찾고 있어요"
-                  : "Please wait while I find the perfect buyers for you")}
+                (isKorean ? "바이어 찾고 이메일 작성 중" : "Finding buyers and writing emails")}
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -375,9 +470,9 @@ export function StepLeadGeneration() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">{isKorean ? "진행 중" : "In progress"}</span>
-                <span className="font-medium text-blue-600">{progressPercent}%</span>
+                <span className="font-medium text-blue-600">{Math.round(displayProgress)}%</span>
               </div>
-              <Progress className="h-3" value={progressPercent} />
+              <Progress className="h-3" value={displayProgress} />
             </div>
 
             {/* Phase Checklist */}
@@ -413,18 +508,6 @@ export function StepLeadGeneration() {
                 </div>
               </div>
             )}
-
-            {/* Loading indicator when no leads yet */}
-            {leads.length === 0 && (
-              <div className="flex flex-col items-center py-8">
-                <Loader2 className="mb-4 h-12 w-12 animate-spin text-blue-500" />
-                <p className="text-gray-500 text-sm">
-                  {isKorean
-                    ? "회사에 맞는 바이어를 찾고 있어요..."
-                    : "Looking for buyers that match your company..."}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -440,18 +523,15 @@ export function StepLeadGeneration() {
             <Sparkles className="h-10 w-10 text-blue-500" />
           </div>
           <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-            {isKorean ? "이제 AI가 일할 차례예요" : "Now it's AI's turn"}
+            {isKorean ? "바이어 찾고 이메일 작성하기" : "Find buyers and write emails"}
           </h2>
           <p className="mb-8 text-center text-gray-500 text-sm">
             {isKorean
-              ? `회사 정보를 분석해서 딱 맞는 바이어 ${TARGET_LEADS}명을 찾고,\n각 바이어에게 보낼 맞춤 이메일까지 준비해드릴게요`
-              : `I'll analyze your company info, find ${TARGET_LEADS} matching buyers,\nand prepare personalized emails for each of them`}
+              ? `바이어 ${TARGET_LEADS}명 + 맞춤 이메일 ${TARGET_LEADS * 2}개`
+              : `${TARGET_LEADS} buyers + ${TARGET_LEADS * 2} personalized emails`}
           </p>
 
           <div className="mb-8 w-full max-w-sm space-y-3 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-5">
-            <p className="mb-3 font-medium text-gray-700 text-sm">
-              {isKorean ? "AI가 해드릴 일" : "What AI will do"}
-            </p>
             <div className="flex items-center gap-3 text-sm">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-blue-600 text-xs shadow-sm">
                 1
@@ -465,7 +545,7 @@ export function StepLeadGeneration() {
                 2
               </div>
               <span className="text-gray-700">
-                {isKorean ? "담당자 이메일 확보" : "Get contact emails"}
+                {isKorean ? "담당자 연락처 찾기" : "Find contact info"}
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm">
@@ -483,8 +563,18 @@ export function StepLeadGeneration() {
             onClick={handleStartGeneration}
             size="lg"
           >
-            {isKorean ? "AI에게 맡기기" : "Let AI handle it"}
+            {isKorean ? "바이어 찾기 시작" : "Start finding buyers"}
             <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+
+          {/* Back Button */}
+          <Button
+            className="mt-3 w-full max-w-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            onClick={handleBack}
+            variant="ghost"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {isKorean ? "회사 정보 수정" : "Edit company info"}
           </Button>
         </CardContent>
       </Card>

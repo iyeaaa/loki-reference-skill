@@ -195,13 +195,13 @@ export function createOnboardingNotification(
   let type: NotificationType
 
   if (isComplete) {
-    title = "온보딩 완료"
+    title = "바이어 찾기 완료!"
     type = "success"
   } else if (isError) {
-    title = "온보딩 오류"
+    title = "잠깐 문제가 생겼어요"
     type = "error"
   } else {
-    title = "온보딩 진행 중"
+    title = "바이어 찾는 중"
     type = "onboarding"
   }
 

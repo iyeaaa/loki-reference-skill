@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -59,6 +59,11 @@ export function StepEmailLink() {
     }
   }
 
+  const handleBack = () => {
+    // Go back to step 2 (lead generation)
+    setSearchParams({ step: "2" })
+  }
+
   const handleNextStep = () => {
     // Go to step 4 (confirmation) - updated from 5 to 4 after combining steps
     setSearchParams({ step: "4" })
@@ -88,6 +93,7 @@ export function StepEmailLink() {
         emailAccount={emailAccount}
         isAddingMore={isLoading}
         onAddMore={handleConnect}
+        onBack={handleBack}
         onNext={handleNextStep}
         workspaceId={workspace.id}
       />
@@ -139,8 +145,8 @@ export function StepEmailLink() {
           {/* Error Message */}
           {error && <p className="mb-4 text-red-500 text-sm">{error}</p>}
 
-          {/* Action Button */}
-          <div className="w-full max-w-sm">
+          {/* Action Buttons */}
+          <div className="w-full max-w-sm space-y-3">
             <Button
               className="h-12 w-full bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
@@ -157,8 +163,18 @@ export function StepEmailLink() {
                   ? "연결 중..."
                   : "Connecting..."
                 : isKorean
-                  ? "계정 연결하기"
-                  : "Connect account"}
+                  ? "Gmail 연동하기"
+                  : "Connect Gmail"}
+            </Button>
+
+            {/* Back Button */}
+            <Button
+              className="w-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              onClick={handleBack}
+              variant="ghost"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {isKorean ? "이전" : "Back"}
             </Button>
           </div>
         </div>
@@ -172,6 +188,7 @@ type LinkedEmailAccountsViewProps = {
   emailAccount: UserEmailAccount
   workspaceId: string
   onAddMore: () => void
+  onBack: () => void
   onNext: () => void
   isAddingMore: boolean
 }
@@ -180,6 +197,7 @@ function LinkedEmailAccountsView({
   emailAccount,
   workspaceId,
   onAddMore,
+  onBack,
   onNext,
   isAddingMore,
 }: LinkedEmailAccountsViewProps) {
@@ -300,11 +318,24 @@ function LinkedEmailAccountsView({
           {isKorean ? "다른 계정 추가" : "Add another account"}
         </Button>
 
-        {/* Next Step Button */}
-        <Button className="h-11 w-full bg-blue-500 text-white hover:bg-blue-600" onClick={onNext}>
-          {isKorean ? "캠페인 시작하기" : "Start campaign"}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+        {/* Navigation Buttons */}
+        <div className="flex gap-3">
+          <Button
+            className="h-11 flex-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+            onClick={onBack}
+            variant="ghost"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {isKorean ? "이전" : "Back"}
+          </Button>
+          <Button
+            className="h-11 flex-[2] bg-blue-500 text-white hover:bg-blue-600"
+            onClick={onNext}
+          >
+            {isKorean ? "캠페인 확인하기" : "Review campaign"}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

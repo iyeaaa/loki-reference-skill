@@ -300,13 +300,21 @@ export function StepCompanyInfo() {
           },
         )
         console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
+
+        // 시작 알림 toast
+        toast.success(isKorean ? "바이어 찾기 시작!" : "Started finding buyers!", {
+          description: isKorean
+            ? "바이어 20명 + 이메일 40개 작성 중"
+            : "Finding 20 buyers + writing 40 emails",
+          duration: 4000,
+        })
       } catch (discoveryError) {
         console.error("[StepCompanyInfo] ❌ Failed to start discovery job:", discoveryError)
         // 실패해도 다음 단계로 진행 (수동으로 리드 탐색 가능)
       }
 
-      // 다음 단계로 이동
-      setSearchParams({ step: "2" })
+      // 다음 단계로 이동 (jobStarted 파라미터로 job 시작 상태 전달)
+      setSearchParams({ step: "2", jobStarted: "true" })
     } catch (error) {
       console.error("[StepCompanyInfo] ❌ Failed to save:", error)
       toast.error(isKorean ? "저장에 실패했습니다" : "Failed to save")

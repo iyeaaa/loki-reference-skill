@@ -5,11 +5,12 @@
  * SSE를 통해 실시간으로 백엔드 진행 상황을 표시
  */
 
-import { ArrowRight, CheckCircle2, Loader2, Upload, Users, XCircle } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { ArrowRight, CheckCircle2, Upload, Users, XCircle } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
+import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -18,6 +19,71 @@ import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
 
 type ViewState = "initial" | "generating" | "complete" | "error"
+
+/**
+ * Fake Progress Hook
+ * UX Best Practice: Progress bar should never stop (Nielsen Norman Group)
+ * - Slowly increases from 0% to maxFakeProgress while waiting for real data
+ * - Uses easing: starts slow, speeds up over time
+ * - Transitions smoothly to real progress when SSE data arrives
+ */
+function useFakeProgress(realProgress: number, isActive: boolean, maxFakeProgress = 15): number {
+  const [fakeProgress, setFakeProgress] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isActive) {
+      setFakeProgress(0)
+      startTimeRef.current = null
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      return
+    }
+
+    // If real progress arrived, use it
+    if (realProgress > 0) {
+      setFakeProgress(0) // Reset fake progress
+      return
+    }
+
+    // Start fake progress animation
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+    const animate = () => {
+      if (!startTimeRef.current) {
+        return
+      }
+
+      const elapsed = Date.now() - startTimeRef.current
+      // Easing: slow start, accelerates over time (ease-in-quad)
+      // Reaches maxFakeProgress in ~30 seconds
+      const duration = 30_000
+      const t = Math.min(elapsed / duration, 1)
+      const easedProgress = t * t * maxFakeProgress // Quadratic easing
+
+      setFakeProgress(easedProgress)
+
+      if (t < 1 && realProgress === 0) {
+        animationFrameRef.current = requestAnimationFrame(animate)
+      }
+    }
+
+    animationFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [isActive, realProgress, maxFakeProgress])
+
+  // Return real progress if available, otherwise fake progress
+  return realProgress > 0 ? realProgress : fakeProgress
+}
 
 export function StepLeadCheck() {
   const { i18n } = useTranslation()
@@ -48,7 +114,6 @@ export function StepLeadCheck() {
   // SSE for real-time progress updates
   const {
     progress: sseProgress,
-    phase,
     progressPercent,
     message,
     isComplete: sseComplete,
@@ -90,6 +155,13 @@ export function StepLeadCheck() {
       setViewState("error")
     }
   }, [sseComplete, sseError, viewState, refetchOnboarding])
+
+  // UX: Fake progress for initial loading (prevents 0% stall)
+  const displayProgress = useFakeProgress(
+    progressPercent,
+    viewState === "generating",
+    15, // Max fake progress before real data arrives
+  )
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -147,37 +219,22 @@ export function StepLeadCheck() {
         <Card>
           <CardContent className="flex flex-col items-center px-8 py-16">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
-              <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+              <StarSpinner size={40} />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {message ||
-                (isKorean ? "맞춤 리드를 생성하고 있습니다..." : "Generating custom leads...")}
+              {message || (isKorean ? "바이어 찾는 중" : "Finding buyers")}
             </h2>
             <p className="mb-2 text-center text-gray-500 text-sm">
               {isKorean
-                ? "AI가 귀사에 최적화된 해외 바이어를 찾고 있습니다"
-                : "AI is finding the best overseas buyers for your business"}
+                ? "바이어 20명 + 이메일 40개 작성 중"
+                : "Finding 20 buyers + writing 40 emails"}
             </p>
             <div className="mt-6 w-full max-w-xs">
-              <Progress className="h-2" value={progressPercent} />
+              <Progress className="h-2" value={displayProgress} />
               <div className="mt-2 flex justify-between text-gray-500 text-sm">
-                <span>{phase || "init"}</span>
-                <span>{progressPercent}%</span>
+                <span>{Math.round(displayProgress)}%</span>
               </div>
             </div>
-            {/* Show details if available (templates/previews only) */}
-            {sseProgress?.details && (
-              <div className="mt-4 text-center text-gray-500 text-xs">
-                {sseProgress.details.templatesGenerated !== undefined &&
-                  sseProgress.details.totalTemplates && (
-                    <p>
-                      {isKorean
-                        ? `템플릿 ${sseProgress.details.templatesGenerated}/${sseProgress.details.totalTemplates}`
-                        : `Templates ${sseProgress.details.templatesGenerated}/${sseProgress.details.totalTemplates}`}
-                    </p>
-                  )}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -194,14 +251,13 @@ export function StepLeadCheck() {
               <XCircle className="h-10 w-10 text-red-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "리드 생성 중 오류가 발생했습니다" : "Error generating leads"}
+              {isKorean ? "잠깐 문제가 생겼어요" : "Something went wrong"}
             </h2>
             <p className="mb-6 text-center text-gray-500 text-sm">
-              {sseProgress?.details?.error ||
-                (isKorean ? "잠시 후 다시 시도해주세요" : "Please try again later")}
+              {isKorean ? "다시 시도해 주세요" : "Please try again"}
             </p>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRetry}>
-              {isKorean ? "다시 시도" : "Retry"}
+              {isKorean ? "다시 시도" : "Try again"}
             </Button>
           </CardContent>
         </Card>
@@ -221,22 +277,15 @@ export function StepLeadCheck() {
               <CheckCircle2 className="h-10 w-10 text-green-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "맞춤 리드 생성 완료!" : "Custom leads generated!"}
+              {isKorean ? "바이어 찾기 완료!" : "Found your buyers!"}
             </h2>
             <div className="mb-6 flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2">
               <Users className="h-5 w-5 text-blue-600" />
               <span className="font-semibold text-blue-600 text-lg">{leadCount || "N/A"}</span>
-              <span className="text-gray-600">
-                {isKorean ? "개의 리드가 생성되었습니다" : "leads generated"}
-              </span>
+              <span className="text-gray-600">{isKorean ? "명" : "buyers"}</span>
             </div>
-            <p className="mb-8 text-center text-gray-500 text-sm">
-              {isKorean
-                ? "귀사의 산업군과 타겟 국가에 최적화된 바이어 리스트입니다"
-                : "Buyer list optimized for your industry and target country"}
-            </p>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleComplete}>
-              {isKorean ? "다음 단계" : "Next Step"}
+              {isKorean ? "다음" : "Next"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
@@ -252,7 +301,7 @@ export function StepLeadCheck() {
         <CardContent className="flex flex-col items-center px-8 py-12">
           {/* Title */}
           <h2 className="mb-8 text-center font-semibold text-2xl text-gray-900">
-            {isKorean ? "보유한 리드가 있으신가요?" : "Do you have existing leads?"}
+            {isKorean ? "이미 보유한 바이어 리스트가 있나요?" : "Do you have existing buyer lists?"}
           </h2>
 
           {/* CSV Upload Area */}
@@ -275,20 +324,16 @@ export function StepLeadCheck() {
               <>
                 <p className="font-medium text-green-700">{uploadedFile.name}</p>
                 <p className="mt-1 text-gray-500 text-sm">
-                  {isKorean
-                    ? "다른 파일을 업로드하려면 클릭하세요"
-                    : "Click to upload a different file"}
+                  {isKorean ? "다른 파일 업로드하려면 클릭" : "Click to upload a different file"}
                 </p>
               </>
             ) : (
               <>
                 <p className="font-medium text-gray-700">
-                  {isKorean
-                    ? "CSV 파일을 드래그하거나 클릭하여 업로드"
-                    : "Drag & drop a CSV file or click to upload"}
+                  {isKorean ? "CSV 파일을 여기에 드래그하세요" : "Drag & drop a CSV file here"}
                 </p>
                 <p className="mt-1 text-gray-500 text-sm">
-                  {isKorean ? "리드 목록이 포함된 CSV 파일" : "CSV file containing your lead list"}
+                  {isKorean ? "또는 클릭해서 업로드" : "or click to upload"}
                 </p>
               </>
             )}
@@ -297,7 +342,7 @@ export function StepLeadCheck() {
           {/* Next Button - only show when file is uploaded */}
           {uploadedFile && (
             <Button className="mt-6 bg-blue-600 hover:bg-blue-700" onClick={handleNext}>
-              {isKorean ? "다음 단계" : "Next Step"}
+              {isKorean ? "다음" : "Next"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
@@ -311,9 +356,7 @@ export function StepLeadCheck() {
               size="lg"
               variant="outline"
             >
-              {isKorean
-                ? "아니오, AI가 자동으로 생성해주세요"
-                : "No, let AI generate leads automatically"}
+              {isKorean ? "없어요, 자동으로 찾아주세요" : "No, find buyers automatically"}
             </Button>
           </div>
         </CardContent>

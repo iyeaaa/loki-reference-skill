@@ -21,6 +21,7 @@ import {
   createCompleteEvent,
   createDiscoveryBatchEvent,
   createDiscoveryCompleteEvent,
+  createDiscoverySearchingEvent,
   createDiscoveryStartEvent,
   createErrorEvent,
   createGroupCompleteEvent,
@@ -322,6 +323,11 @@ export async function runDiscoveryPhase(
       console.log(
         `[DiscoveryPhase] Iteration ${iteration + 1}/${MAX_SEARCH_ITERATIONS}: Query="${query}", LIMIT=${BIGQUERY_BATCH_SIZE}`,
       )
+
+      // Emit SSE: Database searching (before BigQuery call to avoid 0% wait)
+      if (iteration === 0) {
+        await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
+      }
 
       // Search BigQuery with limitOverride to get more results per iteration
       let result: Awaited<ReturnType<typeof searchBigQuery>>

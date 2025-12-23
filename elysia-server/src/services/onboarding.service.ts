@@ -308,6 +308,37 @@ export async function saveSurveyData(
 // ====================================
 
 /**
+ * 온보딩 필수 데이터 검증
+ * - 설문 데이터(survey_data) 존재 여부 확인
+ * - workspace_sales_strategies 존재 여부 확인
+ *
+ * Step 2, 3 진행 전 회사 정보가 실제로 존재하는지 검증합니다.
+ * companyInfoCompleted 플래그만으로는 데이터 삭제 후 상태를 감지할 수 없으므로
+ * 실제 데이터 존재 여부를 확인합니다.
+ */
+async function validateOnboardingPrerequisites(
+  workspaceId: string,
+  progress: OnboardingProgressData,
+): Promise<void> {
+  // 1. 설문 데이터 검증
+  if (!progress.surveyData) {
+    throw new OnboardingValidationError(
+      "회사 정보가 없습니다. Step 1(회사 정보 확인)을 다시 완료해주세요.",
+      "MISSING_SURVEY_DATA",
+    )
+  }
+
+  // 2. workspace_sales_strategies 검증
+  const salesStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
+  if (salesStrategies.length === 0) {
+    throw new OnboardingValidationError(
+      "회사 전략 정보가 없습니다. Step 1(회사 정보 확인)을 다시 완료해주세요.",
+      "MISSING_SALES_STRATEGY",
+    )
+  }
+}
+
+/**
  * Step 1 완료: 회사 정보 확인 완료
  * - 설문 데이터(survey_data) 존재 여부 검증
  * - workspace_sales_strategies 존재 여부 검증
@@ -395,6 +426,7 @@ export async function completeStep1CompanyInfo(
 /**
  * Step 2 완료: 리드 검색 및 저장 완료
  * - Step 1 완료 여부 검증
+ * - 실제 데이터 존재 여부 검증 (회사 정보 삭제 방지)
  */
 export async function completeStep2LeadSearch(
   workspaceId: string,
@@ -411,6 +443,9 @@ export async function completeStep2LeadSearch(
       "STEP1_NOT_COMPLETED",
     )
   }
+
+  // 실제 데이터 존재 여부 검증 (회사 정보가 삭제되지 않았는지 확인)
+  await validateOnboardingPrerequisites(workspaceId, progress)
 
   const [updated] = await db
     .update(onboardingProgress)
@@ -442,6 +477,7 @@ export async function completeStep2LeadSearch(
 /**
  * Step 3 완료: 이메일 시퀀스 생성 완료
  * - Step 2 완료 여부 검증 (선택적 - 리드 없이도 진행 가능)
+ * - 실제 데이터 존재 여부 검증 (회사 정보 삭제 방지)
  */
 export async function completeStep3EmailGeneration(
   workspaceId: string,
@@ -457,6 +493,9 @@ export async function completeStep3EmailGeneration(
       "STEP1_NOT_COMPLETED",
     )
   }
+
+  // 실제 데이터 존재 여부 검증 (회사 정보가 삭제되지 않았는지 확인)
+  await validateOnboardingPrerequisites(workspaceId, progress)
 
   const [updated] = await db
     .update(onboardingProgress)

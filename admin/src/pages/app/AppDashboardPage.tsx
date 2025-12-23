@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils"
 import { SequenceEnrollmentsTable } from "@/pages/sequences/SequenceEnrollmentsTable"
 import { SequenceStepsList } from "@/pages/sequences/SequenceStepList"
 
-const UPGRADE_URL = "https://rinda.ai/en/contact"
+const UPGRADE_URL = "https://rinda.ai/contact"
 
 const PRESET_RANGES = [
   { key: "7d", label: "최근 7일", days: 7 },

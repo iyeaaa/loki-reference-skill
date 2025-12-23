@@ -75,7 +75,7 @@ const PLANS: Plan[] = [
   },
 ]
 
-const CONTACT_URL = "https://rinda.ai/en/contact"
+const CONTACT_URL = "https://rinda.ai/contact"
 
 type UpgradePlanModalProps = {
   open: boolean

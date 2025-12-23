@@ -190,6 +190,75 @@ export async function getAccountInfo(accountId: string): Promise<UnipileAccountR
   }
 }
 
+interface UnipileAccountItem {
+  object?: string
+  id: string
+  name: string
+  email: string
+  type: string
+  status?: string
+  created_at?: string
+  connection_params?: {
+    mail?: {
+      id: string
+      username?: string
+    }
+    calendar?: {
+      id: string
+      username?: string
+    }
+  }
+}
+
+/**
+ * List all accounts from Unipile
+ */
+export async function listAccounts(): Promise<{
+  success: boolean
+  accounts?: Array<UnipileAccountItem>
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/accounts`, {
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error({ status: response.status, error: errorText }, "Failed to list Unipile accounts")
+      return {
+        success: false,
+        error: `Failed to list accounts: ${response.statusText}`,
+      }
+    }
+
+    const data = (await response.json()) as { items?: UnipileAccountItem[] }
+    const accounts = (data.items || []).map((account) => ({
+      id: account.id,
+      name: account.name || "",
+      email: account.name || account.connection_params?.mail?.username || account.email || "",
+      type: account.type || "unknown",
+      status: account.status,
+      connection_param: account.connection_params,
+    }))
+
+    logger.info({ count: accounts.length }, "Listed Unipile accounts")
+
+    return {
+      success: true,
+      accounts,
+    }
+  } catch (error) {
+    logger.error({ err: error }, "Error listing Unipile accounts")
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
 /**
  * Delete account from Unipile
  */
@@ -1064,6 +1133,7 @@ async function handleEmailReplied(event: Record<string, unknown>): Promise<void>
 export default {
   getUnipileAuthUrl,
   getAccountInfo,
+  listAccounts,
   deleteAccount,
   sendEmail,
   syncAccountEmails,

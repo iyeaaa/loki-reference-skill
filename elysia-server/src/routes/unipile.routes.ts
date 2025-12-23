@@ -112,24 +112,84 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           return errorResponse("Workspace ID is required", ResponseCode.BAD_REQUEST)
         }
 
-        // Get account info from Unipile
-        const accountInfo = await unipileService.getAccountInfo(accountId)
+        // List all accounts from Unipile to check for duplicates
+        const accountsResult = await unipileService.listAccounts()
 
-        if (!accountInfo) {
+        if (!accountsResult.success || !accountsResult.accounts) {
+          set.status = 500
+          return errorResponse(
+            accountsResult.error || "Failed to list Unipile accounts",
+            ResponseCode.INTERNAL_ERROR,
+          )
+        }
+
+        // Find the current account from the list
+        const currentAccount = accountsResult.accounts.find((acc) => acc.id === accountId)
+
+        if (!currentAccount) {
           set.status = 404
           return errorResponse("Unipile account not found", ResponseCode.NOT_FOUND)
         }
+
+        const accountEmail = currentAccount.email || currentAccount.name
 
         logger.info(
           {
             userId,
             workspaceId,
             accountId,
-            email: accountInfo.email,
-            provider: accountInfo.provider,
+            email: accountEmail,
+            type: currentAccount.type,
+            totalAccounts: accountsResult.accounts.length,
           },
           "Unipile account info retrieved successfully",
         )
+
+        // Find duplicate accounts with the same email (excluding current account)
+        const duplicateAccounts = accountsResult.accounts.filter(
+          (acc) =>
+            acc.id !== accountId && (acc.email === accountEmail || acc.name === accountEmail),
+        )
+
+        // Delete duplicate accounts from Unipile
+        if (duplicateAccounts.length > 0) {
+          logger.info(
+            {
+              duplicateCount: duplicateAccounts.length,
+              duplicateIds: duplicateAccounts.map((a) => a.id),
+            },
+            "Found duplicate Unipile accounts with same email - deleting",
+          )
+
+          for (const duplicate of duplicateAccounts) {
+            try {
+              const deleted = await unipileService.deleteAccount(duplicate.id)
+              if (deleted) {
+                logger.info(
+                  { duplicateId: duplicate.id, email: duplicate.email },
+                  "Deleted duplicate Unipile account",
+                )
+              } else {
+                logger.warn(
+                  { duplicateId: duplicate.id },
+                  "Failed to delete duplicate Unipile account",
+                )
+              }
+            } catch (deleteError) {
+              logger.error(
+                { err: deleteError, duplicateId: duplicate.id },
+                "Error deleting duplicate Unipile account",
+              )
+            }
+          }
+        }
+
+        // Use accountEmail for the rest of the flow
+        const accountInfo = {
+          accountId,
+          email: accountEmail,
+          provider: currentAccount.type || "GOOGLE_OAUTH",
+        }
 
         // Check for existing email account (might be TRIAL_PREVIEW)
         const existingAccount = await getEmailAccountByWorkspaceAndUserAny(workspaceId, userId)

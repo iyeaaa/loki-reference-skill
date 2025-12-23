@@ -1856,6 +1856,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/emails/send-unipile-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1EmailsSend-unipile-test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/emails/stats/today-sent": {
         parameters: {
             query?: never;
@@ -3893,6 +3909,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/unipile/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Unipile Auth URL
+         * @description Generate Unipile hosted authentication URL for email integration (supports Gmail, Outlook, etc.)
+         */
+        get: operations["getApiV1UnipileAuth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unipile OAuth Callback
+         * @description Process Unipile account connection after hosted authentication
+         */
+        get: operations["getApiV1UnipileCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/account/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Unipile Account
+         * @description Delete Unipile email account (includes Unipile API cleanup and webhook management)
+         */
+        delete: operations["deleteApiV1UnipileAccountByAccountId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unipile Webhook
+         * @description Receive and process Unipile webhook events (opens, clicks, replies, etc.)
+         */
+        post: operations["postApiV1UnipileWebhooks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/account/{accountId}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Unipile Account Info
+         * @description Retrieve account information from Unipile
+         */
+        get: operations["getApiV1UnipileAccountByAccountIdInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/account/{accountId}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Unipile Account Emails
+         * @description Manually trigger email synchronization for replied-emails feature
+         */
+        post: operations["postApiV1UnipileAccountByAccountIdSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/unipile/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unipile Webhook Endpoint
+         * @description Receives real-time webhook events from Unipile for mail_received events (replied-emails feature)
+         */
+        post: operations["postApiV1UnipileWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/lead-discovery/health": {
         parameters: {
             query?: never;
@@ -4880,6 +5036,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/start-discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdStart-discovery"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8477,6 +8649,7 @@ export interface operations {
                     userId: string;
                     /** Format: uuid */
                     workspaceId: string;
+                    provider: "sendgrid" | "nylas" | "unipile";
                     /** Format: email */
                     emailAddress: string;
                     displayName?: string;
@@ -8493,6 +8666,7 @@ export interface operations {
                     userId: string;
                     /** Format: uuid */
                     workspaceId: string;
+                    provider: "sendgrid" | "nylas" | "unipile";
                     /** Format: email */
                     emailAddress: string;
                     displayName?: string;
@@ -8509,6 +8683,7 @@ export interface operations {
                     userId: string;
                     /** Format: uuid */
                     workspaceId: string;
+                    provider: "sendgrid" | "nylas" | "unipile";
                     /** Format: email */
                     emailAddress: string;
                     displayName?: string;
@@ -9355,6 +9530,47 @@ export interface operations {
                     subject: string;
                     content: string;
                     grantId: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1EmailsSend-unipile-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    accountId: string;
+                };
+                "multipart/form-data": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    accountId: string;
+                };
+                "text/plain": {
+                    /** Format: email */
+                    toEmail: string;
+                    subject: string;
+                    content: string;
+                    accountId: string;
                 };
             };
         };
@@ -16333,6 +16549,137 @@ export interface operations {
             };
         };
     };
+    getApiV1UnipileAuth: {
+        parameters: {
+            query?: {
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UnipileCallback: {
+        parameters: {
+            query: {
+                account_id: string;
+                workspaceId?: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteApiV1UnipileAccountByAccountId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1UnipileWebhooks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1UnipileAccountByAccountIdInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1UnipileAccountByAccountIdSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postApiV1UnipileWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "getApiV1Lead-discoveryHealth": {
         parameters: {
             query?: never;
@@ -19012,6 +19359,61 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "postApiV1OnboardingWorkspaceByWorkspaceIdStart-discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    userId: string;
+                    surveyData: {
+                        industry: string;
+                        target: string;
+                        country: string;
+                        experience: string;
+                        lang?: string;
+                    };
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    userId: string;
+                    surveyData: {
+                        industry: string;
+                        target: string;
+                        country: string;
+                        experience: string;
+                        lang?: string;
+                    };
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    userId: string;
+                    surveyData: {
+                        industry: string;
+                        target: string;
+                        country: string;
+                        experience: string;
+                        lang?: string;
+                    };
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {

@@ -1,24 +1,25 @@
-import { ChevronDown, ChevronUp, Mail, Sparkles } from "lucide-react"
-import { useEffect, useId, useRef, useState } from "react"
+// import { ChevronDown, ChevronUp, Mail, Sparkles } from "lucide-react" // Commented out - AI mode selection disabled
+import { useEffect, /* useId, */ useRef, useState } from "react" // useId commented out - AI mode disabled
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+// Commented out - AI mode selection disabled
+// import { Badge } from "@/components/ui/badge"
+// import { Button } from "@/components/ui/button"
+// import { Label } from "@/components/ui/label"
+// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { RichTextEditorRef } from "@/components/ui/rich-text-editor"
 // import { useEmailAccounts } from "@/lib/api/hooks/email-accounts"
 import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
 import {
   useCreateSequenceStep,
   useDeleteSequenceStep,
-  useGenerateAISequence,
+  // useGenerateAISequence, // Commented out - AI mode disabled
   useSequenceSteps,
   useUpdateSequenceStep,
 } from "@/lib/api/hooks/sequences"
 import { useAuth } from "@/lib/auth-provider"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
-import { AIModeContent } from "./components/AIModeContent"
+// import { AIModeContent } from "./components/AIModeContent" // Commented out - AI mode disabled
 import { getCeiledHour, MAX_STEPS } from "./components/constants"
 import { ManualModeContent } from "./components/ManualModeContent"
 import type { EmailStep } from "./components/types"
@@ -45,35 +46,36 @@ export function CreateCampaignStep2({
   sequenceId,
   data,
   onChange,
-  onGenerationComplete,
+  // onGenerationComplete, // Commented out - AI mode disabled
 }: CreateCampaignStep2Props) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const createSequenceStep = useCreateSequenceStep()
   const updateSequenceStep = useUpdateSequenceStep()
   const deleteSequenceStep = useDeleteSequenceStep()
-  const generateAIMutation = useGenerateAISequence()
+  // const generateAIMutation = useGenerateAISequence() // Commented out - AI mode disabled
 
   // 서버에서 스텝 데이터 직접 가져오기 (부모 컴포넌트에 의존하지 않음)
   const { data: serverStepsData } = useSequenceSteps(sequenceId || "", !!sequenceId)
 
-  // AI mode state
-  const [creationMode, setCreationMode] = useState<"ai" | "manual">(data.creationMode)
+  // AI mode state - commented out as we're using manual mode only
+  // const [creationMode, setCreationMode] = useState<"ai" | "manual">(data.creationMode)
+  const creationMode = "manual" as const // Force manual mode only
   // const [selectedEmailAccountId, setSelectedEmailAccountId] = useState(data.selectedEmailAccountId)
-  const [isGenerating, setIsGenerating] = useState(false)
+  // const [isGenerating, setIsGenerating] = useState(false)
 
-  // AI mode signature state
-  const [aiIncludeSignature, setAiIncludeSignature] = useState(false)
-  const [aiSignature, setAiSignature] = useState<string>("")
+  // AI mode signature state - commented out as we're using manual mode only
+  // const [aiIncludeSignature, setAiIncludeSignature] = useState(false)
+  // const [aiSignature, setAiSignature] = useState<string>("")
 
   // // Get email accounts for AI mode
   // const { data: emailAccountsData } = useEmailAccounts({ page: 1, limit: 100 })
   // const emailAccounts = emailAccountsData?.emailAccounts || []
 
-  // Generate unique IDs for form elements
-  const modeAiId = useId()
-  const modeManualId = useId()
-  const [showModeDetails, setShowModeDetails] = useState(false)
+  // Generate unique IDs for form elements - commented out as we're using manual mode only
+  // const modeAiId = useId()
+  // const modeManualId = useId()
+  // const [showModeDetails, setShowModeDetails] = useState(false)
 
   // Get default signature from database
   const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
@@ -205,10 +207,10 @@ export function CreateCampaignStep2({
       }))
       setSteps(updatedSteps)
 
-      // AI mode signature도 초기화
-      if (!aiSignature) {
-        setAiSignature(signature)
-      }
+      // AI mode signature도 초기화 - commented out as we're using manual mode only
+      // if (!aiSignature) {
+      //   setAiSignature(signature)
+      // }
     }
   }, [defaultSignature])
 
@@ -474,7 +476,7 @@ export function CreateCampaignStep2({
           emailSubject: currentStep.emailSubject,
           emailBodyText,
           emailBodyHtml, // 서명이 포함된 HTML
-          generationSource: creationMode === "ai" ? ("ai" as const) : ("manual" as const),
+          generationSource: "manual" as const, // Always manual mode
         }
 
         console.log("[DEBUG] stepData:", {
@@ -579,54 +581,54 @@ export function CreateCampaignStep2({
   //   onChange({ creationMode, selectedEmailAccountId })
   // }, [creationMode, selectedEmailAccountId])
 
-  // Handle AI generation
-  const handleGenerateAIMode = async () => {
-    if (!sequenceId) {
-      toast.error(t("sequences.step2.sequenceIdRequired"))
-      return
-    }
+  // Handle AI generation - commented out as we're using manual mode only
+  // const handleGenerateAIMode = async () => {
+  //   if (!sequenceId) {
+  //     toast.error(t("sequences.step2.sequenceIdRequired"))
+  //     return
+  //   }
 
-    // Email account is now optional - not required for draft generation
-    // if (!selectedEmailAccountId) {
-    //   toast.error(t("sequences.step2.selectEmailAccount"))
-    //   return
-    // }
+  //   // Email account is now optional - not required for draft generation
+  //   // if (!selectedEmailAccountId) {
+  //   //   toast.error(t("sequences.step2.selectEmailAccount"))
+  //   //   return
+  //   // }
 
-    setIsGenerating(true)
+  //   setIsGenerating(true)
 
-    try {
-      // Build request body conditionally - only include userEmailAccountId if it has a value
-      const requestBody: { sequenceId: string; userEmailAccountId?: string } = { sequenceId }
-      // if (selectedEmailAccountId) {
-      //   requestBody.userEmailAccountId = selectedEmailAccountId
-      // }
+  //   try {
+  //     // Build request body conditionally - only include userEmailAccountId if it has a value
+  //     const requestBody: { sequenceId: string; userEmailAccountId?: string } = { sequenceId }
+  //     // if (selectedEmailAccountId) {
+  //     //   requestBody.userEmailAccountId = selectedEmailAccountId
+  //     // }
 
-      const result = await generateAIMutation.mutateAsync(requestBody)
+  //     const result = await generateAIMutation.mutateAsync(requestBody)
 
-      toast.success(
-        t("sequences.step2.aiGenerationComplete", {
-          leads: result.data.totalLeads,
-          drafts: result.data.totalDrafts,
-          steps: result.data.stepsCreated,
-        }),
-      )
-      // Trigger parent to refresh steps
-      onChange({ steps: [] })
-    } catch (error) {
-      toast.error(
-        t("sequences.step2.aiGenerationFailed", {
-          error: error instanceof Error ? error.message : t("sequences.step2.unknownError"),
-        }),
-      )
-    } finally {
-      setIsGenerating(false)
-    }
-  }
+  //     toast.success(
+  //       t("sequences.step2.aiGenerationComplete", {
+  //         leads: result.data.totalLeads,
+  //         drafts: result.data.totalDrafts,
+  //         steps: result.data.stepsCreated,
+  //       }),
+  //     )
+  //     // Trigger parent to refresh steps
+  //     onChange({ steps: [] })
+  //   } catch (error) {
+  //     toast.error(
+  //       t("sequences.step2.aiGenerationFailed", {
+  //         error: error instanceof Error ? error.message : t("sequences.step2.unknownError"),
+  //       }),
+  //     )
+  //   } finally {
+  //     setIsGenerating(false)
+  //   }
+  // }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      {/* Mode Selection - Compact */}
-      <div className="flex flex-shrink-0 flex-col gap-2 rounded-lg border bg-muted/20 px-4 py-3">
+      {/* Mode Selection - Commented out as we're using manual mode only */}
+      {/* <div className="flex flex-shrink-0 flex-col gap-2 rounded-lg border bg-muted/20 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-sm">{t("sequences.step2.creationMode")}</h3>
@@ -656,16 +658,16 @@ export function CreateCampaignStep2({
             value={creationMode}
           >
             {/* Manual Mode */}
-            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
+      {/* <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
               <RadioGroupItem id={modeManualId} value="manual" />
               <Label className="flex cursor-pointer items-center gap-2" htmlFor={modeManualId}>
                 <Mail className="h-4 w-4" />
                 <span className="font-medium text-sm">{t("sequences.step2.manualMode.title")}</span>
               </Label>
-            </div>
+            </div> */}
 
-            {/* AI Mode (Beta) */}
-            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
+      {/* AI Mode (Beta) */}
+      {/* <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:bg-muted/30">
               <RadioGroupItem id={modeAiId} value="ai" />
               <Label className="flex cursor-pointer items-center gap-2" htmlFor={modeAiId}>
                 <Sparkles className="h-4 w-4 text-violet-600" />
@@ -694,11 +696,11 @@ export function CreateCampaignStep2({
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        {/* AI Mode Content */}
-        {creationMode === "ai" && (
+        {/* AI Mode Content - Commented out as we're using manual mode only */}
+        {/* {creationMode === "ai" && (
           <div className="h-full min-h-0 overflow-auto">
             <AIModeContent
               getUserSignature={getUserSignature}
@@ -724,9 +726,9 @@ export function CreateCampaignStep2({
               workspaceId={data.workspaceId}
             />
           </div>
-        )}
+        )} */}
 
-        {/* Manual Mode Content */}
+        {/* Manual Mode Content - Always shown */}
         {creationMode === "manual" && (
           <ManualModeContent
             aiPrompt={aiPrompt}

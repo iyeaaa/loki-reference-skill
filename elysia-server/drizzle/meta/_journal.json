@@ -281,6 +281,13 @@
       "when": 1766393373149,
       "tag": "0039_workable_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1766448000000,
+      "tag": "0040_add_provider_column",
+      "breakpoints": true
     }
   ]
 }

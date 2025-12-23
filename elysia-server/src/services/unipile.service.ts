@@ -38,6 +38,8 @@ export interface SendEmailOptions {
 export interface SendEmailResult {
   success: boolean
   messageId?: string
+  providerId?: string
+  trackingId?: string
   error?: string
 }
 
@@ -417,6 +419,7 @@ export async function deleteWebhook(webhookId: string): Promise<boolean> {
  */
 export interface UnipileEmailDetails {
   id?: string
+  deprecatedId?: string // Legacy ID format used in webhooks (in_reply_to.id)
   messageId?: string
   providerId?: string
   trackingId?: string
@@ -426,18 +429,22 @@ export interface UnipileEmailDetails {
 /**
  * Get email details from Unipile
  * Used to retrieve actual RFC 822 Message-ID after sending email
- * @param emailId - Unipile email ID (tracking_id from send response)
+ * @param providerId - Gmail provider ID (from send response)
+ * @param accountId - Unipile account ID (required for provider_id lookup)
  * @param maxRetries - Maximum number of retry attempts (default: 3)
  * @param retryDelayMs - Delay between retries in ms (default: 1000)
  */
 export async function getEmailDetails(
-  emailId: string,
+  providerId: string,
+  accountId: string,
   maxRetries: number = 3,
   retryDelayMs: number = 1000,
 ): Promise<UnipileEmailDetails | null> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails/${emailId}`, {
+      // Use provider_id + account_id to query (tracking_id doesn't work for lookup)
+      const url = `${UNIPILE_API_URL}/api/v1/emails/${providerId}?account_id=${accountId}`
+      const response = await fetch(url, {
         headers: {
           "X-API-KEY": UNIPILE_API_KEY,
         },
@@ -448,7 +455,7 @@ export async function getEmailDetails(
           // Email might not be ready yet, retry if attempts remaining
           if (attempt < maxRetries) {
             logger.info(
-              { emailId, attempt, maxRetries },
+              { providerId, accountId, attempt, maxRetries },
               "Email not found yet, retrying after delay",
             )
             await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
@@ -461,6 +468,7 @@ export async function getEmailDetails(
 
       interface UnipileEmailResponse {
         id?: string
+        deprecated_id?: string
         message_id?: string
         provider_id?: string
         tracking_id?: string
@@ -470,9 +478,10 @@ export async function getEmailDetails(
 
       logger.info(
         {
-          emailId,
+          providerId,
+          id: data.id,
+          deprecatedId: data.deprecated_id,
           messageId: data.message_id,
-          providerId: data.provider_id,
           trackingId: data.tracking_id,
           threadId: data.thread_id,
         },
@@ -481,6 +490,7 @@ export async function getEmailDetails(
 
       return {
         id: data.id,
+        deprecatedId: data.deprecated_id,
         messageId: data.message_id,
         providerId: data.provider_id,
         trackingId: data.tracking_id,
@@ -489,13 +499,16 @@ export async function getEmailDetails(
     } catch (error) {
       if (attempt < maxRetries) {
         logger.warn(
-          { err: error, emailId, attempt, maxRetries },
+          { err: error, providerId, accountId, attempt, maxRetries },
           "Error getting email details, retrying",
         )
         await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
         continue
       }
-      logger.error({ err: error, emailId }, "Error getting Unipile email details after all retries")
+      logger.error(
+        { err: error, providerId, accountId },
+        "Error getting Unipile email details after all retries",
+      )
       return null
     }
   }
@@ -597,7 +610,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         id?: string
       }
       const data = (await response.json()) as EmailSentResponse
-      const messageId = data.tracking_id || data.provider_id || data.id
 
       logger.info(
         { accountId, trackingId: data.tracking_id, providerId: data.provider_id },
@@ -606,7 +618,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
 
       return {
         success: true,
-        messageId,
+        messageId: data.tracking_id,
+        providerId: data.provider_id,
+        trackingId: data.tracking_id,
       }
     }
 
@@ -679,7 +693,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       id?: string
     }
     const data = (await response.json()) as EmailSentResponse
-    const messageId = data.tracking_id || data.provider_id || data.id
 
     logger.info(
       { accountId, trackingId: data.tracking_id, providerId: data.provider_id },
@@ -688,7 +701,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
 
     return {
       success: true,
-      messageId,
+      messageId: data.tracking_id,
+      providerId: data.provider_id,
+      trackingId: data.tracking_id,
     }
   } catch (error) {
     logger.error({ err: error, accountId }, "Error sending email via Unipile")

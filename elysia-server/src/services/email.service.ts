@@ -657,52 +657,76 @@ This email contains confidential information that is protected by law or under t
         }
       }
 
-      // Unipile returns tracking_id after sending
-      const trackingId = result.messageId
+      // Unipile returns tracking_id and provider_id after sending
+      const { trackingId, providerId } = result
 
       logger.info(
-        { accountId, trackingId, generatedMessageId },
+        { accountId, trackingId, providerId, generatedMessageId },
         "Email sent via Unipile, fetching actual message_id for reply matching",
       )
 
-      // Fetch actual RFC 822 Message-ID from Unipile
+      // Fetch actual RFC 822 Message-ID and Unipile email ID from Unipile
       // Gmail generates its own Message-ID, so we MUST retrieve it for reply matching
       // Without the actual Message-ID, replies cannot be matched to original emails
       let actualMessageId = generatedMessageId // Fallback to generated one
+      let unipileEmailId = trackingId // Fallback to tracking_id
 
-      if (trackingId) {
+      // Use provider_id + account_id to query (tracking_id doesn't work for API lookup)
+      if (providerId) {
         try {
           // Brief delay to allow email to be processed by provider
           await new Promise((resolve) => setTimeout(resolve, 800))
 
-          // Try to get actual message_id with retries
-          const emailDetails = await unipileService.getEmailDetails(trackingId, 3, 1500)
+          // Try to get actual message_id with retries using provider_id + account_id
+          const emailDetails = await unipileService.getEmailDetails(providerId, accountId, 3, 1500)
 
           if (emailDetails?.messageId) {
             actualMessageId = emailDetails.messageId
             logger.info(
-              { accountId, trackingId, actualMessageId, generatedMessageId },
+              { accountId, providerId, actualMessageId, generatedMessageId },
               "✅ Retrieved actual RFC 822 Message-ID from Unipile (reply matching will work)",
             )
           } else {
             logger.warn(
-              { accountId, trackingId, generatedMessageId },
+              { accountId, providerId, generatedMessageId },
               "⚠️ Could not retrieve actual Message-ID - reply detection may fail for this email",
+            )
+          }
+
+          // Store Unipile deprecated_id for webhook matching
+          // Webhook sends in_reply_to.id which is the deprecated_id format
+          if (emailDetails?.deprecatedId) {
+            unipileEmailId = emailDetails.deprecatedId
+            logger.info(
+              { accountId, providerId, unipileEmailId, newId: emailDetails.id },
+              "✅ Retrieved Unipile deprecated_id for webhook matching",
+            )
+          } else if (emailDetails?.id) {
+            // Fallback to new id format if deprecated_id not available
+            unipileEmailId = emailDetails.id
+            logger.info(
+              { accountId, providerId, unipileEmailId },
+              "✅ Retrieved Unipile email ID for webhook matching (new format)",
             )
           }
         } catch (detailsError) {
           logger.warn(
-            { err: detailsError, accountId, trackingId },
+            { err: detailsError, accountId, providerId },
             "⚠️ Error fetching email details - reply detection may fail for this email",
           )
         }
+      } else {
+        logger.warn(
+          { accountId, trackingId },
+          "⚠️ No provider_id returned from Unipile - reply detection may fail for this email",
+        )
       }
 
       return {
         success: true,
         messageId: actualMessageId, // Use actual RFC 822 Message-ID for reply matching
-        sendgridMessageId: trackingId, // Store Unipile tracking_id for webhook matching
-        unipileMessageId: trackingId,
+        sendgridMessageId: unipileEmailId, // Store Unipile deprecated_id for webhook matching
+        unipileMessageId: unipileEmailId,
       }
     } catch (error) {
       logger.error({ err: error, accountId }, "Failed to send email via Unipile")

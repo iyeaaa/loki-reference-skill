@@ -96,7 +96,8 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
 
       try {
         const { account_id: accountId, state } = query
-        workspaceId = query.workspaceId
+        // workspaceId fallback: query param > state param (for Safari/incognito mode)
+        workspaceId = query.workspaceId || state
 
         // Get user from authorization header
         userId = await getUserIdFromToken(headers.authorization)

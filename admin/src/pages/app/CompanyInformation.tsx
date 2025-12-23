@@ -1,13 +1,14 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { AnimatePresence, motion } from "framer-motion"
 import { useAtom } from "jotai"
-import { ArrowRight, Bot } from "lucide-react"
+import { AlertTriangle, ArrowRight, Bot } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
+import { useLocalStorageEnabled } from "@/hooks/useLocalStorageEnabled"
 import { useOnboardingProgress, useSaveSurvey } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
@@ -126,11 +127,75 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
   )
 }
 
+function LocalStorageWarning({ open }: { open: boolean }) {
+  const { i18n } = useTranslation()
+  const isKorean = i18n.language === "ko"
+
+  return (
+    <Dialog open={open}>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content className="fixed top-[50%] left-[50%] z-50 w-full max-w-md translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-xl shadow-2xl outline-none">
+          {/* Warning Header */}
+          <div className="flex flex-col items-center bg-yellow-500 px-8 py-10">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20">
+              <AlertTriangle className="h-10 w-10 text-white" />
+            </div>
+            <span className="font-semibold text-lg text-white">
+              {isKorean ? "브라우저 설정 확인 필요" : "Browser Settings Required"}
+            </span>
+          </div>
+
+          {/* Warning Content */}
+          <div className="bg-white p-8">
+            <h2 className="mb-3 font-bold text-gray-900 text-xl">
+              {isKorean ? "시크릿 모드를 해제해주세요" : "Please Disable Private Browsing"}
+            </h2>
+            <p className="mb-4 text-gray-600 text-sm leading-relaxed">
+              {isKorean
+                ? "현재 시크릿/사설 브라우징 모드를 사용 중입니다. RINDA를 이용하시려면 일반 브라우징 모드로 전환해주세요."
+                : "You are currently using private/incognito browsing mode. Please switch to normal browsing mode to use RINDA."}
+            </p>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-medium text-gray-900 text-sm">
+                {isKorean ? "해결 방법:" : "How to fix:"}
+              </p>
+              <ul className="mt-2 space-y-1 text-gray-600 text-sm">
+                <li>
+                  •{" "}
+                  {isKorean
+                    ? "시크릿 모드 창을 닫고 일반 창에서 다시 접속"
+                    : "Close private window and open in normal window"}
+                </li>
+                <li>
+                  •{" "}
+                  {isKorean
+                    ? "Safari: 개인정보 보호 브라우징 끄기"
+                    : "Safari: Turn off Private Browsing"}
+                </li>
+                <li>
+                  •{" "}
+                  {isKorean
+                    ? "Chrome: 시크릿 모드 대신 일반 모드 사용"
+                    : "Chrome: Use normal mode instead of incognito"}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
+  )
+}
+
 export default function CompanyInformation() {
   const [searchParams, _setSearchParams] = useSearchParams()
   const [showWelcome, setShowWelcome] = useState(false)
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const autoSaveAttempted = useRef(false)
+
+  // Check if localStorage is enabled
+  const isLocalStorageEnabled = useLocalStorageEnabled()
 
   // Jotai atom for survey data (from localStorage)
   const [jotaiSurveyData, setJotaiSurveyData] = useAtom(surveyDataAtom)
@@ -334,6 +399,9 @@ export default function CompanyInformation() {
 
   return (
     <div className="py-6">
+      {/* localStorage Warning - Show if localStorage is disabled */}
+      <LocalStorageWarning open={!isLocalStorageEnabled} />
+
       <WelcomePopup onComplete={handleWelcomeComplete} open={showWelcome} />
 
       {/* Stepper */}

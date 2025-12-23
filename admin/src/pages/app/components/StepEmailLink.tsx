@@ -49,9 +49,20 @@ export function StepEmailLink() {
     try {
       // ⚠️ 중요: Unipile OAuth 전에 workspaceId를 localStorage에 저장
       // Unipile가 state 파라미터를 유실할 수 있으므로 백업 저장
+      // Safari, 시크릿 모드 등에서 localStorage 사용 불가할 수 있으므로 try-catch로 처리
       if (workspace?.id) {
-        localStorage.setItem("unipile_oauth_workspace_id", workspace.id)
-        console.log("🔐 [StepEmailLink] Saved workspaceId to localStorage:", workspace.id)
+        try {
+          localStorage.setItem("unipile_oauth_workspace_id", workspace.id)
+          console.log("🔐 [StepEmailLink] Saved workspaceId to localStorage:", workspace.id)
+        } catch (storageError) {
+          // localStorage 저장 실패 (Safari 시크릿 모드, 저장소 할당량 초과 등)
+          // state 파라미터로 workspaceId를 전달하므로 계속 진행
+          console.warn(
+            "⚠️ [StepEmailLink] Failed to save workspaceId to localStorage (Safari/incognito mode?):",
+            storageError,
+          )
+          console.log("✅ [StepEmailLink] Continuing with state parameter fallback")
+        }
       }
 
       // Get hosted auth URL from backend with workspaceId in state
@@ -78,7 +89,12 @@ export function StepEmailLink() {
   const handleNextStep = async () => {
     // Check job status and navigate conditionally
     if (!workspace?.id) {
-      setSearchParams({ step: "4" })
+      const isKorean = i18n.language === "ko"
+      toast.error(
+        isKorean
+          ? "워크스페이스 정보를 찾을 수 없습니다. 워크스페이스가 선택되었는지 확인해주세요."
+          : "Workspace information not found. Please check if a workspace is selected.",
+      )
       return
     }
 
@@ -95,8 +111,13 @@ export function StepEmailLink() {
       }
     } catch (err) {
       console.error("Failed to check job status:", err)
-      // On error, go to Step 4 (safe fallback)
-      setSearchParams({ step: "4" })
+      // 에러 발생 시 현재 화면에 머물고 에러 메시지 표시
+      const isKorean = i18n.language === "ko"
+      toast.error(
+        isKorean
+          ? "작업 상태를 확인할 수 없습니다. 잠시 후 다시 시도해주세요."
+          : "Failed to check job status. Please try again later.",
+      )
     } finally {
       setIsCheckingJobStatus(false)
     }

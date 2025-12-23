@@ -282,36 +282,32 @@ export function StepCompanyInfo() {
       console.log(
         `[StepCompanyInfo] 🚀 Starting discovery job at /api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
       )
-      try {
-        const discoveryResponse = await apiFetch(
-          `/api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              userId,
-              surveyData: {
-                industry: editedData.industry,
-                target: editedData.target,
-                country: editedData.country,
-                experience: editedData.experience,
-                lang: i18n.language,
-              },
-            }),
-          },
-        )
-        console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
 
-        // 시작 알림 toast
-        toast.success(isKorean ? "바이어 찾기 시작!" : "Started finding buyers!", {
-          description: isKorean
-            ? "바이어 20명 + 이메일 40개 작성 중"
-            : "Finding 20 buyers + writing 40 emails",
-          duration: 4000,
-        })
-      } catch (discoveryError) {
-        console.error("[StepCompanyInfo] ❌ Failed to start discovery job:", discoveryError)
-        // 실패해도 다음 단계로 진행 (수동으로 리드 탐색 가능)
-      }
+      const discoveryResponse = await apiFetch(
+        `/api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            userId,
+            surveyData: {
+              industry: editedData.industry,
+              target: editedData.target,
+              country: editedData.country,
+              experience: editedData.experience,
+              lang: i18n.language,
+            },
+          }),
+        },
+      )
+      console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
+
+      // 시작 알림 toast
+      toast.success(isKorean ? "바이어 찾기 시작!" : "Started finding buyers!", {
+        description: isKorean
+          ? "바이어 20명 + 이메일 40개 작성 중"
+          : "Finding 20 buyers + writing 40 emails",
+        duration: 4000,
+      })
 
       // 다음 단계로 이동 (jobStarted 파라미터로 job 시작 상태 전달)
       setSearchParams({ step: "2", jobStarted: "true" })

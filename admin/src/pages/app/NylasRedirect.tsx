@@ -40,7 +40,13 @@ export function NylasRedirect() {
     // 2. localStorage backup (saved before OAuth redirect)
     // 3. fallback from user's workspaces API
     const stateWorkspaceId = searchParams.get("state")
-    const localStorageWorkspaceId = localStorage.getItem("unipile_oauth_workspace_id")
+    let localStorageWorkspaceId: string | null = null
+    try {
+      localStorageWorkspaceId = localStorage.getItem("unipile_oauth_workspace_id")
+    } catch (storageError) {
+      // localStorage 접근 실패 (Safari 시크릿 모드 등)
+      console.warn("⚠️ [UnipileRedirect] Failed to read from localStorage:", storageError)
+    }
     const workspaceId = stateWorkspaceId || localStorageWorkspaceId || fallbackWorkspaceId
 
     // Debug logging - 핵심 디버깅 정보
@@ -64,7 +70,12 @@ export function NylasRedirect() {
     // Check for error from auth provider
     if (errorParam) {
       console.error("❌ [UnipileRedirect] OAuth error from provider:", errorParam)
-      localStorage.removeItem("unipile_oauth_workspace_id") // Clean up
+      // Clean up localStorage (Safari 시크릿 모드에서 실패할 수 있음)
+      try {
+        localStorage.removeItem("unipile_oauth_workspace_id")
+      } catch (storageError) {
+        console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+      }
       toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
       navigate("/company?step=2", { replace: true })
       return
@@ -79,7 +90,11 @@ export function NylasRedirect() {
     // No account_id = not a valid Unipile callback
     if (!accountId) {
       console.warn("⚠️ [UnipileRedirect] No account_id in URL, redirecting to step 2")
-      localStorage.removeItem("unipile_oauth_workspace_id") // Clean up
+      try {
+        localStorage.removeItem("unipile_oauth_workspace_id") // Clean up
+      } catch (storageError) {
+        console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+      }
       navigate("/company?step=2", { replace: true })
       return
     }
@@ -95,7 +110,11 @@ export function NylasRedirect() {
         fromLocalStorage: localStorageWorkspaceId,
         fromFallback: fallbackWorkspaceId,
       })
-      localStorage.removeItem("unipile_oauth_workspace_id") // Clean up
+      try {
+        localStorage.removeItem("unipile_oauth_workspace_id") // Clean up
+      } catch (storageError) {
+        console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+      }
       toast.error(t("redirect.error", "워크스페이스 정보를 찾을 수 없습니다."))
       navigate("/company?step=2", { replace: true })
       return
@@ -110,8 +129,12 @@ export function NylasRedirect() {
         console.log("✅ [UnipileRedirect] Unipile success:", response)
 
         // Clean up localStorage after successful OAuth
-        localStorage.removeItem("unipile_oauth_workspace_id")
-        console.log("🧹 [UnipileRedirect] Cleaned up localStorage")
+        try {
+          localStorage.removeItem("unipile_oauth_workspace_id")
+          console.log("🧹 [UnipileRedirect] Cleaned up localStorage")
+        } catch (storageError) {
+          console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+        }
 
         toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
         // Step 3: 바이어 찾고 이메일 생성 화면으로 이동 (백그라운드 작업 진행 표시)
@@ -135,7 +158,11 @@ export function NylasRedirect() {
           console.log("ℹ️ [UnipileRedirect] Account already exists (409), proceeding to step 3")
 
           // Clean up localStorage
-          localStorage.removeItem("unipile_oauth_workspace_id")
+          try {
+            localStorage.removeItem("unipile_oauth_workspace_id")
+          } catch (storageError) {
+            console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+          }
 
           toast.success(t("redirect.alreadyConnected", "이미 연동된 계정입니다. 계속 진행합니다."))
           navigate("/company?step=3", { replace: true })
@@ -153,7 +180,11 @@ export function NylasRedirect() {
         }
 
         // Clean up localStorage on error too
-        localStorage.removeItem("unipile_oauth_workspace_id")
+        try {
+          localStorage.removeItem("unipile_oauth_workspace_id")
+        } catch (storageError) {
+          console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+        }
 
         toast.error(
           data?.message ||

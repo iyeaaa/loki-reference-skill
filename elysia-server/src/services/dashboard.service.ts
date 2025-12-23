@@ -619,16 +619,20 @@ export async function getTrialDashboardStats(
   // 1. Get subscription info
   const subscriptionInfo = await getTrialSubscriptionInfo(workspaceId)
 
-  // 2. Get sequence info (if sequenceId provided, or get the first active sequence)
-  const sequenceInfo = await getTrialSequenceInfo(workspaceId, sequenceId)
+  // 2. Get sequence info (only if sequenceId is provided)
+  // sequenceId가 없으면(undefined) 워크스페이스의 전체 이메일을 조회
+  const sequenceInfo = sequenceId ? await getTrialSequenceInfo(workspaceId, sequenceId) : null
+
+  // 시퀀스 필터링에 사용할 ID (없으면 undefined로 전체 조회)
+  const filterSequenceId = sequenceInfo?.id
 
   // 3. Get funnel data (with date filtering)
-  const funnel = await getTrialFunnelData(workspaceId, sequenceInfo?.id, startDateObj, endDateObj)
+  const funnel = await getTrialFunnelData(workspaceId, filterSequenceId, startDateObj, endDateObj)
 
   // 4. Get hot leads (2+ opens, with date filtering)
   const hotLeads = await getTrialHotLeads(
     workspaceId,
-    sequenceInfo?.id,
+    filterSequenceId,
     5,
     startDateObj,
     endDateObj,
@@ -637,7 +641,7 @@ export async function getTrialDashboardStats(
   // 5. Get recent activity (with date filtering)
   const recentActivity = await getTrialRecentActivity(
     workspaceId,
-    sequenceInfo?.id,
+    filterSequenceId,
     10,
     startDateObj,
     endDateObj,
@@ -646,7 +650,7 @@ export async function getTrialDashboardStats(
   // 6. Get daily stats (with date filtering)
   const dailyStats = await getTrialDailyStats(
     workspaceId,
-    sequenceInfo?.id,
+    filterSequenceId,
     startDateObj,
     endDateObj,
   )
@@ -654,7 +658,7 @@ export async function getTrialDashboardStats(
   // 7. Get country stats (with date filtering)
   const countryStats = await getTrialCountryStats(
     workspaceId,
-    sequenceInfo?.id,
+    filterSequenceId,
     startDateObj,
     endDateObj,
   )

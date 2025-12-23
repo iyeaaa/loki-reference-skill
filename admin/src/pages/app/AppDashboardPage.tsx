@@ -35,17 +35,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTrialDashboardStats } from "@/lib/api/hooks/dashboard"
-import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useSequencesByWorkspace } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
@@ -100,7 +92,6 @@ export default function AppDashboardPage() {
     thirtyDaysAgo.setDate(today.getDate() - 30)
     return { from: thirtyDaysAgo, to: today }
   })
-  const [selectedSequenceId, setSelectedSequenceId] = useState<string>("all")
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
 
   const currentUser = useMemo(() => {
@@ -114,15 +105,11 @@ export default function AppDashboardPage() {
   const { data: userWorkspaces } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
-  const { data: onboardingProgress } = useOnboardingProgress(workspaceId, !!workspaceId)
-  const defaultSequenceId = onboardingProgress?.generatedSequenceId || ""
-
-  // Get all sequences for this workspace
+  // 바이어 목록, 이메일 캠페인 탭에서 사용할 첫 번째 시퀀스 ID
   const { data: sequences } = useSequencesByWorkspace(workspaceId, !!workspaceId)
+  const firstSequenceId = sequences?.[0]?.id
 
-  // Determine which sequence to use for stats
-  const sequenceId = selectedSequenceId === "all" ? defaultSequenceId : selectedSequenceId
-
+  // 체험판은 시퀀스 1개만 있으므로 시퀀스 필터링 없이 워크스페이스 전체 데이터 조회
   const {
     data: stats,
     isLoading,
@@ -131,7 +118,7 @@ export default function AppDashboardPage() {
   } = useTrialDashboardStats(
     {
       workspaceId,
-      sequenceId,
+      // sequenceId 미전달 시 워크스페이스 전체 이메일 통계 조회
       startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     },
@@ -350,23 +337,6 @@ export default function AppDashboardPage() {
                   </div>
                 </PopoverContent>
               </Popover>
-
-              {/* Sequence Selector */}
-              {sequences && sequences.length > 0 && (
-                <Select onValueChange={setSelectedSequenceId} value={selectedSequenceId}>
-                  <SelectTrigger className="h-8 w-[160px] text-sm">
-                    <SelectValue placeholder="시퀀스" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">전체 시퀀스</SelectItem>
-                    {sequences.map((seq) => (
-                      <SelectItem key={seq.id} value={seq.id}>
-                        {seq.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
 
               {/* Region Filter */}
               {availableCountries.length > 0 && (
@@ -872,8 +842,8 @@ export default function AppDashboardPage() {
         </TabsContent>
 
         <TabsContent className="space-y-4" value="leads">
-          {sequenceId ? (
-            <SequenceEnrollmentsTable sequenceId={sequenceId} />
+          {firstSequenceId ? (
+            <SequenceEnrollmentsTable sequenceId={firstSequenceId} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Users className="mb-3 h-10 w-10 text-muted-foreground/30" />
@@ -885,8 +855,8 @@ export default function AppDashboardPage() {
         </TabsContent>
 
         <TabsContent className="space-y-4" value="emails">
-          {sequenceId ? (
-            <SequenceStepsList isEdit={true} readOnly={false} sequenceId={sequenceId} />
+          {firstSequenceId ? (
+            <SequenceStepsList isEdit={true} readOnly={false} sequenceId={firstSequenceId} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Mail className="mb-3 h-10 w-10 text-muted-foreground/30" />
@@ -897,11 +867,15 @@ export default function AppDashboardPage() {
       </Tabs>
 
       {/* Info */}
-      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <p className="text-blue-700 text-sm">
-          자동 일시정지: 바이어가 답장하면 해당 바이어에게 발송이 자동으로 중지됩니다.
-        </p>
+      <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+        <ul className="space-y-1 text-blue-700 text-sm">
+          <li>• 바이어가 답장하면 해당 리드의 이메일 시퀀스가 자동으로 중지됩니다.</li>
+          <li>
+            • 특정 시퀀스의 이메일 오픈 수가 10회 이상이면 시퀀스가 중지되고, 린다 세일즈 전문팀과
+            상담이 진행됩니다.
+          </li>
+        </ul>
       </div>
     </div>
   )

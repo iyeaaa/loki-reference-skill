@@ -535,14 +535,16 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
     "/webhook",
     async ({ body }) => {
       try {
-        logger.info({ event: body }, "[Unipile Webhook] Received event")
+        logger.info({ rawBody: body, bodyType: typeof body }, "[Unipile Webhook] Received event")
 
         // Unipile sends webhook data with custom field names
         // Default fields: account_id, email_id, date, from_attendee, subject, body, etc.
         interface UnipileWebhookBody {
+          event?: string
           account_id?: string
           email_id?: string
-          from_attendee?: { identifier?: string }
+          from_attendee?: { identifier?: string; display_name?: string }
+          to_attendees?: Array<{ identifier?: string }>
           subject?: string
           body?: string
           body_plain?: string
@@ -553,7 +555,50 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           role?: string
           origin?: string
         }
-        const webhookBody = body as UnipileWebhookBody
+
+        // Handle case where body might be a string (needs parsing)
+        // or might be incorrectly parsed with JSON as key
+        let webhookBody: UnipileWebhookBody
+
+        if (typeof body === "string") {
+          try {
+            webhookBody = JSON.parse(body) as UnipileWebhookBody
+            logger.info("[Unipile Webhook] Parsed body from string")
+          } catch {
+            logger.error({ body }, "[Unipile Webhook] Failed to parse body string")
+            return successResponse({ message: "Event received (parse error)" })
+          }
+        } else if (body && typeof body === "object") {
+          // Check if body is incorrectly parsed (JSON string as key)
+          const keys = Object.keys(body)
+          if (keys.length === 1 && keys[0]?.startsWith("{")) {
+            try {
+              webhookBody = JSON.parse(keys[0]) as UnipileWebhookBody
+              logger.info("[Unipile Webhook] Parsed body from incorrectly-keyed object")
+            } catch {
+              webhookBody = body as UnipileWebhookBody
+            }
+          } else {
+            webhookBody = body as UnipileWebhookBody
+          }
+        } else {
+          logger.error({ body }, "[Unipile Webhook] Invalid body format")
+          return successResponse({ message: "Event received (invalid format)" })
+        }
+
+        logger.info(
+          {
+            event: webhookBody.event,
+            role: webhookBody.role,
+            origin: webhookBody.origin,
+            emailId: webhookBody.email_id,
+            from: webhookBody.from_attendee?.identifier,
+            subject: webhookBody.subject,
+            inReplyTo: webhookBody.in_reply_to,
+          },
+          "[Unipile Webhook] Parsed webhook body",
+        )
+
         const accountId = webhookBody.account_id
         const emailId = webhookBody.email_id
         const fromAttendee = webhookBody.from_attendee

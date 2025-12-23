@@ -1341,15 +1341,7 @@ async function discoverLeadsForOnboarding(
     }
   } catch (error) {
     console.error("[LeadDiscovery] Error during lead discovery:", error)
-    return {
-      leadIds: [],
-      count: 0,
-      targetCount: TARGET_LEADS,
-      enrichmentSuccessRate: "0.0%",
-      duplicatesSkipped: 0,
-      totalEnriched: 0,
-      totalDuplicates: 0,
-    }
+    throw error // Propagate error to caller for proper error handling
   }
 }
 

@@ -400,7 +400,7 @@ export async function fetchWithDepth(
       ]
 
       // 최대 페이지 수
-      const MAX_PAGES = 4
+      const MAX_PAGES = 10
 
       // 모든 링크 수집 (필터링 전)
       const allLinks: string[] = []

@@ -9,7 +9,6 @@ import {
   Loader2,
   Mail,
   Send,
-  Target,
   Users,
   Zap,
 } from "lucide-react"
@@ -339,7 +338,7 @@ export function StepConfirmation() {
                 </div>
                 <div className="w-px bg-gray-100" />
                 <div className="text-center">
-                  <p className="font-bold text-3xl text-green-600">{leads.length * 2}</p>
+                  <p className="font-bold text-3xl text-green-600">{leads.length * 3}</p>
                   <p className="mt-1 text-gray-400 text-sm">{isKorean ? "이메일" : "Emails"}</p>
                 </div>
               </div>
@@ -399,19 +398,12 @@ export function StepConfirmation() {
       <Card className="overflow-hidden border-0 bg-white shadow-gray-200/50 shadow-lg">
         {/* 헤더 */}
         <div className="px-8 pt-8 pb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="mb-1 font-medium text-blue-600 text-sm">
-                {isKorean ? "모든 준비가 끝났어요" : "All ready"}
-              </p>
-              <h2 className="font-bold text-[22px] text-gray-900 tracking-tight">
-                {isKorean ? "바로 시작할까요?" : "Ready to launch?"}
-              </h2>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50">
-              <Target className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
+          <p className="mb-1 font-medium text-blue-600 text-sm">
+            {isKorean ? "모든 준비가 끝났어요" : "All ready"}
+          </p>
+          <h2 className="font-bold text-[22px] text-gray-900 tracking-tight">
+            {isKorean ? "바로 시작할까요?" : "Ready to launch?"}
+          </h2>
         </div>
 
         <CardContent className="space-y-5 px-8 pb-8">
@@ -428,14 +420,14 @@ export function StepConfirmation() {
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
                 <Mail className="h-5 w-5 text-green-600" />
               </div>
-              <p className="font-bold text-2xl text-gray-900">{leads.length * 2}</p>
+              <p className="font-bold text-2xl text-gray-900">{leads.length * 3}</p>
               <p className="text-gray-500 text-xs">{isKorean ? "이메일" : "Emails"}</p>
             </div>
             <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-violet-50 p-4 text-center">
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
                 <Calendar className="h-5 w-5 text-purple-600" />
               </div>
-              <p className="font-bold text-2xl text-gray-900">2</p>
+              <p className="font-bold text-2xl text-gray-900">3</p>
               <p className="text-gray-500 text-xs">{isKorean ? "발송 단계" : "Steps"}</p>
             </div>
           </div>
@@ -470,7 +462,7 @@ export function StepConfirmation() {
                 <span className="text-gray-600 text-sm">{isKorean ? "발송 일정" : "Schedule"}</span>
               </div>
               <span className="text-gray-900 text-sm">
-                {isKorean ? "오늘 → 3일 후" : "Today → Day 3"}
+                {isKorean ? "오늘 → 1일 후 → 2일 후" : "Today → Day 1 → Day 2"}
               </span>
             </div>
 

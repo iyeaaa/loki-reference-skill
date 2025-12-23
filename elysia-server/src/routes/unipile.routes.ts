@@ -47,10 +47,21 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
    */
   .get(
     "/auth",
-    async ({ set }) => {
+    async ({ query, set }) => {
       try {
+        // Get state parameter (workspaceId) from query
+        const { state } = query
+
+        logger.info({ state, query }, "🔍 [Unipile Auth] Received auth request with state")
+
         // Initialize Unipile hosted auth session (use GOOGLE for Gmail)
-        const result = await unipileService.getUnipileAuthUrl("GOOGLE")
+        // Pass state to include in redirect URL
+        const result = await unipileService.getUnipileAuthUrl("GOOGLE", state)
+
+        logger.info(
+          { state, hostedAuthUrl: result.hostedAuthUrl },
+          "✅ [Unipile Auth] Generated auth URL",
+        )
 
         return successResponse(result, "Unipile auth URL generated successfully")
       } catch (error) {

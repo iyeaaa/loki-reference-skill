@@ -30,6 +30,19 @@ export function removeToken(): void {
   }
 }
 
+// Custom API error class with status code
+export class ApiError extends Error {
+  status: number
+  data?: { message?: string }
+
+  constructor(message: string, status: number, data?: { message?: string }) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.data = data
+  }
+}
+
 // Custom fetch wrapper for API calls
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
@@ -78,15 +91,17 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       })
 
       let message: string
+      let errorData: { message?: string } | undefined
       try {
-        const errorData = JSON.parse(errorText)
+        errorData = JSON.parse(errorText)
         console.error("❌ Parsed error data:", errorData)
-        message = errorData.message || errorData.error || `Request failed (${response.status})`
+        message = errorData?.message || `Request failed (${response.status})`
       } catch (parseError) {
         console.error("❌ Failed to parse error response:", parseError)
         message = errorText.trim() || `Request failed (${response.status})`
       }
-      throw new Error(message)
+      // Throw ApiError with status code for proper error handling
+      throw new ApiError(message, response.status, errorData)
     }
 
     // Handle 204 No Content

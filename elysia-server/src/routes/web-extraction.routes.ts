@@ -16,6 +16,7 @@ import {
   type CompanyRecord,
   DEFAULT_EXTRACTION_CONFIG,
   type ExtractionProgress,
+  MEMORY_OPTIMIZATION,
 } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
@@ -433,9 +434,19 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           }
         }
 
-        // API 키 개수에 따른 동시성 설정 (메모리 최적화: 최대 10개로 제한)
+        // 배치 크기 제한 (메모리 최적화)
+        const { MAX_BATCH_SIZE } = MEMORY_OPTIMIZATION
+        if (validRecords.length > MAX_BATCH_SIZE) {
+          set.status = 400
+          return {
+            success: false,
+            error: `한 번에 처리 가능한 최대 URL 수는 ${MAX_BATCH_SIZE}개입니다. 현재 ${validRecords.length}개가 포함되어 있습니다. 파일을 분할하여 업로드해주세요.`,
+          }
+        }
+
+        // API 키 개수에 따른 동시성 설정 (메모리 최적화: 최대 3개로 제한)
         const activeApiKeyCount = await getActiveApiKeyCount(workspaceId)
-        const defaultConcurrency = Math.min(activeApiKeyCount > 0 ? activeApiKeyCount * 3 : 3, 10)
+        const defaultConcurrency = Math.min(activeApiKeyCount > 0 ? activeApiKeyCount : 2, 3)
 
         logger.info(
           {

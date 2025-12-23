@@ -386,6 +386,24 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   )
 
   // ====================================
+  // Job 상태 확인
+  // ====================================
+
+  // Job 완료 상태 확인 (Step 2 완료 후 조건부 네비게이션용)
+  .get(
+    "/workspace/:workspaceId/job-status",
+    async ({ params: { workspaceId } }) => {
+      const status = await onboardingService.checkJobCompletionStatus(workspaceId)
+      return { data: status }
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // ====================================
   // 바이어 검색 Job 시작
   // ====================================
 

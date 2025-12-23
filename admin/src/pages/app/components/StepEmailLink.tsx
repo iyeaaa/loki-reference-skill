@@ -11,6 +11,7 @@ import {
   useEmailAccountByWorkspaceAndUser,
 } from "@/lib/api/hooks/email-accounts"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { onboardingApi } from "@/lib/api/services/onboarding"
 import { deleteUnipileAccount, getUnipileAuthUrl } from "@/lib/api/services/unipile"
 import type { UserEmailAccount } from "@/lib/api/types/email-account"
 
@@ -18,6 +19,7 @@ export function StepEmailLink() {
   const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingJobStatus, setIsCheckingJobStatus] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Get current user
@@ -45,8 +47,17 @@ export function StepEmailLink() {
     setError(null)
 
     try {
+      // ⚠️ 중요: Unipile OAuth 전에 workspaceId를 localStorage에 저장
+      // Unipile가 state 파라미터를 유실할 수 있으므로 백업 저장
+      if (workspace?.id) {
+        localStorage.setItem("unipile_oauth_workspace_id", workspace.id)
+        console.log("🔐 [StepEmailLink] Saved workspaceId to localStorage:", workspace.id)
+      }
+
       // Get hosted auth URL from backend with workspaceId in state
       const response = await getUnipileAuthUrl(workspace?.id)
+
+      console.log("🚀 [StepEmailLink] Redirecting to Unipile OAuth:", response.hostedAuthUrl)
 
       // Redirect to Unipile hosted authentication
       window.location.href = response.hostedAuthUrl
@@ -60,13 +71,35 @@ export function StepEmailLink() {
   }
 
   const handleBack = () => {
-    // Go back to step 2 (lead generation)
-    setSearchParams({ step: "2" })
+    // Go back to step 1 (company info)
+    setSearchParams({ step: "1" })
   }
 
-  const handleNextStep = () => {
-    // Go to step 4 (confirmation) - updated from 5 to 4 after combining steps
-    setSearchParams({ step: "4" })
+  const handleNextStep = async () => {
+    // Check job status and navigate conditionally
+    if (!workspace?.id) {
+      setSearchParams({ step: "4" })
+      return
+    }
+
+    setIsCheckingJobStatus(true)
+    try {
+      const jobStatus = await onboardingApi.getJobStatus(workspace.id)
+
+      if (jobStatus.isComplete) {
+        // Job done - skip Step 3, go directly to Step 4
+        setSearchParams({ step: "4" })
+      } else {
+        // Job still running - show Step 3 (loading progress)
+        setSearchParams({ step: "3" })
+      }
+    } catch (err) {
+      console.error("Failed to check job status:", err)
+      // On error, go to Step 4 (safe fallback)
+      setSearchParams({ step: "4" })
+    } finally {
+      setIsCheckingJobStatus(false)
+    }
   }
 
   // 자동 이동 제거 - 사용자가 이메일 연동 결과를 확인하고 직접 다음 단계 버튼을 클릭하도록 변경
@@ -92,6 +125,7 @@ export function StepEmailLink() {
       <LinkedEmailAccountsView
         emailAccount={emailAccount}
         isAddingMore={isLoading}
+        isNextLoading={isCheckingJobStatus}
         onAddMore={handleConnect}
         onBack={handleBack}
         onNext={handleNextStep}
@@ -191,6 +225,7 @@ type LinkedEmailAccountsViewProps = {
   onBack: () => void
   onNext: () => void
   isAddingMore: boolean
+  isNextLoading?: boolean
 }
 
 function LinkedEmailAccountsView({
@@ -200,6 +235,7 @@ function LinkedEmailAccountsView({
   onBack,
   onNext,
   isAddingMore,
+  isNextLoading,
 }: LinkedEmailAccountsViewProps) {
   const { t, i18n } = useTranslation()
   const deleteEmailAccountMutation = useDeleteEmailAccount()
@@ -332,6 +368,7 @@ function LinkedEmailAccountsView({
         <div className="flex gap-3">
           <Button
             className="h-11 flex-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+            disabled={isNextLoading}
             onClick={onBack}
             variant="ghost"
           >
@@ -340,10 +377,12 @@ function LinkedEmailAccountsView({
           </Button>
           <Button
             className="h-11 flex-[2] bg-blue-500 text-white hover:bg-blue-600"
+            disabled={isNextLoading}
             onClick={onNext}
           >
+            {isNextLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isKorean ? "캠페인 확인하기" : "Review campaign"}
-            <ArrowRight className="ml-2 h-4 w-4" />
+            {!isNextLoading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>
       </CardContent>

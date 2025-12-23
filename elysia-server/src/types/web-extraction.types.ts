@@ -156,12 +156,20 @@ export interface WebExtractionConfig {
 }
 
 export const DEFAULT_EXTRACTION_CONFIG: WebExtractionConfig = {
-  maxConcurrent: 20, // 기본값 (API 키 개수에 따라 자동 조정됨: 키 개수 * 20)
-  timeoutSeconds: 120,
-  gptTimeout: 180,
+  maxConcurrent: 2, // 메모리 최적화: 동시 처리 수 감소 (기존 20 → 2)
+  timeoutSeconds: 60, // 타임아웃 단축 (기존 120 → 60)
+  gptTimeout: 120, // GPT 타임아웃 단축 (기존 180 → 120)
   crawlDepth: 1,
   deduplicateByUrl: true,
   expandEmailsToRows: true,
-  randomDelayMin: 3000,
-  randomDelayMax: 6000,
+  randomDelayMin: 2000, // 지연 시간 단축 (기존 3000 → 2000)
+  randomDelayMax: 4000, // 지연 시간 단축 (기존 6000 → 4000)
+}
+
+// 메모리 최적화 상수
+export const MEMORY_OPTIMIZATION = {
+  MAX_BATCH_SIZE: 200, // 한 번에 처리 가능한 최대 URL 수
+  MAX_LOGS_IN_MEMORY: 50, // 메모리에 유지할 최대 로그 수 (기존 500 → 50)
+  CHUNK_SIZE: 10, // 청크당 URL 수 (Promise.all 대신 청크 단위 처리)
+  GC_INTERVAL_MS: 5000, // 가비지 컬렉션 힌트 간격
 }

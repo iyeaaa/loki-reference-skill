@@ -211,4 +211,17 @@ export const onboardingApi = {
       `/api/v1/onboarding/workspace/${workspaceId}/reset`,
       { method: "POST" },
     ).then((res) => res.data),
+
+  /**
+   * Job 완료 상태 확인 (Step 2 완료 후 조건부 네비게이션용)
+   */
+  getJobStatus: (workspaceId: string) =>
+    apiFetch<{
+      data: {
+        isComplete: boolean
+        jobStatus: string | null
+        hasLeads: boolean
+        hasSequence: boolean
+      }
+    }>(`/api/v1/onboarding/workspace/${workspaceId}/job-status`).then((res) => res.data),
 }

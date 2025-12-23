@@ -58,6 +58,8 @@ export interface OnboardingSurveyData {
   lang?: string
 }
 
+export type JobStatus = "waiting" | "active" | "completed" | "failed" | "delayed" | "stalled"
+
 export interface OnboardingProgressData {
   id: string
   workspaceId: string
@@ -72,6 +74,8 @@ export interface OnboardingProgressData {
   emailGenerationCompleted: Date | null
   emailLinkCompleted: Date | null
   completedAt: Date | null
+  jobId: string | null
+  jobStatus: JobStatus | null
   createdAt: Date
   updatedAt: Date
 }
@@ -176,6 +180,39 @@ export async function updateJobInfo(
       updatedAt: new Date(),
     })
     .where(eq(onboardingProgress.workspaceId, workspaceId))
+}
+
+/**
+ * Check job completion status for conditional navigation
+ * Used by frontend to determine whether to show Step 3 (loading) or skip to Step 4
+ */
+export async function checkJobCompletionStatus(workspaceId: string): Promise<{
+  isComplete: boolean
+  jobStatus: string | null
+  hasLeads: boolean
+  hasSequence: boolean
+}> {
+  const progress = await getOnboardingProgress(workspaceId)
+
+  if (!progress) {
+    return {
+      isComplete: false,
+      jobStatus: null,
+      hasLeads: false,
+      hasSequence: false,
+    }
+  }
+
+  const isComplete = progress.jobStatus === "completed"
+  const hasLeads = Array.isArray(progress.selectedLeadIds) && progress.selectedLeadIds.length > 0
+  const hasSequence = !!progress.generatedSequenceId
+
+  return {
+    isComplete,
+    jobStatus: progress.jobStatus || null,
+    hasLeads,
+    hasSequence,
+  }
 }
 
 // ====================================
@@ -699,12 +736,28 @@ export const INDUSTRY_NAMES: Record<string, string> = {
 }
 
 /**
+ * HTML 특수문자 이스케이프 (XSS 방지)
+ * < > & " ' 문자를 HTML 엔티티로 변환
+ */
+function escapeHtml(text: string): string {
+  const htmlEscapeMap: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }
+  return text.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] || char)
+}
+
+/**
  * Replace template variables with lead data
  * Handles language-appropriate fallbacks based on target language
  *
  * @param template - Email template with placeholders
  * @param lead - Lead data for replacement
  * @param targetLanguage - Target language for fallbacks (optional, auto-detected if not provided)
+ * @param isHtml - Whether the template is HTML (applies XSS sanitization)
  */
 function replaceVariables(
   template: string,
@@ -715,6 +768,7 @@ function replaceVariables(
     country?: string | null
   },
   targetLanguage?: string,
+  isHtml = false,
 ): string {
   // Determine language for fallbacks
   // Priority: 1) explicit targetLanguage, 2) lead's country, 3) template detection
@@ -736,22 +790,29 @@ function replaceVariables(
   // For contact name: if missing, remove the greeting entirely or use appropriate fallback
   const hasContactName = lead.contactName && lead.contactName.trim().length > 0
 
+  // XSS 방지: HTML 컨텍스트에서는 사용자 데이터를 이스케이프
+  const safeCompanyName = isHtml
+    ? escapeHtml(lead.companyName || companyFallback)
+    : lead.companyName || companyFallback
+  const safeWebsiteUrl = isHtml ? escapeHtml(lead.websiteUrl || "") : lead.websiteUrl || ""
+  const safeCountry = isHtml ? escapeHtml(lead.country || "") : lead.country || ""
+
   let result = template
     // English variable names (new)
-    .replace(/\{\{company_name\}\}/gi, lead.companyName || companyFallback)
+    .replace(/\{\{company_name\}\}/gi, safeCompanyName)
     // Korean/legacy variable names
-    .replace(/\{\{companyName\}\}/g, lead.companyName || companyFallback)
-    .replace(/\{\{회사명\}\}/g, lead.companyName || companyFallback)
-    .replace(/\{\{website\}\}/g, lead.websiteUrl || "")
-    .replace(/\{\{country\}\}/g, lead.country || "")
+    .replace(/\{\{companyName\}\}/g, safeCompanyName)
+    .replace(/\{\{회사명\}\}/g, safeCompanyName)
+    .replace(/\{\{website\}\}/g, safeWebsiteUrl)
+    .replace(/\{\{country\}\}/g, safeCountry)
 
   // Handle contact name with language-appropriate greeting
   if (hasContactName && lead.contactName) {
-    const contactName = lead.contactName
+    const safeContactName = isHtml ? escapeHtml(lead.contactName) : lead.contactName
     result = result
-      .replace(/\{\{contact_name\}\}/gi, contactName)
-      .replace(/\{\{contactName\}\}/g, contactName)
-      .replace(/\{\{담당자명\}\}/g, contactName)
+      .replace(/\{\{contact_name\}\}/gi, safeContactName)
+      .replace(/\{\{contactName\}\}/g, safeContactName)
+      .replace(/\{\{담당자명\}\}/g, safeContactName)
   } else {
     // Remove awkward greetings when no contact name
     // "Hi {{contact_name}}," -> "Hi there," (English) or "안녕하세요," (Korean)
@@ -860,20 +921,34 @@ export async function generatePreviewEmailsForSequence(
           console.log(
             `[PreviewEmails] Translating step ${step.stepOrder} to ${targetLanguage} for lead ${lead.companyName}`,
           )
-          const translatedTemplate = await aiService.translateEmailTemplate({
-            subject: step.emailSubject,
-            bodyText: step.emailBodyText,
-            bodyHtml: step.emailBodyHtml,
-            targetLanguage,
-          })
+          try {
+            const translatedTemplate = await aiService.translateEmailTemplate({
+              subject: step.emailSubject,
+              bodyText: step.emailBodyText,
+              bodyHtml: step.emailBodyHtml,
+              targetLanguage,
+            })
 
-          translated = {
-            subject: translatedTemplate.subject,
-            bodyText: translatedTemplate.bodyText,
-            bodyHtml: translatedTemplate.bodyHtml,
+            translated = {
+              subject: translatedTemplate.subject,
+              bodyText: translatedTemplate.bodyText,
+              bodyHtml: translatedTemplate.bodyHtml,
+            }
+            translationCache.set(cacheKey, translated)
+            console.log(`[PreviewEmails] ✅ Translation cached for ${cacheKey}`)
+          } catch (translationError) {
+            // 번역 실패 시: 해당 스텝의 이메일을 스킵하고 로그 기록
+            // 잘못된 언어의 이메일이 발송되는 것을 방지
+            console.error(
+              `[PreviewEmails] ❌ Translation failed for step ${step.stepOrder} to ${targetLanguage}:`,
+              translationError,
+            )
+            console.warn(
+              `[PreviewEmails] ⚠️ Skipping email for lead ${lead.companyName} (${lead.id}) - step ${step.stepOrder}`,
+            )
+            // 이 스텝은 스킵하고 다음 스텝으로 진행
+            continue
           }
-          translationCache.set(cacheKey, translated)
-          console.log(`[PreviewEmails] ✅ Translation cached for ${cacheKey}`)
         }
 
         subject = translated.subject
@@ -882,9 +957,9 @@ export async function generatePreviewEmailsForSequence(
       }
 
       // Replace placeholders with lead data (pass targetLanguage for accurate fallbacks)
-      subject = replaceVariables(subject, lead, targetLanguage)
-      bodyText = replaceVariables(bodyText, lead, targetLanguage)
-      bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead, targetLanguage) : null
+      subject = replaceVariables(subject, lead, targetLanguage, false)
+      bodyText = replaceVariables(bodyText, lead, targetLanguage, false)
+      bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead, targetLanguage, true) : null
 
       // Calculate scheduled time: base + lead offset + delay days
       const scheduledAt = new Date(
@@ -1397,28 +1472,39 @@ export async function enrichLeadsForOnboarding(
   return enrichedLeads
 }
 
-// 2-touch email sequence for trial signup (optimized based on research)
-// Research shows: First follow-up boosts reply rates by 49-65.8%, 70% of responses come from 2nd-4th email
-// Touch 1: Brief intro with pain point + low-commitment CTA
-// Touch 2: Follow-up with new value + time-bound CTA (3 days later)
-export const EMAIL_TYPES_2TOUCH = [
+// 3-touch email sequence for trial signup
+// Touch 1: Brief intro (2 minutes after enrollment - same day)
+// Touch 2: Follow-up with value (1 day later, same time)
+// Touch 3: Final reminder (2 days later, same time)
+export const EMAIL_TYPES_3TOUCH = [
   {
     type: "introduction",
     promptKr:
       "잠재 고객에게 보내는 첫 이메일을 작성해주세요. 짧고 간결하게(2-5문장) 고객의 핵심 문제점을 언급하고, 우리가 어떻게 도움을 줄 수 있는지 설명하세요. 부담 없는 다음 단계(예: 자료 확인, 짧은 통화)를 제안해주세요.",
     promptEn:
       "Write a brief introduction email (2-5 sentences) to a potential customer. Highlight a key pain point they likely face, briefly explain how you can help, and propose a low-commitment next step (e.g., viewing a resource, a quick 10-min call).",
-    delayDays: 0,
+    delayDays: 0, // 2분 뒤 (scheduledMinute로 조절)
   },
   {
-    type: "follow_up",
+    type: "follow_up_1",
     promptKr:
       "이전 이메일의 후속 메시지를 작성해주세요. 첫 이메일을 간략히 언급하고, 새로운 가치(성공 사례, 구체적 혜택, 또는 인사이트)를 추가하세요. 명확하고 시간이 정해진 행동 요청(예: '이번 주 10분 통화')으로 마무리해주세요.",
     promptEn:
       "Write a follow-up email referencing your previous outreach. Add new value (a success story, specific benefit, or insight) that wasn't in the first email. End with a clear, time-bound CTA (e.g., '10 minutes this week') to lower the commitment barrier.",
-    delayDays: 3,
+    delayDays: 1, // 1일 뒤 (같은 시간)
+  },
+  {
+    type: "follow_up_2",
+    promptKr:
+      "마지막 후속 이메일을 작성해주세요. 이전 이메일들을 간략히 언급하고, 고객이 놓치고 있는 가치를 강조하세요. 긴급성을 부드럽게 표현하면서 최종 행동 요청(예: '이번 주 내로 답변 부탁드립니다')으로 마무리해주세요.",
+    promptEn:
+      "Write a final follow-up email. Reference previous outreach briefly, emphasize the value they're missing, and create soft urgency. End with a final CTA (e.g., 'Would love to hear from you this week').",
+    delayDays: 2, // 2일 뒤 (같은 시간)
   },
 ]
+
+// Backward compatibility alias
+export const EMAIL_TYPES_2TOUCH = EMAIL_TYPES_3TOUCH
 
 // Placeholder email for leads without contact email
 const TRIAL_PLACEHOLDER_EMAIL = "trial@preview.local"
@@ -1510,9 +1596,9 @@ export async function autoGenerateOnboarding(
       console.log(`[AutoGenerate] Added ${leadIds.length} leads to customer group`)
     }
 
-    // 4. Generate email templates using AI (2-touch sequence for trial)
-    const templatesNeeded = EMAIL_TYPES_2TOUCH.length
-    console.log(`[AutoGenerate] Will generate ${templatesNeeded} templates (2-touch sequence)`)
+    // 4. Generate email templates using AI (3-touch sequence for trial)
+    const templatesNeeded = EMAIL_TYPES_3TOUCH.length
+    console.log(`[AutoGenerate] Will generate ${templatesNeeded} templates (3-touch sequence)`)
 
     const aiService = getAITemplateGenerationService()
     const templates: Array<{
@@ -1524,7 +1610,7 @@ export async function autoGenerateOnboarding(
     }> = []
 
     for (let i = 0; i < templatesNeeded; i++) {
-      const emailType = EMAIL_TYPES_2TOUCH[i]
+      const emailType = EMAIL_TYPES_3TOUCH[i]
       if (!emailType) continue
 
       const prompt = isKorean ? emailType.promptKr : emailType.promptEn
@@ -1596,7 +1682,7 @@ export async function autoGenerateOnboarding(
 
     console.log(`[AutoGenerate] Created sequence ${sequence.id}`)
 
-    // 6. Create sequence steps with 2-touch timing (Day 0 and Day 3)
+    // 6. Create sequence steps with 3-touch timing (Day 0, Day 1, Day 2)
     const now = new Date()
     const kstNow = new Date(now.getTime() + KST_OFFSET_MS)
     const scheduledHour = kstNow.getUTCHours()
@@ -1616,7 +1702,7 @@ export async function autoGenerateOnboarding(
       const step = await createSequenceStep({
         sequenceId: sequence.id,
         stepOrder: template.stepOrder,
-        delayDays: template.delayDays, // From EMAIL_TYPES_2TOUCH: 0 for intro, 3 for follow-up
+        delayDays: template.delayDays, // From EMAIL_TYPES_3TOUCH: 0, 1, 2 days
         scheduledHour,
         scheduledMinute,
         emailSubject: template.emailSubject,

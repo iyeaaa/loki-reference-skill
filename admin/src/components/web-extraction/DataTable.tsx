@@ -63,7 +63,7 @@ export function DataTable({ data }: DataTableProps) {
     <Card>
       <CardContent className="p-0">
         <div className="overflow-x-auto rounded-md border">
-          <Table>
+          <Table className="min-w-max table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 z-10 w-[160px] max-w-[160px] border-r bg-background p-1">
@@ -182,8 +182,8 @@ export function DataTable({ data }: DataTableProps) {
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
-                    {item.facebook_url ? (
-                      <TooltipCell content={item.facebook_url}>
+                    <TooltipCell content={item.facebook_url}>
+                      {item.facebook_url ? (
                         <a
                           className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.facebook_url) || "#"}
@@ -194,14 +194,14 @@ export function DataTable({ data }: DataTableProps) {
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
                         </a>
-                      </TooltipCell>
-                    ) : (
-                      "-"
-                    )}
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
-                    {item.instagram_url ? (
-                      <TooltipCell content={item.instagram_url}>
+                    <TooltipCell content={item.instagram_url}>
+                      {item.instagram_url ? (
                         <a
                           className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.instagram_url) || "#"}
@@ -212,14 +212,14 @@ export function DataTable({ data }: DataTableProps) {
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
                         </a>
-                      </TooltipCell>
-                    ) : (
-                      "-"
-                    )}
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
-                    {item.twitter_url ? (
-                      <TooltipCell content={item.twitter_url}>
+                    <TooltipCell content={item.twitter_url}>
+                      {item.twitter_url ? (
                         <a
                           className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.twitter_url) || "#"}
@@ -230,14 +230,14 @@ export function DataTable({ data }: DataTableProps) {
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
                         </a>
-                      </TooltipCell>
-                    ) : (
-                      "-"
-                    )}
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
-                    {item.linkedin_url ? (
-                      <TooltipCell content={item.linkedin_url}>
+                    <TooltipCell content={item.linkedin_url}>
+                      {item.linkedin_url ? (
                         <a
                           className="flex cursor-pointer items-center gap-1 text-primary hover:underline"
                           href={normalizeUrl(item.linkedin_url) || "#"}
@@ -248,10 +248,10 @@ export function DataTable({ data }: DataTableProps) {
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
                         </a>
-                      </TooltipCell>
-                    ) : (
-                      "-"
-                    )}
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.employee_count?.toString()}>
@@ -359,7 +359,7 @@ export function DataTable({ data }: DataTableProps) {
                           {item.error_message}
                         </span>
                       ) : (
-                        "-"
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TooltipCell>
                   </TableCell>

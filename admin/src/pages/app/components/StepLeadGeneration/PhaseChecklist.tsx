@@ -79,9 +79,6 @@ export function PhaseChecklist({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-slate-50 p-4">
-      <h4 className="mb-3 font-medium text-gray-700 text-sm">
-        {isKorean ? "AI가 하고 있는 일" : "What AI is doing"}
-      </h4>
       <div className="space-y-3">
         {phases.map((phase) => {
           const status = getPhaseStatus(phase.id)

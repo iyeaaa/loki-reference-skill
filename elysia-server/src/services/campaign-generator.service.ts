@@ -25,7 +25,7 @@ import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
 import {
   COUNTRY_NAMES,
-  EMAIL_TYPES_2TOUCH,
+  EMAIL_TYPES_3TOUCH,
   enrichLeadsForOnboarding,
   generatePreviewEmailsForSequence,
   INDUSTRY_NAMES,
@@ -113,11 +113,11 @@ export type ProgressCallback = (phase: string, progressPercent: number, message:
 // ============================================================================
 
 const DEFAULT_CONFIG: Required<CampaignGeneratorConfig> = {
-  targetLeads: 20,
-  enrichmentBatchSize: 20,
+  targetLeads: 30,
+  enrichmentBatchSize: 30,
   bigqueryBatchSize: 100,
   maxSearchIterations: 2,
-  emailSchedule: EMAIL_TYPES_2TOUCH,
+  emailSchedule: EMAIL_TYPES_3TOUCH,
   autoActivateSequence: false,
   generatePreviews: true,
 }
@@ -813,10 +813,10 @@ export async function generateCampaignFromJob(
 // ============================================================================
 
 /**
- * 빠른 온보딩용 설정 (20개 리드, 2-touch)
+ * 빠른 온보딩용 설정 (30개 리드, 3-touch = 90 emails)
  */
 export const QUICK_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
-  targetLeads: 20,
+  targetLeads: 30,
   bigqueryBatchSize: 100,
   maxSearchIterations: 2,
   autoActivateSequence: false,
@@ -824,7 +824,7 @@ export const QUICK_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
 }
 
 /**
- * 전체 온보딩용 설정 (300개 리드, 2-touch)
+ * 전체 온보딩용 설정 (300개 리드, 3-touch)
  */
 export const FULL_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
   targetLeads: 150,
@@ -835,10 +835,10 @@ export const FULL_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
 }
 
 /**
- * 즉시 활성화용 설정 (20개 리드, 2-touch, 자동 활성화)
+ * 즉시 활성화용 설정 (30개 리드, 3-touch, 자동 활성화)
  */
 export const INSTANT_CAMPAIGN_CONFIG: CampaignGeneratorConfig = {
-  targetLeads: 20,
+  targetLeads: 30,
   bigqueryBatchSize: 100,
   maxSearchIterations: 2,
   autoActivateSequence: true,

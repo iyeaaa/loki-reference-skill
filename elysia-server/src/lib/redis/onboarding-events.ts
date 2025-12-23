@@ -234,7 +234,7 @@ export function createDiscoverySearchingEvent(
 }
 
 // Must match TARGET_LEADS in onboarding-worker.service.ts
-const TARGET_LEADS_FOR_PROGRESS = 20
+const TARGET_LEADS_FOR_PROGRESS = 30
 
 export function createDiscoveryBatchEvent(
   workspaceId: string,
@@ -244,14 +244,14 @@ export function createDiscoveryBatchEvent(
   leadsFound: number,
   leadsEnriched: number,
 ): OnboardingProgressEvent {
-  // 20개 목표 기준 실제 퍼센트 표시 (0% ~ 100% 범위)
+  // 30개 목표 기준 실제 퍼센트 표시 (0% ~ 100% 범위)
   const progressPercent = Math.min(Math.round((leadsFound / TARGET_LEADS_FOR_PROGRESS) * 100), 100)
 
   // 진행 상황에 따른 자연스러운 메시지
   let messageKr: string
   if (leadsFound === 0) {
     messageKr = "바이어 찾고 있어요"
-  } else if (leadsFound < 10) {
+  } else if (leadsFound < 15) {
     messageKr = `${leadsFound}명 찾았어요`
   } else {
     messageKr = `벌써 ${leadsFound}명이에요`

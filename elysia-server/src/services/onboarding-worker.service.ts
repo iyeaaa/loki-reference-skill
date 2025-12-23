@@ -53,7 +53,7 @@ import {
   COUNTRY_NAMES,
   completeStep1CompanyInfo,
   completeStep2LeadSearch,
-  EMAIL_TYPES_2TOUCH,
+  EMAIL_TYPES_3TOUCH,
   enrichLeadsForOnboarding,
   generatePreviewEmailsForSequence,
   INDUSTRY_NAMES,
@@ -67,10 +67,10 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 150 // Target 150 leads matching direct function
-const ENRICHMENT_BATCH_SIZE = 20
-const BIGQUERY_BATCH_SIZE = 100
-const MAX_SEARCH_ITERATIONS = 3
+const TARGET_LEADS = 30 // 30 leads for 3-touch sequence (90 emails total)
+const ENRICHMENT_BATCH_SIZE = 30
+const BIGQUERY_BATCH_SIZE = 100 // Reduced from 500 for faster onboarding
+const MAX_SEARCH_ITERATIONS = 3 // Enough iterations to find 30 leads
 const HUNTERIO_MAX_PER_PAGE = 100
 const HUNTERIO_MAX_EMAIL_COUNT = 100 // Skip companies with too many emails (proxy for large companies)
 
@@ -954,7 +954,7 @@ export async function runTemplatesPhase(
   console.log("[TemplatesPhase] Generating email templates")
 
   // Emit SSE + Save to DB: Templates started
-  const templatesNeeded = EMAIL_TYPES_2TOUCH.length
+  const templatesNeeded = EMAIL_TYPES_3TOUCH.length
   await emitAndSaveNotification(
     createTemplatesStartEvent(workspaceId, jobId, templatesNeeded),
     userId,
@@ -978,8 +978,8 @@ export async function runTemplatesPhase(
       throw new Error(`Workspace not found: ${workspaceId}`)
     }
 
-    const templatesNeeded = EMAIL_TYPES_2TOUCH.length
-    console.log(`[TemplatesPhase] Generating ${templatesNeeded} templates (2-touch sequence)`)
+    const templatesNeeded = EMAIL_TYPES_3TOUCH.length
+    console.log(`[TemplatesPhase] Generating ${templatesNeeded} templates (3-touch sequence)`)
 
     const aiService = getAITemplateGenerationService()
     const templates: Array<{
@@ -992,7 +992,7 @@ export async function runTemplatesPhase(
     const totalTemplates = templatesNeeded
 
     for (let i = 0; i < templatesNeeded; i++) {
-      const emailType = EMAIL_TYPES_2TOUCH[i]
+      const emailType = EMAIL_TYPES_3TOUCH[i]
       if (!emailType) continue
 
       // Report progress to keep job alive (extends lock)

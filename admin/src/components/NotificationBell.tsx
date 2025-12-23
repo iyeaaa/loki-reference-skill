@@ -21,7 +21,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { type Notification, useNotificationsManager } from "@/lib/api/hooks/notifications"
 import { cn } from "@/lib/utils"
+import { useSharedFakeProgressReadOnly } from "@/store/fake-progress"
 
 // ============================================================================
 // Types
@@ -49,93 +50,6 @@ type GroupedNotifications = {
   dateKey: string
   dateLabel: string
   notifications: Notification[]
-}
-
-// ============================================================================
-// Fake Progress Hook (Step 2와 동일한 로직)
-// ============================================================================
-
-/**
- * Fake Progress Hook
- *
- * UX Best Practice (Harrison et al., CMU 2007 & Nielsen Norman Group):
- * - "Fast start, slow finish" reduces perceived wait time by ~11%
- * - Users prefer progress that starts quickly and decelerates
- * - First 20% of progress has the most psychological impact
- *
- * Algorithm: Ease-out Cubic with optimized timing
- * - 시작: 5% (즉시 진행 중임을 보여줌)
- * - 0-5초: 5% → 12% (빠른 시작, 체감 속도 ↑)
- * - 5-15초: 12% → 14.5% (점진적 감속)
- * - 15-30초: 14.5% → 15% (거의 멈춤, 실제 데이터 대기)
- *
- * Formula: progress = minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
- */
-function useFakeProgress(
-  realProgress: number,
-  isActive: boolean,
-  maxFakeProgress = 15,
-  minFakeProgress = 5,
-): number {
-  const [fakeProgress, setFakeProgress] = useState(0)
-  const startTimeRef = useRef<number | null>(null)
-  const animationFrameRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (!isActive) {
-      setFakeProgress(0)
-      startTimeRef.current = null
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      return
-    }
-
-    // Start fake progress animation (항상 시작, realProgress와 무관)
-    if (!startTimeRef.current) {
-      startTimeRef.current = Date.now()
-    }
-
-    const animate = () => {
-      if (!startTimeRef.current) {
-        return
-      }
-
-      const elapsed = Date.now() - startTimeRef.current
-      const duration = 30_000 // 30 seconds to reach maxFakeProgress
-      const t = Math.min(elapsed / duration, 1)
-
-      // Ease-out Cubic: fast start, slow finish
-      // Formula: minProgress + (1 - (1 - t)^3) * (maxProgress - minProgress)
-      // At t=0 (0초): 5% (즉시 시작)
-      // At t=0.17 (5초): ~12% (빠른 초기 진행)
-      // At t=0.5 (15초): ~14% (점진적 감속)
-      // At t=1.0 (30초): 15% (최대)
-      const easeOutCubic = 1 - (1 - t) ** 3
-      const progressRange = maxFakeProgress - minFakeProgress
-      const easedProgress = minFakeProgress + easeOutCubic * progressRange
-
-      setFakeProgress(easedProgress)
-
-      // fake progress가 max에 도달하거나 real progress보다 높아질 때까지 계속
-      if (t < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate)
-      }
-    }
-
-    animationFrameRef.current = requestAnimationFrame(animate)
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [isActive, maxFakeProgress, minFakeProgress]) // realProgress 의존성 제거 (animation 중단 방지)
-
-  // isActive일 때 최소 minFakeProgress부터 시작 (즉시 진행 중 표시)
-  const effectiveProgress = isActive ? Math.max(fakeProgress, minFakeProgress) : fakeProgress
-  // 항상 둘 중 큰 값 반환 (역전 방지)
-  return Math.max(realProgress, effectiveProgress)
 }
 
 // ============================================================================
@@ -278,6 +192,7 @@ type NotificationItemProps = {
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
   onAction?: (url: string) => void
+  parentWorkspaceId?: string // 부모에서 전달받은 workspaceId (fallback)
 }
 
 function NotificationItem({
@@ -285,6 +200,7 @@ function NotificationItem({
   onMarkAsRead,
   onDelete,
   onAction,
+  parentWorkspaceId,
 }: NotificationItemProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -296,6 +212,7 @@ function NotificationItem({
     totalPreviews?: number
     actionUrl?: string
     actionLabel?: string
+    workspaceId?: string
   } | null
 
   const phase = metadata?.phase
@@ -304,11 +221,14 @@ function NotificationItem({
   const isError = phase === "error" || notification.type === "error"
   const isInProgress = notification.type === "onboarding" && !isComplete && !isError
 
-  // Fake progress 적용 (Step 2 UI와 동일한 로직)
-  const displayProgress = useFakeProgress(
+  // workspaceId를 metadata에서 가져오거나 부모에서 받은 것 사용
+  const workspaceId = metadata?.workspaceId || parentWorkspaceId || ""
+
+  // 공유 Fake progress 적용 (StepBuyerLoading과 동기화)
+  const displayProgress = useSharedFakeProgressReadOnly(
+    workspaceId,
     rawProgressPercent,
     isInProgress,
-    15, // Max fake progress before real data arrives
   )
 
   // 상세 정보 포맷팅
@@ -457,9 +377,10 @@ type DateGroupProps = {
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
   onAction: (url: string) => void
+  workspaceId?: string
 }
 
-function DateGroup({ group, onMarkAsRead, onDelete, onAction }: DateGroupProps) {
+function DateGroup({ group, onMarkAsRead, onDelete, onAction, workspaceId }: DateGroupProps) {
   return (
     <div>
       {/* Date Header */}
@@ -476,6 +397,7 @@ function DateGroup({ group, onMarkAsRead, onDelete, onAction }: DateGroupProps) 
             onAction={onAction}
             onDelete={onDelete}
             onMarkAsRead={onMarkAsRead}
+            parentWorkspaceId={workspaceId}
           />
         ))}
       </ul>
@@ -593,6 +515,7 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
                   onAction={handleAction}
                   onDelete={deleteNotification}
                   onMarkAsRead={markAsRead}
+                  workspaceId={workspaceId}
                 />
               ))}
             </div>

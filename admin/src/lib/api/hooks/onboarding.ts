@@ -20,6 +20,7 @@ export const onboardingKeys = {
   progress: (workspaceId: string) => [...onboardingKeys.all, "progress", workspaceId] as const,
   incomplete: () => [...onboardingKeys.all, "incomplete"] as const,
   stats: () => [...onboardingKeys.all, "stats"] as const,
+  jobStatus: (workspaceId: string) => [...onboardingKeys.all, "job-status", workspaceId] as const,
 }
 
 // ====================================
@@ -64,6 +65,19 @@ export function useOnboardingStats(enabled = true) {
     queryFn: onboardingApi.getStats,
     enabled,
     staleTime: 60 * 1000, // 1분
+  })
+}
+
+/**
+ * Job 완료 상태 확인 훅 (Step 2 완료 후 조건부 네비게이션용)
+ */
+export function useJobStatus(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: onboardingKeys.jobStatus(workspaceId),
+    queryFn: () => onboardingApi.getJobStatus(workspaceId),
+    enabled: enabled && !!workspaceId,
+    staleTime: 0,
+    refetchOnMount: true,
   })
 }
 

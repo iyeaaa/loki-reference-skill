@@ -17,7 +17,7 @@ import type {
   ProgressLog,
   WebExtractionConfig,
 } from "../types/web-extraction.types"
-import { GPT_COST_PER_REQUEST } from "../types/web-extraction.types"
+import { GPT_COST_PER_REQUEST, MEMORY_OPTIMIZATION } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { getNextApiKey } from "./openai-api-key.service"
 
@@ -215,14 +215,14 @@ export async function fetchWebsiteContent(
       })
       .remove()
 
-    // 본문 텍스트 추출
-    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 48000) // 메타데이터 공간 확보를 위해 48KB로 제한
+    // 본문 텍스트 추출 (메모리 최적화: 28KB로 제한)
+    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 28000)
 
-    // 메타데이터 + 본문 결합
-    const content = metadata + bodyText
+    // 메타데이터 + 본문 결합 (최종 30KB 제한)
+    const content = (metadata + bodyText).substring(0, 30000)
 
     return {
-      content: content.substring(0, 50000), // 최종 50KB 제한
+      content, // 30KB 제한
       statusCode: response.status,
       finalUrl: response.url,
     }
@@ -461,11 +461,11 @@ export async function fetchWithDepth(
       })
       .remove()
 
-    // 본문 텍스트 추출
-    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 48000) // 메타데이터 공간 확보
+    // 본문 텍스트 추출 (메모리 최적화: 28KB로 제한)
+    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 28000)
 
-    // 메타데이터 + 본문 결합
-    const pageContent = (metadata + bodyText).substring(0, 50000)
+    // 메타데이터 + 본문 결합 (최종 30KB 제한)
+    const pageContent = (metadata + bodyText).substring(0, 30000)
 
     if (pageContent) {
       pagesContent.set(normalizedUrl, pageContent)
@@ -1119,7 +1119,8 @@ export async function processCompanyRecord(
 }
 
 /**
- * 일괄 처리 (동시성 제어)
+ * 일괄 처리 (메모리 최적화 - 청크 단위 처리)
+ * 기존 Promise.all 대신 청크 단위로 순차 처리하여 메모리 사용량 최소화
  */
 export async function processBatch(
   records: CompanyRecord[],
@@ -1139,188 +1140,171 @@ export async function processBatch(
   let addressFound = 0
   let socialFound = 0
   let gptRequests = 0
-  let estimatedCost = 0 // 누적 예상 비용
+  let estimatedCost = 0
 
-  // 로그 추가 헬퍼 함수
+  const { MAX_LOGS_IN_MEMORY, CHUNK_SIZE } = MEMORY_OPTIMIZATION
+
+  // 로그 추가 헬퍼 함수 (메모리 최적화: 최근 N개만 유지)
   const addLog = (message: string, type: ProgressLog["type"]) => {
-    const log: ProgressLog = {
+    logs.push({
       timestamp: Date.now(),
       message,
       type,
       processed,
       total: records.length,
-    }
-    logs.push(log)
-    // 최대 500개 로그만 유지 (메모리 절약)
-    if (logs.length > 500) {
+    })
+    // 최근 50개 로그만 유지 (기존 500 → 50)
+    while (logs.length > MAX_LOGS_IN_MEMORY) {
       logs.shift()
     }
   }
 
+  // 진행 상황 전송 헬퍼 (로그 복사 최적화)
+  const sendProgress = (latestResult?: CompanyRecord) => {
+    const elapsed = (Date.now() - startTime) / 1000
+    const itemsPerSecond = processed > 0 ? processed / elapsed : 0
+    const remaining = records.length - processed
+    const estimatedTimeRemaining = itemsPerSecond > 0 ? remaining / itemsPerSecond : 0
+
+    progressCallback({
+      status: "processing",
+      total: records.length,
+      processed,
+      success,
+      errors,
+      emailFound,
+      phoneFound,
+      addressFound,
+      socialFound,
+      gptRequests,
+      percentage: (processed / records.length) * 100,
+      currentCompany: latestResult?.foundCompanyName || latestResult?.websiteUrl,
+      elapsedTime: elapsed,
+      estimatedTimeRemaining,
+      itemsPerSecond,
+      logs: logs.slice(-MAX_LOGS_IN_MEMORY), // 복사 대신 슬라이스
+      latestResult,
+      estimatedCost,
+    })
+  }
+
   // 시작 로그
-  addLog(`${records.length}개 웹사이트 데이터 추출 시작 (동시성: ${config.maxConcurrent})`, "info")
+  addLog(
+    `${records.length}개 웹사이트 데이터 추출 시작 (동시성: ${config.maxConcurrent}, 청크: ${CHUNK_SIZE})`,
+    "info",
+  )
+
+  // 청크로 분할
+  const chunks: CompanyRecord[][] = []
+  for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+    chunks.push(records.slice(i, i + CHUNK_SIZE))
+  }
+
+  logger.info(
+    { totalRecords: records.length, chunkCount: chunks.length, chunkSize: CHUNK_SIZE },
+    "[processBatch] Starting chunked processing for memory optimization",
+  )
 
   // p-limit을 사용한 동시성 제어
   const limit = pLimit(config.maxConcurrent)
 
-  // 모든 레코드를 동시성 제한과 함께 처리
-  const promises = records.map((record, i) =>
-    limit(async () => {
-      const recordIndex = i + 1
-      const displayName = record.websiteUrl
+  // 청크 단위로 순차 처리 (메모리 최적화)
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+    const chunk = chunks[chunkIndex]
+    if (!chunk) continue // TypeScript undefined 체크
 
-      try {
-        // 처리 시작 로그
-        addLog(`[${recordIndex}/${records.length}] ${displayName} 처리 시작...`, "info")
+    const chunkStartIndex = chunkIndex * CHUNK_SIZE
 
-        const result = await processCompanyRecord(record, config, workspaceId, searchCriteria)
-        processed++
+    // 현재 청크 내 레코드들을 동시성 제한과 함께 처리
+    const chunkPromises = chunk.map((record, i) =>
+      limit(async () => {
+        const recordIndex = chunkStartIndex + i + 1
+        const displayName = record.websiteUrl
 
-        // 에러가 발생한 경우 결과에 포함하지 않음
-        if (result.errorMessage) {
-          errors++
+        try {
+          addLog(`[${recordIndex}/${records.length}] ${displayName} 처리 시작...`, "info")
+
+          const result = await processCompanyRecord(record, config, workspaceId, searchCriteria)
+          processed++
+
+          if (result.errorMessage) {
+            errors++
+            const httpStatusText = result.httpStatus ? `[${result.httpStatus}] ` : ""
+            addLog(
+              `[${recordIndex}/${records.length}] ${httpStatusText}✗ ${displayName}: ${result.errorMessage}`,
+              "error",
+            )
+            sendProgress()
+            return null
+          }
+
+          // 성공 처리
+          results.push(result)
+
+          if (result.collectedAt) {
+            gptRequests++
+            const inputCost =
+              (GPT_COST_PER_REQUEST.INPUT_TOKENS / 1_000_000) *
+              GPT_COST_PER_REQUEST.INPUT_PRICE_PER_MILLION
+            const outputCost =
+              (GPT_COST_PER_REQUEST.OUTPUT_TOKENS / 1_000_000) *
+              GPT_COST_PER_REQUEST.OUTPUT_PRICE_PER_MILLION
+            estimatedCost += inputCost + outputCost
+          }
+
+          if (result.email) emailFound++
+          if (result.phoneNumber) phoneFound++
+          if (result.address) addressFound++
+          if (
+            result.facebookUrl ||
+            result.instagramUrl ||
+            result.twitterUrl ||
+            result.linkedinUrl
+          ) {
+            socialFound++
+          }
+
+          success++
+          const details: string[] = []
+          if (result.email) details.push("이메일")
+          if (result.phoneNumber) details.push("전화")
+          if (result.address) details.push("주소")
+          const detailText = details.length > 0 ? ` (${details.join(", ")})` : ""
+          const resultName = result.foundCompanyName || displayName
           const httpStatusText = result.httpStatus ? `[${result.httpStatus}] ` : ""
           addLog(
-            `[${recordIndex}/${records.length}] ${httpStatusText}✗ ${displayName}: ${result.errorMessage}`,
-            "error",
+            `[${recordIndex}/${records.length}] ${httpStatusText}✓ ${resultName}${detailText}`,
+            "success",
           )
 
-          // 진행 상황 콜백 (에러 정보만, latestResult는 포함하지 않음)
-          const elapsed = (Date.now() - startTime) / 1000
-          const itemsPerSecond = processed / elapsed
-          const remaining = records.length - processed
-          const estimatedTimeRemaining = remaining / itemsPerSecond
+          sendProgress(result)
+          return result
+        } catch (error) {
+          logger.error({ error, record }, "Failed to process record in batch")
+          errors++
+          processed++
 
-          progressCallback({
-            status: "processing",
-            total: records.length,
-            processed,
-            success,
-            errors,
-            emailFound,
-            phoneFound,
-            addressFound,
-            socialFound,
-            gptRequests,
-            percentage: (processed / records.length) * 100,
-            currentCompany: record.websiteUrl,
-            elapsedTime: elapsed,
-            estimatedTimeRemaining,
-            itemsPerSecond,
-            logs: [...logs], // 복사본 전달
-            estimatedCost, // 누적 예상 비용
-          })
-
-          return null // 에러가 발생한 경우 null 반환
+          const errorMsg = error instanceof Error ? error.message : "Unknown error"
+          addLog(`[${recordIndex}/${records.length}] ✗ ${record.websiteUrl}: ${errorMsg}`, "error")
+          sendProgress()
+          return null
         }
+      }),
+    )
 
-        // 성공한 경우에만 결과에 추가
-        results.push(result)
+    // 현재 청크 완료 대기
+    await Promise.all(chunkPromises)
 
-        // GPT 요청이 성공한 경우에만 비용 계산
-        if (result.collectedAt) {
-          gptRequests++
-          // GPT API 비용 계산 (요청당 고정 비용)
-          const inputCost =
-            (GPT_COST_PER_REQUEST.INPUT_TOKENS / 1_000_000) *
-            GPT_COST_PER_REQUEST.INPUT_PRICE_PER_MILLION
-          const outputCost =
-            (GPT_COST_PER_REQUEST.OUTPUT_TOKENS / 1_000_000) *
-            GPT_COST_PER_REQUEST.OUTPUT_PRICE_PER_MILLION
-          estimatedCost += inputCost + outputCost
-        }
-
-        // 통계 업데이트
-        if (result.email) emailFound++
-        if (result.phoneNumber) phoneFound++
-        if (result.address) addressFound++
-        if (result.facebookUrl || result.instagramUrl || result.twitterUrl || result.linkedinUrl) {
-          socialFound++
-        }
-
-        // 성공 로그
-        success++
-        const details: string[] = []
-        if (result.email) details.push("이메일")
-        if (result.phoneNumber) details.push("전화")
-        if (result.address) details.push("주소")
-        const detailText = details.length > 0 ? ` (${details.join(", ")})` : ""
-        const resultName = result.foundCompanyName || displayName
-        const httpStatusText = result.httpStatus ? `[${result.httpStatus}] ` : ""
-        addLog(
-          `[${recordIndex}/${records.length}] ${httpStatusText}✓ ${resultName}${detailText}`,
-          "success",
-        )
-
-        // 진행 상황 콜백 (성공한 결과만 포함)
-        const elapsed = (Date.now() - startTime) / 1000
-        const itemsPerSecond = processed / elapsed
-        const remaining = records.length - processed
-        const estimatedTimeRemaining = remaining / itemsPerSecond
-
-        progressCallback({
-          status: "processing",
-          total: records.length,
-          processed,
-          success,
-          errors,
-          emailFound,
-          phoneFound,
-          addressFound,
-          socialFound,
-          gptRequests,
-          percentage: (processed / records.length) * 100,
-          currentCompany: result.foundCompanyName || record.websiteUrl,
-          elapsedTime: elapsed,
-          estimatedTimeRemaining,
-          itemsPerSecond,
-          logs: [...logs], // 복사본 전달
-          latestResult: result, // 성공한 최신 결과만 포함
-          estimatedCost, // 누적 예상 비용
-        })
-
-        return result
-      } catch (error) {
-        logger.error({ error, record }, "Failed to process record in batch")
-        errors++
-        processed++
-
-        const errorMsg = error instanceof Error ? error.message : "Unknown error"
-        addLog(`[${recordIndex}/${records.length}] ✗ ${record.websiteUrl}: ${errorMsg}`, "error")
-
-        // 진행 상황 콜백 (에러 정보만, latestResult는 포함하지 않음)
-        const elapsed = (Date.now() - startTime) / 1000
-        const itemsPerSecond = processed / elapsed
-        const remaining = records.length - processed
-        const estimatedTimeRemaining = remaining / itemsPerSecond
-
-        progressCallback({
-          status: "processing",
-          total: records.length,
-          processed,
-          success,
-          errors,
-          emailFound,
-          phoneFound,
-          addressFound,
-          socialFound,
-          gptRequests,
-          percentage: (processed / records.length) * 100,
-          currentCompany: record.websiteUrl,
-          elapsedTime: elapsed,
-          estimatedTimeRemaining,
-          itemsPerSecond,
-          logs: [...logs], // 복사본 전달
-          estimatedCost, // 누적 예상 비용
-        })
-
-        return null // 에러가 발생한 경우 null 반환
-      }
-    }),
-  )
-
-  // 모든 작업 완료 대기
-  await Promise.all(promises)
+    // 청크 완료 후 메모리 정리 힌트
+    if (chunkIndex < chunks.length - 1) {
+      logger.debug(
+        { chunkIndex: chunkIndex + 1, totalChunks: chunks.length, processed },
+        "[processBatch] Chunk completed, memory cleanup hint",
+      )
+      // 청크 참조 해제 (GC 힌트)
+      chunks[chunkIndex] = []
+    }
+  }
 
   // 완료 로그
   addLog(`✓ 처리 완료: 성공 ${success}개, 실패 ${errors}개 (총 ${records.length}개)`, "success")
@@ -1343,9 +1327,14 @@ export async function processBatch(
     estimatedTimeRemaining: 0,
     itemsPerSecond: processed / elapsed,
     message: "처리 완료",
-    logs: [...logs], // 최종 로그
-    estimatedCost, // 최종 예상 비용
+    logs: logs.slice(-MAX_LOGS_IN_MEMORY),
+    estimatedCost,
   })
+
+  logger.info(
+    { totalRecords: records.length, success, errors, elapsedSeconds: elapsed },
+    "[processBatch] Batch processing completed",
+  )
 
   return results
 }

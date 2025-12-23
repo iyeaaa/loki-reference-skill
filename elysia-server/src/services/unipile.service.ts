@@ -43,9 +43,12 @@ export interface SendEmailResult {
 /**
  * Get Unipile hosted authentication URL
  * Initialize hosted auth session and get redirect URL
+ * @param provider - Email provider (GOOGLE, OUTLOOK, etc.)
+ * @param state - Optional state parameter (workspaceId) to pass through OAuth flow
  */
 export async function getUnipileAuthUrl(
   provider: string = "GOOGLE",
+  state?: string,
 ): Promise<UnipileAuthUrlResponse> {
   if (!UNIPILE_API_KEY) {
     throw new Error("UNIPILE_API_KEY is not configured")
@@ -57,17 +60,36 @@ export async function getUnipileAuthUrl(
     expiresOn.setHours(expiresOn.getHours() + 1)
     const expiresOnISO = expiresOn.toISOString()
 
+    // Build redirect URLs with state parameter if provided
+    // ⚠️ 중요: state는 workspaceId를 전달하는 데 사용됨
+    const stateParam = state ? `state=${encodeURIComponent(state)}` : ""
+    const successUrl = stateParam ? `${UNIPILE_REDIRECT_URI}?${stateParam}` : UNIPILE_REDIRECT_URI
+    const failureUrl = stateParam
+      ? `${UNIPILE_REDIRECT_URI}?error=true&${stateParam}`
+      : `${UNIPILE_REDIRECT_URI}?error=true`
+
     // POST to initialize hosted auth session
     const requestBody = {
       type: "create",
       providers: [provider],
       api_url: UNIPILE_API_URL,
       expiresOn: expiresOnISO,
-      success_redirect_url: UNIPILE_REDIRECT_URI,
-      failure_redirect_url: `${UNIPILE_REDIRECT_URI}?error=true`,
+      success_redirect_url: successUrl,
+      failure_redirect_url: failureUrl,
     }
 
-    logger.info({ requestBody, apiUrl: UNIPILE_API_URL }, "Requesting Unipile hosted auth URL")
+    logger.info(
+      {
+        state,
+        stateParam,
+        successUrl,
+        failureUrl,
+        UNIPILE_REDIRECT_URI,
+        requestBody,
+        apiUrl: UNIPILE_API_URL,
+      },
+      "🔍 [Unipile] Requesting hosted auth URL with state parameter",
+    )
 
     const response = await fetch(`${UNIPILE_API_URL}/api/v1/hosted/accounts/link`, {
       method: "POST",

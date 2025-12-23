@@ -13,10 +13,10 @@ import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
 import { isValidSurveyData, migrateFromSessionStorage, surveyDataAtom } from "@/store/survey"
 import { OnboardingStepper } from "./components/OnboardingStepper"
+import { StepBuyerLoading } from "./components/StepBuyerLoading"
 import { StepCompanyInfo } from "./components/StepCompanyInfo"
 import { StepConfirmation } from "./components/StepConfirmation"
 import { StepEmailLink } from "./components/StepEmailLink"
-import { StepLeadGeneration } from "./components/StepLeadGeneration"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -312,19 +312,19 @@ export default function CompanyInformation() {
   // Calculate completed steps (all steps before current step)
   const completedSteps = Array.from({ length: currentStep - 1 }, (_, i) => i + 1)
 
-  // Updated: 5 steps → 4 steps
-  // Step 1: Company Info
-  // Step 2: Lead & Email Generation (combined)
-  // Step 3: Email Link
-  // Step 4: Confirmation
+  // Updated: New onboarding flow
+  // Step 1: 정보 입력 (+ 백그라운드 작업 시작)
+  // Step 2: 유니파일 이메일 연동 (백그라운드 병렬 실행)
+  // Step 3: 바이어 찾고 이메일 생성 (조건부 - 백그라운드 미완료 시)
+  // Step 4: 캠페인 확인 및 실행
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return <StepCompanyInfo />
       case 2:
-        return <StepLeadGeneration />
-      case 3:
         return <StepEmailLink />
+      case 3:
+        return <StepBuyerLoading />
       case 4:
         return <StepConfirmation />
       default:

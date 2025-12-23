@@ -112,16 +112,16 @@ class AITemplateGenerationService {
       // 1. 랜덤 예시 5개 선택
       const examples = this.getRandomExamples(5)
       console.log(`[AITemplate] Selected ${examples.length} random email examples`)
-      const _examplesText =
+      const examplesText =
         examples.length > 0
           ? examples
               .map(
                 (ex, idx) => `
-예시 ${idx + 1}:
-회사: ${ex.company}
-발송 시점: ${ex.day}
-제목: ${ex.subject}
-본문:
+Example ${idx + 1}:
+Company: ${ex.company}
+Timing: ${ex.day}
+Subject: ${ex.subject}
+Body:
 ${ex.content}
 `,
               )
@@ -274,7 +274,17 @@ Noticed {{company_name}} has been making waves in the Middle East fragrance mark
 Many beauty distributors we've worked with struggled to find the right buyers when entering new regions. We helped 3 similar companies connect with 50+ qualified buyers in their first 90 days.
 
 Worth a quick chat about your expansion plans?"
-
+${
+  examplesText
+    ? `
+═══════════════════════════════════════════════════════════════
+REFERENCE EXAMPLES (Learn from these successful cold emails)
+═══════════════════════════════════════════════════════════════
+Study these real examples for tone, structure, and approach. Do NOT copy them directly.
+${examplesText}
+`
+    : ""
+}
 ═══════════════════════════════════════════════════════════════
 OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON)
 ═══════════════════════════════════════════════════════════════
@@ -598,8 +608,8 @@ ${bodyText}`
       console.log(`[AITemplate] Translation completed (${elapsed}ms)`)
 
       // JSON 파싱 시도
-      let translatedSubject = subject
-      let translatedBodyText = bodyText
+      let translatedSubject: string | null = null
+      let translatedBodyText: string | null = null
 
       const jsonResult = this.tryParseJson(text)
       if (jsonResult) {
@@ -626,12 +636,20 @@ ${bodyText}`
         if (translatedBodyLines.length > 0) {
           translatedBodyText = translatedBodyLines.join("\n").trim()
         }
+      }
 
-        // 여전히 비어있으면 원본 사용
-        if (!translatedBodyText) {
-          console.warn("[AITemplate] ⚠️ Translation failed - using original body")
-          translatedBodyText = bodyText
-        }
+      // 번역 실패 검증: 본문이 비어있으면 에러로 처리
+      // 잘못된 언어의 이메일이 발송되는 것을 방지
+      if (!translatedBodyText || translatedBodyText.trim().length === 0) {
+        const errorMsg = `Translation to ${targetLanguage} failed: empty body result`
+        console.error(`[AITemplate] ❌ ${errorMsg}`)
+        throw new Error(errorMsg)
+      }
+
+      // 제목이 비어있으면 원본 유지 (본문보다 덜 치명적)
+      if (!translatedSubject || translatedSubject.trim().length === 0) {
+        console.warn(`[AITemplate] ⚠️ Translation subject empty, using original`)
+        translatedSubject = subject
       }
 
       // Post-process: Force placeholder conversion based on target language

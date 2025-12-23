@@ -530,12 +530,30 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
   /**
    * POST /api/v1/unipile/webhook
    * Receive webhook events from Unipile (mail_received)
+   * Note: Unipile sends JSON but may use different Content-Type headers
    */
   .post(
     "/webhook",
-    async ({ body }) => {
+    async ({ body, request }) => {
       try {
-        logger.info({ rawBody: body, bodyType: typeof body }, "[Unipile Webhook] Received event")
+        // Try to get raw body if Elysia's parsing failed
+        let rawBodyText: string | null = null
+        try {
+          // Clone request to read body (request body can only be read once)
+          rawBodyText = await request.clone().text()
+        } catch {
+          // Ignore if we can't read raw body
+        }
+
+        logger.info(
+          {
+            bodyType: typeof body,
+            bodyKeys: body && typeof body === "object" ? Object.keys(body).length : 0,
+            rawBodyLength: rawBodyText?.length,
+            rawBodyPreview: rawBodyText?.substring(0, 200),
+          },
+          "[Unipile Webhook] Received event",
+        )
 
         // Unipile sends webhook data with custom field names
         // Default fields: account_id, email_id, date, from_attendee, subject, body, etc.
@@ -556,34 +574,67 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           origin?: string
         }
 
-        // Handle case where body might be a string (needs parsing)
-        // or might be incorrectly parsed with JSON as key
-        let webhookBody: UnipileWebhookBody
+        // Handle case where body might be incorrectly parsed
+        // Unipile sends JSON but Elysia may parse it incorrectly depending on Content-Type
+        // Priority: 1) Raw body text (most reliable), 2) String body, 3) Parsed object
+        let webhookBody: UnipileWebhookBody | null = null
 
-        if (typeof body === "string") {
+        // Strategy 1: Try raw body text first (most reliable)
+        if (rawBodyText?.trim().startsWith("{")) {
+          try {
+            webhookBody = JSON.parse(rawBodyText) as UnipileWebhookBody
+            logger.info("[Unipile Webhook] ✅ Parsed from raw body text")
+          } catch (rawParseError) {
+            logger.warn(
+              { error: rawParseError instanceof Error ? rawParseError.message : rawParseError },
+              "[Unipile Webhook] Failed to parse raw body, trying fallback methods",
+            )
+          }
+        }
+
+        // Strategy 2: Body is already a string
+        if (!webhookBody && typeof body === "string") {
           try {
             webhookBody = JSON.parse(body) as UnipileWebhookBody
-            logger.info("[Unipile Webhook] Parsed body from string")
-          } catch {
-            logger.error({ body }, "[Unipile Webhook] Failed to parse body string")
-            return successResponse({ message: "Event received (parse error)" })
+            logger.info("[Unipile Webhook] ✅ Parsed from string body")
+          } catch (parseError) {
+            logger.warn(
+              { error: parseError instanceof Error ? parseError.message : parseError },
+              "[Unipile Webhook] Failed to parse body string",
+            )
           }
-        } else if (body && typeof body === "object") {
-          // Check if body is incorrectly parsed (JSON string as key)
+        }
+
+        // Strategy 3: Body is object with JSON as key (form-urlencoded parsing issue)
+        if (!webhookBody && body && typeof body === "object") {
           const keys = Object.keys(body)
-          if (keys.length === 1 && keys[0]?.startsWith("{")) {
+
+          if (keys.length >= 1 && keys[0]?.startsWith("{")) {
             try {
               webhookBody = JSON.parse(keys[0]) as UnipileWebhookBody
-              logger.info("[Unipile Webhook] Parsed body from incorrectly-keyed object")
+              logger.info("[Unipile Webhook] ✅ Parsed from object key")
             } catch {
-              webhookBody = body as UnipileWebhookBody
+              logger.warn("[Unipile Webhook] Failed to parse from object key")
             }
-          } else {
-            webhookBody = body as UnipileWebhookBody
           }
-        } else {
-          logger.error({ body }, "[Unipile Webhook] Invalid body format")
-          return successResponse({ message: "Event received (invalid format)" })
+
+          // Check if body is already correctly parsed
+          if (!webhookBody) {
+            const bodyAsWebhook = body as UnipileWebhookBody
+            if (bodyAsWebhook.event || bodyAsWebhook.email_id || bodyAsWebhook.role) {
+              webhookBody = bodyAsWebhook
+              logger.info("[Unipile Webhook] ✅ Body already correctly parsed")
+            }
+          }
+        }
+
+        // Final check
+        if (!webhookBody) {
+          logger.error(
+            { bodyType: typeof body, rawBodyLength: rawBodyText?.length },
+            "[Unipile Webhook] ❌ Could not parse webhook body",
+          )
+          return successResponse({ message: "Event received (parse error)" })
         }
 
         logger.info(

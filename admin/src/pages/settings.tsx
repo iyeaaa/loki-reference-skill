@@ -51,6 +51,7 @@ import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
 import { AuditLogsPage, PoliciesPage, RolesPage, TierBoundariesPage } from "./iam"
 import LeadImportPage from "./lead-import/index"
 import { BullMQTestPage } from "./settings/BullMQTestPage"
+import { EmailDraftTest } from "./settings/EmailDraftTest"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 import { JobLogsPage } from "./settings/job-logs"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
@@ -354,6 +355,12 @@ export default function SettingsPage() {
         icon: <ScrollText className="h-4 w-4" />,
         permission: "admin-only",
       },
+      {
+        id: "email-draft-test",
+        label: t("settings.emailDraftTest.title"),
+        icon: <Mail className="h-4 w-4" />,
+        permission: "admin-only",
+      },
     ],
     [t],
   )
@@ -597,6 +604,8 @@ export default function SettingsPage() {
         return <BullMQTestPage />
       case "job-logs":
         return <JobLogsPage />
+      case "email-draft-test":
+        return <EmailDraftTest />
       default:
         return null
     }

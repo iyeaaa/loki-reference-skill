@@ -196,3 +196,76 @@ unipileTest.accountIdPlaceholder,trial step4에서 발급된 accountId를 붙여
 unipileTest.accountIdHint,이 값은 저장되지 않으며 발송 후 자동으로 비워집니다.,This value is not saved and will be cleared after sending.
 unipileTest.send,발송,Send
 unipileTest.sending,발송 중...,Sending...
+emailDraftTest.title,AI 이메일 드래프트 테스트,AI Email Draft Test
+emailDraftTest.description,AI를 활용한 이메일 드래프트 생성 기능을 테스트합니다.,Test AI-powered email draft generation features.
+emailDraftTest.tabs.reply,AI 답장,AI Reply
+emailDraftTest.tabs.template,템플릿 생성,Template
+emailDraftTest.tabs.followup,후속 이메일,Follow-up
+emailDraftTest.tabs.summary,대화 요약,Summary
+emailDraftTest.generate,생성,Generate
+emailDraftTest.generating,생성 중...,Generating...
+emailDraftTest.reply.hint,받은 이메일에 대한 AI 답장을 생성합니다. 발신자 이메일과 내용을 입력하세요.,Generate an AI reply to a received email. Enter the sender email and content.
+emailDraftTest.reply.fromEmail,발신자 이메일,Sender Email
+emailDraftTest.reply.fromEmailHint,답장을 받을 상대방의 이메일 주소입니다.,The email address of the person you are replying to.
+emailDraftTest.reply.subject,제목 (선택),Subject (Optional)
+emailDraftTest.reply.subjectPlaceholder,원본 이메일 제목,Original email subject
+emailDraftTest.reply.content,이메일 내용,Email Content
+emailDraftTest.reply.contentPlaceholder,답장할 이메일의 내용을 입력하세요...,Enter the email content to reply to...
+emailDraftTest.reply.contentHint,AI가 이 내용을 분석하여 적절한 답장을 생성합니다.,AI will analyze this content and generate an appropriate reply.
+emailDraftTest.template.hint,워크스페이스 정보를 기반으로 AI 이메일 템플릿을 생성합니다.,Generate an AI email template based on workspace information.
+emailDraftTest.template.workspace,워크스페이스,Workspace
+emailDraftTest.template.workspacePlaceholder,워크스페이스 선택,Select workspace
+emailDraftTest.template.workspaceHint,워크스페이스의 회사 정보가 템플릿 생성에 사용됩니다.,Workspace company information will be used for template generation.
+emailDraftTest.template.country,대상 국가,Target Country
+emailDraftTest.template.countryPlaceholder,예: 미국 바이어,e.g. US buyers
+emailDraftTest.template.prompt,프롬프트,Prompt
+emailDraftTest.template.promptPlaceholder,어떤 종류의 이메일을 작성하고 싶은지 설명하세요 (최소 10자)...,Describe what kind of email you want to write (min 10 chars)...
+emailDraftTest.template.promptHint,프롬프트가 상세할수록 더 나은 결과를 얻을 수 있습니다.,The more detailed your prompt the better results you'll get.
+emailDraftTest.template.model,AI 모델,AI Model
+emailDraftTest.template.temperature,Temperature,Temperature
+emailDraftTest.followup.hint,이메일 스레드를 분석하여 AI 후속 이메일을 생성합니다. Thread ID가 필요합니다.,Analyze an email thread and generate an AI follow-up email. Thread ID is required.
+emailDraftTest.followup.threadId,Thread ID,Thread ID
+emailDraftTest.followup.threadIdPlaceholder,이메일 스레드 ID를 입력하세요,Enter email thread ID
+emailDraftTest.followup.threadIdHint,이메일 상세 페이지에서 Thread ID를 확인할 수 있습니다.,You can find the Thread ID on the email detail page.
+emailDraftTest.followup.workspace,워크스페이스 (선택),Workspace (Optional)
+emailDraftTest.followup.workspacePlaceholder,워크스페이스 선택,Select workspace
+emailDraftTest.followup.allWorkspaces,전체 워크스페이스,All Workspaces
+emailDraftTest.summary.hint,이메일 스레드를 분석하여 AI 요약을 생성합니다.,Analyze an email thread and generate an AI summary.
+emailDraftTest.summary.threadId,Thread ID,Thread ID
+emailDraftTest.summary.threadIdPlaceholder,이메일 스레드 ID를 입력하세요,Enter email thread ID
+emailDraftTest.summary.threadIdHint,이메일 상세 페이지에서 Thread ID를 확인할 수 있습니다.,You can find the Thread ID on the email detail page.
+emailDraftTest.summary.workspace,워크스페이스 (선택),Workspace (Optional)
+emailDraftTest.summary.workspacePlaceholder,워크스페이스 선택,Select workspace
+emailDraftTest.summary.allWorkspaces,전체 워크스페이스,All Workspaces
+emailDraftTest.summary.language,요약 언어,Summary Language
+emailDraftTest.result.title,생성 결과,Generation Result
+emailDraftTest.result.subject,제목,Subject
+emailDraftTest.result.body,본문,Body
+emailDraftTest.result.bodyText,본문 (텍스트),Body (Text)
+emailDraftTest.result.bodyHtml,본문 (HTML 미리보기),Body (HTML Preview)
+emailDraftTest.result.emails,개 이메일,email(s)
+emailDraftTest.result.followupSuggestion,AI 후속 이메일 제안,AI Follow-up Suggestion
+emailDraftTest.result.summary,AI 요약,AI Summary
+emailDraftTest.fillSample,샘플 데이터 채우기,Fill sample data
+emailDraftTest.reset,초기화,Reset
+emailDraftTest.sampleFilled,샘플 데이터가 입력되었습니다,Sample data has been filled
+emailDraftTest.copied,클립보드에 복사되었습니다,Copied to clipboard
+emailDraftTest.shortcutHint,⌘/Ctrl + Enter로 생성,⌘/Ctrl + Enter to generate
+emailDraftTest.examplePrompts,예시 프롬프트,Example prompts
+emailDraftTest.chars,자,chars
+emailDraftTest.success.draft,AI 이메일 답장이 생성되었습니다,AI email reply has been generated
+emailDraftTest.success.template,AI 이메일 템플릿이 생성되었습니다,AI email template has been generated
+emailDraftTest.success.followup,AI 후속 이메일이 생성되었습니다,AI follow-up email has been generated
+emailDraftTest.success.summary,AI 대화 요약이 생성되었습니다,AI conversation summary has been generated
+emailDraftTest.error.draft,AI 이메일 답장 생성에 실패했습니다,Failed to generate AI email reply
+emailDraftTest.error.template,AI 이메일 템플릿 생성에 실패했습니다,Failed to generate AI email template
+emailDraftTest.error.followup,AI 후속 이메일 생성에 실패했습니다,Failed to generate AI follow-up email
+emailDraftTest.error.summary,AI 대화 요약 생성에 실패했습니다,Failed to generate AI conversation summary
+emailDraftTest.error.draft,[NO TRANSLATION] settings.emailDraftTest.error.draft,[NO TRANSLATION] settings.emailDraftTest.error.draft
+emailDraftTest.error.followup,[NO TRANSLATION] settings.emailDraftTest.error.followup,[NO TRANSLATION] settings.emailDraftTest.error.followup
+emailDraftTest.error.summary,[NO TRANSLATION] settings.emailDraftTest.error.summary,[NO TRANSLATION] settings.emailDraftTest.error.summary
+emailDraftTest.error.template,[NO TRANSLATION] settings.emailDraftTest.error.template,[NO TRANSLATION] settings.emailDraftTest.error.template
+emailDraftTest.success.draft,[NO TRANSLATION] settings.emailDraftTest.success.draft,[NO TRANSLATION] settings.emailDraftTest.success.draft
+emailDraftTest.success.followup,[NO TRANSLATION] settings.emailDraftTest.success.followup,[NO TRANSLATION] settings.emailDraftTest.success.followup
+emailDraftTest.success.summary,[NO TRANSLATION] settings.emailDraftTest.success.summary,[NO TRANSLATION] settings.emailDraftTest.success.summary
+emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template

@@ -3,7 +3,7 @@
  *
  * Unipile OAuth 콜백 처리 컴포넌트
  * - /app/redirect?account_id=xxx&state=workspaceId 형태로 리다이렉트됨
- * - 성공 시 Step 3 (리드 & 이메일)로 이동
+ * - 성공 시 Step 3 (바이어 찾고 이메일 생성)로 이동
  * - 실패 시 Step 2 (이메일 연동)로 이동
  */
 
@@ -114,7 +114,7 @@ export function NylasRedirect() {
         console.log("🧹 [UnipileRedirect] Cleaned up localStorage")
 
         toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
-        // Step 3: 리드 & 이메일 화면으로 이동 (백그라운드 작업 진행 표시)
+        // Step 3: 바이어 찾고 이메일 생성 화면으로 이동 (백그라운드 작업 진행 표시)
         navigate("/company?step=3", { replace: true })
       })
       .catch((error: Error | ApiError) => {

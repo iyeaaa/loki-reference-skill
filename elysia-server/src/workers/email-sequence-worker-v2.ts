@@ -249,12 +249,13 @@ async function sendSequenceEmail(execution: {
       )
     }
 
-    // Get email account details
+    // Get email account details (including provider for Unipile/Nylas/SendGrid routing)
     const [emailAccount] = await db
       .select({
         emailAddress: userEmailAccounts.emailAddress,
         displayName: userEmailAccounts.displayName,
         apiKey: userEmailAccounts.apiKey,
+        provider: userEmailAccounts.provider,
       })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.id, execution.emailAccountId))
@@ -408,6 +409,7 @@ async function sendSequenceEmail(execution: {
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
       apiKey: apiKey,
+      provider: emailAccount.provider, // Add provider for Unipile/Nylas/SendGrid routing
     })
 
     if (!sendResult.success) {

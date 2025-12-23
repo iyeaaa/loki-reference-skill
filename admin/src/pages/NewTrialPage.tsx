@@ -189,8 +189,12 @@ export default function NewTrialPage() {
             className="mb-8 flex items-center lg:mb-12"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
-            <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 sm:h-10 sm:w-10">
-              <span className="font-bold text-base text-white sm:text-lg">R</span>
+            <div className="mr-3 flex h-8 w-8 items-center justify-center sm:h-10 sm:w-10">
+              <img
+                alt="Rinda Logo"
+                className="h-full w-full object-contain"
+                src="/images/rinda-logo.png"
+              />
             </div>
             <span className="font-bold text-gray-900 text-lg sm:text-xl">RINDA</span>
           </motion.div>

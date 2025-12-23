@@ -138,7 +138,7 @@ export const extractWebsiteContent = async (
     return cached
   }
 
-  const TIMEOUT_MS = 15000 // 15초 타임아웃
+  const TIMEOUT_MS = 60000 // 60초 타임아웃 (느린 사이트 대응)
 
   const call = externalLogger.start({
     service: "jina",
@@ -158,6 +158,11 @@ export const extractWebsiteContent = async (
       const response = await fetch(`https://r.jina.ai/${normalizedUrl}`, {
         headers: {
           Accept: "text/plain",
+          "X-Engine": "browser", // 브라우저 엔진 사용 (JavaScript 렌더링)
+          "X-Timeout": "90000", // 90초 대기 (Jina 서버측 타임아웃)
+          "X-Wait-For-Selector": "#main, #root, #app, .main-content, main, article", // 주요 콘텐츠 로딩 대기
+          "X-With-Iframe": "true", // iframe 콘텐츠 포함
+          "X-No-Cache": "true", // 캐시 비활성화 (최신 콘텐츠 가져오기)
         },
         signal: controller.signal,
       })

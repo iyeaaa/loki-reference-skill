@@ -22,8 +22,12 @@ export function DashboardPreview() {
 
       {/* Dashboard Header */}
       <div className="mb-6 flex items-center">
-        <div className="mr-3 flex h-8 w-8 items-center justify-center rounded bg-blue-600">
-          <span className="font-bold text-sm text-white">R</span>
+        <div className="mr-3 flex h-8 w-8 items-center justify-center">
+          <img
+            alt="Rinda Logo"
+            className="h-full w-full object-contain"
+            src="/images/rinda-logo.png"
+          />
         </div>
         <span className="font-semibold text-gray-900 text-lg">RINDA</span>
       </div>

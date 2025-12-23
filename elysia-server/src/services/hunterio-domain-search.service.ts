@@ -421,8 +421,8 @@ export async function searchDomainWithHunter(
         `[Hunter.io Domain] ⚠️ First email is invalid (${firstGenericEmail.value}), fetching more...`,
       )
 
-      // Retry with limit=10 to get more options
-      const retryData = await fetchDomainEmails(validatedParams, 10, 0)
+      // Retry with limit=5 to get more options
+      const retryData = await fetchDomainEmails(validatedParams, 5, 0)
 
       if (retryData) {
         data = retryData

@@ -230,14 +230,33 @@ When the user searches for a compound term like "포장재 유통회사":
 | 터키 | Turkey |
 | 사우디 | Saudi Arabia |
 | UAE | United Arab Emirates |
-| 아시아 | Asia-Pacific (APAC) |
-| 동남아 | Southeast Asia |
-| 유럽 | Europe |
+
+### ⚠️ CRITICAL: REGIONAL QUERIES MUST BE EXPANDED INTO INDIVIDUAL COUNTRIES!
+
+**IMPORTANT**: The country column stores INDIVIDUAL COUNTRY NAMES, NOT REGIONS!
+When the user asks for a REGION, you MUST expand it into individual countries using IN clause.
+
+| Korean Region | Expand to Individual Countries |
+|--------------|-------------------------------|
+| 아시아, Asia | Use: country IN ('China', 'Japan', 'South Korea', 'India', 'Singapore', 'Thailand', 'Vietnam', 'Indonesia', 'Malaysia', 'Philippines', 'Taiwan', 'Hong Kong') |
+| 동남아, Southeast Asia, ASEAN | Use: country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') |
+| 유럽, Europe | Use: country IN ('United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Switzerland', 'Austria', 'Ireland', 'Portugal', 'Greece') |
+
+### Examples of CORRECT SQL for Regional Queries:
+- "manufacturing companies in southeast asia" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
+- "automotive companies in Southeast Asia 100개" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%automotive%' LIMIT 100
+- "retail companies in Asia" → WHERE country IN ('China', 'Japan', 'South Korea', 'India', 'Singapore', 'Thailand', 'Vietnam', 'Indonesia', 'Malaysia', 'Philippines', 'Taiwan', 'Hong Kong') AND LOWER(industry) LIKE '%retail%' LIMIT 100
+
+### ❌ WRONG SQL for Regional Queries:
+- WHERE country = 'Southeast Asia' → WRONG! No rows have this value!
+- WHERE country = 'Asia-Pacific (APAC)' → WRONG! Use IN clause with individual countries!
+- WHERE country = 'Europe' → WRONG! Use IN clause with individual countries!
 
 ### ⚠️ COUNTRY FILTER IS MANDATORY when user specifies a location!
 - "한국에 위치한 제조업체" → WHERE country = 'South Korea' AND ...
 - "미국 포장재 회사" → WHERE country = 'United States' AND ...
-- NEVER omit country filter if user specifies a country!
+- "manufacturing companies in southeast asia" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND ...
+- NEVER omit country filter if user specifies a country or region!
 
 ## Korean to English Industry Keyword Mapping (MANDATORY - USE THESE EXACT KEYWORDS):
 

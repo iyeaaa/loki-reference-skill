@@ -494,6 +494,10 @@ async function searchWithHunterIO(options: HunterIOSearchOptions): Promise<{
             companyName: company.organization,
             websiteUrl: `https://${company.domain}`,
             primaryEmail: emailResult.genericEmail,
+            businessType: emailResult.industry || undefined,
+            country: emailResult.country || undefined,
+            employeeCount: emailResult.headcount || undefined,
+            description: emailResult.description || undefined,
           })
           existingDomains.add(company.domain.toLowerCase())
 

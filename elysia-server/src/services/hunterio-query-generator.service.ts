@@ -8,7 +8,17 @@
 
 import { ChatOpenAI } from "@langchain/openai"
 import { z } from "zod"
+import {
+  VALID_HUNTERIO_INDUSTRIES,
+  type ValidHunterioIndustry,
+} from "../constants/hunterio-industries"
 import type { HunterioDiscoverParams } from "./hunterio-lead-search.service"
+
+// Re-export for backwards compatibility
+export {
+  VALID_HUNTERIO_INDUSTRIES,
+  type ValidHunterioIndustry,
+} from "../constants/hunterio-industries"
 
 // Step 1: GPT-5.1 for initial query generation
 const generatorLLM = new ChatOpenAI({
@@ -28,7 +38,9 @@ const extractorLLM = new ChatOpenAI({
 const HunterQueryOutputSchema = z.object({
   query: z.string().describe("Natural language search description for Hunter.io"),
   country_code: z.string().describe("ISO 3166-1 alpha-2 country code (e.g., US, KR, JP)"),
-  industries: z.array(z.string()).describe("Industries to include (e.g., Technology, Software)"),
+  industries: z
+    .array(z.enum(VALID_HUNTERIO_INDUSTRIES))
+    .describe("Industries to include - MUST be from the valid industries list"),
   headcount: z
     .array(z.enum(["1-10", "11-50", "51-200", "201-500", "501-1000"]))
     .describe("Company size ranges to target (SMB focus, max 1000 employees)"),
@@ -63,25 +75,6 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
   brazil: "BR",
   mx: "MX",
   mexico: "MX",
-}
-
-// Industry name mapping (survey industry to Hunter.io industry)
-const INDUSTRY_MAP: Record<string, string[]> = {
-  tech: ["Technology", "Software", "Information Technology"],
-  software: ["Software", "Technology", "SaaS"],
-  healthcare: ["Healthcare", "Medical"],
-  finance: ["Financial Services", "Banking", "Insurance"],
-  manufacturing: ["Manufacturing", "Industrial"],
-  retail: ["Retail", "E-commerce", "Consumer Goods"],
-  education: ["Education", "E-learning"],
-  consulting: ["Consulting", "Professional Services"],
-  marketing: ["Marketing", "Advertising"],
-  media: ["Media", "Entertainment"],
-  realestate: ["Real Estate", "Construction"],
-  food: ["Food & Beverage", "Restaurant"],
-  logistics: ["Logistics", "Transportation"],
-  energy: ["Energy", "Oil & Gas", "Renewable Energy"],
-  telecom: ["Telecommunications"],
 }
 
 export interface SurveyData {
@@ -146,11 +139,15 @@ Original Survey Data:
 - Target: ${surveyData.target}
 - Country: ${surveyData.country}
 
+CRITICAL: You MUST select industries ONLY from this valid Hunter.io industries list:
+${VALID_HUNTERIO_INDUSTRIES.join(", ")}
+
 Rules:
 - Map country to ISO 3166-1 alpha-2 code (e.g., US, KR, JP, DE, GB)
 - Only include headcount ranges up to "501-1000" (SMB focus)
 - Generate 2-5 relevant keywords
-- Keep industry list to 2-3 max`
+- Keep industry list to 2-3 max
+- Industries MUST be exact matches from the valid list above`
 
     console.log("[HunterioQueryGenerator] Step 2: Extracting structured params with GPT-4o-mini")
     const extracted = await structuredLLM.invoke(extractionPrompt)
@@ -184,6 +181,58 @@ Rules:
 }
 
 /**
+ * Find matching valid Hunter.io industries from survey input
+ */
+function findMatchingIndustries(surveyIndustry: string): ValidHunterioIndustry[] {
+  const input = surveyIndustry.toLowerCase()
+
+  // Find industries that contain the input term or vice versa
+  const matches = VALID_HUNTERIO_INDUSTRIES.filter((industry) => {
+    const industryLower = industry.toLowerCase()
+    const firstWord = industryLower.split(" ")[0] ?? ""
+    return industryLower.includes(input) || input.includes(firstWord)
+  })
+
+  // Return up to 3 matches, or a general fallback
+  if (matches.length > 0) {
+    return matches.slice(0, 3) as ValidHunterioIndustry[]
+  }
+
+  // Fallback to general categories based on common terms
+  if (input.includes("tech") || input.includes("software") || input.includes("it")) {
+    return [
+      "Software Development",
+      "IT Services and IT Consulting",
+      "Technology, Information and Internet",
+    ]
+  }
+  if (input.includes("health") || input.includes("medical")) {
+    return ["Hospitals and Health Care", "Medical Practices", "Medical Equipment Manufacturing"]
+  }
+  if (input.includes("financ") || input.includes("bank")) {
+    return ["Financial Services", "Banking", "Investment Management"]
+  }
+  if (input.includes("retail") || input.includes("commerce")) {
+    return ["Retail", "Online and Mail Order Retail"]
+  }
+  if (input.includes("manufactur")) {
+    return ["Manufacturing", "Machinery Manufacturing"]
+  }
+  if (input.includes("consult")) {
+    return ["Business Consulting and Services", "Professional Services"]
+  }
+  if (input.includes("market") || input.includes("advertis")) {
+    return ["Marketing Services", "Advertising Services"]
+  }
+  if (input.includes("educat") || input.includes("learning")) {
+    return ["Education", "E-Learning Providers", "Higher Education"]
+  }
+
+  // Ultimate fallback - use Professional Services as it's broad
+  return ["Professional Services"]
+}
+
+/**
  * Build fallback parameters when LLM fails
  */
 function buildFallbackParams(surveyData: SurveyData): HunterioDiscoverParams {
@@ -193,9 +242,8 @@ function buildFallbackParams(surveyData: SurveyData): HunterioDiscoverParams {
   const countryCode =
     COUNTRY_CODE_MAP[surveyData.country.toLowerCase()] || surveyData.country.toUpperCase()
 
-  // Map industry
-  const industryLower = surveyData.industry.toLowerCase()
-  const industries = INDUSTRY_MAP[industryLower] || [surveyData.industry]
+  // Find matching valid industries
+  const industries = findMatchingIndustries(surveyData.industry)
 
   return {
     query: `${surveyData.target} in ${surveyData.industry} sector`,

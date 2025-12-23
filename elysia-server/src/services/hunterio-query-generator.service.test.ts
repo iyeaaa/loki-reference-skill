@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test"
+import { VALID_HUNTERIO_INDUSTRIES } from "../constants/hunterio-industries"
+
+// Cast to mutable array for easier testing
+const INDUSTRIES_LIST = VALID_HUNTERIO_INDUSTRIES as readonly string[]
 
 /**
  * Tests for hunterio-query-generator.service.ts
@@ -7,19 +11,43 @@ import { describe, expect, test } from "bun:test"
  * These unit tests focus on the fallback logic and parameter transformation.
  */
 
-// We need to test the exported function and its fallback behavior
-// Since the LLM calls are internal, we test:
-// 1. Fallback params generation (when LLM fails)
-// 2. Expected output structure
-
 describe("hunterio-query-generator.service", () => {
+  describe("valid industries constant", () => {
+    test("VALID_HUNTERIO_INDUSTRIES contains expected industries", () => {
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Software Development")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("IT Services and IT Consulting")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Financial Services")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Manufacturing")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Retail")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Education")
+      expect(VALID_HUNTERIO_INDUSTRIES).toContain("Hospitals and Health Care")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES has many entries", () => {
+      expect(VALID_HUNTERIO_INDUSTRIES.length).toBeGreaterThan(400)
+    })
+
+    test("all industries are non-empty strings", () => {
+      for (const industry of VALID_HUNTERIO_INDUSTRIES) {
+        expect(typeof industry).toBe("string")
+        expect(industry.length).toBeGreaterThan(0)
+      }
+    })
+  })
+
   describe("fallback params structure", () => {
-    test("fallback params have correct structure", () => {
-      // Test the expected fallback structure directly
+    test("fallback params have correct structure with valid industries", () => {
+      // Test the expected fallback structure directly using valid industries
       const fallbackParams = {
         query: "B2B companies in tech sector",
         headquarters_location: { include: [{ country: "US" }] },
-        industry: { include: ["Technology", "Software", "Information Technology"] },
+        industry: {
+          include: [
+            "Software Development",
+            "IT Services and IT Consulting",
+            "Technology, Information and Internet",
+          ],
+        },
         headcount: ["1-10", "11-50", "51-200", "201-500", "501-1000"] as const,
         limit: 100,
         offset: 0,
@@ -29,13 +57,17 @@ describe("hunterio-query-generator.service", () => {
       expect(fallbackParams).toHaveProperty("offset", 0)
       expect(fallbackParams).toHaveProperty("query")
       expect(fallbackParams.headquarters_location.include).toHaveLength(1)
-      expect(fallbackParams.industry.include).toContain("Technology")
+      expect(fallbackParams.industry.include).toContain("Software Development")
       expect(fallbackParams.headcount).toHaveLength(5)
+
+      // Verify all industries are valid
+      for (const industry of fallbackParams.industry.include) {
+        expect(INDUSTRIES_LIST).toContain(industry)
+      }
     })
   })
 
   describe("country code mapping (unit tests)", () => {
-    // Test the COUNTRY_CODE_MAP indirectly through fallback
     const countryMappings = [
       { input: "us", expected: "US" },
       { input: "usa", expected: "US" },
@@ -58,7 +90,6 @@ describe("hunterio-query-generator.service", () => {
     ]
 
     test.each(countryMappings)("maps '$input' to '$expected'", ({ input, expected }) => {
-      // Test the mapping logic directly
       const COUNTRY_CODE_MAP: Record<string, string> = {
         us: "US",
         usa: "US",
@@ -93,46 +124,74 @@ describe("hunterio-query-generator.service", () => {
     })
   })
 
-  describe("industry mapping (unit tests)", () => {
-    const INDUSTRY_MAP: Record<string, string[]> = {
-      tech: ["Technology", "Software", "Information Technology"],
-      software: ["Software", "Technology", "SaaS"],
-      healthcare: ["Healthcare", "Medical"],
-      finance: ["Financial Services", "Banking", "Insurance"],
-      manufacturing: ["Manufacturing", "Industrial"],
-      retail: ["Retail", "E-commerce", "Consumer Goods"],
-      education: ["Education", "E-learning"],
-      consulting: ["Consulting", "Professional Services"],
-      marketing: ["Marketing", "Advertising"],
-      media: ["Media", "Entertainment"],
-      realestate: ["Real Estate", "Construction"],
-      food: ["Food & Beverage", "Restaurant"],
-      logistics: ["Logistics", "Transportation"],
-      energy: ["Energy", "Oil & Gas", "Renewable Energy"],
-      telecom: ["Telecommunications"],
-    }
+  describe("industry matching with valid industries", () => {
+    test("all fallback industries are valid Hunter.io industries", () => {
+      // These are the fallback industries used in findMatchingIndustries
+      const techFallback = [
+        "Software Development",
+        "IT Services and IT Consulting",
+        "Technology, Information and Internet",
+      ]
+      const healthFallback = [
+        "Hospitals and Health Care",
+        "Medical Practices",
+        "Medical Equipment Manufacturing",
+      ]
+      const financeFallback = ["Financial Services", "Banking", "Investment Management"]
+      const retailFallback = ["Retail", "Online and Mail Order Retail"]
+      const manufacturingFallback = ["Manufacturing", "Machinery Manufacturing"]
+      const consultingFallback = ["Business Consulting and Services", "Professional Services"]
+      const marketingFallback = ["Marketing Services", "Advertising Services"]
+      const educationFallback = ["Education", "E-Learning Providers", "Higher Education"]
+      const defaultFallback = ["Professional Services"]
 
-    test("maps tech to Technology, Software, Information Technology", () => {
-      expect(INDUSTRY_MAP.tech).toContain("Technology")
-      expect(INDUSTRY_MAP.tech).toContain("Software")
-      expect(INDUSTRY_MAP.tech).toContain("Information Technology")
+      const allFallbacks = [
+        ...techFallback,
+        ...healthFallback,
+        ...financeFallback,
+        ...retailFallback,
+        ...manufacturingFallback,
+        ...consultingFallback,
+        ...marketingFallback,
+        ...educationFallback,
+        ...defaultFallback,
+      ]
+
+      for (const industry of allFallbacks) {
+        expect(INDUSTRIES_LIST).toContain(industry)
+      }
     })
 
-    test("maps healthcare to Healthcare, Medical", () => {
-      expect(INDUSTRY_MAP.healthcare).toContain("Healthcare")
-      expect(INDUSTRY_MAP.healthcare).toContain("Medical")
+    test("VALID_HUNTERIO_INDUSTRIES contains Software Development", () => {
+      expect(INDUSTRIES_LIST).toContain("Software Development")
     })
 
-    test("maps finance to Financial Services, Banking, Insurance", () => {
-      expect(INDUSTRY_MAP.finance).toContain("Financial Services")
-      expect(INDUSTRY_MAP.finance).toContain("Banking")
-      expect(INDUSTRY_MAP.finance).toContain("Insurance")
+    test("VALID_HUNTERIO_INDUSTRIES contains IT Services and IT Consulting", () => {
+      expect(INDUSTRIES_LIST).toContain("IT Services and IT Consulting")
     })
 
-    test("unknown industry returns original", () => {
-      const unknownIndustry = "unknown_industry"
-      const result = INDUSTRY_MAP[unknownIndustry] || [unknownIndustry]
-      expect(result).toEqual([unknownIndustry])
+    test("VALID_HUNTERIO_INDUSTRIES contains Financial Services", () => {
+      expect(INDUSTRIES_LIST).toContain("Financial Services")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES contains Retail", () => {
+      expect(INDUSTRIES_LIST).toContain("Retail")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES contains Manufacturing", () => {
+      expect(INDUSTRIES_LIST).toContain("Manufacturing")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES contains Professional Services", () => {
+      expect(INDUSTRIES_LIST).toContain("Professional Services")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES contains Education", () => {
+      expect(INDUSTRIES_LIST).toContain("Education")
+    })
+
+    test("VALID_HUNTERIO_INDUSTRIES contains Hospitals and Health Care", () => {
+      expect(INDUSTRIES_LIST).toContain("Hospitals and Health Care")
     })
   })
 
@@ -160,14 +219,14 @@ describe("hunterio-query-generator.service", () => {
   })
 
   describe("output format validation", () => {
-    test("HunterioDiscoverParams structure is valid", () => {
+    test("HunterioDiscoverParams structure is valid with valid industries", () => {
       const validParams = {
         query: "B2B SaaS companies",
         headquarters_location: {
           include: [{ country: "US" }],
         },
         industry: {
-          include: ["Technology", "Software"],
+          include: ["Software Development", "IT Services and IT Consulting"],
         },
         headcount: ["11-50", "51-200"] as const,
         keywords: {
@@ -186,6 +245,11 @@ describe("hunterio-query-generator.service", () => {
       expect(validParams.keywords.match).toBe("all")
       expect(validParams.limit).toBe(100)
       expect(validParams.offset).toBe(0)
+
+      // Verify all industries are valid
+      for (const industry of validParams.industry.include) {
+        expect(INDUSTRIES_LIST).toContain(industry)
+      }
     })
 
     test("keywords.match must be 'any' or 'all'", () => {
@@ -234,6 +298,13 @@ describe("hunterio-query-generator.service integration", () => {
       expect(result.headquarters_location?.include).toBeDefined()
       expect(result.industry?.include).toBeDefined()
       expect(result.headcount).toBeDefined()
+
+      // Verify generated industries are valid
+      if (result.industry?.include) {
+        for (const industry of result.industry.include) {
+          expect(INDUSTRIES_LIST).toContain(industry)
+        }
+      }
     },
     30000,
   ) // 30s timeout for LLM calls

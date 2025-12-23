@@ -62,7 +62,8 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
       })
       .returning({ id: departments.id })
 
-    testDepartmentId = dept!.id
+    if (!dept?.id) throw new Error("Failed to create test department")
+    testDepartmentId = dept.id
 
     // Step 2: Generate test credentials
     testCredentials = generateTestCredentials(testDepartmentId)
@@ -82,7 +83,8 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
       .where(eq(users.email, testCredentials.email))
       .limit(1)
 
-    testUserId = user!.id
+    if (!user?.id) throw new Error("Failed to get test user")
+    testUserId = user.id
 
     // Step 6: Create workspace
     console.log("  ✓ Creating test workspace...")
@@ -95,7 +97,8 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
       })
       .returning({ id: workspaces.id })
 
-    testWorkspaceId = workspace!.id
+    if (!workspace?.id) throw new Error("Failed to create test workspace")
+    testWorkspaceId = workspace.id
 
     // Step 7: Create customer group
     console.log("  ✓ Creating test customer group...")
@@ -109,7 +112,8 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
       })
       .returning({ id: customerGroups.id })
 
-    testGroupId = group!.id
+    if (!group?.id) throw new Error("Failed to create test customer group")
+    testGroupId = group.id
 
     // Step 8: Create existing lead with duplicate email
     console.log("  ✓ Creating existing lead with duplicate email...")
@@ -123,7 +127,8 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
       })
       .returning({ id: leads.id })
 
-    existingLeadId = existingLead!.id
+    if (!existingLead?.id) throw new Error("Failed to create existing lead")
+    existingLeadId = existingLead.id
 
     // Add existing email to create duplicate scenario
     await db.insert(leadContacts).values({

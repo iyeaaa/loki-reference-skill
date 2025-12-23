@@ -8,15 +8,30 @@
 
 import { z } from "zod"
 import { VALID_HUNTERIO_INDUSTRIES } from "../constants/hunterio-industries"
-import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
+import {
+  createB2BCustomerIndustryAgent,
+  createB2BHunterIndustryAgent,
+  generateB2BCustomerIndustryPrompt,
+  generateB2BHunterIndustryPrompt,
+} from "../shared/mastra"
 import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
 import { findMatchingIndustries, generateHunterioQuery } from "./hunterio-query-generator.service"
-import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
+import {
+  APOLLO_LEADS_DATA_DICTIONARY,
+  B2B_LEADS_DATA_DICTIONARY,
+  FRESH_LEADS_DATA_DICTIONARY,
+  REVATION_LEADS_DATA_DICTIONARY,
+} from "./lead-discovery/nodes/bigquery-executor"
 import { formatLeadForScoring, scoreLeadFit } from "./lead-scoring.service"
 import { enrichLeadsForOnboarding } from "./onboarding.service"
+import {
+  convertPerplexityToBigQueryFormat,
+  optimizeQueryForPerplexity,
+  searchLeadsWithPerplexity,
+} from "./perplexity-search.service"
 
 // ====================================
 // CONSTANTS
@@ -43,7 +58,7 @@ export interface EnrichedLead {
   country?: string
   employeeCount?: string
   description?: string
-  leadSource: "bigquery-auto" | "hunterio-discover"
+  leadSource: "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "hunterio-discover"
 }
 
 export interface SearchResult {
@@ -244,6 +259,8 @@ interface BigQuerySearchOptions {
   onProgress?: ProgressCallback
 }
 
+type LeadSource = "b2b" | "apollo" | "fresh" | "revation" | "perplexity"
+
 async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   leads: Array<{
     company: string
@@ -251,11 +268,17 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     industry: string
     employees: string
     country: string
+    source: LeadSource
   }>
   stats: {
     totalQueried: number
     skippedDuplicates: number
     skippedLargeCompanies: number
+    fromB2B: number
+    fromApollo: number
+    fromFresh: number
+    fromRevation: number
+    fromPerplexity: number
   }
 }> {
   const { targetIndustries, countryName, targetCount, onProgress } = options
@@ -266,79 +289,182 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     industry: string
     employees: string
     country: string
+    source: LeadSource
   }> = []
 
   let totalQueried = 0
   let skippedDuplicates = 0
   let skippedLargeCompanies = 0
+  let fromB2B = 0
+  let fromApollo = 0
+  let fromFresh = 0
+  let fromRevation = 0
+  let fromPerplexity = 0
 
-  // One query per industry
-  for (const targetIndustry of targetIndustries) {
+  // Build natural language query combining all target industries
+  const nlQuery = `${targetIndustries.join(" or ")} companies in ${countryName}`
+  const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
+
+  console.log(`[LeadSearch] Querying 5 data sources in parallel: "${nlQuery}"`)
+  console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
+
+  // Report progress
+  if (onProgress) {
+    await onProgress({
+      phase: "bigquery",
+      message: "Searching 5 data sources in parallel...",
+      currentCount: 0,
+      targetCount,
+    })
+  }
+
+  // Search all 5 sources in parallel
+  const [b2bResult, apolloResult, freshResult, revationResult, perplexityResult] =
+    await Promise.allSettled([
+      searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
+      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
+      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
+      searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
+      searchLeadsWithPerplexity(perplexityQuery, 10),
+    ])
+
+  // Helper function to transform BigQuery results
+  function transformBigQueryResults(
+    result: PromiseSettledResult<{
+      results: Record<string, unknown>[]
+      totalCount: number
+      sql: string
+    }>,
+    source: LeadSource,
+  ): Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+  }> {
+    if (result.status !== "fulfilled") {
+      console.warn(`[LeadSearch] ${source} search failed:`, result.reason)
+      return []
+    }
+
+    console.log(`[LeadSearch] ${source}: ${result.value.results.length} results`)
+    return result.value.results.map((row) => ({
+      company: (row.company as string) || "",
+      website: (row.website as string) || "",
+      industry: ((row.industry || row.industry_category) as string) || "",
+      employees: row.employees?.toString() || row.employee_count?.toString() || "",
+      country: (row.country as string) || "",
+      source,
+    }))
+  }
+
+  // Transform results from each source
+  const b2bLeads = transformBigQueryResults(b2bResult, "b2b")
+  const apolloLeads = transformBigQueryResults(apolloResult, "apollo")
+  const freshLeads = transformBigQueryResults(freshResult, "fresh")
+  const revationLeads = transformBigQueryResults(revationResult, "revation")
+
+  // Transform Perplexity results
+  let perplexityLeads: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+  }> = []
+  if (perplexityResult.status === "fulfilled") {
+    const pxResults = convertPerplexityToBigQueryFormat(perplexityResult.value.leads)
+    perplexityLeads = pxResults.map((r) => ({
+      company: r.companyName || "",
+      website: r.webAddress || "",
+      industry: r.mainIndustry || "",
+      employees: r.employee || "",
+      country: r.country || "",
+      source: "perplexity" as LeadSource,
+    }))
+    console.log(`[LeadSearch] perplexity: ${perplexityLeads.length} results`)
+  } else {
+    console.warn(`[LeadSearch] perplexity search failed:`, perplexityResult.reason)
+  }
+
+  // Combine all results with priority order (Perplexity > Revation > Apollo > Fresh > B2B)
+  const allResults = [
+    ...perplexityLeads, // Perplexity first (real-time)
+    ...revationLeads, // Premium curated leads
+    ...apolloLeads, // High quality
+    ...freshLeads, // Fresh leads
+    ...b2bLeads, // B2B leads
+  ]
+
+  totalQueried = allResults.length
+
+  // Filter and deduplicate results
+  for (const row of allResults) {
     if (leads.length >= targetCount) {
       console.log(`[LeadSearch] BigQuery target reached: ${leads.length}/${targetCount}`)
       break
     }
 
-    const query = `${targetIndustry} companies in ${countryName}`
-    console.log(`[LeadSearch] Querying BigQuery: "${query}"`)
+    const website = row.website
+    if (!website) continue
 
-    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
-      limitOverride: SEARCH_CONFIG.BIGQUERY_BATCH_SIZE,
-    })
-
-    if (!result.results.length) {
-      console.log(`[LeadSearch] No results for "${targetIndustry}"`)
+    // Filter 1: Skip duplicates
+    if (processedWebsites.has(website.toLowerCase())) {
+      skippedDuplicates++
       continue
     }
 
-    console.log(`[LeadSearch] Found ${result.results.length} results for "${targetIndustry}"`)
-    totalQueried += result.results.length
-
-    // Filter results
-    for (const row of result.results) {
-      const website = row.website as string
-      if (!website) continue
-
-      // Filter 1: Skip duplicates
-      if (processedWebsites.has(website.toLowerCase())) {
-        skippedDuplicates++
-        continue
-      }
-
-      // Filter 2: Skip large companies
-      const employeeCount = parseInt(row.employees?.toString() || "0", 10)
-      if (isCompanyTooLarge(employeeCount)) {
-        console.log(
-          `[LeadSearch] Skipping large company (${employeeCount} employees): ${row.company}`,
-        )
-        skippedLargeCompanies++
-        continue
-      }
-
-      processedWebsites.add(website.toLowerCase())
-
-      leads.push({
-        company: row.company as string,
-        website,
-        industry: row.industry as string,
-        employees: row.employees?.toString() || "",
-        country: row.country as string,
-      })
+    // Filter 2: Skip large companies
+    const employeeCount = parseInt(row.employees || "0", 10)
+    if (isCompanyTooLarge(employeeCount)) {
+      console.log(
+        `[LeadSearch] Skipping large company (${employeeCount} employees): ${row.company}`,
+      )
+      skippedLargeCompanies++
+      continue
     }
 
-    // Report progress
-    if (onProgress) {
-      await onProgress({
-        phase: "bigquery",
-        message: `Found ${leads.length}/${targetCount} leads from BigQuery`,
-        currentCount: leads.length,
-        targetCount,
-      })
+    processedWebsites.add(website.toLowerCase())
+
+    // Track source counts
+    switch (row.source) {
+      case "b2b":
+        fromB2B++
+        break
+      case "apollo":
+        fromApollo++
+        break
+      case "fresh":
+        fromFresh++
+        break
+      case "revation":
+        fromRevation++
+        break
+      case "perplexity":
+        fromPerplexity++
+        break
     }
+
+    leads.push(row)
+  }
+
+  // Report progress
+  if (onProgress) {
+    await onProgress({
+      phase: "bigquery",
+      message: `Found ${leads.length}/${targetCount} leads from 5 data sources`,
+      currentCount: leads.length,
+      targetCount,
+    })
   }
 
   console.log(
-    `[LeadSearch] BigQuery complete: ${leads.length} leads (${skippedDuplicates} duplicates, ${skippedLargeCompanies} large companies skipped)`,
+    `[LeadSearch] BigQuery complete: ${leads.length} leads from 5 sources ` +
+      `(B2B: ${fromB2B}, Apollo: ${fromApollo}, Fresh: ${fromFresh}, Revation: ${fromRevation}, Perplexity: ${fromPerplexity}) ` +
+      `(${skippedDuplicates} duplicates, ${skippedLargeCompanies} large companies skipped)`,
   )
 
   return {
@@ -347,6 +473,11 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
       totalQueried,
       skippedDuplicates,
       skippedLargeCompanies,
+      fromB2B,
+      fromApollo,
+      fromFresh,
+      fromRevation,
+      fromPerplexity,
     },
   }
 }
@@ -361,6 +492,10 @@ interface HunterIOSearchOptions {
   currentCount: number
   targetCount: number
   onProgress?: ProgressCallback
+  industryName: string
+  countryName: string
+  experience?: string
+  target?: string
 }
 
 async function searchWithHunterIO(options: HunterIOSearchOptions): Promise<{
@@ -379,7 +514,16 @@ async function searchWithHunterIO(options: HunterIOSearchOptions): Promise<{
     skippedLargeCompanies: number
   }
 }> {
-  const { naturalLanguageQuery, existingDomains, currentCount, targetCount, onProgress } = options
+  const {
+    existingDomains,
+    currentCount,
+    targetCount,
+    onProgress,
+    industryName,
+    countryName,
+    experience,
+    target,
+  } = options
   const leads: Array<{
     companyName: string
     websiteUrl: string
@@ -399,17 +543,50 @@ async function searchWithHunterIO(options: HunterIOSearchOptions): Promise<{
   )
 
   try {
-    // 1. Generate Hunter.io params from natural language query
-    console.log(`[LeadSearch] Hunter.io query: "${naturalLanguageQuery}"`)
+    // 1. Get target industries using B2B Hunter Industry Agent
+    console.log(
+      `[LeadSearch] Hunter.io - Getting target industries for: ${industryName} in ${countryName}`,
+    )
 
-    // Parse the query to extract industry and country for Hunter.io
-    const { industry, country } = await parseNaturalLanguageQuery(naturalLanguageQuery)
+    const hunterAgent = createB2BHunterIndustryAgent()
+    const hunterPrompt = generateB2BHunterIndustryPrompt(industryName, countryName)
+    const hunterResponse = await hunterAgent.generate(hunterPrompt)
+
+    // Extract structured output
+    const hunterStructured = await structuredExtractionAgent.generate(
+      [
+        {
+          role: "user",
+          content: `Extract the target industries from the following analysis. Return only the industry names as a JSON array.
+
+Analysis:
+${hunterResponse.text}
+
+Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
+        },
+      ],
+      {
+        output: z.object({
+          targetIndustries: z
+            .array(z.string())
+            .min(1)
+            .max(3)
+            .describe("1-3 target customer industries for Hunter.io"),
+        }),
+      },
+    )
+
+    const hunterIndustries = hunterStructured.object.targetIndustries
+    console.log(`[LeadSearch] Hunter.io target industries: ${hunterIndustries.join(", ")}`)
 
     const surveyData = {
-      industry,
-      country,
-      target: `${industry} companies`,
-      experience: "intermediate",
+      industry: industryName,
+      country: countryName,
+      target:
+        target === "both"
+          ? "both b2b and or b2c in those industries "
+          : target + hunterIndustries.join(", "),
+      experience: !experience || experience === "none" ? "not experienced" : experience,
     }
 
     const baseParams = await generateHunterioQuery(surveyData)
@@ -623,13 +800,21 @@ async function enrichLeads(
  * @param query - Natural language search query (e.g., "Software companies in United States")
  * @param minimumMatchScore - Minimum score (0-100) required for leads to be included (default: 0 = include all)
  * @param onProgress - Optional progress callback
+ * @param options - Optional direct industry/country input to skip AI parsing
  * @returns Search results with enriched leads and statistics
  */
 export async function searchAndEnrichLeads(
   targetLeadCount: number,
-  query: string,
+  query: string, // natural language query
   minimumMatchScore = 0,
   onProgress?: ProgressCallback,
+  options?: {
+    industry?: string
+    country?: string
+    experience?: string
+    lang?: string
+    target?: string
+  },
 ): Promise<SearchResult> {
   console.log("=".repeat(60))
   console.log("[LeadSearch] Starting lead search and enrichment")
@@ -640,8 +825,23 @@ export async function searchAndEnrichLeads(
 
   const startTime = Date.now()
 
-  // Step 1: Parse natural language query
-  const { industry: industryName, country: countryName } = await parseNaturalLanguageQuery(query)
+  // Step 1: Parse natural language query (skip if industry/country provided directly)
+  let industryName: string
+  let countryName: string
+  const experience: string = options?.experience || ""
+  const target: string = options?.target || ""
+
+  if (options?.industry && options?.country) {
+    industryName = options.industry
+    countryName = options.country
+    console.log(
+      `[LeadSearch] Using provided industry: "${industryName}", country: "${countryName}"`,
+    )
+  } else {
+    const parsed = await parseNaturalLanguageQuery(query)
+    industryName = parsed.industry
+    countryName = parsed.country
+  }
 
   // Step 2: Get target B2B customer industries
   const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
@@ -690,6 +890,12 @@ export async function searchAndEnrichLeads(
     })
   }
 
+  // Create source lookup map BEFORE enrichment (to preserve source through enrichment)
+  const sourceByWebsite = new Map<string, LeadSource>()
+  for (const lead of bigQueryResult.leads) {
+    sourceByWebsite.set(lead.website.toLowerCase(), lead.source)
+  }
+
   const enrichedBigQueryLeads = await enrichLeads(bigQueryResult.leads, onProgress)
 
   // Filter leads with valid emails
@@ -705,7 +911,7 @@ export async function searchAndEnrichLeads(
     })
     .map((lead) => ({
       ...lead,
-      leadSource: "bigquery-auto" as const,
+      leadSource: sourceByWebsite.get(lead.websiteUrl.toLowerCase()) || "apollo",
     }))
 
   console.log(
@@ -811,6 +1017,10 @@ export async function searchAndEnrichLeads(
       currentCount: qualifiedLeads.length,
       targetCount: qualifiedLeads.length + hunterIOTargetCount,
       onProgress,
+      industryName,
+      countryName,
+      experience,
+      target,
     })
 
     totalSkippedDuplicates += hunterIOResult.stats.skippedDuplicates

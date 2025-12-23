@@ -728,7 +728,7 @@ export async function resetOnboarding(workspaceId: string): Promise<OnboardingPr
 export const COUNTRY_NAMES: Record<string, string> = {
   jp: "Japan",
   us: "United States",
-  sea: "Singapore", // Apollo has individual SEA countries - use Singapore as representative
+  sea: "South East Asia", // Apollo has individual SEA countries - use Singapore as representative
   eu: "United Kingdom", // Apollo has individual EU countries - use UK as representative
   cn: "China",
   ae: "United Arab Emirates",

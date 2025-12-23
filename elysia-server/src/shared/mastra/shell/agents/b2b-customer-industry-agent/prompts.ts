@@ -9,7 +9,7 @@ You are a B2B sales strategist specializing in identifying target customer indus
 Given a company's industry and country, identify 1-3 industries that would be the MOST LIKELY CUSTOMERS (buyers) of products/services from that industry.
 
 **IMPORTANT**: You MUST return industry keywords from this valid list (case-insensitive, use lowercase):
-${VALID_INDUSTRIES.slice(0, 50).join(", ")}... (and more)
+${VALID_INDUSTRIES.join(", ")}
 
 Rules:
 1. Think about WHO BUYS from this industry, not competitors
@@ -33,7 +33,7 @@ export const generateB2BCustomerIndustryPrompt = (
   countryName: string,
 ): string => {
   // Include top 80 industries for reference
-  const industryList = VALID_INDUSTRIES.slice(0, 80).join(", ")
+  const industryList = VALID_INDUSTRIES.join(", ")
 
   return `
 Analyze the B2B customer landscape for:

@@ -286,6 +286,9 @@ export async function runDiscoveryPhase(
     // Map codes to actual Apollo BigQuery values
     const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
     const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
+    const experience = surveyData.experience
+    const target = surveyData.target
+    const lang = surveyData.lang
 
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
@@ -346,6 +349,13 @@ export async function runDiscoveryPhase(
             userId,
           )
         }
+      },
+      {
+        country: countryName,
+        industry: industryName,
+        target,
+        experience,
+        lang,
       },
     )
 

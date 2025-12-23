@@ -51,7 +51,7 @@ export function getMoreResults(
 
 // Data Dictionaries for BigQuery tables
 // B2B Leads 테이블 (BigQuery 실제 스키마 기준)
-const B2B_LEADS_DATA_DICTIONARY = {
+export const B2B_LEADS_DATA_DICTIONARY = {
   tableName: "sendgrinda-leads.leads.b2b_leads_clean",
   columns: [
     "company",
@@ -507,7 +507,7 @@ export const APOLLO_LEADS_DATA_DICTIONARY = {
 }
 
 // Fresh Leads 테이블 (Apollo + Phone + Pitchbook 통합 데이터 24만개)
-const FRESH_LEADS_DATA_DICTIONARY = {
+export const FRESH_LEADS_DATA_DICTIONARY = {
   tableName: "sendgrinda-leads.leads.fresh_leads_clean",
   columns: ["company", "website", "industry", "employees", "country", "industry_category"],
   // industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드 - 실제 데이터 분석 기반)
@@ -662,7 +662,7 @@ const FRESH_LEADS_DATA_DICTIONARY = {
 }
 
 // Revation Leads 테이블 (큐레이션된 프리미엄 리드)
-const REVATION_LEADS_DATA_DICTIONARY = {
+export const REVATION_LEADS_DATA_DICTIONARY = {
   tableName: "sendgrinda-leads.leads.revation_leads",
   columns: [
     "company",

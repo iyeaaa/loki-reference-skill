@@ -110,9 +110,12 @@ async function main() {
     console.log(`   ✓ ${largeCompanies} large companies (should be 0)`)
 
     // Check: Source distribution
-    const bigQueryCount = result.leads.filter((l) => l.leadSource === "bigquery-auto").length
+    const bigQuerySources = ["b2b", "apollo", "fresh", "revation", "perplexity"] as const
+    const bigQueryCount = result.leads.filter((l) =>
+      bigQuerySources.includes(l.leadSource as (typeof bigQuerySources)[number]),
+    ).length
     const hunterIOCount = result.leads.filter((l) => l.leadSource === "hunterio-discover").length
-    console.log(`   ✓ Sources: ${bigQueryCount} BigQuery, ${hunterIOCount} Hunter.io`)
+    console.log(`   ✓ Sources: ${bigQueryCount} BigQuery (5 sources), ${hunterIOCount} Hunter.io`)
 
     console.log()
     console.log("=".repeat(60))

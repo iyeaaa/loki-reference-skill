@@ -141,10 +141,13 @@ async function main() {
 
     // Source breakdown
     console.log("📈 Lead Source Breakdown:")
-    const bigQueryCount = result.leads.filter((l) => l.leadSource === "bigquery-auto").length
+    const bigQuerySources = ["b2b", "apollo", "fresh", "revation", "perplexity"] as const
+    const bigQueryCount = result.leads.filter((l) =>
+      bigQuerySources.includes(l.leadSource as (typeof bigQuerySources)[number]),
+    ).length
     const hunterIOCount = result.leads.filter((l) => l.leadSource === "hunterio-discover").length
     console.log(
-      `   BigQuery: ${bigQueryCount} (${((bigQueryCount / result.leads.length) * 100).toFixed(1)}%)`,
+      `   BigQuery (5 sources): ${bigQueryCount} (${((bigQueryCount / result.leads.length) * 100).toFixed(1)}%)`,
     )
     console.log(
       `   Hunter.io: ${hunterIOCount} (${((hunterIOCount / result.leads.length) * 100).toFixed(1)}%)`,

@@ -242,41 +242,72 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           "Unipile email account created successfully",
         )
 
-        // Register webhook for all accounts (only once, not per account)
-        // Check if webhook already exists to avoid duplicates
+        // Register webhooks for all accounts (only once, not per account)
+        // Two webhooks needed:
+        // 1. "email" source webhook for mail_received (reply detection)
+        // 2. "email_tracking" source webhook for mail_opened, mail_link_clicked (open/click tracking)
         try {
           const webhooksResult = await unipileService.listWebhooks()
-          const webhookUrl = `${config.appUrl}/api/v1/unipile/webhook`
+          const mailReceivedWebhookUrl = `${config.appUrl}/api/v1/unipile/webhook`
+          const trackingWebhookUrl = `${config.appUrl}/api/v1/unipile/webhooks`
 
-          const existingWebhook = webhooksResult.webhooks?.find(
-            (wh) => wh.request_url === webhookUrl && wh.events?.includes("mail_received"),
+          // 1. Register mail_received webhook (for reply detection)
+          const existingMailWebhook = webhooksResult.webhooks?.find(
+            (wh) => wh.request_url === mailReceivedWebhookUrl && wh.events?.includes("mail_received"),
           )
 
-          if (!existingWebhook) {
-            // Register webhook for ALL accounts (account_ids omitted)
-            const webhookResult = await unipileService.registerEmailWebhook(webhookUrl)
+          if (!existingMailWebhook) {
+            const webhookResult = await unipileService.registerEmailWebhook(mailReceivedWebhookUrl)
 
             if (webhookResult.success) {
               logger.info(
-                { webhookId: webhookResult.webhookId, webhookUrl },
-                "✅ Unipile webhook registered successfully for all accounts",
+                { webhookId: webhookResult.webhookId, webhookUrl: mailReceivedWebhookUrl },
+                "✅ Unipile mail_received webhook registered successfully",
               )
             } else {
               logger.warn(
-                { error: webhookResult.error, webhookUrl },
-                "⚠️ Failed to register Unipile webhook (non-critical)",
+                { error: webhookResult.error, webhookUrl: mailReceivedWebhookUrl },
+                "⚠️ Failed to register Unipile mail_received webhook (non-critical)",
               )
             }
           } else {
             logger.info(
-              { webhookId: existingWebhook.id, webhookUrl },
-              "✅ Unipile webhook already exists, skipping registration",
+              { webhookId: existingMailWebhook.id },
+              "✅ Unipile mail_received webhook already exists",
+            )
+          }
+
+          // 2. Register email_tracking webhook (for open/click tracking)
+          const existingTrackingWebhook = webhooksResult.webhooks?.find(
+            (wh) =>
+              wh.request_url === trackingWebhookUrl &&
+              (wh.events?.includes("mail_opened") || wh.events?.includes("mail_link_clicked")),
+          )
+
+          if (!existingTrackingWebhook) {
+            const trackingResult = await unipileService.registerEmailTrackingWebhook(trackingWebhookUrl)
+
+            if (trackingResult.success) {
+              logger.info(
+                { webhookId: trackingResult.webhookId, webhookUrl: trackingWebhookUrl },
+                "✅ Unipile email_tracking webhook registered successfully (opens/clicks)",
+              )
+            } else {
+              logger.warn(
+                { error: trackingResult.error, webhookUrl: trackingWebhookUrl },
+                "⚠️ Failed to register Unipile email_tracking webhook (non-critical)",
+              )
+            }
+          } else {
+            logger.info(
+              { webhookId: existingTrackingWebhook.id },
+              "✅ Unipile email_tracking webhook already exists",
             )
           }
         } catch (webhookError) {
           logger.warn(
             { err: webhookError },
-            "⚠️ Error checking/registering Unipile webhook (non-critical)",
+            "⚠️ Error checking/registering Unipile webhooks (non-critical)",
           )
         }
 

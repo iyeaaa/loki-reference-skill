@@ -4,6 +4,9 @@ import { db } from "../db"
 import { emailEvents, emailReplies, emails } from "../db/schema/emails"
 import logger from "../utils/logger"
 
+// Note: sendEmailOpenNotification은 순환 의존성 방지를 위해 동적 import 사용
+// email-open-notification.service.ts ↔ unipile.service.ts
+
 // Unipile configuration
 const UNIPILE_API_KEY = config.unipile.apiKey
 const UNIPILE_API_URL = config.unipile.apiUrl
@@ -33,6 +36,11 @@ export interface SendEmailOptions {
     filename: string
     contentType: string
   }>
+  trackingOptions?: {
+    opens?: boolean
+    links?: boolean
+    label?: string
+  }
 }
 
 export interface SendEmailResult {
@@ -395,6 +403,68 @@ export async function listWebhooks(): Promise<{
 }
 
 /**
+ * Register webhook for email tracking events (opens and clicks)
+ * Creates a webhook with source "email_tracking" to receive mail_opened and mail_link_clicked events
+ * Note: This is separate from the "email" source webhook which handles mail_received events
+ */
+export async function registerEmailTrackingWebhook(
+  webhookUrl: string,
+  accountIds?: string[],
+): Promise<{ success: boolean; webhookId?: string; error?: string }> {
+  try {
+    const requestBody = {
+      request_url: webhookUrl,
+      name: "Rinda Email Tracking Webhook",
+      source: "email_tracking", // Required for open/click tracking (different from "email" source)
+      format: "json",
+      enabled: true,
+      events: ["mail_opened", "mail_link_clicked"], // Tracking events
+      account_ids: accountIds, // Optional: specific accounts, or omit for all accounts
+    }
+
+    logger.info(
+      { webhookUrl, accountIds: accountIds?.length || "all" },
+      "Registering Unipile email tracking webhook",
+    )
+
+    const response = await fetch(`${UNIPILE_API_URL}/api/v1/webhooks`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": UNIPILE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error(
+        { status: response.status, error: errorText },
+        "Failed to register Unipile email tracking webhook",
+      )
+      return {
+        success: false,
+        error: `Failed to register tracking webhook: ${response.statusText}`,
+      }
+    }
+
+    const data = (await response.json()) as { webhook_id?: string }
+    logger.info({ webhookId: data.webhook_id }, "Unipile email tracking webhook registered successfully")
+
+    return {
+      success: true,
+      webhookId: data.webhook_id,
+    }
+  } catch (error) {
+    logger.error({ error }, "Error registering Unipile email tracking webhook")
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
  * Delete webhook
  */
 export async function deleteWebhook(webhookId: string): Promise<boolean> {
@@ -531,9 +601,11 @@ function base64ToBlob(base64: string, contentType: string): Blob {
 /**
  * Send email via Unipile
  * Uses multipart/form-data when attachments are present, JSON otherwise
+ * @param options.trackingOptions - Enable email open/click tracking for webhooks
+ * @param options.replyTo - Provider ID of email being replied to (for threading)
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { accountId, to, subject, body, cc, bcc, replyTo, attachments } = options
+  const { accountId, to, subject, body, cc, bcc, replyTo, attachments, trackingOptions } = options
 
   try {
     // If attachments exist, use multipart/form-data (required by Unipile API)
@@ -633,11 +705,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       to: [{ identifier: to }],
       subject,
       body,
-      // Enable open/click tracking for webhooks
-      tracking_options: {
-        opens: true,
-        links: true,
-      },
     }
 
     // Threading support: reply_to is the Provider ID of the email being replied to
@@ -653,6 +720,18 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       requestBody.bcc = bcc.map((email) => ({ identifier: email }))
     }
 
+    if (attachments && attachments.length > 0) {
+      requestBody.attachments = attachments
+    }
+
+    // Add tracking options for email open/click webhooks
+    if (trackingOptions) {
+      requestBody.tracking_options = {
+        opens: trackingOptions.opens ?? true,
+        links: trackingOptions.links ?? true,
+        ...(trackingOptions.label && { label: trackingOptions.label }),
+      }
+    }
     logger.info(
       {
         accountId,
@@ -1084,13 +1163,18 @@ export async function processUnipileWebhook(payload: unknown): Promise<{ success
       "Processing Unipile webhook event",
     )
 
-    // Unipile email_tracking webhook events:
-    // - mail_opened (from email_tracking source)
-    // - mail_link_clicked (from email_tracking source)
+    // Unipile webhook events:
+    // - mail_received: New email received (from "email" source webhook)
+    // - mail_opened: Email was opened (from "email_tracking" source webhook)
+    // - mail_link_clicked: Link in email was clicked (from "email_tracking" source webhook)
     // Legacy event names (from email source):
     // - email.opened, email.clicked, email.replied
 
     switch (eventType) {
+      case "mail_received":
+        // Handle new email received - used for reply detection
+        logger.info({ eventType: "mail_received" }, "New email received webhook")
+        break
       case "mail_opened":
       case "email_opened":
       case "email.opened":
@@ -1119,8 +1203,15 @@ export async function processUnipileWebhook(payload: unknown): Promise<{ success
 }
 
 /**
- * Handle email opened webhook
- * Unipile email_tracking webhook sends: tracking_id, email_id, ip, user_agent, etc.
+ * Handle email opened webhook (mail_opened event from email_tracking source)
+ * Unipile tracking webhook payload:
+ * - email_id: Unipile email ID
+ * - tracking_id: Unipile tracking ID (same as email_id for sent emails)
+ * - account_id: Unipile account ID
+ * - event: "mail_opened"
+ * - date: ISO timestamp
+ * - ip: Recipient's IP
+ * - user_agent: Browser info
  */
 async function handleEmailOpened(event: Record<string, unknown>): Promise<void> {
   const trackingId = event.tracking_id as string | undefined
@@ -1132,7 +1223,7 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
   }
 
   try {
-    // Find email by tracking_id or email_id (stored in sendgridMessageId as deprecated_id)
+    // Find email by tracking_id or email_id (stored in sendgridMessageId field)
     const email = await db.query.emails.findFirst({
       where: (emails, { or, eq }) =>
         or(
@@ -1147,12 +1238,14 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
       return
     }
 
-    // Update email status
+    const openedAt = new Date()
+
+    // Update email status and increment open count
     await db
       .update(emails)
       .set({
         status: "opened",
-        openedAt: new Date(),
+        openedAt,
         openCount: sql`${emails.openCount} + 1`,
         updatedAt: new Date(),
       })
@@ -1162,21 +1255,42 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
     await db.insert(emailEvents).values({
       emailId: email.id,
       eventType: "open",
-      timestamp: new Date(),
+      timestamp: openedAt,
       ipAddress: event.ip as string | undefined,
       userAgent: event.user_agent as string | undefined,
       rawEventData: event as Record<string, unknown>,
     })
 
-    logger.info({ emailId: email.id, trackingId }, "✅ Email opened event processed")
+    logger.info({ emailId: email.id, trackingId }, "Email opened event processed")
+
+    // 체험판 사용자에게 이메일 오픈 알림 발송 (비동기, fire-and-forget)
+    // - 최초 오픈인 경우에만 발송 (openCount가 0에서 1이 된 경우)
+    // - 동적 import로 순환 의존성 방지
+    if (email.openCount === 0) {
+      import("./email-open-notification.service")
+        .then(({ sendEmailOpenNotification }) => {
+          sendEmailOpenNotification(email.id, openedAt).catch((err) => {
+            logger.error({ error: err, emailId: email.id }, "Failed to send email open notification")
+          })
+        })
+        .catch((err) => {
+          logger.error({ error: err, emailId: email.id }, "Failed to import email-open-notification.service")
+        })
+    }
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email opened event")
   }
 }
 
 /**
- * Handle email clicked webhook
- * Unipile email_tracking webhook sends: tracking_id, email_id, url, ip, user_agent, etc.
+ * Handle email clicked webhook (mail_link_clicked event from email_tracking source)
+ * Unipile tracking webhook payload:
+ * - email_id: Unipile email ID
+ * - tracking_id: Unipile tracking ID
+ * - url: Clicked link URL
+ * - event: "mail_link_clicked"
+ * - ip: Recipient's IP
+ * - user_agent: Browser info
  */
 async function handleEmailClicked(event: Record<string, unknown>): Promise<void> {
   const trackingId = event.tracking_id as string | undefined
@@ -1189,7 +1303,7 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
   }
 
   try {
-    // Find email by tracking_id or email_id (stored in sendgridMessageId as deprecated_id)
+    // Find email by tracking_id or email_id (stored in sendgridMessageId field)
     const email = await db.query.emails.findFirst({
       where: (emails, { or, eq }) =>
         or(
@@ -1226,7 +1340,7 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
 
     logger.info(
       { emailId: email.id, trackingId, url: clickedUrl },
-      "✅ Email clicked event processed",
+      "Email clicked event processed",
     )
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email clicked event")
@@ -1551,4 +1665,8 @@ export default {
   sendEmail,
   syncAccountEmails,
   processUnipileWebhook,
+  registerEmailWebhook,
+  registerEmailTrackingWebhook,
+  listWebhooks,
+  deleteWebhook,
 }

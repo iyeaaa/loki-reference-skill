@@ -58,6 +58,9 @@ export const config = {
   port: getEnvInt("PORT", 3001),
   nodeEnv: NODE_ENV,
 
+  // Frontend URL (for email notification links)
+  frontendUrl: getEnvOrDefault("FRONTEND_URL", "https://app.grinda.ai"),
+
   // Database
   database: {
     url: getEnv("DATABASE_URL"),

@@ -638,7 +638,7 @@ This email contains confidential information that is protected by law or under t
         contentType: att.type || "application/octet-stream",
       }))
 
-      // Send via Unipile (with threading support for follow-up emails)
+      // Send via Unipile (with tracking and threading support)
       const result = await unipileService.sendEmail({
         accountId,
         to: data.toEmail,
@@ -648,6 +648,11 @@ This email contains confidential information that is protected by law or under t
         bcc: data.bccEmails,
         replyTo: data.inReplyTo, // Threading: Provider ID for reply chain
         attachments: unipileAttachments,
+        trackingOptions: {
+          opens: true, // Enable email open tracking
+          links: true, // Enable link click tracking
+          label: data.workspaceId, // Label for tracking context
+        },
       })
 
       if (!result.success) {

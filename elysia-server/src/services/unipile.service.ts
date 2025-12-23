@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emailReplies, emails } from "../db/schema/emails"
@@ -504,15 +504,116 @@ export async function getEmailDetails(
 }
 
 /**
+ * Convert base64 string to Blob
+ */
+function base64ToBlob(base64: string, contentType: string): Blob {
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: contentType })
+}
+
+/**
  * Send email via Unipile
+ * Uses multipart/form-data when attachments are present, JSON otherwise
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const { accountId, to, subject, body, cc, bcc, replyTo, attachments } = options
 
   try {
+    // If attachments exist, use multipart/form-data (required by Unipile API)
+    if (attachments && attachments.length > 0) {
+      const formData = new FormData()
+
+      // Required fields
+      formData.append("account_id", accountId)
+      formData.append("to", JSON.stringify([{ identifier: to }]))
+      formData.append("subject", subject)
+      formData.append("body", body)
+
+      // Optional CC/BCC
+      if (cc && cc.length > 0) {
+        formData.append("cc", JSON.stringify(cc.map((email) => ({ identifier: email }))))
+      }
+      if (bcc && bcc.length > 0) {
+        formData.append("bcc", JSON.stringify(bcc.map((email) => ({ identifier: email }))))
+      }
+
+      // Attachments as binary files
+      for (const att of attachments) {
+        const blob = base64ToBlob(att.content, att.contentType)
+        formData.append("attachments", blob, att.filename)
+      }
+
+      logger.info(
+        {
+          accountId,
+          endpoint: `${UNIPILE_API_URL}/api/v1/emails`,
+          attachmentCount: attachments.length,
+          attachmentNames: attachments.map((a) => a.filename),
+        },
+        "Sending email to Unipile API with attachments (multipart/form-data)",
+      )
+
+      const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails`, {
+        method: "POST",
+        headers: {
+          "X-API-KEY": UNIPILE_API_KEY,
+          // Note: Don't set Content-Type for FormData, browser/runtime will set it with boundary
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        let errorData: { message?: string; detail?: string } = { message: errorText }
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { message: errorText }
+        }
+
+        logger.error(
+          {
+            accountId,
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+          },
+          "Unipile API error response (with attachments)",
+        )
+
+        throw new Error(
+          errorData.message || errorData.detail || `Unipile API error: ${response.statusText}`,
+        )
+      }
+
+      interface EmailSentResponse {
+        object?: string
+        tracking_id?: string
+        provider_id?: string
+        id?: string
+      }
+      const data = (await response.json()) as EmailSentResponse
+      const messageId = data.tracking_id || data.provider_id || data.id
+
+      logger.info(
+        { accountId, trackingId: data.tracking_id, providerId: data.provider_id },
+        "Email sent via Unipile successfully (with attachments)",
+      )
+
+      return {
+        success: true,
+        messageId,
+      }
+    }
+
+    // No attachments - use JSON (simpler)
     const requestBody: Record<string, unknown> = {
-      account_id: accountId, // ← Unipile requires account_id in body
-      to: [{ identifier: to }], // ← Unipile uses 'identifier' instead of 'email'
+      account_id: accountId,
+      to: [{ identifier: to }],
       subject,
       body,
     }
@@ -530,17 +631,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       requestBody.bcc = bcc.map((email) => ({ identifier: email }))
     }
 
-    if (attachments && attachments.length > 0) {
-      requestBody.attachments = attachments
-    }
-
     logger.info(
       {
         accountId,
         endpoint: `${UNIPILE_API_URL}/api/v1/emails`,
-        requestBody,
       },
-      "Sending email to Unipile API",
+      "Sending email to Unipile API (JSON)",
     )
 
     const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails`, {
@@ -583,8 +679,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       id?: string
     }
     const data = (await response.json()) as EmailSentResponse
-
-    // Response format: { object: "EmailSent", tracking_id: string, provider_id: string | null }
     const messageId = data.tracking_id || data.provider_id || data.id
 
     logger.info(
@@ -1098,41 +1192,311 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
 
 /**
  * Handle email replied webhook
+ * Stores inbound reply email and creates email_replies record
+ * Similar to SendGrid webhook processing
  */
 async function handleEmailReplied(event: Record<string, unknown>): Promise<void> {
   const originalMessageId = event.original_message_id as string
+  const replyMessageId = (event.reply_message_id || event.message_id) as string
+  const accountId = event.account_id as string
+
+  logger.info(
+    {
+      eventType: event.type,
+      originalMessageId,
+      replyMessageId,
+      accountId,
+      fullEvent: JSON.stringify(event, null, 2),
+    },
+    "💬 [UNIPILE] email.replied - Processing reply webhook",
+  )
 
   if (!originalMessageId) {
-    logger.warn("Email replied event missing original_message_id")
+    logger.warn({ event }, "Email replied event missing original_message_id")
     return
   }
 
   try {
-    const [email] = await db
-      .select({ id: emails.id, leadId: emails.leadId })
-      .from(emails)
-      .where(eq(emails.sendgridMessageId, originalMessageId))
-      .limit(1)
+    // 1. Find original email by sendgridMessageId (Unipile tracking_id) or messageId
+    const originalEmail = await db.query.emails.findFirst({
+      where: (emails, { or, eq, like }) =>
+        or(
+          eq(emails.sendgridMessageId, originalMessageId),
+          eq(emails.messageId, originalMessageId),
+          like(emails.messageId, `%${originalMessageId}%`),
+        ),
+      columns: {
+        id: true,
+        workspaceId: true,
+        userEmailAccountId: true,
+        leadId: true,
+        sequenceId: true,
+        leadName: true,
+        sequenceName: true,
+        threadId: true,
+        fromEmail: true,
+        messageId: true,
+      },
+    })
 
-    if (!email) {
-      logger.warn({ originalMessageId }, "Original email not found for reply event")
+    if (!originalEmail) {
+      logger.warn(
+        { originalMessageId, replyMessageId },
+        "⚠️ [UNIPILE] email.replied - Original email not found",
+      )
       return
     }
 
+    logger.info(
+      {
+        originalEmailId: originalEmail.id,
+        leadId: originalEmail.leadId,
+        threadId: originalEmail.threadId,
+      },
+      "💬 [UNIPILE] email.replied - Found original email",
+    )
+
+    // 2. Fetch reply email details from Unipile API (if replyMessageId exists)
+    let replyFrom = ""
+    let replySubject = ""
+    let replyBody = ""
+    let replyReceivedAt = new Date()
+    let replyRfcMessageId = replyMessageId
+
+    if (replyMessageId) {
+      try {
+        const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails/${replyMessageId}`, {
+          headers: {
+            "X-API-KEY": UNIPILE_API_KEY,
+          },
+        })
+
+        if (response.ok) {
+          const replyData = (await response.json()) as {
+            from_attendee?: { identifier?: string }
+            subject?: string
+            body?: string
+            body_plain?: string
+            date?: string
+            message_id?: string
+          }
+
+          replyFrom = replyData.from_attendee?.identifier || ""
+          replySubject = replyData.subject || ""
+          replyBody = replyData.body || replyData.body_plain || ""
+          replyReceivedAt = replyData.date ? new Date(replyData.date) : new Date()
+          replyRfcMessageId = replyData.message_id || replyMessageId
+
+          logger.info(
+            { replyFrom, replySubject, replyReceivedAt },
+            "💬 [UNIPILE] email.replied - Fetched reply details",
+          )
+        } else {
+          logger.warn(
+            { replyMessageId, status: response.status },
+            "⚠️ [UNIPILE] email.replied - Could not fetch reply details",
+          )
+        }
+      } catch (fetchError) {
+        logger.warn(
+          { err: fetchError, replyMessageId },
+          "⚠️ [UNIPILE] email.replied - Error fetching reply details",
+        )
+      }
+    }
+
+    // 3. Store reply as inbound email in emails table
+    const [inboundEmail] = await db
+      .insert(emails)
+      .values({
+        workspaceId: originalEmail.workspaceId,
+        userEmailAccountId: originalEmail.userEmailAccountId,
+        leadId: originalEmail.leadId,
+        sequenceId: originalEmail.sequenceId,
+        direction: "inbound",
+        fromEmail: replyFrom || "unknown",
+        toEmail: originalEmail.fromEmail,
+        subject: replySubject || `Re: ${originalEmail.sequenceName || ""}`,
+        bodyText: replyBody,
+        status: "delivered",
+        sentAt: replyReceivedAt,
+        deliveredAt: replyReceivedAt,
+        messageId: replyRfcMessageId,
+        sendgridMessageId: replyMessageId,
+        inReplyTo: originalEmail.messageId || originalMessageId,
+        threadId: originalEmail.threadId || originalMessageId,
+        leadName: originalEmail.leadName,
+        sequenceName: originalEmail.sequenceName,
+      })
+      .returning({ id: emails.id })
+
+    if (!inboundEmail) {
+      logger.error(
+        { originalMessageId },
+        "❌ [UNIPILE] email.replied - Failed to save inbound email",
+      )
+      return
+    }
+
+    logger.info(
+      { inboundEmailId: inboundEmail.id, originalEmailId: originalEmail.id },
+      "✅ [UNIPILE] email.replied - Inbound email saved",
+    )
+
+    // 4. Update original email repliedAt
     await db
       .update(emails)
       .set({
-        repliedAt: new Date(),
+        repliedAt: replyReceivedAt,
+        status: "replied",
         updatedAt: new Date(),
       })
-      .where(eq(emails.id, email.id))
+      .where(eq(emails.id, originalEmail.id))
 
-    logger.info({ emailId: email.id, originalMessageId }, "Email replied event processed")
+    logger.info(
+      { originalEmailId: originalEmail.id },
+      "✅ [UNIPILE] email.replied - Original email repliedAt updated",
+    )
 
-    // TODO: Stop active sequence enrollments for this lead
-    // Similar to Nylas handleThreadReplied
+    // 5. Create or update email_replies record
+    const existingReplyResults = await db
+      .select({ id: emailReplies.id })
+      .from(emailReplies)
+      .where(eq(emailReplies.originalEmailId, originalEmail.id))
+      .limit(1)
+
+    const existingReply = existingReplyResults[0]
+    let emailReply: { id: string } | undefined
+
+    if (existingReply) {
+      // Update existing reply with the LATEST reply email
+      const [updated] = await db
+        .update(emailReplies)
+        .set({
+          replyEmailId: inboundEmail.id,
+          intent: null,
+          sentiment: null,
+        })
+        .where(eq(emailReplies.id, existingReply.id))
+        .returning({ id: emailReplies.id })
+
+      emailReply = updated
+      logger.info(
+        { emailReplyId: emailReply?.id, originalEmailId: originalEmail.id },
+        "✅ [UNIPILE] email.replied - email_replies record UPDATED",
+      )
+    } else {
+      // Create new email_replies record
+      const [inserted] = await db
+        .insert(emailReplies)
+        .values({
+          workspaceId: originalEmail.workspaceId,
+          originalEmailId: originalEmail.id,
+          replyEmailId: inboundEmail.id,
+          isRead: false,
+        })
+        .returning({ id: emailReplies.id })
+
+      emailReply = inserted
+      logger.info(
+        { emailReplyId: emailReply?.id, originalEmailId: originalEmail.id },
+        "✅ [UNIPILE] email.replied - email_replies record CREATED",
+      )
+    }
+
+    // 6. AI classification (async, non-blocking)
+    const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+    if (emailReply && classificationEnabled) {
+      try {
+        const { reclassifyEmailReply } = await import("./email-replies.service")
+        reclassifyEmailReply(emailReply.id).catch((error) => {
+          logger.warn(
+            { err: error, emailReplyId: emailReply.id },
+            "⚠️ [UNIPILE] email.replied - AI classification failed",
+          )
+        })
+      } catch {
+        // AI classification is optional
+      }
+    }
+
+    // 7. Stop active sequence enrollments for this lead
+    if (originalEmail.leadId) {
+      try {
+        const { sequenceEnrollments, sequenceStepExecutions } = await import("../db/schema")
+
+        // Find active enrollments for this lead
+        const activeEnrollments = await db
+          .select({
+            id: sequenceEnrollments.id,
+            sequenceId: sequenceEnrollments.sequenceId,
+          })
+          .from(sequenceEnrollments)
+          .where(
+            and(
+              eq(sequenceEnrollments.leadId, originalEmail.leadId),
+              eq(sequenceEnrollments.status, "active"),
+            ),
+          )
+
+        if (activeEnrollments.length > 0) {
+          logger.info(
+            {
+              leadId: originalEmail.leadId,
+              activeEnrollmentsCount: activeEnrollments.length,
+            },
+            "🛑 [UNIPILE] email.replied - Stopping active enrollments for lead",
+          )
+
+          // Stop all active enrollments
+          await db
+            .update(sequenceEnrollments)
+            .set({
+              status: "stopped",
+              stoppedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(sequenceEnrollments.leadId, originalEmail.leadId),
+                eq(sequenceEnrollments.status, "active"),
+              ),
+            )
+
+          // Skip pending step executions
+          for (const enrollment of activeEnrollments) {
+            await db
+              .update(sequenceStepExecutions)
+              .set({
+                status: "skipped",
+                errorMessage: "Skipped due to reply received",
+              })
+              .where(
+                and(
+                  eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+                  eq(sequenceStepExecutions.status, "pending"),
+                ),
+              )
+          }
+
+          logger.info(
+            { leadId: originalEmail.leadId, stoppedCount: activeEnrollments.length },
+            "✅ [UNIPILE] email.replied - Active enrollments stopped",
+          )
+        }
+      } catch (enrollmentError) {
+        logger.error(
+          { err: enrollmentError, leadId: originalEmail.leadId },
+          "❌ [UNIPILE] email.replied - Error stopping enrollments",
+        )
+      }
+    }
+
+    logger.info(
+      { originalEmailId: originalEmail.id, inboundEmailId: inboundEmail.id },
+      "✅ [UNIPILE] email.replied - Reply processed successfully",
+    )
   } catch (error) {
-    logger.error({ err: error, originalMessageId }, "Error handling email replied event")
+    logger.error({ err: error, originalMessageId }, "❌ [UNIPILE] email.replied - Error processing")
   }
 }
 

@@ -145,7 +145,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           subject: body.subject,
           bodyText: body.content,
           bodyHtml: html,
-          apiKey: body.grantId, // Not starting with "SG" => Nylas grantId route
+          apiKey: body.grantId,
+          provider: "nylas", // Explicitly specify Nylas provider
           includeSignature: false,
         })
 
@@ -709,6 +710,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             emailAddress: userEmailAccounts.emailAddress,
             displayName: userEmailAccounts.displayName,
             apiKey: userEmailAccounts.apiKey,
+            provider: userEmailAccounts.provider,
             status: userEmailAccounts.status,
             isVerified: userEmailAccounts.isVerified,
             workspaceId: userEmailAccounts.workspaceId,
@@ -940,6 +942,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           userId: body.userId,
           workspaceId: body.workspaceId,
           apiKey: apiKey,
+          provider: emailAccount.provider, // Explicitly specify provider for routing
         })
 
         if (!sendResult.success) {

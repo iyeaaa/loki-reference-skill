@@ -45,6 +45,7 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
             emailAddress: userEmailAccounts.emailAddress,
             displayName: userEmailAccounts.displayName,
             apiKey: userEmailAccounts.apiKey,
+            provider: userEmailAccounts.provider,
             status: userEmailAccounts.status,
             isVerified: userEmailAccounts.isVerified,
           })
@@ -132,7 +133,7 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
               "이메일 발송 중",
             )
 
-            // SendGrid로 이메일 발송 (CSV 대량 전송에는 서명 제외)
+            // 이메일 발송 (CSV 대량 전송에는 서명 제외)
             const sendResult = await emailService.sendEmail({
               fromEmail: fromEmail,
               fromName: fromName,
@@ -142,6 +143,7 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
               bodyHtml: emailData.bodyHtml,
               includeSignature: false, // CSV 대량 전송에는 서명 제외
               apiKey: apiKey,
+              provider: emailAccount.provider, // Explicitly specify provider for routing
             })
 
             if (!sendResult.success) {

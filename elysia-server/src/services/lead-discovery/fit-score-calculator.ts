@@ -1,6 +1,6 @@
 /**
  * Fit Score Calculator
- * AI 기반 리드 적합도 계산 서비스
+ * AI-based lead fit score calculation service
  */
 
 import { createHash } from "node:crypto"
@@ -95,7 +95,7 @@ class LruTtlCache {
 }
 
 const FIT_SCORE_CACHE = new LruTtlCache({
-  // 메모리 캐시: 동일 입력(리드+쿼리+타겟/판매자 컨텍스트) 재평가 방지
+  // Memory cache: Prevents re-evaluation of identical input (lead + query + target/seller context)
   maxEntries: Number.parseInt(process.env.LEAD_DISCOVERY_FIT_SCORE_CACHE_MAX || "20000", 10),
   defaultTtlMs:
     Number.parseInt(
@@ -124,7 +124,7 @@ function makeFitScoreCacheKey(params: {
     userQuery: userQuery ?? null,
     selectedTarget,
     websiteAnalysis: userQuery
-      ? // userQuery 기반 스코어링이면 판매자 정보는 영향도가 낮으니 key 크기 축소
+      ? // For userQuery-based scoring, seller info has low impact so reduce key size
         { companyName: websiteAnalysis.companyName ?? null }
       : {
           companyName: websiteAnalysis.companyName ?? null,
@@ -168,7 +168,7 @@ function isLikelyValidEmail(value?: string): boolean {
 
 function isWebsiteUnreachable(httpStatus?: number | null): boolean {
   if (httpStatus === null || httpStatus === undefined) return false
-  // 4xx/5xx: 접근 실패로 간주
+  // 4xx/5xx: Considered as access failure
   return httpStatus >= 400
 }
 
@@ -186,7 +186,7 @@ async function probeWebsiteHttpStatus(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    // 1) HEAD 먼저 시도
+    // 1) Try HEAD first
     const head = await fetch(url, {
       method: "HEAD",
       redirect: "follow",
@@ -194,7 +194,7 @@ async function probeWebsiteHttpStatus(
     })
     return { status: head.status, finalUrl: head.url }
   } catch {
-    // 2) HEAD가 막히는 사이트가 많아 GET fallback
+    // 2) Many sites block HEAD, so fallback to GET
     const controller2 = new AbortController()
     const timer2 = setTimeout(() => controller2.abort(), timeoutMs)
     try {
@@ -203,7 +203,7 @@ async function probeWebsiteHttpStatus(
         redirect: "follow",
         signal: controller2.signal,
         headers: {
-          // 일부 서버가 UA 없으면 차단하는 케이스 완화
+          // Mitigate cases where some servers block requests without UA
           "User-Agent": "Mozilla/5.0 (compatible; LeadDiscoveryBot/1.0)",
         },
       })
@@ -244,7 +244,7 @@ async function hydrateMissingHttpStatus(leads: LeadForScoring[]): Promise<LeadFo
         const { status } = await probeWebsiteHttpStatus(url, timeoutMs)
         statusById.set(lead.id, status)
       } catch (error) {
-        // 네트워크/타임아웃 등: 접근 실패로 간주하여 강한 페널티가 적용되게 한다.
+        // Network/timeout etc: Treat as access failure to apply strong penalty
         leadDiscoveryLogger.debug?.(
           `[fit-score] website probe failed leadId=${lead.id} url=${url}: ${String(error)}`,
         )
@@ -255,7 +255,7 @@ async function hydrateMissingHttpStatus(leads: LeadForScoring[]): Promise<LeadFo
 
   if (tasks.length === 0) return leads
 
-  // 간단한 워커 풀 (의존성 없이)
+  // Simple worker pool (without dependencies)
   let idx = 0
   const workers = Array.from(
     { length: Math.max(1, Math.min(concurrency, tasks.length)) },
@@ -300,44 +300,44 @@ function applyFitScorePolicy(params: {
   if (!hasEmail) missingSignals.push("email")
   if (!hasPhone) missingSignals.push("phone")
 
-  // (1) 정보 부족 패널티: 핵심 정보가 비어있을수록 점수 하향
-  // - “매칭” 점수를 완전히 뒤엎기보다는, 부족한 정보만큼 신뢰도를 낮춘다.
+  // (1) Missing information penalty: Lower score as key information is missing
+  // - Rather than completely overturning the "match" score, lower reliability based on missing info
   const missingPenalty = Math.min(35, missingSignals.length * 5)
   score -= missingPenalty
 
-  // (2) 이메일 보너스: 회사 이메일이 있으면 가산
+  // (2) Email bonus: Add points if company email exists
   if (hasEmail) score += 8
 
-  // (3) 연락처가 거의 없으면 추가 하향
+  // (3) Additional penalty if almost no contact info
   if (!hasEmail && !hasPhone) score -= 10
 
-  // (4) 프로필 고도화(verified) 보너스: 정보 신뢰도 소폭 가산
+  // (4) Enhanced profile (verified) bonus: Slightly increase information reliability
   if (lead.verified) score += 5
 
   score = clampScore(score)
 
-  // (5) 홈페이지 접근 실패는 “강한 하한/상한” 정책으로 반영
-  // - 사용자 요구: 홈페이지 접속이 안되면 점수가 아예 낮아야 한다.
+  // (5) Website access failure is reflected with "strong floor/ceiling" policy
+  // - User requirement: If website is unreachable, score should be significantly lowered
   if (websiteUnreachable) {
     score = Math.min(score, 12)
   }
 
-  // (6) 웹사이트가 아예 없으면 점수 상한을 낮춘다 (접속여부를 확인할 수 없음)
+  // (6) If website doesn't exist at all, lower score ceiling (can't verify accessibility)
   if (!hasWebsite) {
     score = Math.min(score, 25)
   }
 
   const policyNotes: string[] = []
-  if (websiteUnreachable) policyNotes.push(`홈페이지 접속 실패(http=${lead.http_status ?? "?"})`)
-  if (!hasWebsite) policyNotes.push("웹사이트 없음")
-  if (missingPenalty > 0) policyNotes.push(`정보 부족(-${missingPenalty})`)
-  if (hasEmail) policyNotes.push("회사 이메일(+8)")
-  if (!hasEmail && !hasPhone) policyNotes.push("연락처 부족(-10)")
-  if (lead.verified) policyNotes.push("프로필 고도화(+5)")
+  if (websiteUnreachable) policyNotes.push(`Website access failed(http=${lead.http_status ?? "?"})`)
+  if (!hasWebsite) policyNotes.push("No website")
+  if (missingPenalty > 0) policyNotes.push(`Missing info(-${missingPenalty})`)
+  if (hasEmail) policyNotes.push("Company email(+8)")
+  if (!hasEmail && !hasPhone) policyNotes.push("Lack of contact(-10)")
+  if (lead.verified) policyNotes.push("Enhanced profile(+5)")
 
   const mergedReason =
     policyNotes.length > 0
-      ? [base.reason, `정책: ${policyNotes.join(", ")}`].filter(Boolean).join(" | ")
+      ? [base.reason, `Policy: ${policyNotes.join(", ")}`].filter(Boolean).join(" | ")
       : base.reason
 
   return {
@@ -361,9 +361,9 @@ function truncateForPrompt(value: string | undefined | null, maxChars: number): 
 }
 
 /**
- * LLM 프롬프트용 “초압축” 리드 표현
- * - 한 줄 = 한 리드
- * - pipe(|) 구분 고정 컬럼
+ * "Ultra-compressed" lead representation for LLM prompts
+ * - One line = One lead
+ * - pipe(|) delimited fixed columns
  */
 function formatLeadForPrompt(lead: LeadForScoring): string {
   const company = truncateForPrompt(lead.company_name, 40) || "N/A"
@@ -490,14 +490,14 @@ function tryRuleBasedScore(params: {
     return {
       leadId: lead.id,
       score: 5,
-      reason: `국가 불일치(요청: ${extractedCountry}, 리드: ${lead.country})`,
+      reason: `Country mismatch(requested: ${extractedCountry}, lead: ${lead.country})`,
     }
   }
   if (!userQuery && lead.country && !leadCountryMatches(lead.country, selectedTarget.country)) {
     return {
       leadId: lead.id,
       score: 10,
-      reason: `타겟 국가 불일치(타겟: ${selectedTarget.country}, 리드: ${lead.country})`,
+      reason: `Target country mismatch(target: ${selectedTarget.country}, lead: ${lead.country})`,
     }
   }
 
@@ -568,32 +568,40 @@ function tryRuleBasedScore(params: {
     ]
 
     if (exclusionKeywords.some((k) => leadText.includes(k))) {
-      return { leadId: lead.id, score: 15, reason: "명백한 제외군(서비스/전문직/비관련)" }
+      return {
+        leadId: lead.id,
+        score: 15,
+        reason: "Clear exclusion(service/professional/unrelated)",
+      }
     }
 
     if (supplierKeywords.some((k) => leadText.includes(k))) {
-      return { leadId: lead.id, score: 90, reason: "자재/유통/공급 키워드 매칭" }
+      return { leadId: lead.id, score: 90, reason: "Materials/distribution/supply keyword match" }
     }
 
     if (contractorKeywords.some((k) => leadText.includes(k))) {
-      return { leadId: lead.id, score: 30, reason: "시공/서비스 성격(자재 공급사 가능성 낮음)" }
+      return {
+        leadId: lead.id,
+        score: 30,
+        reason: "Construction/service nature(low probability of materials supplier)",
+      }
     }
   }
 
   return null
 }
 
-// 단순 지역/국가 검색인지 확인 (산업군 등 추가 조건이 없는 경우)
+// Check if it's a simple location/country search (no additional conditions like industry)
 function isSimpleLocationSearch(query: string): boolean {
-  // 1. "국가: XX" 또는 "지역: XX" 패턴 체크
+  // 1. Check "country: XX" or "region: XX" pattern
   const parts = query.split(",").map((p) => p.trim())
   const isLocationPrefixOnly = parts.every((part) => /^(국가|지역):/.test(part) || part === "")
   if (isLocationPrefixOnly) return true
 
-  // 2. "XX 회사", "XX 기업", "XX 업체" 등 단순 국가/지역 + 일반 명사 패턴 체크
-  // 산업군 키워드가 없으면 단순 지역 검색으로 처리
+  // 2. Check simple country/region + general noun patterns like "XX company", "XX corporation", "XX business"
+  // Treat as simple location search if no industry keywords present
   const industryKeywords = [
-    // 영어 산업군
+    // English industries
     "cosmetic",
     "beauty",
     "pharmaceutical",
@@ -626,7 +634,7 @@ function isSimpleLocationSearch(query: string): boolean {
     "hospitality",
     "education",
     "consulting",
-    // 한국어 산업군
+    // Korean industries
     "화장품",
     "뷰티",
     "제약",
@@ -671,11 +679,11 @@ function isSimpleLocationSearch(query: string): boolean {
     lowerQuery.includes(keyword.toLowerCase()),
   )
 
-  // 산업군 키워드가 없으면 단순 지역 검색
+  // Simple location search if no industry keywords present
   return !hasIndustryKeyword
 }
 
-// 한국어 쿼리에서 국가명 추출
+// Extract country name from Korean query
 function extractCountryFromQuery(query: string): string | null {
   const countryMap: Record<string, string> = {
     미국: "United States",
@@ -723,32 +731,36 @@ function extractCountryFromQuery(query: string): string | null {
 }
 
 /**
- * 배치로 리드 적합도 계산 (최대 100개 단위, 프롬프트 길이에 따라 자동 축소)
+ * Calculate lead fit scores in batches (max 100 units, auto-reduced based on prompt length)
  */
 export async function calculateFitScores(
   leads: LeadForScoring[],
   websiteAnalysis: WebsiteAnalysisContext,
   selectedTarget: { country: string; industry: string },
   onScore: (result: FitScoreResult) => void,
-  userQuery?: string, // 사용자 검색 쿼리 추가
+  userQuery?: string, // User search query added
   workspaceId?: string,
 ): Promise<void> {
-  // enrichment 전이라도 웹사이트 접속 실패를 반영하기 위해 http_status를 가능한 채운다.
+  // Fill http_status as much as possible to reflect website access failures even before enrichment
   const effectiveLeads = await hydrateMissingHttpStatus(leads)
 
-  // 단순 지역/국가 검색인 경우 AI 호출 없이 모두 100점 반환
+  // For simple location/country searches, return 100 points for all without AI call
   if (userQuery && isSimpleLocationSearch(userQuery)) {
     leadDiscoveryLogger.info(
       `Simple location search detected: "${userQuery}". All leads scored 100.`,
     )
     for (const lead of effectiveLeads) {
-      const base: FitScoreResult = { leadId: lead.id, score: 100, reason: "단순 지역/국가 검색" }
+      const base: FitScoreResult = {
+        leadId: lead.id,
+        score: 100,
+        reason: "Simple location/country search",
+      }
       onScore(applyFitScorePolicy({ lead, base }))
     }
     return
   }
 
-  // 요청 배치 사이즈 (최대 100) - 실제 LLM 프롬프트 길이에 따라 자동으로 더 작아질 수 있음
+  // Requested batch size (max 100) - can automatically become smaller based on actual LLM prompt length
   const requestedBatchSize = parsePositiveInt(process.env.LEAD_DISCOVERY_FIT_SCORE_BATCH_SIZE, 100)
   const maxBatchSize = Math.max(1, Math.min(100, requestedBatchSize))
   const maxPromptChars = parsePositiveInt(
@@ -778,7 +790,7 @@ export async function calculateFitScores(
   const remainingForLlm: LeadForScoring[] = []
   const candidatesForRedis: LeadForScoring[] = []
 
-  // 1) 메모리 캐시 hit는 즉시 반환
+  // 1) Memory cache hits are returned immediately
   for (const lead of effectiveLeads) {
     const keyHash = keyByLeadId.get(lead.id)
     if (!keyHash) {
@@ -800,7 +812,7 @@ export async function calculateFitScores(
     candidatesForRedis.push(lead)
   }
 
-  // 2) Redis 분산 캐시 hit는 MGET으로 한 번에 처리 (가능하면)
+  // 2) Redis distributed cache hits are processed at once with MGET (if possible)
   if (FIT_SCORE_REDIS_CACHE.isEnabled() && candidatesForRedis.length > 0) {
     const keyHashes = candidatesForRedis
       .map((l) => keyByLeadId.get(l.id))
@@ -836,7 +848,7 @@ export async function calculateFitScores(
     }
   }
 
-  // 3) 룰 기반 프리필터링 (명백한 케이스는 LLM 스킵)
+  // 3) Rule-based pre-filtering (skip LLM for obvious cases)
   for (const lead of candidatesForRedis) {
     const keyHash = keyByLeadId.get(lead.id)
     if (!keyHash) {
@@ -861,7 +873,7 @@ export async function calculateFitScores(
 
   if (remainingForLlm.length === 0) return
 
-  // 4) LLM 배치는 프롬프트 길이 제한을 고려해 “최대 100개”에서 자동으로 잘라 처리
+  // 4) LLM batches are automatically split from "max 100" considering prompt length limits
   const batches = chunkLeadsForPrompt(remainingForLlm, {
     maxBatchSize,
     maxPromptChars,
@@ -892,7 +904,7 @@ export async function calculateFitScores(
               const base: FitScoreResult = {
                 leadId: score.leadId,
                 score: score.score,
-                reason: score.reason ?? "LLM 평가",
+                reason: score.reason ?? "LLM evaluation",
               }
               const finalScore = applyFitScorePolicy({ lead, base })
               const keyHash = keyByLeadId.get(lead.id)
@@ -911,7 +923,7 @@ export async function calculateFitScores(
               const base: FitScoreResult = {
                 leadId: score.leadId,
                 score: score.score,
-                reason: score.reason ?? "LLM 평가",
+                reason: score.reason ?? "LLM evaluation",
               }
               onScore(applyFitScorePolicy({ lead, base }))
             } else {
@@ -926,7 +938,7 @@ export async function calculateFitScores(
             const base: FitScoreResult = {
               leadId: lead.id,
               score: 50,
-              reason: "계산 중 오류 발생",
+              reason: "Error occurred during calculation",
             }
             onScore(applyFitScorePolicy({ lead, base }))
           }
@@ -937,12 +949,12 @@ export async function calculateFitScores(
 
   await Promise.all(workers)
 
-  // 4) Redis 캐시 저장은 “성능 보조”이므로 마지막에 일괄 시도 (실패해도 메인 흐름 영향 없음)
+  // 4) Redis cache writes are "performance assistance" so batch attempt at the end (main flow unaffected even if failed)
   await FIT_SCORE_REDIS_CACHE.setMany(redisWrites)
 }
 
 /**
- * 배치 적합도 계산
+ * Calculate batch fit scores
  */
 async function calculateBatchScores(
   leads: LeadForScoring[],
@@ -950,11 +962,11 @@ async function calculateBatchScores(
   selectedTarget: { country: string; industry: string },
   userQuery?: string,
 ): Promise<FitScoreResult[]> {
-  // 배치 크기를 키우기 위해, 리드 정보를 매우 압축된 포맷으로 구성한다.
-  // (길이가 커지면 모델 컨텍스트 한계를 빠르게 초과하므로 필드/설명을 축약)
+  // To increase batch size, compose lead info in a very compressed format
+  // (Field/description abbreviated as length quickly exceeds model context limit)
   const leadsInfo = leads.map(formatLeadForPrompt).join("\n")
 
-  // userQuery가 있으면 검색 쿼리 기반 평가, 없으면 판매자 정보 기반 평가
+  // If userQuery exists, evaluate based on search query; otherwise evaluate based on seller info
   const searchCriteria = userQuery
     ? `## User Search Query (MOST IMPORTANT):
 "${userQuery}"
@@ -968,16 +980,16 @@ Evaluate each lead based on how well they match this search query.`
 - Target Markets: ${websiteAnalysis.targetMarkets?.join(", ") || "N/A"}
 - Business Model: ${websiteAnalysis.businessModel || "N/A"}`
 
-  // 사용자 쿼리에서 국가 추출
+  // Extract country from user query
   const extractedCountry = userQuery ? extractCountryFromQuery(userQuery) : null
 
-  // 자재/제품 검색 감지 (도매/유통사를 찾는 경우) - 먼저 체크
+  // Detect materials/product search (when looking for wholesalers/distributors) - check first
   const isMaterialsSearch = Boolean(userQuery && isMaterialsSearchQuery(userQuery))
 
-  // 판매 관련 키워드 감지 (자재 검색이면 무시)
+  // Detect sales-related keywords (ignore if materials search)
   const isSalesSearch = Boolean(userQuery && !isMaterialsSearch && isSalesSearchQuery(userQuery))
 
-  // 제품/자재 키워드 추출
+  // Extract product/materials keywords
   const productKeywords = userQuery
     ? userQuery
         .toLowerCase()
@@ -1248,7 +1260,7 @@ Important: Return ONLY the JSON array, no explanation or markdown.`
   const responseText = (response.content as string).trim()
 
   try {
-    // JSON 파싱 시도
+    // Attempt JSON parsing
     const jsonMatch = responseText.match(/\[[\s\S]*\]/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]) as Array<{ leadId: string; score: number }>
@@ -1261,10 +1273,10 @@ Important: Return ONLY the JSON array, no explanation or markdown.`
     leadDiscoveryLogger.error(`Failed to parse fit scores: ${parseError}`)
   }
 
-  // 파싱 실패 시 기본값 반환
+  // Return default values if parsing fails
   return leads.map((lead) => ({
     leadId: lead.id,
     score: 50,
-    reason: "계산 중 오류",
+    reason: "Error during calculation",
   }))
 }

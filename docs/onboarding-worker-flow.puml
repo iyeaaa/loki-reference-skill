@@ -1,0 +1,243 @@
+@startuml Onboarding Worker Flow
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam maxmessagesize 200
+
+title Onboarding Auto-Generation Worker Flow\n(BullMQ Job Processing)
+
+actor User
+participant "Frontend" as FE
+participant "Onboarding\nRoutes" as Routes
+participant "BullMQ\nQueue" as Queue
+participant "Onboarding\nWorker" as Worker
+database "PostgreSQL" as DB
+database "Redis" as Redis
+participant "SSE Stream" as SSE
+participant "BigQuery\n(Apollo)" as BQ
+participant "Hunter.io\nAPI" as Hunter
+participant "AI Service\n(Gemini/Claude)" as AI
+
+== Job Initialization ==
+
+User -> FE: Complete survey\n(industry, country, target)
+FE -> Routes: POST /api/v1/onboarding/workspace/:id/start-discovery
+Routes -> Queue: addOnboardingJob(workspaceId, userId, surveyData)
+note right
+  Job ID: onboarding-{workspaceId}
+  Prevents duplicate jobs
+  for same workspace
+end note
+Queue -> DB: Store job log\n(status: waiting)
+Routes --> FE: { jobId, message }
+FE -> Routes: GET /workspace/:id/stream\n(SSE connection)
+Routes -> SSE: Create SSE stream
+SSE --> FE: Connected event
+
+== Phase 1: Discovery + Enrichment ==
+
+Queue -> Worker: Process job
+Worker -> Redis: Load checkpoint state
+Worker -> DB: Count existing leads\nwith emails
+alt currentLeadsCount >= 150
+  Worker -> DB: Get existing 150 lead IDs
+  Worker --> Worker: Skip to Phase 2
+else currentLeadsCount < 150
+  Worker -> AI: getB2BCustomerIndustries()\n(1-3 target industries)
+  AI --> Worker: ["Industry1", "Industry2", ...]
+
+  loop For each iteration (max 3)
+    Worker -> DB: Check current lead count
+
+    loop For each target industry (1-3)
+      Worker -> Worker: generateUniqueQuery()
+      Worker -> BQ: searchBigQuery(query)\n(100 results per query)
+      BQ --> Worker: Company data\n(website, employees, country)
+
+      loop Process in batches of 30
+        Worker -> Worker: enrichLeadsForOnboarding()\n(Hunter.io + Gemini)
+        Worker -> Hunter: Domain Search API\n(get emails)
+        Hunter --> Worker: Generic email
+        Worker -> AI: Analyze company\n(description, business type)
+        AI --> Worker: Company details
+
+        Worker -> DB: bulkCreateLeads()\n(with emails)
+        Worker -> Redis: Save checkpoint
+        Worker -> SSE: Emit batch progress event
+        SSE --> FE: Update progress UI
+
+        Worker -> DB: Count leads with emails
+        alt Lead count >= 150
+          Worker --> Worker: Break loop (target reached)
+        end
+      end
+    end
+  end
+
+  Worker -> DB: Count leads after BigQuery
+
+  alt afterBigQueryCount < 150
+    Worker -> SSE: Emit "Starting Hunter.io fallback"
+    SSE --> FE: Show fallback message
+
+    Worker -> AI: generateHunterioQuery(surveyData)
+    AI --> Worker: Hunter.io search params
+
+    loop Paginate until 150 leads
+      Worker -> Hunter: Lead Discovery API\n(100 per page)
+      Hunter --> Worker: List of companies
+
+      loop For each company
+        alt Not duplicate & emailsCount < 100
+          Worker -> Hunter: Domain Search API
+          Hunter --> Worker: Generic email
+          Worker -> Worker: Add to leads list
+
+          alt Lead count >= 150
+            Worker --> Worker: Break (target reached)
+          end
+        end
+      end
+    end
+
+    Worker -> DB: bulkCreateLeads()\n(leadSource: hunterio-discover)
+  end
+end
+
+Worker -> DB: Get final 150 lead IDs
+Worker -> Redis: Save checkpoint (phase: discovery)
+Worker -> SSE: Emit discovery complete
+SSE --> FE: Discovery phase done ✓
+
+== Phase 2: Customer Group Creation ==
+
+Worker -> SSE: Emit group start event
+SSE --> FE: Creating group...
+
+Worker -> Redis: Check checkpoint for existing groupId
+alt Group already exists
+  Worker -> DB: Verify group exists
+  Worker --> Worker: Reuse existing group
+else No existing group
+  Worker -> DB: createCustomerGroup()\n("Demo Lead Group")
+  Worker -> Redis: Save groupId to checkpoint
+  Worker -> DB: bulkAddLeadsToCustomerGroup()\n(150 leads)
+end
+
+Worker -> SSE: Emit group complete
+SSE --> FE: Group created ✓
+
+== Phase 3: Email Template Generation ==
+
+Worker -> SSE: Emit templates start (3 templates)
+SSE --> FE: Generating templates...
+
+Worker -> Redis: Check checkpoint for cached templates
+alt Templates cached
+  Worker --> Worker: Reuse cached templates
+else No cached templates
+  Worker -> DB: Get workspace info\n(companyName, description)
+
+  loop For each email type (3-touch)
+    note right
+      1. Introduction (Day 0)
+      2. Follow-up 1 (Day 1)
+      3. Follow-up 2 (Day 2)
+    end note
+
+    Worker -> AI: generateEmailTemplate()\n(workspaceName, industry, country)
+    AI --> Worker: { subject, bodyText, bodyHtml }
+    Worker -> Redis: Save template to checkpoint
+    Worker -> SSE: Emit template progress (1/3, 2/3, 3/3)
+    SSE --> FE: Template X of 3 generated
+  end
+end
+
+Worker -> SSE: Emit templates complete
+SSE --> FE: All templates ready ✓
+
+== Phase 4: Sequence Creation ==
+
+Worker -> SSE: Emit sequence start
+SSE --> FE: Creating sequence...
+
+Worker -> Redis: Check checkpoint for existing sequenceId
+alt Sequence already exists
+  Worker -> DB: Verify sequence exists
+  Worker -> DB: Get existing steps
+  Worker --> Worker: Reuse existing sequence
+else No existing sequence
+  Worker -> DB: createSequence()\n("Demo Email Sequence")
+  Worker -> Redis: Save sequenceId to checkpoint
+
+  loop For each template (3 steps)
+    Worker -> DB: createSequenceStep()\n(stepOrder, delayDays, content)
+  end
+end
+
+Worker -> SSE: Emit sequence complete
+SSE --> FE: Sequence ready ✓
+
+== Phase 5: Preview Email Generation ==
+
+Worker -> SSE: Emit previews start\n(150 leads × 3 steps = 450 emails)
+SSE --> FE: Generating previews...
+
+Worker -> DB: Check existing preview emails
+alt All previews exist
+  Worker --> Worker: Skip generation
+else Missing previews
+  Worker -> DB: Get user email
+  Worker -> DB: Get/create email account\n(apiKey: TRIAL_PREVIEW)
+  Worker -> DB: Fetch lead details + emails
+
+  loop For each lead (150)
+    loop For each step (3)
+      Worker -> Worker: Get lead's country
+      alt Translation needed
+        Worker -> AI: translateEmailTemplate()\n(to lead's language)
+        AI --> Worker: Translated content
+      end
+
+      Worker -> Worker: replaceVariables()\n({{company_name}}, {{contact_name}})
+      Worker -> Worker: Calculate scheduledAt\n(staggered by 1 min per lead)
+      Worker -> DB: Insert preview email\n(status: draft)
+
+      Worker -> SSE: Emit preview progress
+      SSE --> FE: Generated X/450 emails
+    end
+  end
+end
+
+Worker -> SSE: Emit previews complete (450 emails)
+SSE --> FE: All previews ready ✓
+
+== Phase 6: Complete Onboarding ==
+
+Worker -> DB: Get current onboarding progress
+Worker -> DB: completeStep1CompanyInfo()
+Worker -> DB: completeStep2LeadSearch()\n(150 leadIds, groupId)
+Worker -> DB: Update onboarding_progress\n(currentStep: 2, sequenceId)
+
+Worker -> Redis: Save checkpoint (phase: complete)
+Worker -> SSE: Emit complete event
+SSE --> FE: Onboarding complete! ✓
+
+FE -> User: Show success\n"150 leads found\n450 emails generated"
+
+== Error Handling ==
+
+alt Error occurs in any phase
+  Worker -> Redis: Save error to checkpoint
+  Worker -> SSE: Emit error event
+  SSE --> FE: Show error message
+  Worker -> Queue: Job failed (will retry)
+
+  Queue -> Worker: Retry job (exponential backoff)
+  Worker -> Redis: Load checkpoint
+  Worker --> Worker: Resume from last phase
+end
+
+@enduml

@@ -1,0 +1,1311 @@
+{
+  "metadata": {
+    "query": "Toy manufacturing companies in Japan",
+    "targetLeads": 150,
+    "executionTime": "193.89s",
+    "timestamp": "2025-12-23T07:29:13.813Z"
+  },
+  "statistics": {
+    "totalFound": 150,
+    "fromBigQuery": 34,
+    "fromHunterIO": 116,
+    "withEmails": 150,
+    "skippedDuplicates": 117,
+    "skippedLargeCompanies": 32
+  },
+  "progressLog": [
+    "[BIGQUERY] 0% - Searching BigQuery for leads",
+    "[BIGQUERY] 16% - Found 24/150 leads from BigQuery",
+    "[BIGQUERY] 38% - Found 57/150 leads from BigQuery",
+    "[BIGQUERY] 38% - Found 57/150 leads from BigQuery",
+    "[BIGQUERY] 38% - Found 57/150 leads from BigQuery",
+    "[BIGQUERY] 38% - Found 57/150 leads from BigQuery",
+    "[BIGQUERY] 38% - Found 57/150 leads from BigQuery",
+    "[ENRICHMENT] 0% - Enriching leads with contact information",
+    "[ENRICHMENT] 53% - Enriched 30/57 leads",
+    "[ENRICHMENT] 100% - Enriched 57/57 leads",
+    "[HUNTERIO] 23% - Searching Hunter.io for additional leads",
+    "[HUNTERIO] 23% - Found 35/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 24% - Found 36/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 25% - Found 37/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 25% - Found 38/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 26% - Found 39/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 27% - Found 40/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 27% - Found 41/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 28% - Found 42/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 29% - Found 43/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 29% - Found 44/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 30% - Found 45/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 31% - Found 46/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 31% - Found 47/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 32% - Found 48/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 33% - Found 49/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 33% - Found 50/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 34% - Found 51/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 35% - Found 52/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 35% - Found 53/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 36% - Found 54/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 37% - Found 55/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 37% - Found 56/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 38% - Found 57/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 39% - Found 58/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 39% - Found 59/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 40% - Found 60/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 41% - Found 61/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 41% - Found 62/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 42% - Found 63/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 43% - Found 64/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 43% - Found 65/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 44% - Found 66/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 45% - Found 67/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 45% - Found 68/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 46% - Found 69/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 47% - Found 70/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 47% - Found 71/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 48% - Found 72/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 49% - Found 73/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 49% - Found 74/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 50% - Found 75/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 51% - Found 76/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 51% - Found 77/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 52% - Found 78/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 53% - Found 79/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 53% - Found 80/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 54% - Found 81/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 55% - Found 82/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 55% - Found 83/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 56% - Found 84/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 57% - Found 85/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 57% - Found 86/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 58% - Found 87/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 59% - Found 88/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 59% - Found 89/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 60% - Found 90/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 61% - Found 91/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 61% - Found 92/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 62% - Found 93/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 63% - Found 94/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 63% - Found 95/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 64% - Found 96/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 65% - Found 97/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 65% - Found 98/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 66% - Found 99/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 67% - Found 100/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 67% - Found 101/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 68% - Found 102/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 69% - Found 103/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 69% - Found 104/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 70% - Found 105/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 71% - Found 106/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 71% - Found 107/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 72% - Found 108/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 73% - Found 109/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 73% - Found 110/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 74% - Found 111/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 75% - Found 112/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 75% - Found 113/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 76% - Found 114/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 77% - Found 115/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 77% - Found 116/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 78% - Found 117/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 79% - Found 118/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 79% - Found 119/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 80% - Found 120/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 81% - Found 121/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 81% - Found 122/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 82% - Found 123/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 83% - Found 124/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 83% - Found 125/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 84% - Found 126/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 85% - Found 127/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 85% - Found 128/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 86% - Found 129/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 87% - Found 130/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 87% - Found 131/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 88% - Found 132/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 89% - Found 133/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 89% - Found 134/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 90% - Found 135/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 91% - Found 136/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 91% - Found 137/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 92% - Found 138/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 93% - Found 139/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 93% - Found 140/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 94% - Found 141/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 95% - Found 142/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 95% - Found 143/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 96% - Found 144/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 97% - Found 145/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 97% - Found 146/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 98% - Found 147/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 99% - Found 148/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 99% - Found 149/150 leads (Hunter.io fallback)",
+    "[HUNTERIO] 100% - Found 150/150 leads (Hunter.io fallback)",
+    "[COMPLETE] 100% - Found 150 leads"
+  ],
+  "leads": [
+    {
+      "index": 1,
+      "companyName": "OWNDAYS CO LTD",
+      "websiteUrl": "http://www.owndays.com",
+      "primaryEmail": "inquirysg@owndays.com",
+      "businessType": "eyewear, retail, consumer goods, consumers",
+      "country": "Japan",
+      "employeeCount": "7",
+      "description": "OWNDAYS CO LTD는 안경, 선글라스 및 콘택트 렌즈를 판매하는 온라인 및 오프라인 소매점입니다. 다양한 스타일과 브랜드의 안경테를 제공하며, 렌즈 교체 서비스도 제공합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 2,
+      "companyName": "Locarise",
+      "websiteUrl": "http://www.locarise.com",
+      "primaryEmail": "sales@locarise.com",
+      "businessType": "shopper insights, indoor analytics, customer behaviour, wifi location analytics, location analytics, big data, retail analytics, instore experience analytics, big data analytics, retail technology, business intelligence, quantitative marketing, information technology & services, analytics, enterprise software, enterprises, computer software, marketing & advertising, e-commerce",
+      "country": "Japan",
+      "employeeCount": "10",
+      "description": "Locarise는 리테일, 쇼핑몰, 장소 등을 위한 방문자 중심 공간에 대한 물리적 공간 정보를 제공하는 엔터프라이즈 IoT 플랫폼입니다. 고정밀 센서를 기반으로 한 고급 인원 계수 솔루션, 맞춤형 게스트 Wi-Fi 서비스를 통한 마케팅 자동화 도구, Wi-Fi 장치 위치 추적 시스템을 통해 방문자 행동 분석을 제공합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 3,
+      "companyName": "CCC Ltd.",
+      "websiteUrl": "http://www.ccc.co.jp",
+      "primaryEmail": "oil_gallery@ccc.co.jp",
+      "businessType": "marketing, advertising, entertainment, consulting, marketing & advertising, lifestyle, retail",
+      "country": "Japan",
+      "employeeCount": "103",
+      "description": "CCC カルチュア・コンビニエンス・クラブ株式会社는 일본의 회사입니다. 웹사이트는 로딩 중이며 많은 이미지가 표시되지만 회사에 대한 구체적인 정보는 제공하지 않습니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 4,
+      "companyName": "KONICA MINOLTA, INC.",
+      "websiteUrl": "http://www.konicaminolta.com",
+      "primaryEmail": "info_kmj_seminar@konicaminolta.com",
+      "businessType": "electrical/electronic manufacturing, consumer electronics, retail, manufacturing, consumers, hardware",
+      "country": "Japan",
+      "employeeCount": "368",
+      "description": "Konica Minolta U.S.A.는 디지털 혁신을 통해 고객을 지원하는 기술 회사입니다. 그들은 사무실 인쇄, 워크플로우 관리, 헬스케어 솔루션, 그리고 색상 및 빛 측정 기술을 포함한 다양한 제품과 서비스를 제공합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 5,
+      "companyName": "K9 Natural Japan",
+      "websiteUrl": "http://www.k9natural.jp",
+      "primaryEmail": "info@k9natural.jp",
+      "businessType": "natural raw lamb dog treats, natural raw lamb dog food, natural raw lamb chicken cat food, natural raw venison dog food, natural raw beef dog food, natural raw lamb amp chicken cat food, retail",
+      "country": "Japan",
+      "employeeCount": "1",
+      "description": "K9 Natural Japan은 반려동물, 특히 강아지와 고양이를 위한 동결 건조 사료 및 용품을 판매하는 회사입니다. 그들의 사료는 육류 함량이 높고 곡물, 감자, 콩류를 포함하지 않아 반려동물의 건강에 도움을 줍니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 6,
+      "companyName": "JahanaKippanTen",
+      "websiteUrl": "http://www.jahanakippan.com",
+      "primaryEmail": "orders@jahanakippan.com",
+      "businessType": "japanese sweets, okinawa, retailer, food manufacture, food & beverages, consumer goods, consumers",
+      "country": "Japan",
+      "employeeCount": "1",
+      "description": "謝花きっぱん店(Jahana Kippan-ten)은 전통 과자인 Kippan과 동과절임을 판매하는 회사입니다. 오랜 역사를 가지고 있으며, 전통의 맛을 계승하고 있습니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 7,
+      "companyName": "panfam.com",
+      "websiteUrl": "http://www.panfam.com",
+      "primaryEmail": "info-j@panfam.com",
+      "businessType": "retail",
+      "country": "Japan",
+      "employeeCount": "1",
+      "description": "panfam.com (パンダファミリー) is an online retailer offering \"better goods, better life.\" They operate multiple online stores, including Amazon, auPAY Market, Qoo10, and Yahoo! Shopping, suggesting a wide range of products.  They also run information aggregation and trend analysis sites related to online shopping.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 8,
+      "companyName": "OTARITEC Corporation",
+      "websiteUrl": "http://www.otaritec.co.jp",
+      "primaryEmail": "video-support@otaritec.co.jp",
+      "businessType": "retail",
+      "country": "Japan",
+      "employeeCount": "2",
+      "description": "오타리텍 주식회사는 음성, 영상 및 네트워크 장비를 수입 및 판매하는 회사입니다.  방송, 라이브 사운드, 레코딩 스튜디오 등 프로페셔널 용도의 장비를 취급하며, 다양한 유명 브랜드 제품을 제공합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 9,
+      "companyName": "Travelex Japan KK",
+      "websiteUrl": "http://www.travelex.co.jp",
+      "primaryEmail": "customerservice@travelex.co.jp",
+      "businessType": "retail",
+      "country": "Japan",
+      "employeeCount": "3",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 10,
+      "companyName": "VF Japan Limited",
+      "websiteUrl": "http://www.timberland.co.jp",
+      "primaryEmail": "contact@timberland.co.jp",
+      "businessType": "retail",
+      "country": "Japan",
+      "employeeCount": "5",
+      "description": "VF Japan Limited는 Timberland 브랜드의 일본 공식 온라인 스토어를 운영하며, 의류, 신발, 액세서리 등 다양한 Timberland 제품을 판매합니다. 고객에게 온라인 쇼핑 경험을 제공하며, 회원 가입 및 특별 프로모션을 통해 고객 만족도를 높이는 데 주력합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 11,
+      "companyName": "Isetan Mitsukoshi Holdings",
+      "websiteUrl": "http://www.imhds.co.jp",
+      "primaryEmail": "info@imhds.co.jp",
+      "businessType": "retail, marketing",
+      "country": "Japan",
+      "employeeCount": "8",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 12,
+      "companyName": "Matsuya Co., Ltd.",
+      "websiteUrl": "http://www.matsuya.com",
+      "primaryEmail": "arbeit@matsuya.com",
+      "businessType": "retail",
+      "country": "Japan",
+      "employeeCount": "9",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 13,
+      "companyName": "MODA + TECNICA",
+      "websiteUrl": "http://www.moda-tecnica.com",
+      "primaryEmail": "tokyo@moda-tecnica.com",
+      "businessType": "fashion amp retail recruitment, mentoring & professional development, career management, fashion retail recruitment, recruitment coaching, human resources",
+      "country": "Japan",
+      "employeeCount": "16",
+      "description": "MODA + TECNICA는 패션, 소매, 고급 및 브랜드 소비재 산업에 특화된 채용 대행사입니다. 그들은 중간 관리직부터 고위 임원 및 이사에 이르기까지 다양한 직책을 다루며, 영업, 마케팅, 구매, 상품 기획, 소매 관리, 재무 및 인사 등의 분야를 전문으로 합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 14,
+      "companyName": "Costco Wholesale Japan",
+      "websiteUrl": "http://www.costco.co.jp",
+      "primaryEmail": "info@costco.co.jp",
+      "businessType": "wholesale retail, wholesale",
+      "country": "Japan",
+      "employeeCount": "72",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 15,
+      "companyName": "Mori Building Co., Ltd.",
+      "websiteUrl": "http://www.mori.co.jp",
+      "primaryEmail": "thwebmaster@mori.co.jp",
+      "businessType": "urban redevelopment, office leasing, luxury residential leasing, luxury residential sales, retail leasing, building & town management, culture, education art, hotels & conferences, resorts & wellness, overseas business, nonasset business, real estate",
+      "country": "Japan",
+      "employeeCount": "112",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 16,
+      "companyName": "Accent Corporation (Accent株式会社)",
+      "websiteUrl": "http://www.accent-corp.com",
+      "primaryEmail": "info@accent-corp.com",
+      "businessType": "computer engineeringit, lawcontracts, financeadministrationeconomics, tourismadvertisingentertainment, translationinterpretinglocalization services, medical care pharmaceuticals, manufacturinghightechchemical technologies, manualscatalogues, patents, translation & localization",
+      "country": "Japan",
+      "employeeCount": "1",
+      "description": "Accent株式会社는 번역, 통역 및 현지화 서비스를 전문으로 제공하는 회사입니다. 고객의 요구에 맞춰 최적의 번역 프로세스를 제안하며, 다양한 분야와 언어에 대한 서비스를 제공합니다.",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 17,
+      "companyName": "DOKE Co.,Ltd",
+      "websiteUrl": "http://www.do-ke.jp",
+      "primaryEmail": "info@do-ke.jp",
+      "businessType": "that you begin to create products for btoc, entertainment",
+      "country": "Japan",
+      "employeeCount": "1",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 18,
+      "companyName": "Tokyo FM Broadcasting Co., LTD.",
+      "websiteUrl": "http://www.tfm.co.jp",
+      "primaryEmail": "world@tfm.co.jp",
+      "businessType": "entertainment",
+      "country": "Japan",
+      "employeeCount": "2",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 19,
+      "companyName": "Film Preservation Society",
+      "websiteUrl": "http://www.filmpres.org",
+      "primaryEmail": "info@filmpres.org",
+      "businessType": "motion pictures & film, entertainment",
+      "country": "Japan",
+      "employeeCount": "2",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 20,
+      "companyName": "Live Viewing Japan, Inc.",
+      "websiteUrl": "http://www.liveviewing.jp",
+      "primaryEmail": "lvj-overseas@liveviewing.jp",
+      "businessType": "entertainment",
+      "country": "Japan",
+      "employeeCount": "2",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 21,
+      "companyName": "CREATIVEMAN PRODUCTIONS CO., LTD.",
+      "websiteUrl": "http://www.creativeman.co.jp",
+      "primaryEmail": "info@creativeman.co.jp",
+      "businessType": "entertainment",
+      "country": "Japan",
+      "employeeCount": "2",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 22,
+      "companyName": "DRAWIZ",
+      "websiteUrl": "http://www.drawiz.co.jp",
+      "primaryEmail": "info@drawiz.co.jp",
+      "businessType": "motion pictures & film, entertainment",
+      "country": "Japan",
+      "employeeCount": "3",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 23,
+      "companyName": "Asmik Ace Entertainment Inc.",
+      "websiteUrl": "http://www.asmik-ace.co.jp",
+      "primaryEmail": "intl@asmik-ace.co.jp",
+      "businessType": "motion pictures & film, photography, entertainment",
+      "country": "Japan",
+      "employeeCount": "3",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 24,
+      "companyName": "Cinema Africa in Tokyo",
+      "websiteUrl": "http://www.cinemaafrica.com",
+      "primaryEmail": "info@cinemaafrica.com",
+      "businessType": "motion pictures & film, entertainment",
+      "country": "Japan",
+      "employeeCount": "3",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 25,
+      "companyName": "Warner Entertainment Japan, Inc.",
+      "websiteUrl": "http://www.warnerbros.co.jp",
+      "primaryEmail": "customerservice@warnerbros.co.jp",
+      "businessType": "entertainment",
+      "country": "Japan",
+      "employeeCount": "4",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 26,
+      "companyName": "KADOKAWA Contents Gate Co.,Ltd",
+      "websiteUrl": "http://www.kadokawa-cgate.co.jp",
+      "primaryEmail": "snap@kadokawa-cgate.co.jp",
+      "businessType": "entertainment",
+      "country": "Japan",
+      "employeeCount": "5",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 27,
+      "companyName": "Toei Animation Co., Ltd.",
+      "websiteUrl": "http://www.toei-anim.co.jp",
+      "primaryEmail": "marketing-taeu@toei-anim.co.jp",
+      "businessType": "animation production, character rights management, licensing, entertainment",
+      "country": "Japan",
+      "employeeCount": "34",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 28,
+      "companyName": "株式会社オルトプラス( AltPlus Inc. )",
+      "websiteUrl": "http://www.altplus.co.jp",
+      "primaryEmail": "pr@altplus.co.jp",
+      "businessType": "entertainment, online games",
+      "country": "Japan",
+      "employeeCount": "43",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 29,
+      "companyName": "travelience",
+      "websiteUrl": "http://www.travelience.com",
+      "primaryEmail": "contact@travelience.com",
+      "businessType": "free & paid guide tours in tokyo japan, madetoorder tours in tokyo, consulting & business support for tourism operators, social media support for tourism operators, entertainment, tourism, guides, travel",
+      "country": "Japan",
+      "employeeCount": "1",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 30,
+      "companyName": "exsa inc.",
+      "websiteUrl": "http://www.exsa.jp",
+      "primaryEmail": "info@exsa.jp",
+      "businessType": "coming soon, entertainment",
+      "country": "Japan",
+      "employeeCount": "1",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 31,
+      "companyName": "Ticketstreet",
+      "websiteUrl": "http://www.ticket.st",
+      "primaryEmail": "info2@ticket.st",
+      "businessType": "e-commerce, marketplaces, entertainment industry, ticketing, internet, auctions, consumer internet, consumers, information technology & services",
+      "country": "Japan",
+      "employeeCount": "1",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 32,
+      "companyName": "Dentsu Creative X",
+      "websiteUrl": "http://www.dentsu-crx.co.jp",
+      "primaryEmail": "info@dentsu-crx.co.jp",
+      "businessType": "web amp interactive, print, web interactive, film production, tvc production, media production, motion pictures & film, entertainment",
+      "country": "Japan",
+      "employeeCount": "11",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 33,
+      "companyName": "CROOZ,Inc.",
+      "websiteUrl": "http://www.crooz.co.jp",
+      "primaryEmail": "crooz_pr@crooz.co.jp",
+      "businessType": "crooz, inc is an entertainment corporation which supplies internet contents such as blogging & sns as well as games & shopping services, information technology & services, information services, e-commerce",
+      "country": "Japan",
+      "employeeCount": "29",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 34,
+      "companyName": "SHUSAKU·YAMAMOTO",
+      "websiteUrl": "http://www.shupat.gr.jp",
+      "primaryEmail": "resumes@shupat.gr.jp",
+      "businessType": "intellectual property, regulatory healthcare, food consumer, anticounterfeiting, technology, media telecoms, antimonopoly antitrust, corporate commercial, corporate governance compliance, dispute resolution litigation, employment, privacy & data protection, trade telecommunications, franchising international corporate transactions, venture capital, media, entertainment, sports, merchandising advertising, law practice, legal services",
+      "country": "Japan",
+      "employeeCount": "32",
+      "leadSource": "bigquery-auto"
+    },
+    {
+      "index": 35,
+      "companyName": "Asahi Kasei",
+      "websiteUrl": "https://asahi-kasei.eu",
+      "primaryEmail": "info@asahi-kasei.eu",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 36,
+      "companyName": "Toyota Saudi Arabia",
+      "websiteUrl": "https://toyota.com.sa",
+      "primaryEmail": "epartssupport@toyota.com.sa",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 37,
+      "companyName": "タカラトミー",
+      "websiteUrl": "https://takaratomy.co.jp",
+      "primaryEmail": "ttpr@takaratomy.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 38,
+      "companyName": "Suntory Holdings Limited",
+      "websiteUrl": "https://suntory.co.jp",
+      "primaryEmail": "info@suntory.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 39,
+      "companyName": "Panasonic",
+      "websiteUrl": "https://panasonic.jp",
+      "primaryEmail": "end@panasonic.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 40,
+      "companyName": "Toyota Canada",
+      "websiteUrl": "https://toyota.ca",
+      "primaryEmail": "toyota_feedback@toyota.ca",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 41,
+      "companyName": "アサヒビール ASAHIBEER",
+      "websiteUrl": "https://asahibeer.co.jp",
+      "primaryEmail": "studyab@asahibeer.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 42,
+      "companyName": "NISSAN MOTOR",
+      "websiteUrl": "https://nissan.co.jp",
+      "primaryEmail": "campaign@nissan.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 43,
+      "companyName": "Toyota Global",
+      "websiteUrl": "https://toyota.co.jp",
+      "primaryEmail": "info@toyota.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 44,
+      "companyName": "Otsuka Pharmaceutical Co., Ltd.",
+      "websiteUrl": "https://otsuka.co.jp",
+      "primaryEmail": "jidc@otsuka.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 45,
+      "companyName": "Kenwood",
+      "websiteUrl": "https://kenwood.com",
+      "primaryEmail": "info@kenwood.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 46,
+      "companyName": "Toyota Deutschland",
+      "websiteUrl": "https://toyota.de",
+      "primaryEmail": "geschaeftskundenservice@toyota.de",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 47,
+      "companyName": "Toyota",
+      "websiteUrl": "https://toyota.fr",
+      "primaryEmail": "relation.clients@toyota.fr",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 48,
+      "companyName": "Kosé",
+      "websiteUrl": "https://kose.co.jp",
+      "primaryEmail": "clean-brand_pr@kose.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 49,
+      "companyName": "Noritz",
+      "websiteUrl": "https://noritz.co.jp",
+      "primaryEmail": "ofurokirei_pj@noritz.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 50,
+      "companyName": "LOTTE SHOJI K.K.",
+      "websiteUrl": "https://lotte.co.jp",
+      "primaryEmail": "medipalette_support@lotte.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 51,
+      "companyName": "Toyota Việt Nam",
+      "websiteUrl": "https://toyota.com.vn",
+      "primaryEmail": "info@toyota.com.vn",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 52,
+      "companyName": "Bandai Co.",
+      "websiteUrl": "https://bandai.co.jp",
+      "primaryEmail": "contact@bandai.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 53,
+      "companyName": "Honda",
+      "websiteUrl": "https://honda.co.uk",
+      "primaryEmail": "noreply@honda.co.uk",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 54,
+      "companyName": "Kracie",
+      "websiteUrl": "https://kracie.co.jp",
+      "primaryEmail": "muchudent@kracie.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 55,
+      "companyName": "Pronexus",
+      "websiteUrl": "https://pronexus.co.jp",
+      "primaryEmail": "kenshu-info@pronexus.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 56,
+      "companyName": "クリナップ新宿ショールーム",
+      "websiteUrl": "https://cleanup.jp",
+      "primaryEmail": "grp.hiroma@cleanup.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 57,
+      "companyName": "（株）丸山機械製作所",
+      "websiteUrl": "https://maruyamakikai.co.jp",
+      "primaryEmail": "info@maruyamakikai.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 58,
+      "companyName": "Yakult Honsha Co.",
+      "websiteUrl": "https://yakult.co.jp",
+      "primaryEmail": "mailbox-iyakuosaka@yakult.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 59,
+      "companyName": "Citizen Watch Co.",
+      "websiteUrl": "https://citizen.co.jp",
+      "primaryEmail": "miyota-newsletter_subscribe@citizen.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 60,
+      "companyName": "Panasonic",
+      "websiteUrl": "https://panasonic.ru",
+      "primaryEmail": "info@panasonic.ru",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 61,
+      "companyName": "Morinaga Milk Industry",
+      "websiteUrl": "https://morinagamilk.co.jp",
+      "primaryEmail": "interntl@morinagamilk.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 62,
+      "companyName": "Lion Corporationライオン株式会社",
+      "websiteUrl": "https://lion.co.jp",
+      "primaryEmail": "sale@lion.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 63,
+      "companyName": "伊藤園 企業情報サイト",
+      "websiteUrl": "https://itoen.co.jp",
+      "primaryEmail": "itoenpr@itoen.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 64,
+      "companyName": "Olympus Corporation",
+      "websiteUrl": "https://olympus-global.com",
+      "primaryEmail": "info@olympus-global.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 65,
+      "companyName": "Toyota Australia",
+      "websiteUrl": "https://toyota.com.au",
+      "primaryEmail": "customerassistance@toyota.com.au",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 66,
+      "companyName": "Nippon Steel Corporation",
+      "websiteUrl": "https://nipponsteel.com",
+      "primaryEmail": "contact@nipponsteel.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 67,
+      "companyName": "Nikon",
+      "websiteUrl": "https://nikon.co.jp",
+      "primaryEmail": "nikon.salon@nikon.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 68,
+      "companyName": "（株）オンワード樫山",
+      "websiteUrl": "https://onward.co.jp",
+      "primaryEmail": "nhn-kouhou@onward.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 69,
+      "companyName": "Coca-Cola Japan",
+      "websiteUrl": "https://cocacola.co.jp",
+      "primaryEmail": "cokeon@cocacola.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 70,
+      "companyName": "ROHTO Pharmaceutical Co., Ltd.",
+      "websiteUrl": "https://rohto.co.jp",
+      "primaryEmail": "rohtosalon.shop@rohto.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 71,
+      "companyName": "Fujitsu General Limited",
+      "websiteUrl": "https://fujitsu-general.com",
+      "primaryEmail": "invitation-airstagecloud@fujitsu-general.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 72,
+      "companyName": "富士電機（株）",
+      "websiteUrl": "https://fujielectric.co.jp",
+      "primaryEmail": "info@fujielectric.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 73,
+      "companyName": "アイリスオーヤマ株式会社【公式】",
+      "websiteUrl": "https://irisohyama.co.jp",
+      "primaryEmail": "kurashi_info@irisohyama.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 74,
+      "companyName": "IHI Aerospace",
+      "websiteUrl": "https://ihi.co.jp",
+      "primaryEmail": "info@ihi.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 75,
+      "companyName": "リンナイ（株）",
+      "websiteUrl": "https://rinnai.co.jp",
+      "primaryEmail": "matsuyama-support@rinnai.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 76,
+      "companyName": "株式会社SUBARU",
+      "websiteUrl": "https://subaru.co.jp",
+      "primaryEmail": "info@subaru.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 77,
+      "companyName": "JVCKENWOOD",
+      "websiteUrl": "https://jvckenwood.com",
+      "primaryEmail": "dx_nbdd@jvckenwood.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 78,
+      "companyName": "Kobayashi Pharmaceutical Co., Ltd.",
+      "websiteUrl": "https://kobayashi.co.jp",
+      "primaryEmail": "kobayashicollect_jp@kobayashi.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 79,
+      "companyName": "第一三共ヘルスケア（株）",
+      "websiteUrl": "https://daiichisankyo-hc.co.jp",
+      "primaryEmail": "cc-pr@daiichisankyo-hc.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 80,
+      "companyName": "Toyota Motor Russia",
+      "websiteUrl": "https://toyota.ru",
+      "primaryEmail": "info@toyota.ru",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 81,
+      "companyName": "Kawasaki Heavy Industries",
+      "websiteUrl": "https://khi.co.jp",
+      "primaryEmail": "kawasaki-press@khi.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 82,
+      "companyName": "Zoom",
+      "websiteUrl": "https://zoom.co.jp",
+      "primaryEmail": "info@zoom.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 83,
+      "companyName": "Paloma/パロマ",
+      "websiteUrl": "https://paloma.co.jp",
+      "primaryEmail": "cscall@paloma.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 84,
+      "companyName": "日野自動車株式会社",
+      "websiteUrl": "https://hino.co.jp",
+      "primaryEmail": "mobi-support@hino.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 85,
+      "companyName": "Kawasaki Motors Corporation Japan",
+      "websiteUrl": "https://kawasaki-motors.com",
+      "primaryEmail": "info@kawasaki-motors.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 86,
+      "companyName": "DHC",
+      "websiteUrl": "https://dhc.co.jp",
+      "primaryEmail": "info-rakuten@dhc.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 87,
+      "companyName": "Nestlé",
+      "websiteUrl": "https://nestle.co.jp",
+      "primaryEmail": "webmaster.kitkat@nestle.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 88,
+      "companyName": "バルミューダ(BALMUDA)",
+      "websiteUrl": "https://balmuda.com",
+      "primaryEmail": "customer_service_eu@balmuda.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 89,
+      "companyName": "RISO",
+      "websiteUrl": "https://riso.co.jp",
+      "primaryEmail": "ukima-factory@riso.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 90,
+      "companyName": "クロダルマ（株）",
+      "websiteUrl": "https://fuchu.or.jp",
+      "primaryEmail": "take@fuchu.or.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 91,
+      "companyName": "Yonex",
+      "websiteUrl": "https://yonex.co.jp",
+      "primaryEmail": "office@yonex.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 92,
+      "companyName": "MTG",
+      "websiteUrl": "https://mtg.gr.jp",
+      "primaryEmail": "career@mtg.gr.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 93,
+      "companyName": "オカムラ",
+      "websiteUrl": "https://okamura.co.jp",
+      "primaryEmail": "info_visplay@okamura.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 94,
+      "companyName": "Toyota Ventures",
+      "websiteUrl": "https://toyota.ventures",
+      "primaryEmail": "info@toyota.ventures",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 95,
+      "companyName": "TAIHO PHARMACEUTICAL CO",
+      "websiteUrl": "https://taiho.co.jp",
+      "primaryEmail": "th-102@taiho.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 96,
+      "companyName": "Panasonic",
+      "websiteUrl": "https://panasonic.de",
+      "primaryEmail": "info@panasonic.de",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 97,
+      "companyName": "地図と旅行ガイドブックの昭文社グループ",
+      "websiteUrl": "https://mapple.co.jp",
+      "primaryEmail": "koho-info.shobunsha@mapple.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 98,
+      "companyName": "グローブライド（株）",
+      "websiteUrl": "https://globeride.co.jp",
+      "primaryEmail": "clubonoff_shop@globeride.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 99,
+      "companyName": "Panasonic",
+      "websiteUrl": "https://panasonic.co.uk",
+      "primaryEmail": "customer.care@panasonic.co.uk",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 100,
+      "companyName": "アイシン精機（株）",
+      "websiteUrl": "https://aisin.co.jp",
+      "primaryEmail": "mit.support@aisin.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 101,
+      "companyName": "Megmilk Snow Brand",
+      "websiteUrl": "https://meg-snow.com",
+      "primaryEmail": "shokuiku-kyushu@meg-snow.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 102,
+      "companyName": "Yamazaki Baking",
+      "websiteUrl": "https://yamazakipan.co.jp",
+      "primaryEmail": "liyondailystore@yamazakipan.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 103,
+      "companyName": "塩野義製薬（株）",
+      "websiteUrl": "https://shionogi.co.jp",
+      "primaryEmail": "osaka-saiyo@shionogi.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 104,
+      "companyName": "日本ハム（株）",
+      "websiteUrl": "https://nipponham.co.jp",
+      "primaryEmail": "vet-kit@nipponham.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 105,
+      "companyName": "KEYENCE",
+      "websiteUrl": "https://keyence.de",
+      "primaryEmail": "info@keyence.de",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 106,
+      "companyName": "住友ゴム工業（株）",
+      "websiteUrl": "https://srigroup.co.jp",
+      "primaryEmail": "personal-data-support@srigroup.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 107,
+      "companyName": "Toyota España",
+      "websiteUrl": "https://toyota.es",
+      "primaryEmail": "corporate@toyota.es",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 108,
+      "companyName": "三菱ケミカル（株）",
+      "websiteUrl": "https://m-chemical.co.jp",
+      "primaryEmail": "mcc-sys-cleansui@m-chemical.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 109,
+      "companyName": "ALINCO - アルインコ",
+      "websiteUrl": "https://alinco.co.jp",
+      "primaryEmail": "k-sapporo@alinco.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 110,
+      "companyName": "（株）ジユン",
+      "websiteUrl": "https://jun.co.jp",
+      "primaryEmail": "recruit@jun.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 111,
+      "companyName": "武田薬品工業（株）",
+      "websiteUrl": "https://takeda.co.jp",
+      "primaryEmail": "takeda_rec@takeda.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 112,
+      "companyName": "Saishunkan Co.,Ltd.",
+      "websiteUrl": "https://saishunkan.co.jp",
+      "primaryEmail": "inquiry_th@saishunkan.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 113,
+      "companyName": "参天製薬（株）",
+      "websiteUrl": "https://santen.co.jp",
+      "primaryEmail": "ir@santen.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 114,
+      "companyName": "アイカ工業株式会社",
+      "websiteUrl": "https://aica.co.jp",
+      "primaryEmail": "webmaster@aica.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 115,
+      "companyName": "Kaneka",
+      "websiteUrl": "https://kaneka.co.jp",
+      "primaryEmail": "info_pro@kaneka.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 116,
+      "companyName": "Honda",
+      "websiteUrl": "https://honda.ca",
+      "primaryEmail": "noreply@honda.ca",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 117,
+      "companyName": "（株）ウッドワン",
+      "websiteUrl": "https://woodone.co.jp",
+      "primaryEmail": "info-contest@woodone.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 118,
+      "companyName": "ニチバン（株）",
+      "websiteUrl": "https://nichiban.co.jp",
+      "primaryEmail": "bw-seminar@nichiban.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 119,
+      "companyName": "Toyota NL",
+      "websiteUrl": "https://toyota.nl",
+      "primaryEmail": "info@toyota.nl",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 120,
+      "companyName": "ARKRAY, Inc.",
+      "websiteUrl": "https://arkray.co.jp",
+      "primaryEmail": "arkray_pr@arkray.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 121,
+      "companyName": "帝人（株）",
+      "websiteUrl": "https://teijin.co.jp",
+      "primaryEmail": "pr@teijin.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 122,
+      "companyName": "トーソー（株）",
+      "websiteUrl": "https://toso.co.jp",
+      "primaryEmail": "info@toso.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 123,
+      "companyName": "L&I",
+      "websiteUrl": "https://kyodoprinting.co.jp",
+      "primaryEmail": "goods_support_kpjm@kyodoprinting.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 124,
+      "companyName": "Nisshin Seifun Group",
+      "websiteUrl": "https://nisshin.com",
+      "primaryEmail": "biennale_nbc@nisshin.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 125,
+      "companyName": "Sumitomo Pharma Co., Ltd.",
+      "websiteUrl": "https://sumitomo-pharma.co.jp",
+      "primaryEmail": "recruit@sumitomo-pharma.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 126,
+      "companyName": "JVC",
+      "websiteUrl": "https://jvc.com",
+      "primaryEmail": "webmaster@jvc.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 127,
+      "companyName": "JFE Steel America",
+      "websiteUrl": "https://jfe-steel.co.jp",
+      "primaryEmail": "a-ueto@jfe-steel.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 128,
+      "companyName": "東リ（株）",
+      "websiteUrl": "https://toli.co.jp",
+      "primaryEmail": "toli_contact@toli.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 129,
+      "companyName": "Azbil",
+      "websiteUrl": "https://azbil.com",
+      "primaryEmail": "rcdinfo@azbil.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 130,
+      "companyName": "Kyowa Hakko Kirin Co",
+      "websiteUrl": "https://kyowa-kirin.co.jp",
+      "primaryEmail": "media@kyowa-kirin.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 131,
+      "companyName": "Nihon Kohden",
+      "websiteUrl": "https://nihonkohden.com",
+      "primaryEmail": "hremployeeservices@nihonkohden.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 132,
+      "companyName": "Pドラムだ!金ドン 花火外伝99ver",
+      "websiteUrl": "https://universal-777.com",
+      "primaryEmail": "private@universal-777.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 133,
+      "companyName": "AMERICAN DENKI CO",
+      "websiteUrl": "https://americandenki.co.jp",
+      "primaryEmail": "customer@americandenki.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 134,
+      "companyName": "Resonac",
+      "websiteUrl": "https://resonac.com",
+      "primaryEmail": "reap_admi@resonac.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 135,
+      "companyName": "Mitsubishi Chemical Group Corporation",
+      "websiteUrl": "https://mitsubishichem-hd.co.jp",
+      "primaryEmail": "mchc-ho-pr@mitsubishichem-hd.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 136,
+      "companyName": "Denki Kagaku Kogyo",
+      "websiteUrl": "https://denka.co.jp",
+      "primaryEmail": "corporate-info@denka.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 137,
+      "companyName": "Torii Pharmaceutical",
+      "websiteUrl": "https://torii.co.jp",
+      "primaryEmail": "webmaster@torii.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 138,
+      "companyName": "Chacott -チャコット-",
+      "websiteUrl": "https://chacott-jp.com",
+      "primaryEmail": "culture@chacott-jp.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 139,
+      "companyName": "Toraya Confectionery Co.",
+      "websiteUrl": "https://toraya-group.co.jp",
+      "primaryEmail": "kogen-websaiyo@toraya-group.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 140,
+      "companyName": "Snow Peak Japan",
+      "websiteUrl": "https://snowpeak.co.jp",
+      "primaryEmail": "userservice@snowpeak.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 141,
+      "companyName": "株式会社オリジナルマインド",
+      "websiteUrl": "https://originalmind.co.jp",
+      "primaryEmail": "rec@originalmind.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 142,
+      "companyName": "ライスフォース",
+      "websiteUrl": "https://riceforce.com",
+      "primaryEmail": "world@riceforce.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 143,
+      "companyName": "Uni／三菱鉛筆",
+      "websiteUrl": "https://mpuni.co.jp",
+      "primaryEmail": "uniball@mpuni.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 144,
+      "companyName": "Otsuka Holdings Co., Ltd.",
+      "websiteUrl": "https://otsuka.com",
+      "primaryEmail": "info@otsuka.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 145,
+      "companyName": "佐藤製薬株式会社【公式】",
+      "websiteUrl": "https://sato-seiyaku.co.jp",
+      "primaryEmail": "recruit310@sato-seiyaku.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 146,
+      "companyName": "Kuraray",
+      "websiteUrl": "https://kuraray.co.jp",
+      "primaryEmail": "info_india@kuraray.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 147,
+      "companyName": "(株)ブロッコリー",
+      "websiteUrl": "https://broccoli.co.jp",
+      "primaryEmail": "support@broccoli.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 148,
+      "companyName": "蛇の目ミシン工業（株）",
+      "websiteUrl": "https://janome.co.jp",
+      "primaryEmail": "no-reply@janome.co.jp",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 149,
+      "companyName": "Asahi Kasei Microdevices (AKM)",
+      "websiteUrl": "https://akm.com",
+      "primaryEmail": "icinfo@akm.com",
+      "leadSource": "hunterio-discover"
+    },
+    {
+      "index": 150,
+      "companyName": "Toyota do Brasil",
+      "websiteUrl": "https://toyota.com.br",
+      "primaryEmail": "dreamcarartcontest@toyota.com.br",
+      "leadSource": "hunterio-discover"
+    }
+  ]
+}

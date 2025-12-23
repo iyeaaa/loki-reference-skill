@@ -147,13 +147,23 @@ export const HunterioDomainSearchResponseSchema = z.object({
 export type HunterioDomainSearchResponse = z.infer<typeof HunterioDomainSearchResponseSchema>
 
 /**
- * Simplified result type - returns single generic email
+ * Simplified result type - returns single generic email plus rich company data
  */
 export interface HunterioDomainSearchResult {
   domain: string
   organization: string | null
   genericEmail: string | null
   pattern: string | null
+  description?: string | null
+  industry?: string | null
+  country?: string | null
+  headcount?: string | null
+  companyType?: string | null
+  emails?: Array<{
+    value: string
+    type: "personal" | "generic"
+    confidence: number
+  }>
 }
 
 // ==================== CACHE INITIALIZATION ====================
@@ -220,6 +230,120 @@ function generateCacheKey(params: HunterioDomainSearchParams): string {
   return `hunter_domain:${hash}`
 }
 
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Check if an email is invalid (noreply, abuse, postmaster, etc.)
+ */
+function isInvalidEmail(email: string | null | undefined): boolean {
+  if (!email) return true
+  const emailLower = email.toLowerCase()
+
+  const invalidPrefixes = [
+    "noreply",
+    "no-reply",
+    "donotreply",
+    "do-not-reply",
+    "postmaster",
+    "abuse",
+    "webmaster",
+    "mailer-daemon",
+    "bounce",
+  ]
+
+  return invalidPrefixes.some((prefix) => emailLower.startsWith(`${prefix}@`))
+}
+
+/**
+ * Fetch domain emails with custom limit and offset
+ */
+async function fetchDomainEmails(
+  validatedParams: HunterioDomainSearchParams,
+  limit: number,
+  offset: number = 0,
+): Promise<HunterioDomainSearchResponse["data"] | null> {
+  const response = await executeWithDualRateLimit(() =>
+    pRetry(
+      async () => {
+        const url = new URL("https://api.hunter.io/v2/domain-search")
+        url.searchParams.set("api_key", config.hunter.apiKey)
+
+        // Add search parameters
+        if (validatedParams.domain) {
+          url.searchParams.set("domain", validatedParams.domain)
+        }
+        if (validatedParams.company) {
+          url.searchParams.set("company", validatedParams.company)
+        }
+
+        // Force type to generic to only get generic emails
+        url.searchParams.set("type", "generic")
+        url.searchParams.set("limit", limit.toString())
+        if (offset > 0) {
+          url.searchParams.set("offset", offset.toString())
+        }
+
+        // Add optional filters
+        if (validatedParams.seniority) {
+          url.searchParams.set("seniority", validatedParams.seniority)
+        }
+        if (validatedParams.department) {
+          url.searchParams.set("department", validatedParams.department)
+        }
+        if (validatedParams.required_field) {
+          url.searchParams.set("required_field", validatedParams.required_field)
+        }
+        if (validatedParams.verification_status) {
+          url.searchParams.set("verification_status", validatedParams.verification_status)
+        }
+        if (validatedParams.job_titles) {
+          url.searchParams.set("job_titles", validatedParams.job_titles)
+        }
+
+        const res = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        })
+
+        if (!res.ok) {
+          const errorText = await res.text()
+          // Don't retry on 4xx errors (except 429)
+          if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+            throw new AbortError(`Hunter.io API error (${res.status}): ${errorText}`)
+          }
+          throw new Error(`Hunter.io API error (${res.status}): ${errorText}`)
+        }
+
+        return res.json()
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10000,
+        onFailedAttempt: (error) => {
+          console.log(
+            `[Hunter.io Domain] Retry attempt ${error.attemptNumber} failed. ${error.retriesLeft} retries left.`,
+          )
+        },
+      },
+    ),
+  )
+
+  const parsedResponse = HunterioDomainSearchResponseSchema.safeParse(response)
+  if (!parsedResponse.success) {
+    console.error("[Hunter.io Domain] ❌ Invalid API response:", parsedResponse.error)
+    logger.error(
+      { error: parsedResponse.error },
+      "Hunter.io Domain Search response validation failed",
+    )
+    return null
+  }
+
+  return parsedResponse.data.data
+}
+
 // ==================== MAIN SERVICE FUNCTION ====================
 
 /**
@@ -233,7 +357,8 @@ function generateCacheKey(params: HunterioDomainSearchParams): string {
  * - Dual rate limiting (15/sec AND 500/min)
  * - Automatic retry with exponential backoff (pRetry)
  * - Zod validation for input/output
- * - Returns only 1 generic email address
+ * - Returns first valid generic email (skips noreply/abuse/postmaster)
+ * - Automatically retries with larger limit if first email is invalid
  *
  * @example
  * ```typescript
@@ -280,99 +405,65 @@ export async function searchDomainWithHunter(
   const startTime = Date.now()
 
   try {
-    // 3. Execute API call with dual rate limiting and retry
-    const response = await executeWithDualRateLimit(() =>
-      pRetry(
-        async () => {
-          const url = new URL("https://api.hunter.io/v2/domain-search")
-          url.searchParams.set("api_key", config.hunter.apiKey)
+    // 3. Try with limit=1 first (fast path)
+    console.log("[Hunter.io Domain] Fetching with limit=1 (fast path)")
+    let data = await fetchDomainEmails(validatedParams, 1, 0)
 
-          // Add search parameters
-          if (validatedParams.domain) {
-            url.searchParams.set("domain", validatedParams.domain)
-          }
-          if (validatedParams.company) {
-            url.searchParams.set("company", validatedParams.company)
-          }
-
-          // Force type to generic to only get generic emails
-          url.searchParams.set("type", "generic")
-          url.searchParams.set("limit", "1") // Only need 1 generic email
-
-          // Add optional filters
-          if (validatedParams.seniority) {
-            url.searchParams.set("seniority", validatedParams.seniority)
-          }
-          if (validatedParams.department) {
-            url.searchParams.set("department", validatedParams.department)
-          }
-          if (validatedParams.required_field) {
-            url.searchParams.set("required_field", validatedParams.required_field)
-          }
-          if (validatedParams.verification_status) {
-            url.searchParams.set("verification_status", validatedParams.verification_status)
-          }
-          if (validatedParams.job_titles) {
-            url.searchParams.set("job_titles", validatedParams.job_titles)
-          }
-
-          const res = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          })
-
-          if (!res.ok) {
-            const errorText = await res.text()
-            // Don't retry on 4xx errors (except 429)
-            if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-              throw new AbortError(`Hunter.io API error (${res.status}): ${errorText}`)
-            }
-            throw new Error(`Hunter.io API error (${res.status}): ${errorText}`)
-          }
-
-          return res.json()
-        },
-        {
-          retries: 3,
-          minTimeout: 1000,
-          maxTimeout: 10000,
-          onFailedAttempt: (error) => {
-            console.log(
-              `[Hunter.io Domain] Retry attempt ${error.attemptNumber} failed. ${error.retriesLeft} retries left.`,
-            )
-          },
-        },
-      ),
-    )
-
-    // 4. Validate response schema
-    const parsedResponse = HunterioDomainSearchResponseSchema.safeParse(response)
-    if (!parsedResponse.success) {
-      console.error("[Hunter.io Domain] ❌ Invalid API response:", parsedResponse.error)
-      logger.error(
-        { error: parsedResponse.error },
-        "Hunter.io Domain Search response validation failed",
-      )
+    if (!data) {
       return emptyResult
     }
 
-    // 5. Extract single generic email
-    const data = parsedResponse.data.data
-    const genericEmail = data.emails.find((e) => e.type === "generic")
+    // 4. Check if the first generic email is invalid
+    const firstGenericEmail = data.emails.find((e) => e.type === "generic")
+
+    if (firstGenericEmail && isInvalidEmail(firstGenericEmail.value)) {
+      console.log(
+        `[Hunter.io Domain] ⚠️ First email is invalid (${firstGenericEmail.value}), fetching more...`,
+      )
+
+      // Retry with limit=10 to get more options
+      const retryData = await fetchDomainEmails(validatedParams, 10, 0)
+
+      if (retryData) {
+        data = retryData
+        console.log(
+          `[Hunter.io Domain] Fetched ${retryData.emails.length} emails to find valid one`,
+        )
+      }
+    }
+
+    // 5. Find first valid generic email
+    const validGenericEmail = data.emails
+      .filter((e) => e.type === "generic")
+      .find((e) => !isInvalidEmail(e.value))
+
+    if (validGenericEmail) {
+      console.log(`[Hunter.io Domain] ✓ Found valid generic email: ${validGenericEmail.value}`)
+    } else if (data.emails.some((e) => e.type === "generic")) {
+      console.log("[Hunter.io Domain] ⚠️ Only invalid generic emails found (noreply/abuse/etc)")
+    } else {
+      console.log("[Hunter.io Domain] ℹ️ No generic emails found")
+    }
 
     const result: HunterioDomainSearchResult = {
       domain: data.domain,
       organization: data.organization,
-      genericEmail: genericEmail?.value || null,
+      genericEmail: validGenericEmail?.value || null,
       pattern: data.pattern,
+      description: data.description,
+      industry: data.industry,
+      country: data.country,
+      headcount: data.headcount,
+      companyType: data.company_type,
+      emails: data.emails.map((e) => ({
+        value: e.value,
+        type: e.type,
+        confidence: e.confidence,
+      })),
     }
 
     const elapsed = Date.now() - startTime
-    console.log(
-      `[Hunter.io Domain] ✅ Found ${genericEmail ? "generic email" : "no generic email"} for ${data.domain} (${elapsed}ms)`,
-    )
+    console.log(`[Hunter.io Domain] ✅ Completed search for ${data.domain} in ${elapsed}ms`)
 
     // 6. Cache successful results
     await cache.set(cacheKey, result)

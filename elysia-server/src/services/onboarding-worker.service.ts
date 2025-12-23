@@ -8,7 +8,6 @@
 
 import type { Job } from "bullmq"
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm"
-import { z } from "zod"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -38,23 +37,16 @@ import {
   emitOnboardingProgress,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
-import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
-import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
-import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
-import { searchDomainWithHunter } from "./hunterio-domain-search.service"
-import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
-import { generateHunterioQuery } from "./hunterio-query-generator.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
-import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
+import { searchAndEnrichLeads } from "./lead-search-enrichment.service"
 import { upsertOnboardingProgressNotification } from "./notification.service"
 import {
   COUNTRY_NAMES,
   completeStep1CompanyInfo,
   completeStep2LeadSearch,
   EMAIL_TYPES_3TOUCH,
-  enrichLeadsForOnboarding,
   generatePreviewEmailsForSequence,
   INDUSTRY_NAMES,
   KST_OFFSET_MS,
@@ -67,12 +59,7 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 30 // 30 leads for 3-touch sequence (90 emails total)
-const ENRICHMENT_BATCH_SIZE = 30
-const BIGQUERY_BATCH_SIZE = 100 // Reduced from 500 for faster onboarding
-const MAX_SEARCH_ITERATIONS = 3 // Enough iterations to find 30 leads
-const HUNTERIO_MAX_PER_PAGE = 100
-const HUNTERIO_MAX_EMAIL_COUNT = 100 // Skip companies with too many emails (proxy for large companies)
+const TARGET_LEADS = 150 // 150 leads for 3-touch sequence (450 emails total)
 
 // ====================================
 // SSE + DB NOTIFICATION WRAPPER
@@ -234,223 +221,13 @@ export async function addCheckpointError(
 }
 
 // ====================================
-// B2B AGENT HELPERS
-// ====================================
-
-/**
- * Get B2B customer industries using AI agent
- * Takes the seller's industry and country, returns 1-3 target customer industries
- */
-async function getB2BCustomerIndustries(
-  industryName: string,
-  countryName: string,
-): Promise<string[]> {
-  try {
-    console.log(
-      `[B2BAgent] Analyzing target customer industries for: ${industryName} in ${countryName}`,
-    )
-
-    // Step 1: Generate analysis using B2B agent
-    const agent = createB2BCustomerIndustryAgent()
-    const prompt = generateB2BCustomerIndustryPrompt(industryName, countryName)
-    const response = await agent.generate(prompt)
-
-    console.log(`[B2BAgent] Agent response: ${response.text}`)
-
-    // Step 2: Extract structured output using structured extraction agent
-    const structured = await structuredExtractionAgent.generate(
-      [
-        {
-          role: "user",
-          content: `Extract the target industries from the following analysis. Return only the industry names as a JSON array.
-
-Analysis:
-${response.text}
-
-Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
-        },
-      ],
-      {
-        output: z.object({
-          targetIndustries: z
-            .array(z.string())
-            .min(1)
-            .max(3)
-            .describe("1-3 target customer industries"),
-        }),
-      },
-    )
-
-    const industries = structured.object.targetIndustries
-    console.log(`[B2BAgent] Extracted target industries: ${industries.join(", ")}`)
-
-    return industries
-  } catch (error) {
-    console.error("[B2BAgent] Agent failed, falling back to original industry", error)
-    return [industryName] // Fallback to original behavior
-  }
-}
-
-/**
- * Generate unique search queries to avoid fetching the same leads
- * Varies by: result count, employee range, specific keywords
- */
-function generateUniqueQuery(
-  industryName: string,
-  countryName: string,
-  batchSize: number,
-  iteration: number,
-  usedQueries: Set<string>,
-): string | null {
-  // Strategy variations to generate diverse queries
-  const strategies = [
-    // Base query with increasing limits
-    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add employee size variations
-    () =>
-      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
-
-    // Add business type variations
-    () => `${industryName} startups in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} enterprises in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} SMB companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add keyword variations
-    () => `${industryName} B2B companies in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} software companies in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} service companies in ${countryName} ${batchSize * iteration}개`,
-  ]
-
-  // Try each strategy
-  for (const strategy of strategies) {
-    const query = strategy()
-    if (!usedQueries.has(query)) {
-      usedQueries.add(query)
-      return query
-    }
-  }
-
-  // If all strategies exhausted, return null
-  return null
-}
-
-// ====================================
 // PHASE FUNCTIONS
 // ====================================
 
 /**
- * Hunter.io discovered lead interface
- */
-interface HunterDiscoveredLead {
-  companyName: string
-  websiteUrl: string
-  primaryEmail: string
-  leadSource: "hunterio-discover"
-}
-
-/**
- * Discover leads using Hunter.io Discover API as fallback
- * Called when BigQuery doesn't return enough leads
- */
-async function discoverLeadsWithHunterIO(
-  context: JobContext,
-  existingLeadCount: number,
-  existingDomains: Set<string>,
-): Promise<HunterDiscoveredLead[]> {
-  console.log(
-    `[HunterIO Discovery] Starting fallback discovery. Current leads: ${existingLeadCount}, Target: ${TARGET_LEADS}`,
-  )
-
-  const leads: HunterDiscoveredLead[] = []
-
-  try {
-    // 1. Generate Hunter.io params via LLM
-    const baseParams = await generateHunterioQuery(context.surveyData)
-    console.log("[HunterIO Discovery] Generated params:", baseParams)
-
-    let offset = 0
-    let hasMoreResults = true
-
-    // 2. Paginate until target reached or no more results
-    while (hasMoreResults && existingLeadCount + leads.length < TARGET_LEADS) {
-      const params = { ...baseParams, limit: HUNTERIO_MAX_PER_PAGE, offset }
-      console.log(`[HunterIO Discovery] Fetching page at offset ${offset}`)
-
-      const companies = await searchLeadsWithHunter(params)
-
-      if (companies.length === 0) {
-        console.log("[HunterIO Discovery] No more results from Hunter.io")
-        hasMoreResults = false
-        break
-      }
-
-      console.log(`[HunterIO Discovery] Found ${companies.length} companies`)
-
-      // 3. Process each company
-      for (const company of companies) {
-        // Skip if already processed
-        if (existingDomains.has(company.domain.toLowerCase())) {
-          console.log(`[HunterIO Discovery] Skipping duplicate domain: ${company.domain}`)
-          continue
-        }
-
-        // Skip big companies based on emails count as proxy
-        // If company has too many indexed emails, it's likely a large company
-        if (company.emailsCount.total > HUNTERIO_MAX_EMAIL_COUNT) {
-          console.log(
-            `[HunterIO Discovery] Skipping large company (${company.emailsCount.total} emails): ${company.organization}`,
-          )
-          continue
-        }
-
-        // 4. Get emails via Domain Search API (rate-limited via PQueue)
-        const emailResult = await searchDomainWithHunter({ domain: company.domain })
-
-        if (emailResult.genericEmail) {
-          leads.push({
-            companyName: company.organization,
-            websiteUrl: `https://${company.domain}`,
-            primaryEmail: emailResult.genericEmail,
-            leadSource: "hunterio-discover",
-          })
-          existingDomains.add(company.domain.toLowerCase())
-
-          console.log(
-            `[HunterIO Discovery] Added lead: ${company.organization} (${emailResult.genericEmail})`,
-          )
-        }
-
-        // Check if target reached
-        if (existingLeadCount + leads.length >= TARGET_LEADS) {
-          console.log("[HunterIO Discovery] Target reached!")
-          break
-        }
-      }
-
-      offset += HUNTERIO_MAX_PER_PAGE
-
-      // If fewer results than limit, no more pages
-      if (companies.length < HUNTERIO_MAX_PER_PAGE) {
-        hasMoreResults = false
-      }
-    }
-
-    console.log(`[HunterIO Discovery] Complete. Found ${leads.length} new leads.`)
-    return leads
-  } catch (error) {
-    console.error("[HunterIO Discovery] Error:", error)
-    return leads // Return what we have so far
-  }
-}
-
-/**
  * Phase 1: Discovery + Enrichment (combined)
- * Discovers leads via BigQuery, enriches them, and saves to DB incrementally
+ * Discovers leads via BigQuery, enriches them, and saves to DB
+ * Now uses the unified searchAndEnrichLeads service
  */
 export async function runDiscoveryPhase(
   job: Job<OnboardingAutoGenerateJob, OnboardingAutoGenerateResult>,
@@ -467,11 +244,8 @@ export async function runDiscoveryPhase(
   // Emit SSE + Save to DB: Discovery started
   await emitAndSaveNotification(createDiscoveryStartEvent(workspaceId, jobId), userId)
 
-  // Load checkpoint from BullMQ job data
-  const _checkpoint = loadCheckpoint(job)
-
   try {
-    // Base case: Check if we already have 300+ leads with emails
+    // Base case: Check if we already have TARGET_LEADS+ leads with emails
     const currentLeadsCount = await countLeadsWithEmails(workspaceId)
     if (currentLeadsCount >= TARGET_LEADS) {
       console.log(
@@ -513,10 +287,6 @@ export async function runDiscoveryPhase(
     const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
     const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
 
-    // Get target customer industries from B2B agent (1-3 industries that would BUY from this industry)
-    const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
-    console.log(`[DiscoveryPhase] Target customer industries: ${targetIndustries.join(", ")}`)
-
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
       phase: "discovery",
@@ -528,262 +298,92 @@ export async function runDiscoveryPhase(
       progressPercent: 15, // 15%
     })
 
-    // Track processed websites to avoid duplicates across iterations
-    const processedWebsites = new Set<string>()
+    // Emit SSE: Database searching
+    await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
 
-    // Track used queries to generate diverse searches
-    const usedQueries = new Set<string>()
+    // Build natural language query for the lead search service
+    const naturalLanguageQuery = `${industryName} companies in ${countryName}`
+    console.log(`[DiscoveryPhase] Natural language query: "${naturalLanguageQuery}"`)
 
-    // Iterative search until we reach target or exhaust options
-    // Outer loop: iterations, Inner loop: target industries (1-3)
-    let isFirstQuery = true
-    let globalBatchNum = 0
+    // Use the unified lead search and enrichment service
+    const searchResult = await searchAndEnrichLeads(
+      TARGET_LEADS,
+      naturalLanguageQuery,
+      0, // minimumMatchScore: 0 = no filtering by score
+      // Progress callback for SSE updates
+      async (progress) => {
+        console.log(`[DiscoveryPhase] Progress: ${progress.phase} - ${progress.message}`)
 
-    for (let iteration = 0; iteration < MAX_SEARCH_ITERATIONS; iteration++) {
-      // Check current count before each iteration
-      const currentLeadsCount = await countLeadsWithEmails(workspaceId)
-      if (currentLeadsCount >= TARGET_LEADS) {
-        console.log(
-          `[DiscoveryPhase] Target ${TARGET_LEADS} reached with ${currentLeadsCount} leads, stopping iterations`,
-        )
-        break
-      }
-
-      console.log(
-        `[DiscoveryPhase] Iteration ${iteration + 1}/${MAX_SEARCH_ITERATIONS}: Searching ${targetIndustries.length} target industries`,
-      )
-
-      // Emit SSE: Database searching (before first BigQuery call)
-      if (isFirstQuery) {
-        await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
-      }
-
-      // Collect leads from all target industries in this iteration
-      const allLeadsToEnrich: Array<{
-        company: string
-        website: string
-        industry: string
-        employees: string
-        country: string
-      }> = []
-
-      // Loop over each target customer industry (1-3)
-      for (const targetIndustry of targetIndustries) {
-        // Generate unique query using dynamic strategies
-        const query = generateUniqueQuery(
-          targetIndustry,
-          countryName,
-          BIGQUERY_BATCH_SIZE,
-          iteration + 1,
-          usedQueries,
-        )
-
-        if (!query) {
-          console.warn(
-            `[DiscoveryPhase] No more unique queries for industry "${targetIndustry}", skipping`,
-          )
-          continue
+        // Update job progress
+        let progressPercent = 15
+        if (progress.phase === "bigquery") {
+          progressPercent = 15 + Math.floor((progress.currentCount / progress.targetCount) * 20)
+        } else if (progress.phase === "enrichment") {
+          progressPercent = 35 + Math.floor((progress.currentCount / progress.targetCount) * 15)
+        } else if (progress.phase === "hunterio") {
+          progressPercent = 50 + Math.floor((progress.currentCount / progress.targetCount) * 5)
+        } else if (progress.phase === "scoring") {
+          progressPercent = 55 + Math.floor((progress.currentCount / progress.targetCount) * 5)
         }
 
-        console.log(`[DiscoveryPhase] Query for "${targetIndustry}": "${query}"`)
-        isFirstQuery = false
-
-        // Search BigQuery
-        const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
-          limitOverride: BIGQUERY_BATCH_SIZE,
-        })
-
-        if (!result.results.length) {
-          console.log(`[DiscoveryPhase] No results from BigQuery for "${targetIndustry}"`)
-          continue
-        }
-
-        console.log(
-          `[DiscoveryPhase] Found ${result.results.length} results for "${targetIndustry}"`,
-        )
-
-        // Filter and add to combined leads list
-        let newLeadsAdded = 0
-        for (const row of result.results) {
-          const website = row.website as string
-          if (!website) continue
-          // Skip already processed websites
-          if (processedWebsites.has(website.toLowerCase())) continue
-          processedWebsites.add(website.toLowerCase())
-
-          allLeadsToEnrich.push({
-            company: row.company as string,
-            website,
-            industry: row.industry as string,
-            employees: row.employees?.toString() || "",
-            country: row.country as string,
-          })
-          newLeadsAdded++
-        }
-
-        console.log(
-          `[DiscoveryPhase] Added ${newLeadsAdded} new leads from "${targetIndustry}" ` +
-            `(${result.results.length - newLeadsAdded} duplicates)`,
-        )
-      }
-
-      console.log(
-        `[DiscoveryPhase] Total new leads this iteration: ${allLeadsToEnrich.length}. ` +
-          `Total unique websites: ${processedWebsites.size}`,
-      )
-
-      if (allLeadsToEnrich.length === 0) {
-        console.log(`[DiscoveryPhase] No new leads to enrich in iteration ${iteration + 1}`)
-        continue
-      }
-
-      // Process combined leads in batches
-      const totalBatches = Math.ceil(allLeadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
-      let totalEnrichedCount = 0
-
-      for (let i = 0; i < allLeadsToEnrich.length; i += ENRICHMENT_BATCH_SIZE) {
-        const batch = allLeadsToEnrich.slice(i, i + ENRICHMENT_BATCH_SIZE)
-        const batchNum = Math.floor(i / ENRICHMENT_BATCH_SIZE) + 1
-        globalBatchNum++
-
-        console.log(
-          `[DiscoveryPhase] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`,
-        )
-
-        // Enrich this batch (reuse existing function)
-        const enrichedBatch = await enrichLeadsForOnboarding(batch)
-
-        const enrichedCount = enrichedBatch.filter((l) => l.primaryEmail).length
-        totalEnrichedCount += enrichedCount
-        console.log(
-          `[DiscoveryPhase] Batch ${batchNum}: ${enrichedCount}/${enrichedBatch.length} have emails`,
-        )
-
-        // Emit SSE + Save to DB: Batch progress
-        const currentCount = await countLeadsWithEmails(workspaceId)
-        const progressPercent = Math.min(55, 15 + Math.floor((currentCount / TARGET_LEADS) * 40))
-        await emitAndSaveNotification(
-          createDiscoveryBatchEvent(
-            workspaceId,
-            jobId,
-            globalBatchNum,
-            MAX_SEARCH_ITERATIONS *
-              targetIndustries.length *
-              Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE),
-            currentCount,
-            totalEnrichedCount,
-          ),
-          userId,
-        )
-
-        // Update progress
         await job.updateProgress({
           phase: "discovery",
-          progressPercent,
+          progressPercent: Math.min(60, progressPercent),
         })
 
-        // Filter and save batch with emails
-        const batchWithEmails = enrichedBatch.filter((lead) => {
-          if (!lead.primaryEmail) return false
-          const email = lead.primaryEmail.toLowerCase()
-          // Filter out generic no-reply addresses
-          if (email.includes("noreply")) return false
-          if (email.startsWith("postmaster@")) return false
-          if (email.startsWith("abuse@")) return false
-          return true
-        })
-
-        // Save batch immediately if any leads have emails
-        if (batchWithEmails.length > 0) {
-          console.log(
-            `[DiscoveryPhase] Saving batch ${batchNum}: ${batchWithEmails.length} leads with emails`,
-          )
-
-          const leadsToCreate = batchWithEmails.map((lead) => ({
-            companyName: lead.companyName,
-            foundCompanyName: lead.companyName,
-            websiteUrl: lead.websiteUrl,
-            businessType: lead.businessType,
-            country: lead.country,
-            employeeCount: lead.employeeCount,
-            description: lead.description,
-            primaryEmail: lead.primaryEmail,
-            leadSource: "bigquery-auto" as const,
-            leadStatus: "new" as const,
-          }))
-
-          const { stats } = await bulkCreateLeads({
-            workspaceId,
-            leads: leadsToCreate,
-            createdBy: userId,
-          })
-
-          console.log(
-            `[DiscoveryPhase] Batch ${batchNum} saved: ${stats.created} new leads (${stats.skipped} duplicates)`,
+        // Emit SSE batch event (approximating batch number based on progress)
+        if (progress.phase === "enrichment" || progress.phase === "hunterio") {
+          const batchNum = Math.floor(progress.currentCount / 30) || 1
+          await emitAndSaveNotification(
+            createDiscoveryBatchEvent(
+              workspaceId,
+              jobId,
+              batchNum,
+              Math.ceil(TARGET_LEADS / 30),
+              progress.currentCount,
+              progress.currentCount,
+            ),
+            userId,
           )
         }
-
-        // Check if we've reached target after this batch
-        const afterSaveCount = await countLeadsWithEmails(workspaceId)
-        console.log(`[DiscoveryPhase] Progress: ${afterSaveCount}/${TARGET_LEADS} leads`)
-
-        if (afterSaveCount >= TARGET_LEADS) {
-          console.log(
-            `[DiscoveryPhase] Target reached! Stopping enrichment at iteration ${iteration + 1}, batch ${batchNum}/${totalBatches}`,
-          )
-          break
-        }
-      }
-
-      // Check if target reached after this iteration
-      const afterIterationCount = await countLeadsWithEmails(workspaceId)
-      if (afterIterationCount >= TARGET_LEADS) {
-        break
-      }
-    }
-
-    // ============================================
-    // STEP 2: Hunter.io Fallback (if < 150 leads)
-    // ============================================
-    const afterBigQueryCount = await countLeadsWithEmails(workspaceId)
-    console.log(
-      `[DiscoveryPhase] BigQuery complete. Lead count: ${afterBigQueryCount}/${TARGET_LEADS}`,
+      },
     )
 
-    if (afterBigQueryCount < TARGET_LEADS) {
-      console.log("[DiscoveryPhase] Starting Hunter.io fallback discovery")
+    console.log(`[DiscoveryPhase] Search complete. Found ${searchResult.stats.totalFound} leads`)
+    console.log(`[DiscoveryPhase]   - From BigQuery: ${searchResult.stats.fromBigQuery}`)
+    console.log(`[DiscoveryPhase]   - From Hunter.io: ${searchResult.stats.fromHunterIO}`)
+    console.log(`[DiscoveryPhase]   - With emails: ${searchResult.stats.withEmails}`)
+    console.log(`[DiscoveryPhase]   - Skipped duplicates: ${searchResult.stats.skippedDuplicates}`)
+    console.log(
+      `[DiscoveryPhase]   - Skipped large companies: ${searchResult.stats.skippedLargeCompanies}`,
+    )
 
-      // Hunter.io fallback
-      const hunterLeads = await discoverLeadsWithHunterIO(
-        context,
-        afterBigQueryCount,
-        processedWebsites,
-      )
+    // Save all found leads to database
+    const leadsToCreate = searchResult.leads.map((lead) => ({
+      companyName: lead.companyName,
+      foundCompanyName: lead.companyName,
+      websiteUrl: lead.websiteUrl || undefined,
+      businessType: lead.businessType || undefined,
+      country: lead.country || undefined,
+      employeeCount: lead.employeeCount || undefined,
+      description: lead.description || undefined,
+      primaryEmail: lead.primaryEmail || undefined,
+      leadSource: lead.leadSource,
+      leadStatus: "new" as const,
+    }))
 
-      // Save Hunter.io leads to DB
-      if (hunterLeads.length > 0) {
-        console.log(`[DiscoveryPhase] Saving ${hunterLeads.length} leads from Hunter.io`)
+    console.log(`[DiscoveryPhase] Saving ${leadsToCreate.length} leads to database`)
 
-        const leadsToCreate = hunterLeads.map((lead) => ({
-          companyName: lead.companyName,
-          foundCompanyName: lead.companyName,
-          websiteUrl: lead.websiteUrl,
-          primaryEmail: lead.primaryEmail,
-          leadSource: "hunterio-discover" as const,
-          leadStatus: "new" as const,
-        }))
+    const { stats, createdLeads } = await bulkCreateLeads({
+      workspaceId,
+      leads: leadsToCreate,
+      createdBy: userId,
+    })
 
-        const { stats } = await bulkCreateLeads({
-          workspaceId,
-          leads: leadsToCreate,
-          createdBy: userId,
-        })
+    console.log(`[DiscoveryPhase] Saved ${stats.created} new leads (${stats.skipped} duplicates)`)
 
-        console.log(
-          `[DiscoveryPhase] Hunter.io leads saved: ${stats.created} new (${stats.skipped} duplicates)`,
-        )
-      }
-    }
+    // Extract lead IDs from created leads
+    const leadIds = createdLeads.map((lead) => lead.id)
 
     // Update checkpoint with final count
     const finalCount = await countLeadsWithEmails(workspaceId)
@@ -791,25 +391,6 @@ export async function runDiscoveryPhase(
       leadsWithEmailsCount: finalCount,
       lastIterationCompleted: true,
     })
-
-    // Get all lead IDs with emails from DB
-    const finalLeads = await db
-      .select({
-        id: leadsTable.id,
-      })
-      .from(leadsTable)
-      .innerJoin(leadContacts, eq(leadsTable.id, leadContacts.leadId))
-      .where(
-        and(
-          eq(leadsTable.workspaceId, workspaceId),
-          eq(leadContacts.contactType, "email"),
-          eq(leadContacts.isPrimary, true),
-          isNotNull(leadContacts.contactValue),
-        ),
-      )
-      .limit(TARGET_LEADS)
-
-    const leadIds = finalLeads.map((l) => l.id)
 
     console.log(
       `[DiscoveryPhase] Complete: ${finalCount} leads with emails, returning ${leadIds.length} IDs`,

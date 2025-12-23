@@ -54,6 +54,7 @@ import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sale
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { unipileRoutes } from "./routes/unipile.routes"
+import { unsubscribeRoutes } from "./routes/unsubscribe.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
@@ -218,6 +219,7 @@ const app = new Elysia()
   .use(leadEnrichmentRoutes)
   .use(nylasRoutes)
   .use(unipileRoutes)
+  .use(unsubscribeRoutes)
   .use(leadDiscoveryRoutes)
   .use(salesStrategyRoutes)
   .use(workspaceSalesStrategyRoutes)

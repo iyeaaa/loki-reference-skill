@@ -44,6 +44,14 @@ export const SequenceEmailContextSchema = z.object({
   industry: z.string().optional().describe("Recipient industry/business type"),
   website: z.string().optional().describe("Recipient website URL"),
 
+  // Cultural context for email adaptation
+  country: z.string().optional().describe("Recipient country for cultural adaptation"),
+
+  // Sequence step information
+  stepNumber: z.number().optional().describe("Current step number in the sequence (1-6)"),
+  totalSteps: z.number().optional().describe("Total number of steps in the sequence"),
+  stepPurpose: z.string().optional().describe("Purpose/goal of this specific step"),
+
   // Enriched context arrays
   contacts: z.array(ContactSchema).optional().describe("All contacts for this lead"),
   socialMedia: z.array(SocialMediaSchema).optional().describe("Social media profiles"),

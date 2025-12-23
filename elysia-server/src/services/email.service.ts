@@ -9,6 +9,11 @@ import { departments, users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
 import type { Attachment, SendGridAttachment } from "../models/email.model"
 import { htmlToText } from "../utils/email.util"
+import {
+  generateListUnsubscribeHeaders,
+  generateUnsubscribeFooter,
+  type UnsubscribeConfig,
+} from "../utils/gmail-compliance.util"
 import logger from "../utils/logger"
 import * as nylasService from "./nylas.service"
 import * as unipileService from "./unipile.service"
@@ -248,6 +253,11 @@ This email contains confidential information that is protected by law or under t
     userId?: string // 서명 생성을 위한 사용자 ID
     workspaceId?: string // 서명 생성을 위한 워크스페이스 ID
     signatureHtml?: string // 직접 지정한 서명 HTML (이 값이 있으면 이걸 우선 사용)
+    // Gmail compliance options (List-Unsubscribe header)
+    leadId?: string // Lead ID for unsubscribe tracking
+    sequenceId?: string // Sequence ID for unsubscribe tracking
+    emailId?: string // Email ID for unsubscribe tracking
+    includeUnsubscribe?: boolean // Include List-Unsubscribe header (기본값: true for bulk emails)
   }): Promise<{
     success: boolean
     messageId?: string
@@ -320,6 +330,26 @@ This email contains confidential information that is protected by law or under t
 
       // Message-ID 헤더 추가 (답장 추적용)
       msg.headers["Message-ID"] = generatedMessageId
+
+      // List-Unsubscribe 헤더 추가 (Gmail 정책 준수)
+      // workspaceId가 있고, includeUnsubscribe가 명시적으로 false가 아닌 경우 추가
+      const includeUnsubscribe = data.includeUnsubscribe !== false && data.workspaceId
+      if (includeUnsubscribe) {
+        const unsubscribeConfig: UnsubscribeConfig = {
+          workspaceId: data.workspaceId || "",
+          leadId: data.leadId,
+          sequenceId: data.sequenceId,
+          emailId: data.emailId,
+        }
+        const unsubscribeHeaders = generateListUnsubscribeHeaders(unsubscribeConfig)
+        msg.headers["List-Unsubscribe"] = unsubscribeHeaders["List-Unsubscribe"]
+        msg.headers["List-Unsubscribe-Post"] = unsubscribeHeaders["List-Unsubscribe-Post"]
+
+        logger.info(
+          { workspaceId: data.workspaceId, leadId: data.leadId },
+          "Added List-Unsubscribe headers for Gmail compliance",
+        )
+      }
 
       // 서명 추가 (기본값: true)
       const includeSignature = data.includeSignature !== false

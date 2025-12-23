@@ -151,7 +151,7 @@ export function StepConfirmation() {
     }
 
     fetchLeads()
-  }, [selectedLeadIds, isKorean])
+  }, [allLeadIds, selectedLeadIds.length, isKorean])
 
   // Filtered leads by search
   const filteredLeads = useMemo(() => {

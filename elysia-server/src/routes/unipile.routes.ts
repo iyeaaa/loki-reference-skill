@@ -253,7 +253,8 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
 
           // 1. Register mail_received webhook (for reply detection)
           const existingMailWebhook = webhooksResult.webhooks?.find(
-            (wh) => wh.request_url === mailReceivedWebhookUrl && wh.events?.includes("mail_received"),
+            (wh) =>
+              wh.request_url === mailReceivedWebhookUrl && wh.events?.includes("mail_received"),
           )
 
           if (!existingMailWebhook) {
@@ -285,7 +286,8 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           )
 
           if (!existingTrackingWebhook) {
-            const trackingResult = await unipileService.registerEmailTrackingWebhook(trackingWebhookUrl)
+            const trackingResult =
+              await unipileService.registerEmailTrackingWebhook(trackingWebhookUrl)
 
             if (trackingResult.success) {
               logger.info(

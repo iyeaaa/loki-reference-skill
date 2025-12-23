@@ -522,7 +522,7 @@ export function WebDataExtraction() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h2 className="font-semibold text-xl">웹데추</h2>
-                    <span className="text-muted-foreground text-xs">v1.0.0.20251108</span>
+                    <span className="text-muted-foreground text-xs">v1.1-legacy</span>
                   </div>
                   <p className="text-muted-foreground text-sm">
                     {progress?.status === "processing"

@@ -6,20 +6,26 @@
 import { Elysia, t } from "elysia"
 import * as XLSX from "xlsx"
 import { getActiveApiKeyCount } from "../services/openai-api-key.service"
+// Lead Discovery용 서비스 (현재 버전 유지)
+import { analyzeWebsiteWithStreaming, fetchWithDepth } from "../services/web-extraction.service"
+// 웹데추용 Legacy 서비스 (v1.1 기반 - 안정화)
 import {
-  analyzeWebsiteWithStreaming,
-  fetchWithDepth,
-  processBatch,
-  processCompanyRecord,
-} from "../services/web-extraction.service"
+  processBatchLegacy,
+  processCompanyRecordLegacy,
+} from "../services/web-extraction-legacy.service"
 import {
   type CompanyRecord,
   DEFAULT_EXTRACTION_CONFIG,
   type ExtractionProgress,
-  MEMORY_OPTIMIZATION,
 } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
+
+// 웹데추 v1.1 Legacy 설정 (안정성 우선)
+const LEGACY_CONFIG = {
+  MAX_BATCH_SIZE: 100, // 최대 100개로 제한
+  MAX_CONCURRENT: 2, // 동시 처리 2개로 제한
+}
 
 // 추출 결과를 저장하는 Map (다운로드용) - TTL 기반 자동 정리
 const resultsMap = new Map<string, CompanyRecord[]>()
@@ -253,8 +259,8 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       }
 
       try {
-        // processCompanyRecord 호출 (Web Extraction 전용 함수)
-        const result = await processCompanyRecord(
+        // processCompanyRecordLegacy 호출 (웹데추 v1.1 Legacy 버전)
+        const result = await processCompanyRecordLegacy(
           { websiteUrl: websiteUrl.trim() },
           DEFAULT_EXTRACTION_CONFIG,
           workspaceId,
@@ -434,19 +440,21 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           }
         }
 
-        // 배치 크기 제한 (메모리 최적화)
-        const { MAX_BATCH_SIZE } = MEMORY_OPTIMIZATION
-        if (validRecords.length > MAX_BATCH_SIZE) {
+        // 배치 크기 제한 (v1.1 Legacy: 100개로 제한)
+        if (validRecords.length > LEGACY_CONFIG.MAX_BATCH_SIZE) {
           set.status = 400
           return {
             success: false,
-            error: `한 번에 처리 가능한 최대 URL 수는 ${MAX_BATCH_SIZE}개입니다. 현재 ${validRecords.length}개가 포함되어 있습니다. 파일을 분할하여 업로드해주세요.`,
+            error: `한 번에 처리 가능한 최대 URL 수는 ${LEGACY_CONFIG.MAX_BATCH_SIZE}개입니다. 현재 ${validRecords.length}개가 포함되어 있습니다. 파일을 분할하여 업로드해주세요.`,
           }
         }
 
-        // API 키 개수에 따른 동시성 설정 (메모리 최적화: 최대 3개로 제한)
+        // API 키 개수에 따른 동시성 설정 (v1.1 Legacy: 최대 2개로 제한)
         const activeApiKeyCount = await getActiveApiKeyCount(workspaceId)
-        const defaultConcurrency = Math.min(activeApiKeyCount > 0 ? activeApiKeyCount : 2, 3)
+        const defaultConcurrency = Math.min(
+          activeApiKeyCount > 0 ? activeApiKeyCount : 2,
+          LEGACY_CONFIG.MAX_CONCURRENT,
+        )
 
         logger.info(
           {
@@ -510,8 +518,8 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
               })
               logger.info("[Web Extraction] Sent init event")
 
-              // 추출 시작
-              const results = await processBatch(
+              // 추출 시작 (v1.1 Legacy 서비스 사용)
+              const results = await processBatchLegacy(
                 finalRecords,
                 extractionConfig,
                 (progress: ExtractionProgress) => {

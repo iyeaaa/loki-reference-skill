@@ -172,7 +172,7 @@ export function StepCompanyInfo() {
     }
 
     fetchSalesStrategy()
-  }, [workspace?.id])
+  }, [workspace?.id, isKorean])
 
   const handleSaveAndNext = async () => {
     console.log("[StepCompanyInfo] handleSave called")

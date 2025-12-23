@@ -449,7 +449,10 @@ export async function registerEmailTrackingWebhook(
     }
 
     const data = (await response.json()) as { webhook_id?: string }
-    logger.info({ webhookId: data.webhook_id }, "Unipile email tracking webhook registered successfully")
+    logger.info(
+      { webhookId: data.webhook_id },
+      "Unipile email tracking webhook registered successfully",
+    )
 
     return {
       success: true,
@@ -1270,11 +1273,17 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
       import("./email-open-notification.service")
         .then(({ sendEmailOpenNotification }) => {
           sendEmailOpenNotification(email.id, openedAt).catch((err) => {
-            logger.error({ error: err, emailId: email.id }, "Failed to send email open notification")
+            logger.error(
+              { error: err, emailId: email.id },
+              "Failed to send email open notification",
+            )
           })
         })
         .catch((err) => {
-          logger.error({ error: err, emailId: email.id }, "Failed to import email-open-notification.service")
+          logger.error(
+            { error: err, emailId: email.id },
+            "Failed to import email-open-notification.service",
+          )
         })
     }
   } catch (error) {
@@ -1338,10 +1347,7 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
       rawEventData: event as Record<string, unknown>,
     })
 
-    logger.info(
-      { emailId: email.id, trackingId, url: clickedUrl },
-      "Email clicked event processed",
-    )
+    logger.info({ emailId: email.id, trackingId, url: clickedUrl }, "Email clicked event processed")
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email clicked event")
   }

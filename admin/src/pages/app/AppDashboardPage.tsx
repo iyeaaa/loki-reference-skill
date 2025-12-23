@@ -496,10 +496,7 @@ export default function AppDashboardPage() {
                             borderRadius: "8px",
                             padding: "12px",
                           }}
-                          formatter={(value: number, name: string) => [
-                            value,
-                            name === "sent" ? "발송" : "오픈",
-                          ]}
+                          formatter={(value) => [value ?? 0, "발송"]}
                         />
                         <Area
                           dataKey="sent"
@@ -661,7 +658,7 @@ export default function AppDashboardPage() {
                           type="category"
                           width={80}
                         />
-                        <Tooltip formatter={(value: number) => [value, "잠재고객"]} />
+                        <Tooltip formatter={(value) => [value ?? 0, "잠재고객"]} />
                         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                           {filteredCountryStats.slice(0, 5).map((_, index) => (
                             <Cell

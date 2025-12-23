@@ -78,7 +78,9 @@ function generateEmailOpenNotificationHtml(data: EmailOpenNotificationData): str
   }
 
   // 바이어 정보 행
-  const buyerInfoRow = data.buyerCompany || data.buyerTitle ? `
+  const buyerInfoRow =
+    data.buyerCompany || data.buyerTitle
+      ? `
                   <tr>
                     <td style="padding: 14px 16px; border-bottom: 1px solid #f0f0f0;">
                       <span style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">소속</span>
@@ -87,10 +89,12 @@ function generateEmailOpenNotificationHtml(data: EmailOpenNotificationData): str
                       <span style="font-size: 14px; color: #111827; font-weight: 500;">${data.buyerCompany || "-"}</span>
                       ${data.buyerTitle ? `<span style="font-size: 13px; color: #6b7280; display: block; margin-top: 2px;">${data.buyerTitle}</span>` : ""}
                     </td>
-                  </tr>` : ""
+                  </tr>`
+      : ""
 
   // 응답 시간 행
-  const responseTimeRow = responseTimeText ? `
+  const responseTimeRow = responseTimeText
+    ? `
                   <tr>
                     <td style="padding: 14px 16px;">
                       <span style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">응답 속도</span>
@@ -98,7 +102,8 @@ function generateEmailOpenNotificationHtml(data: EmailOpenNotificationData): str
                     <td style="padding: 14px 16px;">
                       <span style="font-size: 14px; color: #059669; font-weight: 600;">${responseTimeText}</span>
                     </td>
-                  </tr>` : ""
+                  </tr>`
+    : ""
 
   return `
 <!DOCTYPE html>
@@ -252,75 +257,6 @@ function generateEmailOpenNotificationHtml(data: EmailOpenNotificationData): str
 `
 }
 
-function generateEmailOpenNotificationText(data: EmailOpenNotificationData): string {
-  const buyerDisplay = data.buyerName || data.buyerEmail.split("@")[0]
-  const subjectDisplay = data.emailSubject || "(제목 없음)"
-  const openedTimeKST = new Date(data.openedAt).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-  })
-
-  // 발송 후 오픈까지 걸린 시간 계산
-  let responseTimeText = ""
-  if (data.sentAt) {
-    const diffMs = data.openedAt.getTime() - data.sentAt.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
-
-    if (diffHours > 24) {
-      const diffDays = Math.floor(diffHours / 24)
-      responseTimeText = `발송 후 ${diffDays}일 만에 열람`
-    } else if (diffHours > 0) {
-      responseTimeText = `발송 후 ${diffHours}시간 ${diffMinutes}분 만에 열람`
-    } else {
-      responseTimeText = `발송 후 ${diffMinutes}분 만에 열람`
-    }
-  }
-
-  const buyerInfo = [data.buyerCompany, data.buyerTitle].filter(Boolean).join(" / ")
-
-  return `
-RINDA AI SDR Agent | 업무 리포트
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[이메일 열람 감지]
-
-${buyerDisplay}님이 발송하신 이메일을 확인했습니다.
-
-안녕하세요, ${data.userName}님.
-
-제가 대신 발송해드린 이메일을 ${buyerDisplay}님이 열어보셨습니다.
-잠재 고객이 귀사의 제안에 관심을 보이고 있다는 긍정적인 신호입니다.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-발송 이메일 정보
-
-받는 사람: ${data.buyerEmail}
-${buyerInfo ? `소속: ${buyerInfo}` : ""}
-제목: ${subjectDisplay}
-열람 시간: ${openedTimeKST}
-${responseTimeText ? `응답 속도: ${responseTimeText}` : ""}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-RINDA의 권장 사항
-
-이메일 열람은 관심의 첫 번째 신호입니다.
-다음 단계로의 전환을 위해 아래 액션을 고려해 주세요.
-
-- 열람 후 24시간 내 후속 이메일 발송 시 응답률이 평균 2배 상승합니다
-- 바이어의 비즈니스에 맞춤화된 추가 자료를 첨부해 보세요
-- 구체적인 미팅 일정을 제안하면 전환 가능성이 높아집니다
-
-대시보드에서 상세 확인: ${config.frontendUrl}/dashboard
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-이 리포트는 RINDA AI SDR이 자동으로 생성했습니다.
-Grinda AI | AI-Powered Sales Development
-`
-}
-
 // ============================================================================
 // Service Functions
 // ============================================================================
@@ -429,7 +365,10 @@ export async function sendEmailOpenNotification(
     // 2. 체험판 사용자인지 확인
     const isTrial = await isTrialWorkspace(workspace.id)
     if (!isTrial) {
-      logger.debug({ emailId, workspaceId: workspace.id }, "Skipping notification: not a trial workspace")
+      logger.debug(
+        { emailId, workspaceId: workspace.id },
+        "Skipping notification: not a trial workspace",
+      )
       return { success: false, skipped: true, reason: "Not a trial workspace" }
     }
 
@@ -441,14 +380,20 @@ export async function sendEmailOpenNotification(
       .limit(1)
 
     if (!currentEmail || currentEmail.openCount > 1) {
-      logger.debug({ emailId, openCount: currentEmail?.openCount }, "Skipping notification: not first open")
+      logger.debug(
+        { emailId, openCount: currentEmail?.openCount },
+        "Skipping notification: not first open",
+      )
       return { success: false, skipped: true, reason: "Not the first open" }
     }
 
     // 4. 유저의 Unipile 계정 조회
     const unipileAccount = await getUserUnipileAccount(user.id, workspace.id)
     if (!unipileAccount) {
-      logger.warn({ userId: user.id, workspaceId: workspace.id }, "No Unipile account found for user")
+      logger.warn(
+        { userId: user.id, workspaceId: workspace.id },
+        "No Unipile account found for user",
+      )
       return { success: false, skipped: true, reason: "No Unipile account for user" }
     }
 

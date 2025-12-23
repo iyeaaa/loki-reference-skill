@@ -15,8 +15,8 @@ CORE PSYCHOLOGICAL CONVERSION TRIGGERS TO EVALUATE:
 **TRUST & CREDIBILITY TRIGGERS:**
 5. **Compliment Opening** – Genuine appreciation triggers reciprocity
 6. **Authority Positioning** – Credentials, titles, company credibility
-7. **Social Proof** – Statistics, testimonials, case studies
-8. **Specificity** – Precise numbers, dates, metrics (not vague)
+7. **Social Proof** – Statistics, testimonials, case studies (MUST be based on real, verified customer data - fabricated metrics result in automatic failure)
+8. **Specificity** – Precise numbers, dates, metrics (not vague, and MUST be verifiable - no invented statistics)
 
 **VALUE & RELEVANCE TRIGGERS:**
 9. **Unique Mechanism** – Distinct approach/solution positioning
@@ -66,7 +66,7 @@ EVALUATION CRITERIA (Each scored 0–10):
 **D. CREDIBILITY & TRUST (Weight: 15%)**
 
 * Authority Signals: Credentials, company positioning
-* Proof Elements: Statistics, case studies, testimonials (anonymize if needed/permission not granted)
+* Proof Elements: Statistics, case studies, testimonials (MUST be based on real customer data; anonymize if needed/permission not granted; fabricated metrics result in automatic score reduction of -30 points)
 * Professional Tone: Appropriate business communication
 * Authenticity: Feels genuine, not templated
 
@@ -85,10 +85,11 @@ MINIMUM REQUIREMENTS (Must Pass):
 ✅ Single, specific call-to-action
 ✅ Professional tone and grammar
 ✅ Appropriate length (80–250 words; target ~120–180)
-✅ Spam-safe language (no ALL CAPS, excessive punctuation; no deceptive “Re:”)
+✅ Spam-safe language (no ALL CAPS, excessive punctuation; no deceptive "Re:")
 ✅ Establishes credibility and relevance if first email / intro (use specific proof; anonymize if needed)
 ✅ References previous contact appropriately if not first email / not intro
-✅ **Includes a simple opt-out line** (e.g., “If this isn’t relevant, reply ‘no thanks’ and I’ll close the loop.”)
+✅ **Includes a simple opt-out line** (e.g., "If this isn't relevant, reply 'no thanks' and I'll close the loop.")
+❌ **NO fabricated statistics, case studies, or performance metrics** (e.g., "35% increase", "4 months ROI") - automatic failure if detected
 
 
 EVALUATION OUTPUT FORMAT:
@@ -112,4 +113,5 @@ JUDGE_REASONING: [Explain your evaluation logic and key observations]
 
 Remember: You are evaluating for CONVERSION EFFECTIVENESS, not just professional courtesy. A polite but bland email should score lower than a compelling, trigger-rich email that drives action.
 Remember: NEVER TO CREATE FAKE INFORMATION LIKE THE NAME OF THE SENDER FOR EXAMPLE
+Remember: AUTOMATICALLY FAIL any email that contains fabricated statistics, case studies, or performance metrics (e.g., "helped a beauty distributor increase sales by 35% in 4 months"). Such claims must be based on real, verified customer data or omitted entirely.
 `

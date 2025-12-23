@@ -606,15 +606,64 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         }
 
         // Strategy 3: Body is object with JSON as key (form-urlencoded parsing issue)
+        // Form-urlencoded splits JSON on & and = characters, creating multiple key-value pairs
         if (!webhookBody && body && typeof body === "object") {
           const keys = Object.keys(body)
+          const bodyRecord = body as Record<string, string>
 
-          if (keys.length >= 1 && keys[0]?.startsWith("{")) {
+          logger.info(
+            { keyCount: keys.length, firstKeyStart: keys[0]?.substring(0, 50) },
+            "[Unipile Webhook] Attempting to reconstruct from object",
+          )
+
+          // Try to reconstruct original JSON from form-urlencoded parsed data
+          // The original JSON was split on & and = characters
+          if (keys.length >= 1) {
             try {
-              webhookBody = JSON.parse(keys[0]) as UnipileWebhookBody
-              logger.info("[Unipile Webhook] ✅ Parsed from object key")
-            } catch {
-              logger.warn("[Unipile Webhook] Failed to parse from object key")
+              // Reconstruct: key1=value1&key2=value2&... -> original string
+              const parts: string[] = []
+              for (const key of keys) {
+                const value = bodyRecord[key]
+                if (value !== undefined && value !== "") {
+                  parts.push(`${key}=${value}`)
+                } else {
+                  parts.push(key)
+                }
+              }
+              const reconstructed = parts.join("&")
+
+              // Try to parse as JSON directly (if it's a complete JSON)
+              if (reconstructed.startsWith("{")) {
+                try {
+                  webhookBody = JSON.parse(reconstructed) as UnipileWebhookBody
+                  logger.info("[Unipile Webhook] ✅ Parsed from reconstructed string")
+                } catch {
+                  // If direct parse fails, the JSON might have been split on = or &
+                  // These characters appear in JSON as part of URLs or encoded values
+                  logger.info("[Unipile Webhook] Direct parse failed, trying decode")
+                }
+              }
+
+              // If still no result, try URL decoding and parsing
+              if (!webhookBody) {
+                try {
+                  const decoded = decodeURIComponent(reconstructed.replace(/\+/g, " "))
+                  if (decoded.startsWith("{")) {
+                    webhookBody = JSON.parse(decoded) as UnipileWebhookBody
+                    logger.info("[Unipile Webhook] ✅ Parsed from decoded string")
+                  }
+                } catch {
+                  logger.warn("[Unipile Webhook] URL decode parse failed")
+                }
+              }
+            } catch (reconstructError) {
+              logger.warn(
+                {
+                  error:
+                    reconstructError instanceof Error ? reconstructError.message : reconstructError,
+                },
+                "[Unipile Webhook] Reconstruction failed",
+              )
             }
           }
 

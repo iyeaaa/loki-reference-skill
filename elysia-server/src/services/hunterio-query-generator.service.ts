@@ -183,7 +183,7 @@ Rules:
 /**
  * Find matching valid Hunter.io industries from survey input
  */
-function findMatchingIndustries(surveyIndustry: string): ValidHunterioIndustry[] {
+export function findMatchingIndustries(surveyIndustry: string): ValidHunterioIndustry[] {
   const input = surveyIndustry.toLowerCase()
 
   // Find industries that contain the input term or vice versa

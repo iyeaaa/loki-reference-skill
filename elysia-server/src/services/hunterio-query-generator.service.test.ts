@@ -276,6 +276,116 @@ describe("hunterio-query-generator.service", () => {
   })
 })
 
+describe("findMatchingIndustries", () => {
+  test("returns matching industries for exact match", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("Software Development")
+    expect(result).toContain("Software Development")
+  })
+
+  test("returns matching industries for partial match 'software'", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("software")
+    expect(result).toContain("Software Development")
+  })
+
+  test("returns industries containing 'tech' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("tech")
+    // Should match industries containing 'tech' from the list
+    expect(result.length).toBeGreaterThan(0)
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'health' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("health")
+    expect(result).toContain("Hospitals and Health Care")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'finance' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("finance")
+    // Uses fallback since no exact matches
+    expect(result).toContain("Financial Services")
+  })
+
+  test("returns industries containing 'retail' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("retail")
+    expect(result).toContain("Retail")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'manufacturing' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("manufacturing")
+    expect(result).toContain("Manufacturing")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'consulting' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("consulting")
+    expect(result).toContain("Business Consulting and Services")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'marketing' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("marketing")
+    expect(result).toContain("Marketing Services")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns industries containing 'education' when matches exist", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("education")
+    expect(result).toContain("Education")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("returns Professional Services as ultimate fallback for unknown input", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("xyznonexistent123")
+    expect(result).toContain("Professional Services")
+  })
+
+  test("returns at most 3 industries", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const result = findMatchingIndustries("software")
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test("is case insensitive", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const lowerResult = findMatchingIndustries("software")
+    const upperResult = findMatchingIndustries("SOFTWARE")
+    const mixedResult = findMatchingIndustries("SoFtWaRe")
+    expect(lowerResult).toEqual(upperResult)
+    expect(lowerResult).toEqual(mixedResult)
+  })
+
+  test("returns non-empty array for all common industry terms", async () => {
+    const { findMatchingIndustries } = await import("./hunterio-query-generator.service")
+    const terms = [
+      "tech",
+      "health",
+      "finance",
+      "retail",
+      "manufacturing",
+      "consulting",
+      "marketing",
+      "education",
+    ]
+    for (const term of terms) {
+      const result = findMatchingIndustries(term)
+      expect(result.length).toBeGreaterThan(0)
+    }
+  })
+})
+
 describe("hunterio-query-generator.service integration", () => {
   // These tests make real LLM calls - run only in CI or with OPENAI_API_KEY
   const hasApiKey = !!process.env.OPENAI_API_KEY

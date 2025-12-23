@@ -1151,14 +1151,55 @@ async function discoverLeadsForOnboarding(
       }
     }
   >()
-  const usedQueries = new Set<string>()
 
   console.log(`[LeadDiscovery] Target: ${TARGET_LEADS} unique enriched leads with email`)
 
   try {
+    // Step 1: Search BigQuery once per industry
+    console.log(`[LeadDiscovery] Searching BigQuery for ${targetIndustries.length} industries...`)
+
+    for (const targetIndustry of targetIndustries) {
+      const query = `${targetIndustry} companies in ${countryName}`
+      console.log(`[LeadDiscovery] Query for "${targetIndustry}": "${query}"`)
+
+      const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
+        limitOverride: BATCH_SIZE,
+      })
+
+      if (!result.results.length) {
+        console.log(`[LeadDiscovery] No results from BigQuery for "${targetIndustry}"`)
+        continue
+      }
+
+      console.log(`[LeadDiscovery] Found ${result.results.length} results for "${targetIndustry}"`)
+
+      // Add leads to unique leads in-memory state
+      let newLeadsAdded = 0
+      for (const row of result.results) {
+        const website = row.website as string
+        if (!website || uniqueLeadsByWebsite.has(website)) continue
+
+        uniqueLeadsByWebsite.set(website, {
+          company: row.company as string,
+          website,
+          industry: row.industry as string,
+          employees: row.employees?.toString() || "",
+          country: row.country as string,
+        })
+        newLeadsAdded++
+      }
+
+      console.log(
+        `[LeadDiscovery] Added ${newLeadsAdded} new leads from "${targetIndustry}" ` +
+          `(${result.results.length - newLeadsAdded} duplicates)`,
+      )
+    }
+
+    console.log(`[LeadDiscovery] Total unique leads from BigQuery: ${uniqueLeadsByWebsite.size}`)
+
+    // Step 2: Enrich leads in batches until target reached
     let iteration = 0
 
-    // Iterative loop
     while (iteration < MAX_ITERATIONS) {
       iteration++
 
@@ -1168,11 +1209,11 @@ async function discoverLeadsForOnboarding(
       )
 
       console.log(
-        `[LeadDiscovery] Iteration ${iteration}/${MAX_ITERATIONS}: ` +
+        `[LeadDiscovery] Enrichment iteration ${iteration}/${MAX_ITERATIONS}: ` +
           `${enrichedWithEmails.length}/${TARGET_LEADS} enriched leads with email`,
       )
 
-      // BASE CASE: We have 150 unique enriched leads with email
+      // BASE CASE: We have enough enriched leads with email
       if (enrichedWithEmails.length >= TARGET_LEADS) {
         console.log(
           `[LeadDiscovery] ✓ Target reached: ${enrichedWithEmails.length} enriched leads with email`,
@@ -1180,75 +1221,14 @@ async function discoverLeadsForOnboarding(
         break
       }
 
-      // Generate 1-3 queries (one for each target customer industry) and search BigQuery
-      let totalNewLeadsAdded = 0
-      for (const targetIndustry of targetIndustries) {
-        // Generate unique search query using target customer industry
-        const query = generateUniqueQuery(
-          targetIndustry, // Use target customer industry, not seller's industry
-          countryName,
-          BATCH_SIZE,
-          iteration,
-          usedQueries,
-        )
-
-        if (!query) {
-          console.warn(
-            `[LeadDiscovery] No more unique queries for industry "${targetIndustry}", skipping`,
-          )
-          continue
-        }
-
-        console.log(`[LeadDiscovery] Query for "${targetIndustry}": "${query}"`)
-
-        // Search BigQuery
-        const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
-
-        if (!result.results.length) {
-          console.log(`[LeadDiscovery] No results from BigQuery for "${targetIndustry}"`)
-          continue
-        }
-
-        console.log(
-          `[LeadDiscovery] Found ${result.results.length} results for "${targetIndustry}"`,
-        )
-
-        // Add leads to unique leads in-memory state
-        let newLeadsAdded = 0
-        for (const row of result.results) {
-          const website = row.website as string
-          if (!website || uniqueLeadsByWebsite.has(website)) continue
-
-          uniqueLeadsByWebsite.set(website, {
-            company: row.company as string,
-            website,
-            industry: row.industry as string,
-            employees: row.employees?.toString() || "",
-            country: row.country as string,
-          })
-          newLeadsAdded++
-        }
-
-        console.log(
-          `[LeadDiscovery] Added ${newLeadsAdded} new leads from "${targetIndustry}" ` +
-            `(${result.results.length - newLeadsAdded} duplicates)`,
-        )
-        totalNewLeadsAdded += newLeadsAdded
-      }
-
-      console.log(
-        `[LeadDiscovery] Total new leads this iteration: ${totalNewLeadsAdded}. ` +
-          `Total unique: ${uniqueLeadsByWebsite.size}`,
-      )
-
       // Enrich un-enriched leads
       const unenrichedLeads = Array.from(uniqueLeadsByWebsite.values()).filter(
         (lead) => !lead.enriched,
       )
 
       if (unenrichedLeads.length === 0) {
-        console.log("[LeadDiscovery] No un-enriched leads to process")
-        continue
+        console.log("[LeadDiscovery] No more un-enriched leads to process")
+        break
       }
 
       console.log(`[LeadDiscovery] Enriching ${unenrichedLeads.length} un-enriched leads...`)
@@ -1343,54 +1323,6 @@ async function discoverLeadsForOnboarding(
     console.error("[LeadDiscovery] Error during lead discovery:", error)
     throw error // Propagate error to caller for proper error handling
   }
-}
-
-/**
- * Generate unique search queries to avoid fetching the same leads
- * Varies by: result count, employee range, specific keywords
- */
-function generateUniqueQuery(
-  industryName: string,
-  countryName: string,
-  batchSize: number,
-  iteration: number,
-  usedQueries: Set<string>,
-): string | null {
-  // Strategy variations to generate diverse queries
-  const strategies = [
-    // Base query with increasing limits
-    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add employee size variations
-    () =>
-      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
-
-    // Add business type variations
-    () => `${industryName} startups in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} enterprises in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} SMB companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add keyword variations
-    () => `${industryName} B2B companies in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} software companies in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} service companies in ${countryName} ${batchSize * iteration}개`,
-  ]
-
-  // Try each strategy
-  for (const strategy of strategies) {
-    const query = strategy()
-    if (!usedQueries.has(query)) {
-      usedQueries.add(query)
-      return query
-    }
-  }
-
-  // If all strategies exhausted, return null
-  return null
 }
 
 /**

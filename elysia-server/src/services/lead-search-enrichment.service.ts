@@ -7,12 +7,13 @@
  */
 
 import { z } from "zod"
+import { VALID_HUNTERIO_INDUSTRIES } from "../constants/hunterio-industries"
 import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
 import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
-import { generateHunterioQuery } from "./hunterio-query-generator.service"
+import { findMatchingIndustries, generateHunterioQuery } from "./hunterio-query-generator.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
 import { formatLeadForScoring, scoreLeadFit } from "./lead-scoring.service"
 import { enrichLeadsForOnboarding } from "./onboarding.service"
@@ -25,7 +26,6 @@ export const SEARCH_CONFIG = {
   TARGET_LEADS: 150,
   ENRICHMENT_BATCH_SIZE: 30,
   BIGQUERY_BATCH_SIZE: 100,
-  MAX_SEARCH_ITERATIONS: 3,
   MAX_EMPLOYEE_COUNT: 5000, // Skip companies with >5000 employees (target SMBs)
   HUNTERIO_MAX_PER_PAGE: 100,
   HUNTERIO_MAX_EMAIL_COUNT: 100, // Skip companies with >100 indexed emails (proxy for large companies)
@@ -167,55 +167,56 @@ Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
     )
 
     const industries = structured.object.targetIndustries
-    console.log(`[LeadSearch] Target industries: ${industries.join(", ")}`)
+    console.log(`[LeadSearch] Target industries (raw): ${industries.join(", ")}`)
 
-    return industries
+    // Validate industries against Hunter.io valid industries list
+    const validatedIndustries: string[] = []
+    for (const industry of industries) {
+      // Check if it's already a valid industry
+      if (
+        VALID_HUNTERIO_INDUSTRIES.includes(industry as (typeof VALID_HUNTERIO_INDUSTRIES)[number])
+      ) {
+        validatedIndustries.push(industry)
+        continue
+      }
+
+      // Try to map to valid industries using fuzzy matching
+      const mappedIndustries = findMatchingIndustries(industry)
+      if (mappedIndustries.length > 0) {
+        console.log(`[LeadSearch] Mapped "${industry}" to: ${mappedIndustries.join(", ")}`)
+        // Only take the first mapped industry to avoid too many results
+        const firstMapped = mappedIndustries[0]
+        if (firstMapped && !validatedIndustries.includes(firstMapped)) {
+          validatedIndustries.push(firstMapped)
+        }
+      } else {
+        console.warn(
+          `[LeadSearch] Could not map industry "${industry}" to valid Hunter.io industry, skipping`,
+        )
+      }
+    }
+
+    // If no valid industries found, fall back to original industry name
+    if (validatedIndustries.length === 0) {
+      console.warn(
+        `[LeadSearch] No valid industries found, falling back to original: ${industryName}`,
+      )
+      const fallbackIndustries = findMatchingIndustries(industryName)
+      if (fallbackIndustries.length > 0) {
+        validatedIndustries.push(...fallbackIndustries.slice(0, 3))
+      } else {
+        // Last resort: use a generic industry
+        validatedIndustries.push("Professional Services")
+      }
+    }
+
+    console.log(`[LeadSearch] Target industries (validated): ${validatedIndustries.join(", ")}`)
+
+    return validatedIndustries
   } catch (error) {
     console.error("[LeadSearch] B2B Agent failed, falling back to original industry", error)
     return [industryName] // Fallback to original behavior
   }
-}
-
-/**
- * Generate unique BigQuery search queries with variations
- */
-function generateUniqueQuery(
-  industryName: string,
-  countryName: string,
-  batchSize: number,
-  iteration: number,
-  usedQueries: Set<string>,
-): string | null {
-  const strategies = [
-    // Base query with increasing limits
-    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add employee size variations
-    () =>
-      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
-    () =>
-      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
-
-    // Add business type variations
-    () => `${industryName} startups in ${countryName} ${batchSize * iteration}개`,
-    () => `${industryName} SMB companies in ${countryName} ${batchSize * iteration}개`,
-
-    // Add keyword variations
-    () => `${industryName} B2B companies in ${countryName} ${batchSize * iteration}개`,
-  ]
-
-  // Try each strategy until we find an unused query
-  for (const strategy of strategies) {
-    const query = strategy()
-    if (!usedQueries.has(query)) {
-      usedQueries.add(query)
-      return query
-    }
-  }
-
-  return null // All strategies exhausted
 }
 
 /**
@@ -259,7 +260,6 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
 }> {
   const { targetIndustries, countryName, targetCount, onProgress } = options
   const processedWebsites = new Set<string>()
-  const usedQueries = new Set<string>()
   const leads: Array<{
     company: string
     website: string
@@ -272,88 +272,68 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   let skippedDuplicates = 0
   let skippedLargeCompanies = 0
 
-  for (let iteration = 0; iteration < SEARCH_CONFIG.MAX_SEARCH_ITERATIONS; iteration++) {
+  // One query per industry
+  for (const targetIndustry of targetIndustries) {
     if (leads.length >= targetCount) {
       console.log(`[LeadSearch] BigQuery target reached: ${leads.length}/${targetCount}`)
       break
     }
 
-    console.log(
-      `[LeadSearch] BigQuery iteration ${iteration + 1}/${SEARCH_CONFIG.MAX_SEARCH_ITERATIONS}`,
-    )
+    const query = `${targetIndustry} companies in ${countryName}`
+    console.log(`[LeadSearch] Querying BigQuery: "${query}"`)
 
-    for (const targetIndustry of targetIndustries) {
-      // Generate unique query for this industry
-      const query = generateUniqueQuery(
-        targetIndustry,
-        countryName,
-        SEARCH_CONFIG.BIGQUERY_BATCH_SIZE,
-        iteration + 1,
-        usedQueries,
-      )
+    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
+      limitOverride: SEARCH_CONFIG.BIGQUERY_BATCH_SIZE,
+    })
 
-      if (!query) {
-        console.warn(`[LeadSearch] No more unique queries for "${targetIndustry}"`)
+    if (!result.results.length) {
+      console.log(`[LeadSearch] No results for "${targetIndustry}"`)
+      continue
+    }
+
+    console.log(`[LeadSearch] Found ${result.results.length} results for "${targetIndustry}"`)
+    totalQueried += result.results.length
+
+    // Filter results
+    for (const row of result.results) {
+      const website = row.website as string
+      if (!website) continue
+
+      // Filter 1: Skip duplicates
+      if (processedWebsites.has(website.toLowerCase())) {
+        skippedDuplicates++
         continue
       }
 
-      console.log(`[LeadSearch] Querying BigQuery: "${query}"`)
+      // Filter 2: Skip large companies
+      const employeeCount = parseInt(row.employees?.toString() || "0", 10)
+      if (isCompanyTooLarge(employeeCount)) {
+        console.log(
+          `[LeadSearch] Skipping large company (${employeeCount} employees): ${row.company}`,
+        )
+        skippedLargeCompanies++
+        continue
+      }
 
-      const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
-        limitOverride: SEARCH_CONFIG.BIGQUERY_BATCH_SIZE,
+      processedWebsites.add(website.toLowerCase())
+
+      leads.push({
+        company: row.company as string,
+        website,
+        industry: row.industry as string,
+        employees: row.employees?.toString() || "",
+        country: row.country as string,
       })
+    }
 
-      if (!result.results.length) {
-        console.log(`[LeadSearch] No results for "${targetIndustry}"`)
-        continue
-      }
-
-      console.log(`[LeadSearch] Found ${result.results.length} results for "${targetIndustry}"`)
-      totalQueried += result.results.length
-
-      // Filter results
-      for (const row of result.results) {
-        const website = row.website as string
-        if (!website) continue
-
-        // Filter 1: Skip duplicates
-        if (processedWebsites.has(website.toLowerCase())) {
-          skippedDuplicates++
-          continue
-        }
-
-        // Filter 2: Skip large companies
-        const employeeCount = parseInt(row.employees?.toString() || "0", 10)
-        if (isCompanyTooLarge(employeeCount)) {
-          console.log(
-            `[LeadSearch] Skipping large company (${employeeCount} employees): ${row.company}`,
-          )
-          skippedLargeCompanies++
-          continue
-        }
-
-        processedWebsites.add(website.toLowerCase())
-
-        leads.push({
-          company: row.company as string,
-          website,
-          industry: row.industry as string,
-          employees: row.employees?.toString() || "",
-          country: row.country as string,
-        })
-      }
-
-      // Report progress
-      if (onProgress) {
-        await onProgress({
-          phase: "bigquery",
-          message: `Found ${leads.length}/${targetCount} leads from BigQuery`,
-          currentCount: leads.length,
-          targetCount,
-        })
-      }
-
-      if (leads.length >= targetCount) break
+    // Report progress
+    if (onProgress) {
+      await onProgress({
+        phase: "bigquery",
+        message: `Found ${leads.length}/${targetCount} leads from BigQuery`,
+        currentCount: leads.length,
+        targetCount,
+      })
     }
   }
 

@@ -827,7 +827,7 @@ export const QUICK_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
  * 전체 온보딩용 설정 (300개 리드, 2-touch)
  */
 export const FULL_ONBOARDING_CONFIG: CampaignGeneratorConfig = {
-  targetLeads: 300,
+  targetLeads: 150,
   bigqueryBatchSize: 500,
   maxSearchIterations: 5,
   autoActivateSequence: false,

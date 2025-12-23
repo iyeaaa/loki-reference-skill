@@ -177,7 +177,7 @@ async function processOnboardingJob(
             isNotNull(leadContacts.contactValue),
           ),
         )
-        .limit(300)
+        .limit(150)
       leadIds = existingLeads.map((l) => l.id)
       logger.info(
         { jobId, leadsCount: leadIds.length },

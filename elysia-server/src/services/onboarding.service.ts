@@ -1005,7 +1005,7 @@ async function discoverLeadsForOnboarding(
   totalEnriched?: number
   totalDuplicates?: number
 }> {
-  const TARGET_LEADS = 300
+  const TARGET_LEADS = 150
   const MAX_ITERATIONS = 5
   const BATCH_SIZE = 200
 
@@ -1058,7 +1058,7 @@ async function discoverLeadsForOnboarding(
           `${enrichedWithEmails.length}/${TARGET_LEADS} enriched leads with email`,
       )
 
-      // BASE CASE: We have 300 unique enriched leads with email
+      // BASE CASE: We have 150 unique enriched leads with email
       if (enrichedWithEmails.length >= TARGET_LEADS) {
         console.log(
           `[LeadDiscovery] ✓ Target reached: ${enrichedWithEmails.length} enriched leads with email`,
@@ -1174,7 +1174,7 @@ async function discoverLeadsForOnboarding(
       `[LeadDiscovery] Total enriched leads with valid emails: ${enrichedLeadsWithEmails.length}`,
     )
 
-    // Take first 300 and create in database
+    // Take first 150 and create in database
     const leadsToCreate = enrichedLeadsWithEmails.slice(0, TARGET_LEADS).map((lead) => ({
       companyName: lead.companyName,
       foundCompanyName: lead.companyName,

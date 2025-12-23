@@ -8,6 +8,7 @@
 
 import type { Job } from "bullmq"
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm"
+import { z } from "zod"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -37,6 +38,8 @@ import {
   emitOnboardingProgress,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
+import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
+import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
@@ -64,7 +67,7 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 250 // Target 250 leads with BigQuery + Hunter.io fallback
+const TARGET_LEADS = 150 // Target 150 leads matching direct function
 const ENRICHMENT_BATCH_SIZE = 20
 const BIGQUERY_BATCH_SIZE = 100
 const MAX_SEARCH_ITERATIONS = 3
@@ -228,6 +231,112 @@ export async function addCheckpointError(
     timestamp: new Date().toISOString(),
   })
   await saveCheckpoint(job, { errors: checkpoint.errors })
+}
+
+// ====================================
+// B2B AGENT HELPERS
+// ====================================
+
+/**
+ * Get B2B customer industries using AI agent
+ * Takes the seller's industry and country, returns 1-3 target customer industries
+ */
+async function getB2BCustomerIndustries(
+  industryName: string,
+  countryName: string,
+): Promise<string[]> {
+  try {
+    console.log(
+      `[B2BAgent] Analyzing target customer industries for: ${industryName} in ${countryName}`,
+    )
+
+    // Step 1: Generate analysis using B2B agent
+    const agent = createB2BCustomerIndustryAgent()
+    const prompt = generateB2BCustomerIndustryPrompt(industryName, countryName)
+    const response = await agent.generate(prompt)
+
+    console.log(`[B2BAgent] Agent response: ${response.text}`)
+
+    // Step 2: Extract structured output using structured extraction agent
+    const structured = await structuredExtractionAgent.generate(
+      [
+        {
+          role: "user",
+          content: `Extract the target industries from the following analysis. Return only the industry names as a JSON array.
+
+Analysis:
+${response.text}
+
+Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
+        },
+      ],
+      {
+        output: z.object({
+          targetIndustries: z
+            .array(z.string())
+            .min(1)
+            .max(3)
+            .describe("1-3 target customer industries"),
+        }),
+      },
+    )
+
+    const industries = structured.object.targetIndustries
+    console.log(`[B2BAgent] Extracted target industries: ${industries.join(", ")}`)
+
+    return industries
+  } catch (error) {
+    console.error("[B2BAgent] Agent failed, falling back to original industry", error)
+    return [industryName] // Fallback to original behavior
+  }
+}
+
+/**
+ * Generate unique search queries to avoid fetching the same leads
+ * Varies by: result count, employee range, specific keywords
+ */
+function generateUniqueQuery(
+  industryName: string,
+  countryName: string,
+  batchSize: number,
+  iteration: number,
+  usedQueries: Set<string>,
+): string | null {
+  // Strategy variations to generate diverse queries
+  const strategies = [
+    // Base query with increasing limits
+    () => `${industryName} companies in ${countryName} ${batchSize * iteration}개`,
+
+    // Add employee size variations
+    () =>
+      `${industryName} companies in ${countryName} with 10-50 employees ${batchSize * iteration}개`,
+    () =>
+      `${industryName} companies in ${countryName} with 50-200 employees ${batchSize * iteration}개`,
+    () =>
+      `${industryName} companies in ${countryName} with 200+ employees ${batchSize * iteration}개`,
+
+    // Add business type variations
+    () => `${industryName} startups in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} enterprises in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} SMB companies in ${countryName} ${batchSize * iteration}개`,
+
+    // Add keyword variations
+    () => `${industryName} B2B companies in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} software companies in ${countryName} ${batchSize * iteration}개`,
+    () => `${industryName} service companies in ${countryName} ${batchSize * iteration}개`,
+  ]
+
+  // Try each strategy
+  for (const strategy of strategies) {
+    const query = strategy()
+    if (!usedQueries.has(query)) {
+      usedQueries.add(query)
+      return query
+    }
+  }
+
+  // If all strategies exhausted, return null
+  return null
 }
 
 // ====================================
@@ -403,6 +512,11 @@ export async function runDiscoveryPhase(
     // Map codes to actual Apollo BigQuery values
     const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
     const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
+
+    // Get target customer industries from B2B agent (1-3 industries that would BUY from this industry)
+    const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
+    console.log(`[DiscoveryPhase] Target customer industries: ${targetIndustries.join(", ")}`)
+
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
       phase: "discovery",
@@ -417,7 +531,14 @@ export async function runDiscoveryPhase(
     // Track processed websites to avoid duplicates across iterations
     const processedWebsites = new Set<string>()
 
+    // Track used queries to generate diverse searches
+    const usedQueries = new Set<string>()
+
     // Iterative search until we reach target or exhaust options
+    // Outer loop: iterations, Inner loop: target industries (1-3)
+    let isFirstQuery = true
+    let globalBatchNum = 0
+
     for (let iteration = 0; iteration < MAX_SEARCH_ITERATIONS; iteration++) {
       // Check current count before each iteration
       const currentLeadsCount = await countLeadsWithEmails(workspaceId)
@@ -428,87 +549,102 @@ export async function runDiscoveryPhase(
         break
       }
 
-      // Generate search query with higher LIMIT for onboarding
-      const query = `${industryName} companies in ${countryName}`
       console.log(
-        `[DiscoveryPhase] Iteration ${iteration + 1}/${MAX_SEARCH_ITERATIONS}: Query="${query}", LIMIT=${BIGQUERY_BATCH_SIZE}`,
+        `[DiscoveryPhase] Iteration ${iteration + 1}/${MAX_SEARCH_ITERATIONS}: Searching ${targetIndustries.length} target industries`,
       )
 
-      // Emit SSE: Database searching (before BigQuery call to avoid 0% wait)
-      if (iteration === 0) {
+      // Emit SSE: Database searching (before first BigQuery call)
+      if (isFirstQuery) {
         await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
       }
 
-      // Search BigQuery with limitOverride to get more results per iteration
-      let result: Awaited<ReturnType<typeof searchBigQuery>>
+      // Collect leads from all target industries in this iteration
+      const allLeadsToEnrich: Array<{
+        company: string
+        website: string
+        industry: string
+        employees: string
+        country: string
+      }> = []
 
-      if (iteration === 0) {
-        // First iteration: use natural language query with limitOverride
-        result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
+      // Loop over each target customer industry (1-3)
+      for (const targetIndustry of targetIndustries) {
+        // Generate unique query using dynamic strategies
+        const query = generateUniqueQuery(
+          targetIndustry,
+          countryName,
+          BIGQUERY_BATCH_SIZE,
+          iteration + 1,
+          usedQueries,
+        )
+
+        if (!query) {
+          console.warn(
+            `[DiscoveryPhase] No more unique queries for industry "${targetIndustry}", skipping`,
+          )
+          continue
+        }
+
+        console.log(`[DiscoveryPhase] Query for "${targetIndustry}": "${query}"`)
+        isFirstQuery = false
+
+        // Search BigQuery
+        const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
           limitOverride: BIGQUERY_BATCH_SIZE,
         })
-      } else {
-        // Subsequent iterations: modify query to get different results
-        // Add variation to get different results (e.g., different keywords)
-        const variationQueries = [
-          `${industryName} businesses in ${countryName}`,
-          `${industryName} firms in ${countryName}`,
-          `${countryName} ${industryName} 업체`,
-          `${countryName}의 ${industryName} 회사`,
-        ]
-        const variationIndex = (iteration - 1) % variationQueries.length
-        const variationQuery = variationQueries[variationIndex] as string
-        console.log(`[DiscoveryPhase] Using variation query: "${variationQuery}"`)
-        result = await searchBigQuery(variationQuery, APOLLO_LEADS_DATA_DICTIONARY, {
-          limitOverride: BIGQUERY_BATCH_SIZE,
-        })
-      }
 
-      if (!result.results.length) {
-        console.log(`[DiscoveryPhase] No results from BigQuery in iteration ${iteration + 1}`)
-        continue
-      }
+        if (!result.results.length) {
+          console.log(`[DiscoveryPhase] No results from BigQuery for "${targetIndustry}"`)
+          continue
+        }
 
-      console.log(
-        `[DiscoveryPhase] Iteration ${iteration + 1}: Found ${result.results.length} results from BigQuery`,
-      )
+        console.log(
+          `[DiscoveryPhase] Found ${result.results.length} results for "${targetIndustry}"`,
+        )
 
-      // Prepare leads for enrichment (filter out already processed)
-      const leadsToEnrich = result.results
-        .filter((row) => {
+        // Filter and add to combined leads list
+        let newLeadsAdded = 0
+        for (const row of result.results) {
           const website = row.website as string
-          if (!website) return false
+          if (!website) continue
           // Skip already processed websites
-          if (processedWebsites.has(website.toLowerCase())) return false
+          if (processedWebsites.has(website.toLowerCase())) continue
           processedWebsites.add(website.toLowerCase())
-          return true
-        })
-        .map((row) => ({
-          company: row.company as string,
-          website: row.website as string,
-          industry: row.industry as string,
-          employees: row.employees?.toString() || "",
-          country: row.country as string,
-        }))
+
+          allLeadsToEnrich.push({
+            company: row.company as string,
+            website,
+            industry: row.industry as string,
+            employees: row.employees?.toString() || "",
+            country: row.country as string,
+          })
+          newLeadsAdded++
+        }
+
+        console.log(
+          `[DiscoveryPhase] Added ${newLeadsAdded} new leads from "${targetIndustry}" ` +
+            `(${result.results.length - newLeadsAdded} duplicates)`,
+        )
+      }
 
       console.log(
-        `[DiscoveryPhase] Iteration ${iteration + 1}: Prepared ${leadsToEnrich.length} new leads for enrichment`,
+        `[DiscoveryPhase] Total new leads this iteration: ${allLeadsToEnrich.length}. ` +
+          `Total unique websites: ${processedWebsites.size}`,
       )
 
-      if (leadsToEnrich.length === 0) {
+      if (allLeadsToEnrich.length === 0) {
         console.log(`[DiscoveryPhase] No new leads to enrich in iteration ${iteration + 1}`)
         continue
       }
 
-      // Process in batches
-      const totalBatches = Math.ceil(leadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
+      // Process combined leads in batches
+      const totalBatches = Math.ceil(allLeadsToEnrich.length / ENRICHMENT_BATCH_SIZE)
       let totalEnrichedCount = 0
 
-      for (let i = 0; i < leadsToEnrich.length; i += ENRICHMENT_BATCH_SIZE) {
-        const batch = leadsToEnrich.slice(i, i + ENRICHMENT_BATCH_SIZE)
+      for (let i = 0; i < allLeadsToEnrich.length; i += ENRICHMENT_BATCH_SIZE) {
+        const batch = allLeadsToEnrich.slice(i, i + ENRICHMENT_BATCH_SIZE)
         const batchNum = Math.floor(i / ENRICHMENT_BATCH_SIZE) + 1
-        const globalBatchNum =
-          iteration * Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE) + batchNum
+        globalBatchNum++
 
         console.log(
           `[DiscoveryPhase] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`,
@@ -531,7 +667,9 @@ export async function runDiscoveryPhase(
             workspaceId,
             jobId,
             globalBatchNum,
-            MAX_SEARCH_ITERATIONS * Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE),
+            MAX_SEARCH_ITERATIONS *
+              targetIndustries.length *
+              Math.ceil(BIGQUERY_BATCH_SIZE / ENRICHMENT_BATCH_SIZE),
             currentCount,
             totalEnrichedCount,
           ),
@@ -605,7 +743,7 @@ export async function runDiscoveryPhase(
     }
 
     // ============================================
-    // STEP 2: Hunter.io Fallback (if < 250 leads)
+    // STEP 2: Hunter.io Fallback (if < 150 leads)
     // ============================================
     const afterBigQueryCount = await countLeadsWithEmails(workspaceId)
     console.log(

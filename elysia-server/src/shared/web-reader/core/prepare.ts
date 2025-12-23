@@ -49,7 +49,7 @@ export interface JinaReaderOptions {
  */
 export function prepareRequestHeaders(
   apiKey: string,
-  options?: JinaReaderOptions
+  options?: JinaReaderOptions,
 ): Record<string, string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,

@@ -228,7 +228,7 @@ export function useUpdateSequenceStep(sequenceId?: string) {
     mutationFn: (variables: {
       sequenceId?: string
       stepId: string
-      data: CreateSequenceStepRequest
+      data: Partial<CreateSequenceStepRequest>
       files?: File[]
     }) => {
       console.log("📎 Hook - updateStep mutationFn CALLED!")

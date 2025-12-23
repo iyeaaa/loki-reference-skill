@@ -165,7 +165,7 @@ export const sequencesApi = {
   updateStep: (
     sequenceId: string,
     stepId: string,
-    data: CreateSequenceStepRequest,
+    data: Partial<CreateSequenceStepRequest>,
     files?: File[],
   ) => {
     console.log("📎 API - updateStep FUNCTION CALLED!")
@@ -183,16 +183,22 @@ export const sequencesApi = {
     if (files && files.length > 0) {
       const formData = new FormData()
 
-      // Append all data fields
-      formData.append("stepOrder", data.stepOrder.toString())
-      formData.append("delayDays", data.delayDays.toString())
+      // Append all data fields (only if defined for Partial type)
+      if (data.stepOrder !== undefined) {
+        formData.append("stepOrder", data.stepOrder.toString())
+      }
+      if (data.delayDays !== undefined) {
+        formData.append("delayDays", data.delayDays.toString())
+      }
       // Ensure scheduledHour and scheduledMinute are not null (use defaults)
       formData.append("scheduledHour", (data.scheduledHour ?? 9).toString())
       formData.append("scheduledMinute", (data.scheduledMinute ?? 0).toString())
       if (data.timezone) {
         formData.append("timezone", data.timezone)
       }
-      formData.append("emailSubject", data.emailSubject)
+      if (data.emailSubject) {
+        formData.append("emailSubject", data.emailSubject)
+      }
       if (data.emailBodyText) {
         formData.append("emailBodyText", data.emailBodyText)
       }

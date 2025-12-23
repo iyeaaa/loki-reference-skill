@@ -4,7 +4,7 @@ import logger, { generateTraceId, inboundEmailLogger, webhookLogger } from "../u
 
 export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
   // SendGrid Inbound Parse - Use ElysiaJS built-in multipart parser
-  .post("/inbound", async ({ body, request }) => {
+  .post("/inbound", async ({ body }) => {
     const startTime = Date.now()
     const traceId = generateTraceId()
 
@@ -54,9 +54,10 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
         }
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
       const result = await webhookService.processInboundEmail(
+        // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
         formData as any,
+        // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
         files as any,
         traceId,
       )
@@ -75,7 +76,7 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       throw error
     }
   })
-  .post("/inbound-store", async ({ body, request }) => {
+  .post("/inbound-store", async ({ body }) => {
     const startTime = Date.now()
     const traceId = generateTraceId()
 
@@ -112,8 +113,12 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
     inboundEmailLogger.received(traceId, from, to, subject)
 
     try {
-      // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
-      const result = await webhookService.processInboundStore(formData as any, files as any)
+      const result = await webhookService.processInboundStore(
+        // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
+        formData as any,
+        // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
+        files as any,
+      )
 
       const durationMs = Date.now() - startTime
       inboundEmailLogger.processed(traceId, {
@@ -129,7 +134,7 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
     }
   })
   // SendGrid Event Webhook
-  .post("/sendgrid-events", async ({ body, request }) => {
+  .post("/sendgrid-events", async ({ body }) => {
     const startTime = Date.now()
     const traceId = generateTraceId()
     const eventCount = Array.isArray(body) ? body.length : 1

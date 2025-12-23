@@ -13,10 +13,12 @@ import {
   // Sparkles, // TODO: Gemini Search 기능 완성 후 주석 해제
   UserCheck,
 } from "lucide-react"
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"
+import { UpgradePlanModal } from "@/components/UpgradePlanModal"
+import { getUserDisplayTier, UserTierBadge } from "@/components/UserTierBadge"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +33,7 @@ import {
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { iconRotateVariants, shouldReduceMotion } from "@/lib/animations"
+import { useAuth } from "@/lib/auth-provider"
 import {
   IAM_ACTIONS,
   IAM_RESOURCES,
@@ -206,6 +209,8 @@ export function AppSidebar({
   const { t } = useTranslation()
   const location = useLocation()
   const pathname = location.pathname
+  const { user } = useAuth()
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
 
   // 권한 컨텍스트
   const { isAdmin, hasPermission, isLoading: permissionLoading } = usePermissions()
@@ -326,20 +331,63 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-sidebar-border border-t px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
-        {/* Language and Settings */}
-        <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-8">
-          <SidebarMenuItem>
-            <LanguageSwitcher className="w-full" />
+      <SidebarFooter className="border-sidebar-border border-t px-3 py-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-4">
+        {/* User info and Settings */}
+        <SidebarMenu className="gap-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-4">
+          {/* 사용자 정보 + 설정 아이콘 (펼쳐졌을 때) */}
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+              <div className="flex flex-col gap-0.5 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-medium text-sm">
+                    {user?.username || t("common.user")}
+                  </span>
+                  {user &&
+                    (() => {
+                      const tier = getUserDisplayTier(user)
+                      return tier ? <UserTierBadge size="sm" tier={tier} /> : null
+                    })()}
+                </div>
+                <span className="truncate text-muted-foreground text-xs">{user?.email}</span>
+              </div>
+              <Link
+                className={cn(
+                  "ml-2 shrink-0 rounded-md p-1.5 transition-colors hover:bg-accent",
+                  (pathname === "/settings" || pathname === "/company") &&
+                    "bg-accent text-accent-foreground",
+                )}
+                to="/settings"
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </div>
           </SidebarMenuItem>
-          <CustomMenuItem
-            icon={Settings}
-            isActive={pathname === "/settings" || pathname === "/company"}
-            title={t("sidebar.menu.settings")}
-            url="/settings"
-          />
+          {/* 업그레이드 CTA (Trial 사용자만, 펼쳐졌을 때) */}
+          {user?.trialStatus?.isTrialActive && (
+            <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+              <Button
+                className="h-9 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
+                onClick={() => setIsUpgradeModalOpen(true)}
+                size="sm"
+              >
+                {t("sidebar.upgrade.button")}
+              </Button>
+            </SidebarMenuItem>
+          )}
+          {/* 설정 아이콘만 (접혔을 때) */}
+          <div className="hidden group-data-[collapsible=icon]:block">
+            <CustomMenuItem
+              icon={Settings}
+              isActive={pathname === "/settings" || pathname === "/company"}
+              title={t("sidebar.menu.settings")}
+              url="/settings"
+            />
+          </div>
         </SidebarMenu>
       </SidebarFooter>
+
+      {/* 업그레이드 모달 */}
+      <UpgradePlanModal onOpenChange={setIsUpgradeModalOpen} open={isUpgradeModalOpen} />
     </Sidebar>
   )
 }

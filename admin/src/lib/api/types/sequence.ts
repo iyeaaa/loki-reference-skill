@@ -120,6 +120,14 @@ export type SequenceEnrollment = {
   leadCompanyName?: string | null
   leadEmail?: string | null
   emailAccountAddress?: string | null
+  companyName?: string | null
+  leadName?: string | null
+  // Email tracking fields
+  opened?: boolean
+  clicked?: boolean
+  replied?: boolean
+  delivered?: boolean
+  openCount?: number
 }
 
 export type SequenceStepExecution = {

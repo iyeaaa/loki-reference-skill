@@ -54,6 +54,7 @@ import { BullMQTestPage } from "./settings/BullMQTestPage"
 import { EmailDraftTest } from "./settings/EmailDraftTest"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 import { JobLogsPage } from "./settings/job-logs"
+import { LanguageSettings } from "./settings/LanguageSettings"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
@@ -196,6 +197,12 @@ export default function SettingsPage() {
         label: t("settings.signature.title"),
         icon: <Mail className="h-4 w-4" />,
         permission: { resource: IAM_RESOURCES.SETTINGS_PROFILE, action: IAM_ACTIONS.READ },
+      },
+      {
+        id: "language",
+        label: t("settings.language.title"),
+        icon: <Globe className="h-4 w-4" />,
+        permission: "public",
       },
       // ───────────────────────────────────────────────────────────────────────
       // 워크스페이스 - 모든 로그인 사용자 접근 가능
@@ -563,6 +570,8 @@ export default function SettingsPage() {
         )
       case "signature":
         return <EmailSignatureManagement />
+      case "language":
+        return <LanguageSettings />
       case "company-setup":
         return <CompanyInformation />
       case "workspace":

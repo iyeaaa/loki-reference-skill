@@ -1,9 +1,53 @@
 import { Elysia, t } from "elysia"
 import * as dashboardService from "../services/dashboard.service"
-import { errorResponse, ResponseCode } from "../types/response.types"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
 
 export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
+  // Get trial dashboard stats (single optimized API for trial users)
+  .get(
+    "/trial",
+    async ({ query }) => {
+      try {
+        if (!query.workspaceId) {
+          return errorResponse("workspaceId가 필요합니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        const stats = await dashboardService.getTrialDashboardStats({
+          workspaceId: query.workspaceId,
+          sequenceId: query.sequenceId,
+          startDate: query.startDate,
+          endDate: query.endDate,
+        })
+
+        return successResponse(stats, "정상 처리되었습니다.")
+      } catch (error) {
+        logger.error({ error, query }, "Failed to get trial dashboard stats")
+        return errorResponse(
+          "체험판 대시보드 통계 조회에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+        sequenceId: t.Optional(t.String({ format: "uuid" })),
+        startDate: t.Optional(
+          t.String({ description: "Start date in ISO 8601 format (e.g., 2024-01-01)" }),
+        ),
+        endDate: t.Optional(
+          t.String({ description: "End date in ISO 8601 format (e.g., 2024-01-31)" }),
+        ),
+      }),
+      detail: {
+        tags: ["dashboard"],
+        summary: "Get trial dashboard statistics",
+        description:
+          "Returns all statistics for trial dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering.",
+      },
+    },
+  )
   // Get dashboard stats (all 3 columns)
   .get(
     "/stats",

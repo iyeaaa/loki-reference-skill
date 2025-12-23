@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { NotificationBell } from "@/components/NotificationBell"
 import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
 import { ProfileCard } from "@/components/ProfileCard"
+import { getUserDisplayTier, UserTierBadge } from "@/components/UserTierBadge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Breadcrumb,
@@ -145,13 +146,19 @@ function DashboardContent({ children }: DashboardContentProps) {
             <SidebarTrigger className="-ml-1" />
             <Separator className="mr-2 h-4" orientation="vertical" />
             {isSidebarCollapsed && !hideWorkspaceSelector && (
-              <WorkspaceSelector
-                className="mr-2"
-                compact
-                onValueChange={setSelectedWorkspace}
-                options={workspaceOptions}
-                value={selectedWorkspace}
-              />
+              <>
+                <WorkspaceSelector
+                  className="mr-2"
+                  compact
+                  onValueChange={setSelectedWorkspace}
+                  options={workspaceOptions}
+                  value={selectedWorkspace}
+                />
+                {(() => {
+                  const tier = getUserDisplayTier(currentUser)
+                  return tier ? <UserTierBadge className="mr-2" size="sm" tier={tier} /> : null
+                })()}
+              </>
             )}
             <Breadcrumb>
               <BreadcrumbList>

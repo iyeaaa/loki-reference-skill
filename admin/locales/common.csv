@@ -44,4 +44,5 @@ tag.tooltip.auto,자동 생성된 메시지,Auto-generated message
 create,생성,Create
 saving,저장 중...,Saving...
 update,수정,Update
-error,[NO TRANSLATION] common.error,[NO TRANSLATION] common.error
+error,오류,Error
+user,사용자,User

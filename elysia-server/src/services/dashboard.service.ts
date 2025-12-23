@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
 import { emailReplies, emails } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { sequenceEnrollments, sequenceSteps, sequences } from "../db/schema/sequences"
 
@@ -517,4 +518,567 @@ export async function getReplyNotifications(
   )
 
   return emailsWithSentiment
+}
+
+// ============================================================================
+// Trial Dashboard Stats (체험판 대시보드 통합 API)
+// ============================================================================
+
+export interface TrialDashboardParams {
+  workspaceId: string
+  sequenceId?: string
+  startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
+  endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
+}
+
+export interface TrialFunnelData {
+  sent: number
+  opened: number
+  clicked: number
+  replied: number
+  openRate: number
+  clickRate: number
+  replyRate: number
+}
+
+export interface TrialHotLead {
+  id: string
+  companyName: string
+  email: string
+  country: string | null
+  openCount: number
+  clickCount: number
+  score: number
+}
+
+export interface TrialRecentActivity {
+  id: string
+  type: "sent" | "opened" | "clicked" | "replied"
+  leadName: string | null
+  companyName: string | null
+  email: string
+  stepOrder: number | null
+  timestamp: Date
+  openCount?: number
+}
+
+export interface TrialSubscriptionInfo {
+  status: string
+  trialStart: Date | null
+  trialEnd: Date | null
+  daysRemaining: number
+  trialDays: number
+}
+
+export interface TrialDailyStats {
+  date: string // YYYY-MM-DD
+  sent: number
+  opened: number
+  clicked: number
+}
+
+export interface TrialCountryStats {
+  country: string
+  count: number
+  percentage: number
+}
+
+export interface TrialDashboardStats {
+  subscription: TrialSubscriptionInfo
+  funnel: TrialFunnelData
+  hotLeads: TrialHotLead[]
+  recentActivity: TrialRecentActivity[]
+  dailyStats: TrialDailyStats[]
+  countryStats: TrialCountryStats[]
+  sequence: {
+    id: string
+    name: string
+    status: string
+    leadCount: number
+    stepCount: number
+  } | null
+  industryBenchmark: {
+    openRate: number
+    clickRate: number
+    replyRate: number
+  }
+}
+
+/**
+ * Get all trial dashboard stats in one API call (optimized for performance)
+ */
+export async function getTrialDashboardStats(
+  params: TrialDashboardParams,
+): Promise<TrialDashboardStats> {
+  const { workspaceId, sequenceId, startDate, endDate } = params
+
+  // Parse date strings to Date objects
+  const startDateObj = startDate ? new Date(startDate) : undefined
+  const endDateObj = endDate ? new Date(endDate) : undefined
+
+  // 1. Get subscription info
+  const subscriptionInfo = await getTrialSubscriptionInfo(workspaceId)
+
+  // 2. Get sequence info (if sequenceId provided, or get the first active sequence)
+  const sequenceInfo = await getTrialSequenceInfo(workspaceId, sequenceId)
+
+  // 3. Get funnel data (with date filtering)
+  const funnel = await getTrialFunnelData(workspaceId, sequenceInfo?.id, startDateObj, endDateObj)
+
+  // 4. Get hot leads (2+ opens, with date filtering)
+  const hotLeads = await getTrialHotLeads(
+    workspaceId,
+    sequenceInfo?.id,
+    5,
+    startDateObj,
+    endDateObj,
+  )
+
+  // 5. Get recent activity (with date filtering)
+  const recentActivity = await getTrialRecentActivity(
+    workspaceId,
+    sequenceInfo?.id,
+    10,
+    startDateObj,
+    endDateObj,
+  )
+
+  // 6. Get daily stats (with date filtering)
+  const dailyStats = await getTrialDailyStats(
+    workspaceId,
+    sequenceInfo?.id,
+    startDateObj,
+    endDateObj,
+  )
+
+  // 7. Get country stats (with date filtering)
+  const countryStats = await getTrialCountryStats(
+    workspaceId,
+    sequenceInfo?.id,
+    startDateObj,
+    endDateObj,
+  )
+
+  // 8. Industry benchmark (hardcoded for now, can be dynamic later)
+  const industryBenchmark = {
+    openRate: 21, // B2B cold email average
+    clickRate: 2.5,
+    replyRate: 1,
+  }
+
+  return {
+    subscription: subscriptionInfo,
+    funnel,
+    hotLeads,
+    recentActivity,
+    dailyStats,
+    countryStats,
+    sequence: sequenceInfo,
+    industryBenchmark,
+  }
+}
+
+async function getTrialSubscriptionInfo(workspaceId: string): Promise<TrialSubscriptionInfo> {
+  const { subscriptions } = await import("../db/schema/billing")
+
+  const result = await db
+    .select({
+      status: subscriptions.status,
+      trialStart: subscriptions.trialStart,
+      trialEnd: subscriptions.trialEnd,
+    })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.workspaceId, workspaceId), eq(subscriptions.isPrimary, true)))
+    .limit(1)
+
+  const subscription = result[0]
+  const now = new Date()
+
+  if (!subscription) {
+    return {
+      status: "trialing",
+      trialStart: null,
+      trialEnd: null,
+      daysRemaining: 7,
+      trialDays: 7,
+    }
+  }
+
+  let daysRemaining = 7
+  if (subscription.trialEnd) {
+    const diffMs = subscription.trialEnd.getTime() - now.getTime()
+    daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  }
+
+  const trialDays =
+    subscription.trialStart && subscription.trialEnd
+      ? Math.ceil(
+          (subscription.trialEnd.getTime() - subscription.trialStart.getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : 7
+
+  return {
+    status: subscription.status,
+    trialStart: subscription.trialStart,
+    trialEnd: subscription.trialEnd,
+    daysRemaining,
+    trialDays,
+  }
+}
+
+async function getTrialSequenceInfo(
+  workspaceId: string,
+  sequenceId?: string,
+): Promise<{
+  id: string
+  name: string
+  status: string
+  leadCount: number
+  stepCount: number
+} | null> {
+  // Get sequence
+  const sequenceConditions = [eq(sequences.workspaceId, workspaceId)]
+  if (sequenceId) {
+    sequenceConditions.push(eq(sequences.id, sequenceId))
+  }
+
+  const sequenceResult = await db
+    .select({
+      id: sequences.id,
+      name: sequences.name,
+      status: sequences.status,
+      selectedLeadIds: sequences.selectedLeadIds,
+    })
+    .from(sequences)
+    .where(and(...sequenceConditions))
+    .orderBy(desc(sequences.createdAt))
+    .limit(1)
+
+  const sequence = sequenceResult[0]
+  if (!sequence) return null
+
+  // Count steps
+  const stepCountResult = await db
+    .select({ count: count() })
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.sequenceId, sequence.id))
+
+  // Count leads
+  let leadCount = 0
+  if (sequence.selectedLeadIds) {
+    try {
+      const leadIds = JSON.parse(sequence.selectedLeadIds) as string[]
+      leadCount = leadIds.length
+    } catch {
+      leadCount = 0
+    }
+  }
+
+  return {
+    id: sequence.id,
+    name: sequence.name,
+    status: sequence.status,
+    leadCount,
+    stepCount: stepCountResult[0]?.count ?? 0,
+  }
+}
+
+async function getTrialFunnelData(
+  workspaceId: string,
+  sequenceId?: string,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<TrialFunnelData> {
+  const conditions = [eq(emails.workspaceId, workspaceId), eq(emails.direction, "outbound")]
+  if (sequenceId) {
+    conditions.push(eq(emails.sequenceId, sequenceId))
+  }
+  if (startDate) {
+    conditions.push(gte(emails.sentAt, startDate))
+  }
+  if (endDate) {
+    conditions.push(lte(emails.sentAt, endDate))
+  }
+
+  const result = await db
+    .select({
+      sent: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.sentAt} IS NOT NULL THEN ${emails.id} END)::int`,
+      opened: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+      clicked: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.clickedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+      replied: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.repliedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+    })
+    .from(emails)
+    .where(and(...conditions))
+
+  const data = result[0] ?? { sent: 0, opened: 0, clicked: 0, replied: 0 }
+
+  return {
+    sent: data.sent,
+    opened: data.opened,
+    clicked: data.clicked,
+    replied: data.replied,
+    openRate: data.sent > 0 ? Math.round((data.opened / data.sent) * 1000) / 10 : 0,
+    clickRate: data.sent > 0 ? Math.round((data.clicked / data.sent) * 1000) / 10 : 0,
+    replyRate: data.sent > 0 ? Math.round((data.replied / data.sent) * 1000) / 10 : 0,
+  }
+}
+
+async function getTrialHotLeads(
+  workspaceId: string,
+  sequenceId?: string,
+  limit = 5,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<TrialHotLead[]> {
+  const conditions = [
+    eq(emails.workspaceId, workspaceId),
+    eq(emails.direction, "outbound"),
+    isNotNull(emails.leadId),
+  ]
+  if (sequenceId) {
+    conditions.push(eq(emails.sequenceId, sequenceId))
+  }
+  if (startDate) {
+    conditions.push(gte(emails.sentAt, startDate))
+  }
+  if (endDate) {
+    conditions.push(lte(emails.sentAt, endDate))
+  }
+
+  // Get leads with high open counts (2+)
+  const result = await db
+    .select({
+      leadId: emails.leadId,
+      companyName: leads.companyName,
+      email: emails.toEmail,
+      country: leads.country,
+      openCount: sql<number>`SUM(${emails.openCount})::int`,
+      clickCount: sql<number>`SUM(${emails.clickCount})::int`,
+    })
+    .from(emails)
+    .innerJoin(leads, eq(emails.leadId, leads.id))
+    .where(and(...conditions))
+    .groupBy(emails.leadId, leads.companyName, emails.toEmail, leads.country)
+    .having(sql`SUM(${emails.openCount}) >= 2`)
+    .orderBy(desc(sql`SUM(${emails.openCount})`))
+    .limit(limit)
+
+  return result.map((row) => ({
+    id: row.leadId || "",
+    companyName: row.companyName || "Unknown",
+    email: row.email,
+    country: row.country,
+    openCount: row.openCount,
+    clickCount: row.clickCount,
+    score: Math.min(100, row.openCount * 15 + row.clickCount * 25),
+  }))
+}
+
+async function getTrialRecentActivity(
+  workspaceId: string,
+  sequenceId?: string,
+  limit = 10,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<TrialRecentActivity[]> {
+  const { emailEvents } = await import("../db/schema/emails")
+
+  const conditions = [eq(emails.workspaceId, workspaceId)]
+  if (sequenceId) {
+    conditions.push(eq(emails.sequenceId, sequenceId))
+  }
+
+  // Build event conditions with date filtering
+  const eventConditions: ReturnType<typeof eq>[] = []
+  if (startDate) {
+    eventConditions.push(gte(emailEvents.timestamp, startDate))
+  }
+  if (endDate) {
+    eventConditions.push(lte(emailEvents.timestamp, endDate))
+  }
+
+  // Get recent email events
+  const result = await db
+    .select({
+      id: emailEvents.id,
+      eventType: emailEvents.eventType,
+      timestamp: emailEvents.timestamp,
+      emailId: emailEvents.emailId,
+      leadName: emails.leadName,
+      leadEmail: emails.leadEmail,
+      toEmail: emails.toEmail,
+      stepId: emails.stepId,
+      openCount: emails.openCount,
+    })
+    .from(emailEvents)
+    .innerJoin(emails, eq(emailEvents.emailId, emails.id))
+    .where(and(...conditions, ...eventConditions))
+    .orderBy(desc(emailEvents.timestamp))
+    .limit(limit)
+
+  // Get step orders for each step
+  const stepIds = [
+    ...new Set(
+      result
+        .filter((r): r is typeof r & { stepId: string } => r.stepId !== null)
+        .map((r) => r.stepId),
+    ),
+  ]
+  const stepOrders: Record<string, number> = {}
+
+  if (stepIds.length > 0) {
+    const stepsResult = await db
+      .select({
+        id: sequenceSteps.id,
+        stepOrder: sequenceSteps.stepOrder,
+      })
+      .from(sequenceSteps)
+      .where(sql`${sequenceSteps.id} IN ${stepIds}`)
+
+    for (const step of stepsResult) {
+      stepOrders[step.id] = step.stepOrder
+    }
+  }
+
+  // Get company names from leads via leadContacts
+  const leadEmails = [...new Set(result.map((r) => r.toEmail))]
+  const companyNames: Record<string, string> = {}
+
+  if (leadEmails.length > 0) {
+    const leadsResult = await db
+      .select({
+        email: leadContacts.contactValue,
+        companyName: leads.companyName,
+      })
+      .from(leadContacts)
+      .innerJoin(leads, eq(leadContacts.leadId, leads.id))
+      .where(
+        and(
+          eq(leadContacts.contactType, "email"),
+          sql`${leadContacts.contactValue} IN ${leadEmails}`,
+        ),
+      )
+
+    for (const lead of leadsResult) {
+      if (lead.email && lead.companyName) {
+        companyNames[lead.email] = lead.companyName
+      }
+    }
+  }
+
+  return result.map((row) => {
+    let type: "sent" | "opened" | "clicked" | "replied" = "sent"
+    if (row.eventType === "open") type = "opened"
+    else if (row.eventType === "click") type = "clicked"
+    else if (row.eventType === "delivered") type = "sent"
+
+    return {
+      id: row.id,
+      type,
+      leadName: row.leadName,
+      companyName: companyNames[row.toEmail] || null,
+      email: row.toEmail,
+      stepOrder: row.stepId ? stepOrders[row.stepId] || null : null,
+      timestamp: row.timestamp,
+      openCount: row.openCount,
+    }
+  })
+}
+
+/**
+ * Get daily email stats for the specified date range
+ */
+async function getTrialDailyStats(
+  workspaceId: string,
+  sequenceId?: string,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<TrialDailyStats[]> {
+  // Default to last 90 days if no date range specified
+  const effectiveStartDate =
+    startDate ||
+    (() => {
+      const d = new Date()
+      d.setDate(d.getDate() - 90)
+      return d
+    })()
+
+  const conditions = [
+    eq(emails.workspaceId, workspaceId),
+    eq(emails.direction, "outbound"),
+    gte(emails.createdAt, effectiveStartDate),
+  ]
+  if (sequenceId) {
+    conditions.push(eq(emails.sequenceId, sequenceId))
+  }
+  if (endDate) {
+    conditions.push(lte(emails.createdAt, endDate))
+  }
+
+  const result = await db
+    .select({
+      date: sql<string>`DATE(${emails.sentAt})`,
+      sent: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.sentAt} IS NOT NULL THEN ${emails.id} END)::int`,
+      opened: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+      clicked: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.clickedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+    })
+    .from(emails)
+    .where(and(...conditions))
+    .groupBy(sql`DATE(${emails.sentAt})`)
+    .orderBy(sql`DATE(${emails.sentAt})`)
+
+  return result
+    .filter((row) => row.date !== null)
+    .map((row) => ({
+      date: row.date,
+      sent: row.sent,
+      opened: row.opened,
+      clicked: row.clicked,
+    }))
+}
+
+/**
+ * Get lead distribution by country
+ */
+async function getTrialCountryStats(
+  workspaceId: string,
+  sequenceId?: string,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<TrialCountryStats[]> {
+  const conditions = [
+    eq(emails.workspaceId, workspaceId),
+    eq(emails.direction, "outbound"),
+    isNotNull(emails.leadId),
+  ]
+  if (sequenceId) {
+    conditions.push(eq(emails.sequenceId, sequenceId))
+  }
+  if (startDate) {
+    conditions.push(gte(emails.sentAt, startDate))
+  }
+  if (endDate) {
+    conditions.push(lte(emails.sentAt, endDate))
+  }
+
+  const result = await db
+    .select({
+      country: leads.country,
+      count: sql<number>`COUNT(DISTINCT ${leads.id})::int`,
+    })
+    .from(emails)
+    .innerJoin(leads, eq(emails.leadId, leads.id))
+    .where(and(...conditions))
+    .groupBy(leads.country)
+    .orderBy(desc(sql`COUNT(DISTINCT ${leads.id})`))
+    .limit(10)
+
+  const total = result.reduce((sum, row) => sum + row.count, 0)
+
+  return result.map((row) => ({
+    country: row.country || "Unknown",
+    count: row.count,
+    percentage: total > 0 ? Math.round((row.count / total) * 1000) / 10 : 0,
+  }))
 }

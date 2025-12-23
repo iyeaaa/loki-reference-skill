@@ -62,6 +62,87 @@ export type ReplyNotification = {
   createdAt: string
 }
 
+// Trial Dashboard Types
+export type TrialDashboardParams = {
+  workspaceId: string
+  sequenceId?: string
+  startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
+  endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
+}
+
+export type TrialFunnelData = {
+  sent: number
+  opened: number
+  clicked: number
+  replied: number
+  openRate: number
+  clickRate: number
+  replyRate: number
+}
+
+export type TrialHotLead = {
+  id: string
+  companyName: string
+  email: string
+  country: string | null
+  openCount: number
+  clickCount: number
+  score: number
+}
+
+export type TrialRecentActivity = {
+  id: string
+  type: "sent" | "opened" | "clicked" | "replied"
+  leadName: string | null
+  companyName: string | null
+  email: string
+  stepOrder: number | null
+  timestamp: string
+  openCount?: number
+}
+
+export type TrialSubscriptionInfo = {
+  status: string
+  trialStart: string | null
+  trialEnd: string | null
+  daysRemaining: number
+  trialDays: number
+}
+
+export type TrialDailyStats = {
+  date: string
+  sent: number
+  opened: number
+  clicked: number
+}
+
+export type TrialCountryStats = {
+  country: string
+  count: number
+  percentage: number
+}
+
+export type TrialDashboardStats = {
+  subscription: TrialSubscriptionInfo
+  funnel: TrialFunnelData
+  hotLeads: TrialHotLead[]
+  recentActivity: TrialRecentActivity[]
+  dailyStats: TrialDailyStats[]
+  countryStats: TrialCountryStats[]
+  sequence: {
+    id: string
+    name: string
+    status: string
+    leadCount: number
+    stepCount: number
+  } | null
+  industryBenchmark: {
+    openRate: number
+    clickRate: number
+    replyRate: number
+  }
+}
+
 export const dashboardApi = {
   getStats: async (params?: DateRangeParams): Promise<DashboardStats> => {
     const searchParams = new URLSearchParams()
@@ -194,5 +275,22 @@ export const dashboardApi = {
     return apiFetch<ReplyNotification[]>(
       `/api/v1/dashboard/notifications/replies${query ? `?${query}` : ""}`,
     )
+  },
+
+  // Trial Dashboard - Single optimized API call
+  getTrialDashboardStats: async (params: TrialDashboardParams): Promise<TrialDashboardStats> => {
+    const searchParams = new URLSearchParams()
+    searchParams.append("workspaceId", params.workspaceId)
+    if (params.sequenceId) {
+      searchParams.append("sequenceId", params.sequenceId)
+    }
+    if (params.startDate) {
+      searchParams.append("startDate", params.startDate)
+    }
+    if (params.endDate) {
+      searchParams.append("endDate", params.endDate)
+    }
+
+    return apiFetch<TrialDashboardStats>(`/api/v1/dashboard/trial?${searchParams.toString()}`)
   },
 }

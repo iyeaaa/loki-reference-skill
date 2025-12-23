@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { dashboardApi } from "../services/dashboard"
+import { dashboardApi, type TrialDashboardParams } from "../services/dashboard"
 
 export type DateRangeParams = {
   startDate?: string
@@ -23,6 +23,7 @@ export const dashboardKeys = {
     [...dashboardKeys.notifications(), "campaigns", params] as const,
   replyNotifications: (params?: DateRangeParams & { limit?: number }) =>
     [...dashboardKeys.notifications(), "replies", params] as const,
+  trialStats: (params: TrialDashboardParams) => [...dashboardKeys.all, "trial", params] as const,
 }
 
 // Queries
@@ -100,5 +101,18 @@ export function useReplyNotifications(params?: DateRangeParams & { limit?: numbe
     gcTime: 5 * 60 * 1000,
     refetchInterval: 15 * 1000, // Refetch every 15 seconds to get updated sentiment labels
     refetchIntervalInBackground: false, // Stop polling when tab is not active
+  })
+}
+
+// Trial Dashboard - Single optimized API call
+export function useTrialDashboardStats(params: TrialDashboardParams, enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.trialStats(params),
+    queryFn: () => dashboardApi.getTrialDashboardStats(params),
+    enabled: enabled && !!params.workspaceId,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
+    refetchIntervalInBackground: false,
   })
 }

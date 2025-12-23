@@ -309,7 +309,7 @@ export async function runDiscoveryPhase(
     const searchResult = await searchAndEnrichLeads(
       TARGET_LEADS,
       naturalLanguageQuery,
-      0, // minimumMatchScore: 0 = no filtering by score
+      60, // minimumMatchScore: 60 = filter out low-quality leads
       // Progress callback for SSE updates
       async (progress) => {
         console.log(`[DiscoveryPhase] Progress: ${progress.phase} - ${progress.message}`)

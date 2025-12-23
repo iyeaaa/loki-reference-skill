@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai"
 import { BigQuery } from "@google-cloud/bigquery"
 import { config } from "../config"
 import logger from "../utils/logger"
+import { getValidationErrorSummary, validateGeneratedSql } from "./bigquery-sql-validator"
 
 // BigQuery 테이블 메타데이터
 interface DataDictionary {
@@ -183,22 +184,22 @@ When the user searches for a compound term like "포장재 유통회사":
 4. Combine with AND: packaging AND (wholesale OR distribution)
 
 ### Examples of CORRECT SQL:
-- "한국 제조업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
-- "한국에 위치한 제조관련 업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
-- "인도네시아 뷰티 유통업체" → WHERE country = 'Indonesia' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%' OR LOWER(industry) LIKE '%retail%') LIMIT 100
-- "미국 포장재 유통회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
-- "미국 포장재 회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' LIMIT 100
-- "미국 뷰티 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') LIMIT 100
-- "미국 유통 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
-- "미국 IT 컨설팅" → WHERE country = 'United States' AND LOWER(industry) LIKE '%software%' AND LOWER(industry) LIKE '%consulting%' LIMIT 100
-- "일본 IT 회사" → WHERE country = 'Japan' AND (LOWER(industry) LIKE '%software%' OR LOWER(industry) LIKE '%technology%') LIMIT 100
+- "한국 제조업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 150
+- "한국에 위치한 제조관련 업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 150
+- "인도네시아 뷰티 유통업체" → WHERE country = 'Indonesia' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%' OR LOWER(industry) LIKE '%retail%') LIMIT 150
+- "미국 포장재 유통회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 150
+- "미국 포장재 회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' LIMIT 150
+- "미국 뷰티 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') LIMIT 150
+- "미국 유통 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 150
+- "미국 IT 컨설팅" → WHERE country = 'United States' AND LOWER(industry) LIKE '%software%' AND LOWER(industry) LIKE '%consulting%' LIMIT 150
+- "일본 IT 회사" → WHERE country = 'Japan' AND (LOWER(industry) LIKE '%software%' OR LOWER(industry) LIKE '%technology%') LIMIT 150
 
 ### Examples of WRONG SQL (DO NOT DO THIS):
-❌ WHERE country = 'United States' LIMIT 100  -- Missing industry filter! Returns 600K+ unrelated results!
+❌ WHERE country = 'United States' LIMIT 150  -- Missing industry filter! Returns 600K+ unrelated results!
 ❌ WHERE country = 'United States' OR LOWER(industry) LIKE '%packaging%'  -- OR with country is WRONG! Must use AND!
 ❌ WHERE LOWER(industry) LIKE '%wholesale%' -- Missing "packaging" for "포장재 유통"!
 ❌ WHERE LOWER(industry) LIKE '%manufacturing%' OR LOWER(industry) LIKE '%wholesale%' -- Generic "manufacturing" is NOT "packaging"!
-❌ WHERE LOWER(industry) LIKE '%manufacturing%' LIMIT 100 -- Missing country filter for "한국에 위치한 제조업체"!
+❌ WHERE LOWER(industry) LIKE '%manufacturing%' LIMIT 150 -- Missing country filter for "한국에 위치한 제조업체"!
 ❌ WHERE country LIKE '%Korea%' -- Use EXACT value 'South Korea', not partial match!
 ❌ WHERE country = 'Korea' -- Use 'South Korea' not 'Korea'!
 
@@ -243,9 +244,9 @@ When the user asks for a REGION, you MUST expand it into individual countries us
 | 유럽, Europe | Use: country IN ('United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Switzerland', 'Austria', 'Ireland', 'Portugal', 'Greece') |
 
 ### Examples of CORRECT SQL for Regional Queries:
-- "manufacturing companies in southeast asia" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
-- "automotive companies in Southeast Asia 100개" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%automotive%' LIMIT 100
-- "retail companies in Asia" → WHERE country IN ('China', 'Japan', 'South Korea', 'India', 'Singapore', 'Thailand', 'Vietnam', 'Indonesia', 'Malaysia', 'Philippines', 'Taiwan', 'Hong Kong') AND LOWER(industry) LIKE '%retail%' LIMIT 100
+- "manufacturing companies in southeast asia" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%manufacturing%' LIMIT 150
+- "automotive companies in Southeast Asia 100개" → WHERE country IN ('Thailand', 'Vietnam', 'Singapore', 'Malaysia', 'Indonesia', 'Philippines', 'Myanmar', 'Cambodia', 'Laos', 'Brunei') AND LOWER(industry) LIKE '%automotive%' LIMIT 150
+- "retail companies in Asia" → WHERE country IN ('China', 'Japan', 'South Korea', 'India', 'Singapore', 'Thailand', 'Vietnam', 'Indonesia', 'Malaysia', 'Philippines', 'Taiwan', 'Hong Kong') AND LOWER(industry) LIKE '%retail%' LIMIT 150
 
 ### ❌ WRONG SQL for Regional Queries:
 - WHERE country = 'Southeast Asia' → WRONG! No rows have this value!
@@ -343,7 +344,7 @@ WHERE country = 'United States'
   AND LOWER(industry) NOT LIKE '%retail%'
   AND LOWER(industry) NOT LIKE '%cosmetic%'
   AND LOWER(industry) NOT LIKE '%food%'
-LIMIT 100
+LIMIT 150
 
 ## ⚠️ CRITICAL: Breaking Down Compound Categories!
 
@@ -365,7 +366,7 @@ When the query contains B2B-style compound categories like "Real Estate & Constr
 
 ### Example:
 Query: "USA Real Estate & Construction 회사 100개"
-→ WHERE country = 'United States' AND (LOWER(industry) LIKE '%real estate%' OR LOWER(industry) LIKE '%construction%') LIMIT 100
+→ WHERE country = 'United States' AND (LOWER(industry) LIKE '%real estate%' OR LOWER(industry) LIKE '%construction%') LIMIT 150
 
 **NEVER search for the exact phrase "Real Estate & Construction" - it won't match anything!**
 
@@ -434,7 +435,7 @@ ${dataDictionary.employeeRanges.map((e) => `- "${e}"`).join("\n")}
 ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 
 ## Important Rules:
-1. ALWAYS use LIMIT clause (default 100, max 1000)
+1. ALWAYS use LIMIT clause (default 150, max 1000)
 2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
 3. **CRITICAL: Country Filter is MANDATORY when user mentions a location!**
    - "한국" → country = 'South Korea'
@@ -468,7 +469,116 @@ export class InvalidQueryError extends Error {
   }
 }
 
-// 자연어를 SQL로 변환
+// SQL 자동 수정 최대 시도 횟수
+const MAX_CORRECTION_ATTEMPTS = 2
+
+// Dry-run validation result
+interface DryRunResult {
+  isValid: boolean
+  error?: string
+}
+
+// SQL 검증을 위한 Dry-run (실제 실행 없이 문법 검증)
+const validateSqlWithDryRun = async (sql: string): Promise<DryRunResult> => {
+  const bigquery = getBigQueryClient()
+
+  try {
+    await bigquery.createQueryJob({
+      query: sql,
+      location: "US",
+      dryRun: true,
+    })
+
+    return { isValid: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.warn(
+      { sql: sql.substring(0, 200), error: errorMessage },
+      "SQL dry-run validation failed",
+    )
+    return {
+      isValid: false,
+      error: errorMessage,
+    }
+  }
+}
+
+// SQL 수정을 위한 프롬프트 생성
+const generateSqlCorrectionPrompt = (
+  originalQuery: string,
+  previousSql: string,
+  errors: string[],
+  dryRunError?: string,
+): string => {
+  return `You generated the following SQL query that has errors:
+
+\`\`\`sql
+${previousSql}
+\`\`\`
+
+## Errors Found:
+${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}
+${dryRunError ? `\nBigQuery Syntax Error: ${dryRunError}` : ""}
+
+## Original User Query:
+"${originalQuery}"
+
+## CRITICAL RULES TO FIX:
+1. **Industry matching**: Use \`LOWER(industry) LIKE '%keyword%'\`, NOT \`industry = 'value'\`
+2. **Country + Industry**: Connect with AND, NOT OR
+3. **Country matching**: Use exact match \`country = 'Value'\`, NOT LIKE
+4. **Always include LIMIT clause**
+
+## Return ONLY the corrected SQL query (no explanation, no markdown):`
+}
+
+// SQL 쿼리 정제 (마크다운 코드 블록 제거)
+const cleanSqlResponse = (sqlQuery: string): string => {
+  return sqlQuery
+    .replace(/```sql\n?/gi, "")
+    .replace(/```\n?/gi, "")
+    .trim()
+}
+
+// 특수 쿼리 타입 체크 (HELP_QUERY, INVALID_QUERY 등)
+const checkSpecialQueryTypes = (
+  cleanedSql: string,
+  tableName: string,
+): { sql: string; explanation: string } | null => {
+  // 도움말 요청 체크
+  if (cleanedSql.startsWith("HELP_QUERY:")) {
+    console.log(`[BigQuery] Help query detected`)
+    const helpMessage = cleanedSql.replace("HELP_QUERY:", "").trim()
+    throw new InvalidQueryError(`ℹ️ 검색 가이드\n\n${helpMessage}`)
+  }
+
+  // 유효하지 않은 쿼리 체크
+  if (cleanedSql === "INVALID_QUERY" || cleanedSql.includes("INVALID_QUERY")) {
+    console.log(`[BigQuery] Invalid query detected`)
+    throw new InvalidQueryError(
+      '검색어가 올바르지 않습니다. 리드/회사 검색과 관련된 질문을 입력해주세요.\n\n예시:\n- "헬스케어 산업의 미국 회사 100개 보여줘"\n- "직원 수 1000명 이상인 소프트웨어 회사"\n- "캐나다에 있는 금융 서비스 회사"',
+    )
+  }
+
+  // 데이터 없음 체크
+  if (cleanedSql.startsWith("NO_DATA:")) {
+    const message = cleanedSql.replace("NO_DATA:", "").trim()
+    throw new InvalidQueryError(`📋 데이터 안내\n\n${message}`)
+  }
+
+  // Industry 매칭 없음 - 특별한 SQL 반환 (searchBigQuery에서 처리)
+  if (cleanedSql === "NO_INDUSTRY_MATCH" || cleanedSql.includes("NO_INDUSTRY_MATCH")) {
+    logger.info(`[${tableName}] No matching industry, returning empty marker`)
+    return {
+      sql: "NO_INDUSTRY_MATCH",
+      explanation: "이 테이블에서 해당 산업을 찾을 수 없습니다.",
+    }
+  }
+
+  return null
+}
+
+// 자연어를 SQL로 변환 (검증 및 자동 수정 포함)
 export const convertNaturalLanguageToSql = async (
   query: string,
   dataDictionary: DataDictionary,
@@ -479,89 +589,137 @@ export const convertNaturalLanguageToSql = async (
   const startTime = Date.now()
 
   const ai = getGeminiClient()
+  let attempt = 0
+  let lastSql = ""
+  let lastErrors: string[] = []
+  let lastDryRunError: string | undefined
 
-  const prompt = generateSqlPrompt(query, dataDictionary)
+  while (attempt <= MAX_CORRECTION_ATTEMPTS) {
+    attempt++
+    const isRetry = attempt > 1
 
-  try {
-    console.log(`[BigQuery] Calling Gemini for SQL generation...`)
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
-    })
-    const geminiElapsed = Date.now() - startTime
-    console.log(`[BigQuery] Gemini responded (${geminiElapsed}ms)`)
+    try {
+      // 프롬프트 생성: 첫 시도는 기본 프롬프트, 재시도는 수정 프롬프트
+      const prompt = isRetry
+        ? generateSqlCorrectionPrompt(query, lastSql, lastErrors, lastDryRunError)
+        : generateSqlPrompt(query, dataDictionary)
 
-    const sqlQuery = response.text?.trim() || ""
-
-    // SQL 쿼리 정제 (마크다운 코드 블록 제거)
-    const cleanedSql = sqlQuery
-      .replace(/```sql\n?/gi, "")
-      .replace(/```\n?/gi, "")
-      .trim()
-
-    // 도움말 요청 체크
-    if (cleanedSql.startsWith("HELP_QUERY:")) {
-      console.log(`[BigQuery] Help query detected`)
-      const helpMessage = cleanedSql.replace("HELP_QUERY:", "").trim()
-      throw new InvalidQueryError(`ℹ️ 검색 가이드\n\n${helpMessage}`)
-    }
-
-    // 유효하지 않은 쿼리 체크
-    if (cleanedSql === "INVALID_QUERY" || cleanedSql.includes("INVALID_QUERY")) {
-      console.log(`[BigQuery] Invalid query detected`)
-      throw new InvalidQueryError(
-        '검색어가 올바르지 않습니다. 리드/회사 검색과 관련된 질문을 입력해주세요.\n\n예시:\n- "헬스케어 산업의 미국 회사 100개 보여줘"\n- "직원 수 1000명 이상인 소프트웨어 회사"\n- "캐나다에 있는 금융 서비스 회사"',
+      console.log(
+        `[BigQuery] Calling Gemini (attempt ${attempt}/${MAX_CORRECTION_ATTEMPTS + 1})...`,
       )
-    }
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: prompt,
+      })
+      const geminiElapsed = Date.now() - startTime
+      console.log(`[BigQuery] Gemini responded (${geminiElapsed}ms)`)
 
-    // 데이터 없음 체크
-    if (cleanedSql.startsWith("NO_DATA:")) {
-      const message = cleanedSql.replace("NO_DATA:", "").trim()
-      throw new InvalidQueryError(`📋 데이터 안내\n\n${message}`)
-    }
+      const cleanedSql = cleanSqlResponse(response.text?.trim() || "")
 
-    // Industry 매칭 없음 - 특별한 SQL 반환 (searchBigQuery에서 처리)
-    if (cleanedSql === "NO_INDUSTRY_MATCH" || cleanedSql.includes("NO_INDUSTRY_MATCH")) {
-      logger.info(`[${dataDictionary.tableName}] No matching industry, returning empty marker`)
-      return {
-        sql: "NO_INDUSTRY_MATCH",
-        explanation: "이 테이블에서 해당 산업을 찾을 수 없습니다.",
+      // 특수 쿼리 타입 체크 (HELP_QUERY, INVALID_QUERY 등)
+      const specialResult = checkSpecialQueryTypes(cleanedSql, dataDictionary.tableName)
+      if (specialResult) {
+        return specialResult
       }
-    }
 
-    // SQL 쿼리가 SELECT로 시작하는지 검증
-    if (!cleanedSql.toUpperCase().startsWith("SELECT")) {
-      throw new InvalidQueryError(
-        "유효한 검색 쿼리를 생성할 수 없습니다. 리드/회사 검색과 관련된 질문을 입력해주세요.",
-      )
-    }
+      // SQL 쿼리가 SELECT로 시작하는지 검증
+      if (!cleanedSql.toUpperCase().startsWith("SELECT")) {
+        if (attempt <= MAX_CORRECTION_ATTEMPTS) {
+          lastSql = cleanedSql
+          lastErrors = ["Query must start with SELECT"]
+          console.log(`[BigQuery] ⚠️ Invalid SQL format, retrying...`)
+          continue
+        }
+        throw new InvalidQueryError(
+          "유효한 검색 쿼리를 생성할 수 없습니다. 리드/회사 검색과 관련된 질문을 입력해주세요.",
+        )
+      }
 
-    // 설명 생성
-    const explanationPrompt = `다음 SQL 쿼리가 무엇을 검색하는지 한국어로 간단히 설명해주세요 (1-2문장):
+      // Phase 2: SQL 검증 규칙 적용
+      const validationResult = validateGeneratedSql(cleanedSql, {
+        originalQuery: query,
+        dataDictionary,
+      })
 
-SQL: ${cleanedSql}
+      // 자동 수정이 적용된 SQL 사용
+      const sqlToValidate = validationResult.correctedSql
+
+      if (validationResult.autoCorrections.length > 0) {
+        console.log(
+          `[BigQuery] Applied ${validationResult.autoCorrections.length} auto-corrections:`,
+        )
+        for (const correction of validationResult.autoCorrections) {
+          console.log(`[BigQuery]   - ${correction.rule}: ${correction.reason}`)
+        }
+      }
+
+      // 검증 실패 시 재시도
+      if (!validationResult.isValid && attempt <= MAX_CORRECTION_ATTEMPTS) {
+        lastSql = cleanedSql
+        lastErrors = validationResult.errors
+        const errorSummary = getValidationErrorSummary(validationResult)
+        console.log(`[BigQuery] ⚠️ Validation failed (attempt ${attempt}):`)
+        console.log(errorSummary)
+        continue
+      }
+
+      // Phase 1: BigQuery Dry-run 검증
+      const dryRunResult = await validateSqlWithDryRun(sqlToValidate)
+
+      if (!dryRunResult.isValid && attempt <= MAX_CORRECTION_ATTEMPTS) {
+        lastSql = sqlToValidate
+        lastErrors =
+          validationResult.errors.length > 0 ? validationResult.errors : ["SQL syntax error"]
+        lastDryRunError = dryRunResult.error
+        console.log(`[BigQuery] ⚠️ Dry-run failed: ${dryRunResult.error}`)
+        continue
+      }
+
+      // 검증 통과 - 설명 생성
+      const explanationPrompt = `다음 SQL 쿼리가 무엇을 검색하는지 한국어로 간단히 설명해주세요 (1-2문장):
+
+SQL: ${sqlToValidate}
 
 설명:`
 
-    const explanationResponse = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: explanationPrompt,
-    })
+      const explanationResponse = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: explanationPrompt,
+      })
 
-    const explanation = explanationResponse.text?.trim() || "검색 결과입니다."
+      const explanation = explanationResponse.text?.trim() || "검색 결과입니다."
 
-    console.log(`[BigQuery] ✅ SQL generated successfully`)
-    console.log(`[BigQuery]   - SQL: ${cleanedSql.substring(0, 100)}...`)
+      console.log(`[BigQuery] ✅ SQL generated successfully (attempt ${attempt})`)
+      console.log(`[BigQuery]   - SQL: ${sqlToValidate.substring(0, 100)}...`)
+      if (isRetry) {
+        console.log(`[BigQuery]   - Self-correction was applied`)
+      }
 
-    return { sql: cleanedSql, explanation }
-  } catch (error) {
-    if (error instanceof InvalidQueryError) {
+      return { sql: sqlToValidate, explanation }
+    } catch (error) {
+      if (error instanceof InvalidQueryError) {
+        throw error
+      }
+
+      // 재시도 가능한 에러인 경우
+      if (attempt <= MAX_CORRECTION_ATTEMPTS) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        lastSql = lastSql || "-- Error generating SQL"
+        lastErrors = [errorMessage]
+        console.log(`[BigQuery] ⚠️ Error during SQL generation, retrying: ${errorMessage}`)
+        continue
+      }
+
+      console.error(`[BigQuery] ❌ Failed to convert to SQL after ${attempt} attempts:`, error)
+      logger.error({ error, attempts: attempt }, "Failed to convert natural language to SQL")
       throw error
     }
-    console.error(`[BigQuery] ❌ Failed to convert to SQL:`, error)
-    logger.error({ error }, "Failed to convert natural language to SQL")
-    throw error
   }
+
+  // 최대 시도 횟수 초과
+  throw new InvalidQueryError(
+    `SQL 생성에 실패했습니다. 다른 방식으로 질문해 주세요.\n\n마지막 오류: ${lastErrors.join(", ")}`,
+  )
 }
 
 // BigQuery에서 쿼리 실행 (SDK 사용)

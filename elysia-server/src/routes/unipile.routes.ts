@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { config } from "../config"
 import { db } from "../db/index"
@@ -396,31 +396,76 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
 
   /**
    * POST /api/v1/unipile/webhooks
-   * Receive Unipile webhook events
+   * Receive Unipile webhook events (email_tracking: opens, clicks)
+   * Uses same parsing logic as /webhook endpoint
    */
   .post(
     "/webhooks",
     async ({ body, request }) => {
       try {
+        // Try to get raw body if Elysia's parsing failed
+        let rawBodyText: string | null = null
+        try {
+          rawBodyText = await request.clone().text()
+        } catch {
+          // Ignore if we can't read raw body
+        }
+
         logger.info(
           {
-            headers: Object.fromEntries(request.headers),
-            bodyPreview: JSON.stringify(body).substring(0, 200),
+            bodyType: typeof body,
+            bodyKeys: body && typeof body === "object" ? Object.keys(body).length : 0,
+            rawBodyLength: rawBodyText?.length,
+            rawBodyPreview: rawBodyText?.substring(0, 200),
           },
-          "📨 [UNIPILE WEBHOOK] Received webhook request",
+          "📨 [UNIPILE WEBHOOKS] Received webhook request",
         )
 
-        const result = await unipileService.processUnipileWebhook(body)
+        // Parse webhook body using same logic as /webhook
+        let parsedBody: Record<string, unknown> | null = null
+
+        // Strategy 1: Raw body text
+        if (rawBodyText?.trim().startsWith("{")) {
+          try {
+            parsedBody = JSON.parse(rawBodyText) as Record<string, unknown>
+            logger.info("[UNIPILE WEBHOOKS] ✅ Parsed from raw body text")
+          } catch {
+            // Continue to fallback
+          }
+        }
+
+        // Strategy 2: Body is a string
+        if (!parsedBody && typeof body === "string") {
+          try {
+            parsedBody = JSON.parse(body) as Record<string, unknown>
+            logger.info("[UNIPILE WEBHOOKS] ✅ Parsed from string body")
+          } catch {
+            // Continue to fallback
+          }
+        }
+
+        // Strategy 3: Body is already an object
+        if (!parsedBody && body && typeof body === "object") {
+          parsedBody = body as Record<string, unknown>
+          logger.info("[UNIPILE WEBHOOKS] ✅ Using body as object")
+        }
+
+        if (!parsedBody) {
+          logger.error("[UNIPILE WEBHOOKS] ❌ Could not parse webhook body")
+          return { success: false }
+        }
+
+        const result = await unipileService.processUnipileWebhook(parsedBody)
 
         if (result.success) {
-          logger.info("✅ [UNIPILE WEBHOOK] Webhook processed successfully")
+          logger.info("✅ [UNIPILE WEBHOOKS] Webhook processed successfully")
         } else {
-          logger.warn("⚠️ [UNIPILE WEBHOOK] Webhook processing failed")
+          logger.warn("⚠️ [UNIPILE WEBHOOKS] Webhook processing failed")
         }
 
         return { success: result.success }
       } catch (error) {
-        logger.error({ err: error }, "❌ [UNIPILE WEBHOOK] Error handling webhook")
+        logger.error({ err: error }, "❌ [UNIPILE WEBHOOKS] Error handling webhook")
         // Return 200 to prevent Unipile from retrying
         return { success: false }
       }
@@ -428,8 +473,8 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
     {
       detail: {
         tags: ["Unipile"],
-        summary: "Unipile Webhook",
-        description: "Receive and process Unipile webhook events (opens, clicks, replies, etc.)",
+        summary: "Unipile Webhook (email_tracking)",
+        description: "Receive and process Unipile email_tracking webhook events (opens, clicks)",
       },
     },
   )
@@ -686,12 +731,17 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           return successResponse({ message: "Event received (parse error)" })
         }
 
+        const eventType = webhookBody.event
+        const trackingId = webhookBody.tracking_id
+        const emailId = webhookBody.email_id
+
         logger.info(
           {
-            event: webhookBody.event,
+            event: eventType,
+            trackingId,
             role: webhookBody.role,
             origin: webhookBody.origin,
-            emailId: webhookBody.email_id,
+            emailId,
             from: webhookBody.from_attendee?.identifier,
             subject: webhookBody.subject,
             inReplyTo: webhookBody.in_reply_to,
@@ -699,8 +749,78 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           "[Unipile Webhook] Parsed webhook body",
         )
 
+        // Handle open/click tracking events
+        if (eventType === "mail_opened" || eventType === "email_opened") {
+          // Find email by tracking_id (stored in sendgridMessageId as deprecated_id)
+          const email = await db.query.emails.findFirst({
+            where: (emails, { or, eq }) =>
+              or(
+                eq(emails.sendgridMessageId, trackingId || ""),
+                eq(emails.sendgridMessageId, emailId || ""),
+              ),
+            columns: { id: true, status: true, openCount: true },
+          })
+
+          if (email) {
+            await db
+              .update(emails)
+              .set({
+                status: "opened",
+                openedAt: new Date(),
+                openCount: sql`${emails.openCount} + 1`,
+                updatedAt: new Date(),
+              })
+              .where(eq(emails.id, email.id))
+
+            logger.info(
+              { emailId: email.id, trackingId },
+              "[Unipile Webhook] ✅ Email opened event processed",
+            )
+          } else {
+            logger.warn({ trackingId, emailId }, "[Unipile Webhook] Email not found for open event")
+          }
+
+          return successResponse({ message: "Open event processed" })
+        }
+
+        if (eventType === "mail_link_clicked" || eventType === "email_clicked") {
+          // Find email by tracking_id
+          const email = await db.query.emails.findFirst({
+            where: (emails, { or, eq }) =>
+              or(
+                eq(emails.sendgridMessageId, trackingId || ""),
+                eq(emails.sendgridMessageId, emailId || ""),
+              ),
+            columns: { id: true, status: true, clickCount: true },
+          })
+
+          if (email) {
+            await db
+              .update(emails)
+              .set({
+                status: "clicked",
+                clickedAt: new Date(),
+                clickCount: sql`${emails.clickCount} + 1`,
+                updatedAt: new Date(),
+              })
+              .where(eq(emails.id, email.id))
+
+            logger.info(
+              { emailId: email.id, trackingId },
+              "[Unipile Webhook] ✅ Email clicked event processed",
+            )
+          } else {
+            logger.warn(
+              { trackingId, emailId },
+              "[Unipile Webhook] Email not found for click event",
+            )
+          }
+
+          return successResponse({ message: "Click event processed" })
+        }
+
+        // For mail_received events, continue with reply detection logic
         const accountId = webhookBody.account_id
-        const emailId = webhookBody.email_id
         const fromAttendee = webhookBody.from_attendee
         const subject = webhookBody.subject || ""
         const bodyContent = webhookBody.body || webhookBody.body_plain || ""
@@ -709,10 +829,10 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         const role = webhookBody.role
         const origin = webhookBody.origin
 
-        // Only process inbox emails from external sources
+        // Only process inbox emails from external sources (for mail_received)
         if (role !== "inbox" || origin !== "external") {
           logger.info(
-            { role, origin, emailId },
+            { role, origin, emailId, event: eventType },
             "[Unipile Webhook] Skipping non-inbox or internal email",
           )
           return successResponse({ message: "Event received (skipped non-inbox)" })
@@ -738,7 +858,8 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         )
 
         // Check if this is a reply to one of our sent emails
-        // Try matching by: 1) RFC 822 Message-ID, 2) Unipile tracking_id (stored in sendgridMessageId)
+        // Primary matching: RFC 822 Message-ID (in_reply_to.message_id → emails.messageId)
+        // Fallback: Unipile ID (in_reply_to.id → emails.sendgridMessageId, may not work since we store tracking_id now)
         let originalEmail = null
 
         if (inReplyToMessageId) {

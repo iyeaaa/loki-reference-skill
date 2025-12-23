@@ -665,11 +665,10 @@ This email contains confidential information that is protected by law or under t
         "Email sent via Unipile, fetching actual message_id for reply matching",
       )
 
-      // Fetch actual RFC 822 Message-ID and Unipile email ID from Unipile
+      // Fetch actual RFC 822 Message-ID from Unipile
       // Gmail generates its own Message-ID, so we MUST retrieve it for reply matching
       // Without the actual Message-ID, replies cannot be matched to original emails
       let actualMessageId = generatedMessageId // Fallback to generated one
-      let unipileEmailId = trackingId // Fallback to tracking_id
 
       // Use provider_id + account_id to query (tracking_id doesn't work for API lookup)
       if (providerId) {
@@ -683,30 +682,13 @@ This email contains confidential information that is protected by law or under t
           if (emailDetails?.messageId) {
             actualMessageId = emailDetails.messageId
             logger.info(
-              { accountId, providerId, actualMessageId, generatedMessageId },
+              { accountId, providerId, trackingId, actualMessageId, generatedMessageId },
               "✅ Retrieved actual RFC 822 Message-ID from Unipile (reply matching will work)",
             )
           } else {
             logger.warn(
-              { accountId, providerId, generatedMessageId },
+              { accountId, providerId, trackingId, generatedMessageId },
               "⚠️ Could not retrieve actual Message-ID - reply detection may fail for this email",
-            )
-          }
-
-          // Store Unipile deprecated_id for webhook matching
-          // Webhook sends in_reply_to.id which is the deprecated_id format
-          if (emailDetails?.deprecatedId) {
-            unipileEmailId = emailDetails.deprecatedId
-            logger.info(
-              { accountId, providerId, unipileEmailId, newId: emailDetails.id },
-              "✅ Retrieved Unipile deprecated_id for webhook matching",
-            )
-          } else if (emailDetails?.id) {
-            // Fallback to new id format if deprecated_id not available
-            unipileEmailId = emailDetails.id
-            logger.info(
-              { accountId, providerId, unipileEmailId },
-              "✅ Retrieved Unipile email ID for webhook matching (new format)",
             )
           }
         } catch (detailsError) {
@@ -722,11 +704,13 @@ This email contains confidential information that is protected by law or under t
         )
       }
 
+      // Store tracking_id for open/click webhook matching
+      // Reply matching uses messageId (RFC 822 Message-ID)
       return {
         success: true,
-        messageId: actualMessageId, // Use actual RFC 822 Message-ID for reply matching
-        sendgridMessageId: unipileEmailId, // Store Unipile deprecated_id for webhook matching
-        unipileMessageId: unipileEmailId,
+        messageId: actualMessageId, // RFC 822 Message-ID for reply matching (in_reply_to.message_id)
+        sendgridMessageId: trackingId, // tracking_id for open/click webhook matching
+        unipileMessageId: trackingId,
       }
     } catch (error) {
       logger.error({ err: error, accountId }, "Failed to send email via Unipile")

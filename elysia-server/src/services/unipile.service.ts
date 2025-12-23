@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emailReplies, emails } from "../db/schema/emails"
@@ -546,6 +546,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       formData.append("subject", subject)
       formData.append("body", body)
 
+      // Enable open/click tracking for webhooks
+      formData.append("tracking_options", JSON.stringify({ opens: true, links: true }))
+
       // Optional CC/BCC
       if (cc && cc.length > 0) {
         formData.append("cc", JSON.stringify(cc.map((email) => ({ identifier: email }))))
@@ -630,6 +633,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       to: [{ identifier: to }],
       subject,
       body,
+      // Enable open/click tracking for webhooks
+      tracking_options: {
+        opens: true,
+        links: true,
+      },
     }
 
     // Threading support: reply_to is the Provider ID of the email being replied to
@@ -1055,53 +1063,52 @@ export async function syncAccountEmails(
 
 /**
  * Process Unipile webhook events
- * Similar to Nylas webhook handling
+ * Handles email tracking events (opens, clicks) from Unipile
  */
 export async function processUnipileWebhook(payload: unknown): Promise<{ success: boolean }> {
   try {
     const event = payload as Record<string, unknown>
 
+    // Unipile email_tracking webhook uses 'event' field, not 'type'
+    const eventType = (event.event || event.type) as string
+    const trackingId = event.tracking_id as string | undefined
+    const emailId = event.email_id as string | undefined
+
     logger.info(
       {
-        eventType: event.type,
+        eventType,
+        trackingId,
+        emailId,
         accountId: event.account_id,
       },
       "Processing Unipile webhook event",
     )
 
-    // TODO: Implement webhook handlers based on event type
-    // Unipile webhook events:
-    // - email.sent
-    // - email.delivered
-    // - email.opened
-    // - email.clicked
-    // - email.bounced
-    // - email.replied
+    // Unipile email_tracking webhook events:
+    // - mail_opened (from email_tracking source)
+    // - mail_link_clicked (from email_tracking source)
+    // Legacy event names (from email source):
+    // - email.opened, email.clicked, email.replied
 
-    switch (event.type) {
-      case "email.sent":
-        // Handle email sent
-        break
-      case "email.delivered":
-        // Handle email delivered
-        break
+    switch (eventType) {
+      case "mail_opened":
+      case "email_opened":
       case "email.opened":
-        // Handle email opened
         await handleEmailOpened(event)
         break
+      case "mail_link_clicked":
+      case "email_clicked":
       case "email.clicked":
-        // Handle email clicked
         await handleEmailClicked(event)
         break
       case "email.bounced":
         // Handle email bounced
         break
       case "email.replied":
-        // Handle email replied
         await handleEmailReplied(event)
         break
       default:
-        logger.warn({ eventType: event.type }, "Unknown Unipile webhook event type")
+        logger.info({ eventType }, "Unipile webhook event received (no handler)")
     }
 
     return { success: true }
@@ -1113,25 +1120,30 @@ export async function processUnipileWebhook(payload: unknown): Promise<{ success
 
 /**
  * Handle email opened webhook
+ * Unipile email_tracking webhook sends: tracking_id, email_id, ip, user_agent, etc.
  */
 async function handleEmailOpened(event: Record<string, unknown>): Promise<void> {
-  const messageId = event.message_id as string
+  const trackingId = event.tracking_id as string | undefined
+  const emailId = event.email_id as string | undefined
 
-  if (!messageId) {
-    logger.warn("Email opened event missing message_id")
+  if (!trackingId && !emailId) {
+    logger.warn({ event }, "Email opened event missing tracking_id and email_id")
     return
   }
 
   try {
-    // Find email by Unipile message ID
-    const [email] = await db
-      .select({ id: emails.id, status: emails.status })
-      .from(emails)
-      .where(eq(emails.sendgridMessageId, messageId))
-      .limit(1)
+    // Find email by tracking_id or email_id (stored in sendgridMessageId as deprecated_id)
+    const email = await db.query.emails.findFirst({
+      where: (emails, { or, eq }) =>
+        or(
+          eq(emails.sendgridMessageId, trackingId || ""),
+          eq(emails.sendgridMessageId, emailId || ""),
+        ),
+      columns: { id: true, status: true, openCount: true },
+    })
 
     if (!email) {
-      logger.warn({ messageId }, "Email not found for opened event")
+      logger.warn({ trackingId, emailId }, "Email not found for opened event")
       return
     }
 
@@ -1141,6 +1153,7 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
       .set({
         status: "opened",
         openedAt: new Date(),
+        openCount: sql`${emails.openCount} + 1`,
         updatedAt: new Date(),
       })
       .where(eq(emails.id, email.id))
@@ -1150,35 +1163,44 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
       emailId: email.id,
       eventType: "open",
       timestamp: new Date(),
+      ipAddress: event.ip as string | undefined,
+      userAgent: event.user_agent as string | undefined,
       rawEventData: event as Record<string, unknown>,
     })
 
-    logger.info({ emailId: email.id, messageId }, "Email opened event processed")
+    logger.info({ emailId: email.id, trackingId }, "✅ Email opened event processed")
   } catch (error) {
-    logger.error({ err: error, messageId }, "Error handling email opened event")
+    logger.error({ err: error, trackingId, emailId }, "Error handling email opened event")
   }
 }
 
 /**
  * Handle email clicked webhook
+ * Unipile email_tracking webhook sends: tracking_id, email_id, url, ip, user_agent, etc.
  */
 async function handleEmailClicked(event: Record<string, unknown>): Promise<void> {
-  const messageId = event.message_id as string
+  const trackingId = event.tracking_id as string | undefined
+  const emailId = event.email_id as string | undefined
+  const clickedUrl = event.url as string | undefined
 
-  if (!messageId) {
-    logger.warn("Email clicked event missing message_id")
+  if (!trackingId && !emailId) {
+    logger.warn({ event }, "Email clicked event missing tracking_id and email_id")
     return
   }
 
   try {
-    const [email] = await db
-      .select({ id: emails.id })
-      .from(emails)
-      .where(eq(emails.sendgridMessageId, messageId))
-      .limit(1)
+    // Find email by tracking_id or email_id (stored in sendgridMessageId as deprecated_id)
+    const email = await db.query.emails.findFirst({
+      where: (emails, { or, eq }) =>
+        or(
+          eq(emails.sendgridMessageId, trackingId || ""),
+          eq(emails.sendgridMessageId, emailId || ""),
+        ),
+      columns: { id: true, status: true, clickCount: true },
+    })
 
     if (!email) {
-      logger.warn({ messageId }, "Email not found for clicked event")
+      logger.warn({ trackingId, emailId }, "Email not found for clicked event")
       return
     }
 
@@ -1187,6 +1209,7 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
       .set({
         status: "clicked",
         clickedAt: new Date(),
+        clickCount: sql`${emails.clickCount} + 1`,
         updatedAt: new Date(),
       })
       .where(eq(emails.id, email.id))
@@ -1195,13 +1218,18 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
       emailId: email.id,
       eventType: "click",
       timestamp: new Date(),
-      url: (event.url as string) || "",
+      url: clickedUrl || "",
+      ipAddress: event.ip as string | undefined,
+      userAgent: event.user_agent as string | undefined,
       rawEventData: event as Record<string, unknown>,
     })
 
-    logger.info({ emailId: email.id, messageId }, "Email clicked event processed")
+    logger.info(
+      { emailId: email.id, trackingId, url: clickedUrl },
+      "✅ Email clicked event processed",
+    )
   } catch (error) {
-    logger.error({ err: error, messageId }, "Error handling email clicked event")
+    logger.error({ err: error, trackingId, emailId }, "Error handling email clicked event")
   }
 }
 

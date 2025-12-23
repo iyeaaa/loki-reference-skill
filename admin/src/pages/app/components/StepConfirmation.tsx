@@ -141,20 +141,17 @@ export function StepConfirmation() {
         }
       } catch (error) {
         console.error("Failed to fetch leads:", error)
-        setLeads(
-          allLeadIds.map((id) => ({
-            id,
-            companyName: `Lead ${id.slice(0, 8)}...`,
-          })),
+        toast.error(
+          isKorean
+            ? "바이어 정보를 불러올 수 없어요. 다시 시도해주세요."
+            : "Failed to load buyer information. Please try again.",
         )
-        if (selectedLeadIds.length === 0) {
-          setSelectedLeadIds(allLeadIds)
-        }
+        setLeads([])
       }
     }
 
     fetchLeads()
-  }, [allLeadIds, selectedLeadIds.length])
+  }, [selectedLeadIds, isKorean])
 
   // Filtered leads by search
   const filteredLeads = useMemo(() => {

@@ -1,4 +1,13 @@
-import { ArrowRight, CheckCircle2, Eye, Loader2, Mail, Sparkles } from "lucide-react"
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  Loader2,
+  Mail,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -12,12 +21,16 @@ import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 // Polling interval for checking generation status (5 seconds)
 const POLL_INTERVAL_MS = 5000
+// Maximum polling attempts (60 times = 5 minutes)
+const MAX_POLL_ATTEMPTS = 60
 
 export function StepEmailGeneration() {
   const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [showFullEmail, setShowFullEmail] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [pollCount, setPollCount] = useState(0)
+  const [isTimeout, setIsTimeout] = useState(false)
   const startTimeRef = useRef<number | null>(null)
 
   console.log("[StepEmailGeneration] Component rendered")
@@ -75,9 +88,11 @@ export function StepEmailGeneration() {
     }))
   }, [emailsData?.emails, isKorean])
 
-  // Check if generation is complete (emails exist in DB)
+  // Check job status and generation state
+  const jobStatus = onboardingProgress?.jobStatus
   const hasEmails = emails.length > 0
   const isGenerationComplete = hasEmails
+  const isJobFailed = jobStatus === "failed" || jobStatus === "stalled"
 
   console.log("[StepEmailGeneration] Status:", {
     hasEmails,
@@ -85,12 +100,37 @@ export function StepEmailGeneration() {
     isLoadingEmails,
     emailCount: emails.length,
     leadCount: leadIds.length,
+    jobStatus,
+    pollCount,
+    isTimeout,
   })
 
   // Poll for emails if not yet available
   useEffect(() => {
+    // Stop polling if generation is complete
     if (isGenerationComplete) {
       console.log(`[StepEmailGeneration] ✅ Generation complete! ${emails.length} emails loaded`)
+      return
+    }
+
+    // Stop polling if job failed
+    if (isJobFailed) {
+      console.log("[StepEmailGeneration] ❌ Job failed, stopping polling")
+      return
+    }
+
+    // Stop polling if timeout
+    if (isTimeout) {
+      console.log("[StepEmailGeneration] ⏱️ Timeout reached, stopping polling")
+      return
+    }
+
+    // Stop polling if max attempts reached
+    if (pollCount >= MAX_POLL_ATTEMPTS) {
+      console.log(
+        `[StepEmailGeneration] ⏱️ Max polling attempts (${MAX_POLL_ATTEMPTS}) reached, timeout`,
+      )
+      setIsTimeout(true)
       return
     }
 
@@ -100,9 +140,14 @@ export function StepEmailGeneration() {
     }
 
     // Not complete yet, poll for updates
-    console.log("[StepEmailGeneration] Starting polling interval...")
+    console.log(
+      `[StepEmailGeneration] Starting polling interval... (attempt ${pollCount + 1}/${MAX_POLL_ATTEMPTS})`,
+    )
     const pollInterval = setInterval(() => {
-      console.log("[StepEmailGeneration] Polling for generated emails...")
+      console.log(
+        `[StepEmailGeneration] Polling for generated emails... (${pollCount + 1}/${MAX_POLL_ATTEMPTS})`,
+      )
+      setPollCount((prev) => prev + 1)
       refetchEmails()
     }, POLL_INTERVAL_MS)
 
@@ -110,7 +155,15 @@ export function StepEmailGeneration() {
       console.log("[StepEmailGeneration] Clearing polling interval")
       clearInterval(pollInterval)
     }
-  }, [isGenerationComplete, isLoadingEmails, refetchEmails, emails.length])
+  }, [
+    isGenerationComplete,
+    isJobFailed,
+    isTimeout,
+    pollCount,
+    isLoadingEmails,
+    refetchEmails,
+    emails.length,
+  ])
 
   // Exponential decay progress bar - slows down as it approaches completion
   // Formula: progress = 100 * (1 - e^(-t/τ)) where τ is the time constant
@@ -145,6 +198,20 @@ export function StepEmailGeneration() {
     setSearchParams({ step: "4" })
   }
 
+  const handleRetry = () => {
+    // Reset polling state
+    setPollCount(0)
+    setIsTimeout(false)
+    startTimeRef.current = Date.now()
+    setProgress(0)
+    // Refetch to restart polling
+    refetchEmails()
+  }
+
+  const handleBackToLeadSearch = () => {
+    setSearchParams({ step: "2" })
+  }
+
   // Calculate display values
   const leadCount = leadIds.length
   const templateCount =
@@ -166,7 +233,73 @@ export function StepEmailGeneration() {
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {isLoadingEmails || !isGenerationComplete ? (
+          {isJobFailed ? (
+            // Job failed state
+            <div className="space-y-6 py-8">
+              <div className="flex flex-col items-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                  <AlertCircle className="h-8 w-8 text-red-500" />
+                </div>
+                <p className="font-medium text-gray-900 text-lg">
+                  {isKorean ? "이메일 생성에 실패했어요" : "Email generation failed"}
+                </p>
+                <p className="mt-2 max-w-md text-center text-gray-500 text-sm leading-relaxed">
+                  {isKorean
+                    ? "AI 서비스 오류 또는 일시적인 문제로 이메일 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
+                    : "Failed to generate emails due to AI service error or temporary issue. Please try again later."}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  className="h-12 flex-1 rounded-xl border-gray-200"
+                  onClick={handleBackToLeadSearch}
+                  variant="outline"
+                >
+                  {isKorean ? "이전 단계로" : "Go back"}
+                </Button>
+                <Button
+                  className="h-12 flex-1 rounded-xl bg-blue-500 hover:bg-blue-600"
+                  onClick={handleRetry}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {isKorean ? "다시 시도" : "Retry"}
+                </Button>
+              </div>
+            </div>
+          ) : isTimeout ? (
+            // Timeout state
+            <div className="space-y-6 py-8">
+              <div className="flex flex-col items-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <AlertCircle className="h-8 w-8 text-amber-500" />
+                </div>
+                <p className="font-medium text-gray-900 text-lg">
+                  {isKorean ? "시간이 너무 오래 걸리고 있어요" : "Taking longer than expected"}
+                </p>
+                <p className="mt-2 max-w-md text-center text-gray-500 text-sm leading-relaxed">
+                  {isKorean
+                    ? "5분이 지났지만 아직 완료되지 않았습니다. 백그라운드에서 작업이 진행 중일 수 있습니다. 잠시 후 다시 확인하거나 처음부터 다시 시도해주세요."
+                    : "It's been 5 minutes but generation is not complete. The task might still be running in the background. Please check back later or restart from the beginning."}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  className="h-12 flex-1 rounded-xl border-gray-200"
+                  onClick={handleBackToLeadSearch}
+                  variant="outline"
+                >
+                  {isKorean ? "이전 단계로" : "Go back"}
+                </Button>
+                <Button
+                  className="h-12 flex-1 rounded-xl bg-blue-500 hover:bg-blue-600"
+                  onClick={handleRetry}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {isKorean ? "다시 확인" : "Check again"}
+                </Button>
+              </div>
+            </div>
+          ) : isLoadingEmails || !isGenerationComplete ? (
             // Generating state - waiting for backend auto-generation
             <div className="space-y-6 py-8">
               <div className="flex flex-col items-center">
@@ -183,11 +316,20 @@ export function StepEmailGeneration() {
                 </p>
               </div>
               <Progress className="h-2" value={progress} />
-              <p className="text-center text-gray-500 text-sm">
-                {isKorean
-                  ? "리드 탐색 및 이메일 템플릿 생성 중..."
-                  : "Discovering leads and generating email templates..."}
-              </p>
+              <div className="space-y-1">
+                <p className="text-center text-gray-500 text-sm">
+                  {isKorean
+                    ? "리드 탐색 및 이메일 템플릿 생성 중..."
+                    : "Discovering leads and generating email templates..."}
+                </p>
+                {pollCount > 0 && (
+                  <p className="text-center text-gray-400 text-xs">
+                    {isKorean
+                      ? `확인 중... (${pollCount}/${MAX_POLL_ATTEMPTS})`
+                      : `Checking... (${pollCount}/${MAX_POLL_ATTEMPTS})`}
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             // Generation complete - show results

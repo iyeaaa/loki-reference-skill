@@ -153,6 +153,11 @@ export function StepCompanyInfo() {
           setEditedData(mergedData)
         } else {
           // 데이터가 없으면 workspace 정보로 초기화
+          toast.warning(
+            isKorean
+              ? "전략 정보가 없습니다. 워크스페이스 정보로 초기화합니다."
+              : "No strategy information found. Initializing with workspace information.",
+          )
           setEditedData((prev) => ({
             ...prev,
             companyName: workspaceData?.companyName || "",

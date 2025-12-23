@@ -288,6 +288,20 @@
       "when": 1766448000000,
       "tag": "0040_add_provider_column",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1766500000000,
+      "tag": "0041_remove_user_trial_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1766478118627,
+      "tag": "0042_striped_shadowcat",
+      "breakpoints": true
     }
   ]
 }

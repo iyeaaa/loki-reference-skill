@@ -1,8 +1,8 @@
-import { eq, and } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { db } from "../db/index"
+import { billingPlans, billingProducts, subscriptions } from "../db/schema/billing"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
-import { subscriptions, billingPlans, billingProducts } from "../db/schema/billing"
 
 async function checkTrialStatus() {
   const [user] = await db

@@ -932,7 +932,7 @@ export async function createOrUpdateGoogleUser(data: {
     })
 
   // Create default workspace for new users (trial subscription will be created automatically)
-  if (!existingUser) {
+  if (!existingUser && upsertedUser) {
     try {
       const workspace = await workspaceService.createWorkspace({
         name: `${upsertedUser.username}의 워크스페이스`,
@@ -1140,9 +1140,7 @@ export async function getUserTrialStatusFromSubscription(userId: string) {
     .from(subscriptions)
     .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
     .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
-    .where(
-      and(eq(subscriptions.workspaceId, workspaceId), eq(subscriptions.isPrimary, true)),
-    )
+    .where(and(eq(subscriptions.workspaceId, workspaceId), eq(subscriptions.isPrimary, true)))
     .limit(1)
 
   if (!subscription) {
@@ -1171,9 +1169,7 @@ export async function getUserTrialStatusFromSubscription(userId: string) {
     daysRemaining: subscription.trialEnd
       ? Math.max(
           0,
-          Math.ceil(
-            (subscription.trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-          ),
+          Math.ceil((subscription.trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
         )
       : 0,
   }

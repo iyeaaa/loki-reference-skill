@@ -17,7 +17,7 @@ import { emailService } from "../services/email.service"
 import * as leadService from "../services/lead.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
-import logger from "../utils/logger"
+import logger, { emailWorkerLogger, generateTraceId } from "../utils/logger"
 
 interface EmailSendResult {
   success: boolean
@@ -249,7 +249,7 @@ async function sendSequenceEmail(execution: {
       )
     }
 
-    // Get email account details (including provider for Unipile/Nylas/SendGrid routing)
+    // Get email account details (including provider for correct routing)
     const [emailAccount] = await db
       .select({
         emailAddress: userEmailAccounts.emailAddress,
@@ -280,20 +280,21 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         fromEmail: emailAccount.emailAddress,
         displayName: emailAccount.displayName,
+        provider: emailAccount.provider,
       },
       "✅ [STEP-WORKER-V2] Found email account",
     )
 
-    // Use account-specific API key
+    // Use account-specific API key (or Unipile accountId for unipile provider)
     const apiKey = emailAccount.apiKey
     if (!apiKey) {
       logger.error(
-        { executionId: execution.executionId },
-        "❌ [STEP-WORKER-V2] SendGrid API key not configured",
+        { executionId: execution.executionId, provider: emailAccount.provider },
+        "❌ [STEP-WORKER-V2] Email account API key/token not configured",
       )
       return {
         success: false,
-        error: "SendGrid API key not configured",
+        error: "Email account API key/token not configured",
       }
     }
 
@@ -364,8 +365,9 @@ async function sendSequenceEmail(execution: {
         isFirstEmail,
         hasThreading: !!inReplyTo,
         usedDraft: !!existingDraftId,
+        provider: emailAccount.provider,
       },
-      "📤 [STEP-WORKER-V2] Sending email via EmailService",
+      `📤 [STEP-WORKER-V2] Sending email via ${emailAccount.provider}`,
     )
 
     // Prepare attachments for SendGrid
@@ -394,7 +396,7 @@ async function sendSequenceEmail(execution: {
       )
     }
 
-    // Send email using EmailService
+    // Send email using EmailService (provider determines routing: sendgrid/nylas/unipile)
     const sendResult = await emailService.sendEmail({
       fromEmail: emailAccount.emailAddress,
       fromName: emailAccount.displayName || emailAccount.emailAddress,
@@ -409,7 +411,7 @@ async function sendSequenceEmail(execution: {
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
       apiKey: apiKey,
-      provider: emailAccount.provider, // Add provider for Unipile/Nylas/SendGrid routing
+      provider: emailAccount.provider,
     })
 
     if (!sendResult.success) {
@@ -586,49 +588,35 @@ async function sendSequenceEmail(execution: {
 }
 
 async function _processSequenceEmails() {
-  try {
-    logger.debug("🔍 [STEP-WORKER-V2] Checking for pending step executions")
+  const startTime = Date.now()
+  const traceId = generateTraceId()
 
+  try {
     // Get pending step executions
     const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      logger.trace("⏳ [STEP-WORKER-V2] No pending emails to send")
       return
     }
 
-    logger.info(
-      {
-        count: pendingExecutions.length,
-        executions: pendingExecutions.map((e) => ({
-          executionId: e.executionId,
-          sequenceId: e.sequenceId,
-          sequenceName: e.sequenceName,
-          leadCompanyName: e.leadCompanyName,
-          scheduledAt: e.scheduledAt,
-          stepOrder: e.stepOrder,
-        })),
-      },
-      "📬 [STEP-WORKER-V2] Processing pending emails",
-    )
+    // Single log for batch start - no individual execution details
+    emailWorkerLogger.batchStart(traceId, pendingExecutions.length)
 
     let successCount = 0
     let failureCount = 0
 
     // Process each execution
     for (const execution of pendingExecutions) {
-      logger.info(
+      // Individual execution logged at debug level only
+      logger.debug(
         {
+          traceId,
+          component: "email-worker",
           executionId: execution.executionId,
-          enrollmentId: execution.enrollmentId,
-          leadId: execution.leadId,
           leadCompanyName: execution.leadCompanyName,
-          sequenceName: execution.sequenceName,
           stepOrder: execution.stepOrder,
-          scheduledAt: execution.scheduledAt,
-          emailSubject: execution.emailSubject,
         },
-        "📧 [STEP-WORKER-V2] Processing execution",
+        "[email-worker] Processing execution",
       )
 
       // Send email (checks for draft first, falls back to template)
@@ -646,39 +634,34 @@ async function _processSequenceEmails() {
         // Update enrollment progress
         await sequenceService.updateEnrollmentProgress(execution.enrollmentId, execution.stepOrder)
 
-        // Update lead status to 'contacted'
+        // Update lead status to 'contacted' (debug level - not critical)
         try {
           await leadService.updateLead(execution.leadId, {
             leadStatus: "contacted",
             lastContactedAt: new Date(),
           })
-          logger.info(
-            {
-              leadId: execution.leadId,
-              leadCompanyName: execution.leadCompanyName,
-            },
-            "✅ [STEP-WORKER-V2] Lead status updated to contacted",
-          )
         } catch (leadUpdateError) {
-          logger.error(
+          logger.debug(
             {
+              traceId,
               leadId: execution.leadId,
               error: leadUpdateError,
             },
-            "❌ [STEP-WORKER-V2] Failed to update lead status",
+            "[email-worker] Failed to update lead status",
           )
         }
 
         successCount++
-        logger.info(
+        // Success logged at debug level - summary will be at info level
+        emailWorkerLogger.emailSent(
           {
-            executionId: execution.executionId,
-            emailId: result.emailRecordId,
-            sendgridMessageId: result.messageId,
-            leadCompanyName: execution.leadCompanyName,
+            traceId,
+            enrollmentId: execution.enrollmentId,
+            sequenceId: execution.sequenceId,
             stepOrder: execution.stepOrder,
+            leadCompany: execution.leadCompanyName || undefined,
           },
-          "✅ [STEP-WORKER-V2] Email sent successfully",
+          result.messageId || "",
         )
       } else {
         // Update execution status to 'failed'
@@ -689,28 +672,30 @@ async function _processSequenceEmails() {
         )
 
         failureCount++
-        logger.error(
+        // Failures logged at warn level
+        emailWorkerLogger.emailFailed(
           {
-            executionId: execution.executionId,
-            error: result.error,
-            leadCompanyName: execution.leadCompanyName,
+            traceId,
+            enrollmentId: execution.enrollmentId,
+            sequenceId: execution.sequenceId,
             stepOrder: execution.stepOrder,
+            leadCompany: execution.leadCompanyName || undefined,
           },
-          "❌ [STEP-WORKER-V2] Email send failed",
+          result.error || "Unknown error",
         )
       }
     }
 
-    logger.info(
-      {
-        total: pendingExecutions.length,
-        successCount,
-        failureCount,
-      },
-      "🎯 [STEP-WORKER-V2] Finished processing emails",
-    )
+    // Single summary log at the end
+    const durationMs = Date.now() - startTime
+    emailWorkerLogger.batchComplete(traceId, {
+      total: pendingExecutions.length,
+      sent: successCount,
+      failed: failureCount,
+      durationMs,
+    })
   } catch (error) {
-    logger.error({ err: error }, "💥 [STEP-WORKER-V2] Error in processSequenceEmails")
+    logger.error({ traceId, err: error }, "[email-worker] Error in batch processing")
   }
 }
 

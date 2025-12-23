@@ -27,6 +27,7 @@ export interface SendEmailOptions {
   body: string
   cc?: string[]
   bcc?: string[]
+  replyTo?: string // Provider ID of email being replied to (for threading)
   attachments?: Array<{
     content: string // Base64
     filename: string
@@ -506,7 +507,7 @@ export async function getEmailDetails(
  * Send email via Unipile
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { accountId, to, subject, body, cc, bcc, attachments } = options
+  const { accountId, to, subject, body, cc, bcc, replyTo, attachments } = options
 
   try {
     const requestBody: Record<string, unknown> = {
@@ -514,6 +515,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       to: [{ identifier: to }], // ← Unipile uses 'identifier' instead of 'email'
       subject,
       body,
+    }
+
+    // Threading support: reply_to is the Provider ID of the email being replied to
+    if (replyTo) {
+      requestBody.reply_to = replyTo
     }
 
     if (cc && cc.length > 0) {

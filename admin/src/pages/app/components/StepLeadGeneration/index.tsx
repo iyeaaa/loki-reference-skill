@@ -2,7 +2,7 @@
  * StepLeadGeneration - Unified Step 2: Lead Discovery & Email Generation
  *
  * Combines the previous Step 2 (lead discovery) and Step 3 (email generation)
- * into a single, streamlined experience optimized for 20 leads / 40 emails.
+ * into a single, streamlined experience optimized for 30 leads / 90 emails.
  *
  * Features:
  * - Real-time lead cards showing discovery/enrichment/email status
@@ -116,7 +116,7 @@ function useFakeProgress(
 }
 
 // Target counts for progress calculation
-const TARGET_LEADS = 20
+const TARGET_LEADS = 30
 
 export function StepLeadGeneration() {
   const { i18n } = useTranslation()

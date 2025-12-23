@@ -50,23 +50,21 @@ interface SendGridEvent {
 }
 
 class WebhookService {
-  async processInboundEmail(body: SendGridInboundPayload, files: FileData[]) {
-    // Log complete raw data first
-    logger.info(
-      {
-        fullBody: body,
-        fullFiles: files,
-        bodyKeys: Object.keys(body),
-        filesCount: files?.length || 0,
-      },
-      "Complete webhook payload received",
-    )
-
+  async processInboundEmail(body: SendGridInboundPayload, files: FileData[], traceId?: string) {
     // Extract headers - PRIORITY: Parse from body.email (RFC 822) first
     const headers = this.extractHeaders(body.headers, body.email)
 
-    // Log email information
-    this.logEmailInfo(body, headers, files)
+    // Debug-only: detailed payload info
+    logger.debug(
+      {
+        traceId,
+        component: "webhook-service",
+        bodyKeys: Object.keys(body),
+        filesCount: files?.length || 0,
+        hasEmail: !!body.email,
+      },
+      "[webhook-service] Processing inbound email payload",
+    )
 
     // Process attachments
     const parsedAttachments = await this.processAttachments(body)
@@ -78,18 +76,17 @@ class WebhookService {
     emails.push(emailData)
 
     // Store email in database
+    let result: { emailId?: string; isReply?: boolean; classification?: string } = {
+      emailId: undefined,
+      isReply: false,
+    }
     try {
-      await this.storeInboundEmailInDB(body, headers, parsedAttachments, files)
+      result = await this.storeInboundEmailInDB(body, headers, parsedAttachments, files, traceId)
     } catch (error) {
-      logger.error({ err: error }, "Failed to store inbound email in DB")
+      logger.error({ traceId, err: error }, "[webhook-service] Failed to store inbound email in DB")
     }
 
-    // Auto-reply disabled
-    // if (body.from && body.subject) {
-    //   this.handleAutoReply(body, headers)
-    // }
-
-    return { status: "OK" }
+    return { status: "OK", ...result }
   }
 
   processInboundStore(body: SendGridInboundPayload, files: FileData[]) {
@@ -113,7 +110,7 @@ class WebhookService {
     emails.push(email)
     logger.info({ emailId: email.id, subject: email.subject }, "Email stored")
 
-    return { status: "OK" }
+    return { status: "OK", emailId: email.id }
   }
 
   private extractHeaders(
@@ -129,22 +126,11 @@ class WebhookService {
     let references: string[] = []
 
     // PRIORITY 1: Parse from RFC 822 email content (body.email field)
-    // This is the most reliable source for SendGrid Inbound Parse
     if (emailContent) {
       const parsedHeaders = parseEmailHeaders(emailContent)
       messageId = parsedHeaders.messageId
       inReplyTo = parsedHeaders.inReplyTo
       references = parsedHeaders.references
-
-      logger.info(
-        {
-          messageId,
-          inReplyTo,
-          referencesCount: references.length,
-          source: "RFC822",
-        },
-        "Headers extracted from RFC 822 email content",
-      )
     }
 
     // PRIORITY 2: Fallback to headers string (legacy support)
@@ -157,17 +143,8 @@ class WebhookService {
         if (referencesStr) {
           references.push(...referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0))
         }
-        logger.info(
-          {
-            messageId,
-            inReplyTo,
-            referencesCount: references.length,
-            source: "JSON",
-          },
-          "Headers extracted from JSON headers string",
-        )
       } catch (e) {
-        logger.warn({ err: e }, "Failed to parse headers string as JSON")
+        logger.debug({ err: e }, "[webhook-service] Failed to parse headers string as JSON")
       }
     }
 
@@ -345,8 +322,10 @@ class WebhookService {
     },
     _attachments: unknown[],
     files: FileData[],
-  ) {
-    logger.info("Storing inbound email in DB")
+    traceId?: string,
+  ): Promise<{ emailId?: string; isReply: boolean; classification?: string }> {
+    let isReply = false
+    let classification: string | undefined
 
     // 1. 이메일 주소 추출 및 본문 파싱
     const toEmail = extractEmailAddress(body.to || "")
@@ -419,13 +398,13 @@ class WebhookService {
 
     if (emailAccount.length === 0) {
       logger.warn({ toEmail, targetWorkspaceId }, "Email account not found")
-      return
+      return { isReply: false }
     }
 
     const account = emailAccount[0]
     if (!account) {
       logger.warn("Email account not found")
-      return
+      return { isReply: false }
     }
 
     // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId를 가져옴
@@ -579,7 +558,7 @@ class WebhookService {
     const inboundEmail = inboundEmailResults[0]
     if (!inboundEmail) {
       logger.error("Failed to save inbound email")
-      return
+      return { isReply: false }
     }
 
     // 5-1. 첨부파일 저장
@@ -884,15 +863,16 @@ class WebhookService {
 
     // Create email_replies record ONLY when original email is found
     if (originalEmail) {
-      logger.info({
-        msg: "✅ [WEBHOOK] Original email found",
-        originalEmailId: originalEmail.id,
-        originalMessageId: originalEmail.messageId,
-        originalThreadId: originalEmail.threadId,
-        originalSubject: originalEmail.subject,
-        inReplyToHeader: headers.inReplyTo,
-        headersMatch: originalEmail.messageId === headers.inReplyTo,
-      })
+      isReply = true
+      logger.debug(
+        {
+          traceId,
+          component: "webhook-service",
+          originalEmailId: originalEmail.id,
+          threadId: originalEmail.threadId,
+        },
+        "[webhook-service] Original email found for reply",
+      )
 
       // Check if email_replies record already exists for this thread
       // One email_replies record per thread - update if exists, insert if new
@@ -1308,14 +1288,20 @@ class WebhookService {
           })
         }
       } else {
-        logger.info({
-          msg: "ℹ️  [WEBHOOK] Cannot use fallback - missing leadId or sequenceId",
-          inboundEmailId: inboundEmail.id,
-          hasLeadId: !!leadId,
-          hasSequenceId: !!sequenceId,
-        })
+        logger.debug(
+          {
+            traceId,
+            component: "webhook-service",
+            inboundEmailId: inboundEmail.id,
+            hasLeadId: !!leadId,
+            hasSequenceId: !!sequenceId,
+          },
+          "[webhook-service] Cannot use fallback - missing leadId or sequenceId",
+        )
       }
     }
+
+    return { emailId: inboundEmail.id, isReply, classification }
   }
 
   /**

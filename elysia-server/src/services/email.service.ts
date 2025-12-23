@@ -578,6 +578,7 @@ This email contains confidential information that is protected by law or under t
       bodyHtml?: string
       ccEmails?: string[]
       bccEmails?: string[]
+      inReplyTo?: string // For threading: Provider ID of email being replied to
       attachments?: SendGridAttachment[]
       includeSignature?: boolean
       userId?: string
@@ -637,7 +638,7 @@ This email contains confidential information that is protected by law or under t
         contentType: att.type || "application/octet-stream",
       }))
 
-      // Send via Unipile
+      // Send via Unipile (with threading support for follow-up emails)
       const result = await unipileService.sendEmail({
         accountId,
         to: data.toEmail,
@@ -645,6 +646,7 @@ This email contains confidential information that is protected by law or under t
         body: finalBodyHtml || data.bodyText || "",
         cc: data.ccEmails,
         bcc: data.bccEmails,
+        replyTo: data.inReplyTo, // Threading: Provider ID for reply chain
         attachments: unipileAttachments,
       })
 

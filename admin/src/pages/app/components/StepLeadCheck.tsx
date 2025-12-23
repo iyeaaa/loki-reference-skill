@@ -226,8 +226,8 @@ export function StepLeadCheck() {
             </h2>
             <p className="mb-2 text-center text-gray-500 text-sm">
               {isKorean
-                ? "바이어 20명 + 이메일 40개 작성 중"
-                : "Finding 20 buyers + writing 40 emails"}
+                ? "바이어 30명 + 이메일 90개 작성 중"
+                : "Finding 30 buyers + writing 90 emails"}
             </p>
             <div className="mt-6 w-full max-w-xs">
               <Progress className="h-2" value={displayProgress} />

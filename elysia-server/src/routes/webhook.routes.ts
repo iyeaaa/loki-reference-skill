@@ -1,70 +1,21 @@
 import { Elysia } from "elysia"
 import { webhookService } from "../services/webhook.service"
-import logger from "../utils/logger"
+import logger, { generateTraceId, inboundEmailLogger, webhookLogger } from "../utils/logger"
 
 export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
   // SendGrid Inbound Parse - Use ElysiaJS built-in multipart parser
   .post("/inbound", async ({ body, request }) => {
-    const contentType = request.headers.get("content-type")
-    const requestUrl = request.url
-    const requestMethod = request.method
-    const allHeaders = Object.fromEntries(request.headers.entries())
+    const startTime = Date.now()
+    const traceId = generateTraceId()
 
-    logger.info(
-      {
-        contentType,
-        hasContentType: !!contentType,
-        contentTypeLength: contentType?.length || 0,
-        requestUrl,
-        requestMethod,
-        allHeaders,
-        timestamp: new Date().toISOString(),
-      },
-      "📧 [SENDGRID INBOUND] Received inbound webhook request - RAW REQUEST INFO",
-    )
+    // Get essential info only
+    const sendGridFields = (body && typeof body === "object" ? body : {}) as Record<string, unknown>
+    const from = String(sendGridFields.from || "unknown")
+    const to = String(sendGridFields.to || "unknown")
+    const subject = String(sendGridFields.subject || "")
 
-    // ElysiaJS automatically parses multipart/form-data
-    // body will contain the parsed form data
-    logger.info(
-      {
-        bodyType: typeof body,
-        bodyKeys: body && typeof body === "object" ? Object.keys(body) : [],
-        hasBody: !!body,
-      },
-      "📧 [SENDGRID INBOUND] Body type info",
-    )
-
-    // Log specific SendGrid fields if they exist
-    if (body && typeof body === "object") {
-      const sendGridFields = body as Record<string, unknown>
-      logger.info(
-        {
-          from: sendGridFields.from,
-          to: sendGridFields.to,
-          subject: sendGridFields.subject,
-          text: sendGridFields.text
-            ? `${String(sendGridFields.text).substring(0, 200)}...`
-            : undefined,
-          html: sendGridFields.html
-            ? `${String(sendGridFields.html).substring(0, 200)}...`
-            : undefined,
-          envelope: sendGridFields.envelope,
-          headers: sendGridFields.headers,
-          sender_ip: sendGridFields.sender_ip,
-          spam_score: sendGridFields.spam_score,
-          spam_report: sendGridFields.spam_report,
-          charsets: sendGridFields.charsets,
-          SPF: sendGridFields.SPF,
-          dkim: sendGridFields.dkim,
-          attachments: sendGridFields.attachments,
-          attachment_info: sendGridFields["attachment-info"],
-          email: sendGridFields.email
-            ? `[RFC822 email - ${String(sendGridFields.email).length} chars]`
-            : undefined,
-        },
-        "📧 [SENDGRID INBOUND] Parsed SendGrid fields - EMAIL DETAILS",
-      )
-    }
+    // Single log for received webhook
+    inboundEmailLogger.received(traceId, from, to, subject)
 
     try {
       // Convert ElysiaJS parsed body to our expected format
@@ -87,14 +38,15 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
               size: value.size,
               buffer: Buffer.from(await value.arrayBuffer()),
             })
-            logger.info(
+            // Attachments logged at debug level only
+            logger.debug(
               {
-                fieldname: key,
+                traceId,
+                component: "inbound-email",
                 filename: value instanceof File ? value.name : key,
-                mimetype: value.type,
                 size: value.size,
               },
-              "📎 [SENDGRID INBOUND] Attachment detected",
+              `[inbound-email] Attachment: ${value instanceof File ? value.name : key}`,
             )
           } else {
             formData[key] = value
@@ -102,53 +54,30 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
         }
       }
 
-      logger.info(
-        {
-          filesCount: files.length,
-          fileNames: files.map((f) => f.originalname),
-          fileSizes: files.map((f) => f.size),
-          bodyKeys: Object.keys(formData),
-          formDataSample: {
-            from: formData.from,
-            to: formData.to,
-            subject: formData.subject,
-          },
-        },
-        "📧 [SENDGRID INBOUND] Multipart parsing completed - ready to process",
-      )
-
       // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
-      const result = await webhookService.processInboundEmail(formData as any, files as any)
-
-      logger.info(
-        { result, from: formData.from, to: formData.to, subject: formData.subject },
-        "✅ [SENDGRID INBOUND] Inbound email processed successfully",
+      const result = await webhookService.processInboundEmail(
+        formData as any,
+        files as any,
+        traceId,
       )
+
+      const durationMs = Date.now() - startTime
+      inboundEmailLogger.processed(traceId, {
+        emailId: result?.emailId || "unknown",
+        isReply: result?.isReply || false,
+        classification: result?.classification,
+        durationMs,
+      })
 
       return result
     } catch (error) {
-      logger.error(
-        {
-          err: error,
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : undefined,
-          contentType,
-          bodyKeys: body && typeof body === "object" ? Object.keys(body) : [],
-        },
-        "❌ [SENDGRID INBOUND] Failed to process inbound email",
-      )
+      inboundEmailLogger.failed(traceId, error instanceof Error ? error.message : String(error))
       throw error
     }
   })
   .post("/inbound-store", async ({ body, request }) => {
-    logger.info(
-      {
-        contentType: request.headers.get("content-type"),
-        bodyType: typeof body,
-        bodyKeys: body && typeof body === "object" ? Object.keys(body) : [],
-      },
-      "📦 [INBOUND-STORE] Received request",
-    )
+    const startTime = Date.now()
+    const traceId = generateTraceId()
 
     // Use ElysiaJS built-in parser
     const formData: Record<string, unknown> = {}
@@ -176,94 +105,78 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       }
     }
 
-    logger.info(
-      {
-        from: formData.from,
-        to: formData.to,
-        subject: formData.subject,
-        filesCount: files.length,
-        fileNames: files.map((f) => f.originalname),
-      },
-      "📦 [INBOUND-STORE] Parsed email data",
-    )
+    const from = String(formData.from || "unknown")
+    const to = String(formData.to || "unknown")
+    const subject = String(formData.subject || "")
+
+    inboundEmailLogger.received(traceId, from, to, subject)
 
     try {
       // biome-ignore lint/suspicious/noExplicitAny: webhook payload type is dynamic
       const result = await webhookService.processInboundStore(formData as any, files as any)
 
-      logger.info(
-        { result, from: formData.from, to: formData.to },
-        "✅ [INBOUND-STORE] Processed successfully",
-      )
+      const durationMs = Date.now() - startTime
+      inboundEmailLogger.processed(traceId, {
+        emailId: result?.emailId || "unknown",
+        isReply: false,
+        durationMs,
+      })
 
       return result
     } catch (error) {
-      logger.error(
-        {
-          err: error,
-          errorMessage: error instanceof Error ? error.message : String(error),
-          from: formData.from,
-          to: formData.to,
-        },
-        "❌ [INBOUND-STORE] Failed to process",
-      )
+      inboundEmailLogger.failed(traceId, error instanceof Error ? error.message : String(error))
       throw error
     }
   })
   // SendGrid Event Webhook
   .post("/sendgrid-events", async ({ body, request }) => {
-    logger.info(
-      {
-        url: request.url,
-        method: request.method,
-        contentType: request.headers.get("content-type"),
-        bodyType: typeof body,
-        isArray: Array.isArray(body),
-        eventCount: Array.isArray(body) ? body.length : 1,
-        timestamp: new Date().toISOString(),
-      },
-      "📊 [SENDGRID EVENTS] Received SendGrid event webhook",
-    )
+    const startTime = Date.now()
+    const traceId = generateTraceId()
+    const eventCount = Array.isArray(body) ? body.length : 1
 
-    // Log each event in the batch
+    // Single log for batch received - no individual event logging
+    webhookLogger.batchReceived({ source: "sendgrid-events", traceId }, eventCount)
+
+    // Log event types summary at debug level only
     if (Array.isArray(body)) {
-      body.forEach((event: Record<string, unknown>, index: number) => {
-        logger.info(
-          {
-            index,
-            eventType: event.event,
-            email: event.email,
-            sgMessageId: event.sg_message_id,
-            timestamp: event.timestamp,
-            ip: event.ip,
-            userAgent: event.useragent,
-            sgMachineOpen: event.sg_machine_open,
-            url: event.url,
-            category: event.category,
-          },
-          `📊 [SENDGRID EVENTS] Event ${index + 1}: ${event.event}`,
-        )
-      })
+      const eventTypeCounts = body.reduce(
+        (acc: Record<string, number>, event: Record<string, unknown>) => {
+          const type = String(event.event || "unknown")
+          acc[type] = (acc[type] || 0) + 1
+          return acc
+        },
+        {},
+      )
+      logger.debug(
+        {
+          traceId,
+          component: "webhook",
+          source: "sendgrid-events",
+          eventTypeCounts,
+        },
+        `[webhook:sendgrid-events] Event breakdown: ${JSON.stringify(eventTypeCounts)}`,
+      )
     }
 
     try {
       const result = await webhookService.processSendGridEvents(body as unknown)
 
-      logger.info(
-        { result, eventCount: Array.isArray(body) ? body.length : 1 },
-        "✅ [SENDGRID EVENTS] SendGrid events processed",
+      const durationMs = Date.now() - startTime
+      webhookLogger.processed(
+        { source: "sendgrid-events", eventType: "batch", traceId },
+        { success: true, durationMs, metadata: { eventCount } },
       )
 
       return result
     } catch (error) {
-      logger.error(
+      const durationMs = Date.now() - startTime
+      webhookLogger.processed(
+        { source: "sendgrid-events", eventType: "batch", traceId },
         {
-          err: error,
-          errorMessage: error instanceof Error ? error.message : String(error),
-          eventCount: Array.isArray(body) ? body.length : 1,
-          eventTypes: Array.isArray(body) ? body.map((e: Record<string, unknown>) => e.event) : [],
+          success: false,
+          durationMs,
+          metadata: { eventCount, error: error instanceof Error ? error.message : String(error) },
         },
-        "❌ [SENDGRID EVENTS] Failed to process events",
       )
       throw error
     }

@@ -1080,7 +1080,7 @@ async function discoverLeadsForOnboarding(
   totalEnriched?: number
   totalDuplicates?: number
 }> {
-  const TARGET_LEADS = 150
+  const TARGET_LEADS = 30
   const MAX_ITERATIONS = 5
   const BATCH_SIZE = 200
 

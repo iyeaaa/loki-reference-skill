@@ -1,5 +1,5 @@
 import { config } from "../config"
-import logger from "../utils/logger"
+import logger, { externalLogger } from "../utils/logger"
 import { hashString, RedisCache } from "./redis-cache.service"
 
 // Initialize cache for lead enrichment
@@ -62,12 +62,16 @@ export const findEmailsWithHunter = async (
   // Check cache first
   const cached = await cache.get<HunterCacheValue>(`hunter:${domain}`)
   if (cached) {
-    console.log(`[Hunter.io] ✅ Cache hit for ${domain}`)
+    // Cache hit logged at debug level only
+    logger.debug({ service: "hunter", domain, cached: true }, "[hunter] Cache hit")
     return cached
   }
 
-  console.log(`[Hunter.io] Searching emails for domain: ${domain}`)
-  const startTime = Date.now()
+  const call = externalLogger.start({
+    service: "hunter",
+    operation: "domain_search",
+    endpoint: domain,
+  })
 
   try {
     // type=generic: 공식 이메일만 가져옴 (contact@, info@, sales@, support@ 등)
@@ -76,9 +80,7 @@ export const findEmailsWithHunter = async (
     const response = await fetch(url)
 
     if (!response.ok) {
-      const error = await response.json()
-      console.error(`[Hunter.io] ❌ API error for ${domain}:`, error)
-      logger.warn({ domain, error }, "Hunter.io API error")
+      call.failure(`API error: ${response.status}`, { domain })
       return { emails: [] }
     }
 
@@ -102,7 +104,6 @@ export const findEmailsWithHunter = async (
 
     // 신뢰도 순으로 정렬
     const sortedEmails = genericEmails.sort((a, b) => b.confidence - a.confidence)
-    const elapsed = Date.now() - startTime
 
     const result = {
       emails: sortedEmails.slice(0, 5), // 상위 5개만
@@ -110,18 +111,14 @@ export const findEmailsWithHunter = async (
       description: data.data?.description,
     }
 
-    console.log(`[Hunter.io] ✅ Found ${result.emails.length} emails for ${domain} (${elapsed}ms)`)
-    if (result.emails.length > 0) {
-      console.log(`[Hunter.io]   - emails: ${result.emails.map((e) => e.value).join(", ")}`)
-    }
+    call.success({ emailCount: result.emails.length })
 
     // Cache the result
     await cache.set(`hunter:${domain}`, result)
 
     return result
   } catch (error) {
-    console.error(`[Hunter.io] ❌ Failed to fetch emails for ${domain}:`, error)
-    logger.error({ error, domain }, "Failed to fetch emails from Hunter.io")
+    call.failure(error instanceof Error ? error : String(error), { domain })
     return { emails: [] }
   }
 }
@@ -137,14 +134,17 @@ export const extractWebsiteContent = async (
   // Check cache first
   const cached = await cache.get<JinaCacheValue>(`jina:${url}`)
   if (cached) {
-    console.log(`[JinaReader] ✅ Cache hit for ${url}`)
+    logger.debug({ service: "jina", url, cached: true }, "[jina] Cache hit")
     return cached
   }
 
   const TIMEOUT_MS = 15000 // 15초 타임아웃
 
-  console.log(`[JinaReader] Extracting content from: ${url}`)
-  const startTime = Date.now()
+  const call = externalLogger.start({
+    service: "jina",
+    operation: "extract_content",
+    endpoint: url,
+  })
 
   try {
     // URL 정규화
@@ -165,13 +165,11 @@ export const extractWebsiteContent = async (
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        console.error(`[JinaReader] ❌ API error for ${url}: status ${response.status}`)
-        logger.warn({ url, status: response.status }, "Jina Reader API error")
+        call.failure(`API error: ${response.status}`, { url })
         return { content: "" }
       }
 
       const content = await response.text()
-      const elapsed = Date.now() - startTime
 
       // 콘텐츠에서 제목과 설명 추출 시도
       const titleMatch = content.match(/^#\s*(.+)$/m)
@@ -181,10 +179,7 @@ export const extractWebsiteContent = async (
       const paragraphs = content.split("\n\n").filter((p) => p.trim().length > 50)
       const description = paragraphs.slice(0, 2).join(" ").slice(0, 500)
 
-      console.log(`[JinaReader] ✅ Extracted ${content.length} chars from ${url} (${elapsed}ms)`)
-      if (title) {
-        console.log(`[JinaReader]   - title: ${title.substring(0, 50)}...`)
-      }
+      call.success({ contentLength: content.length })
 
       const result = {
         content: content.slice(0, 5000), // 최대 5000자
@@ -199,15 +194,13 @@ export const extractWebsiteContent = async (
     } catch (error) {
       clearTimeout(timeoutId)
       if (error instanceof Error && error.name === "AbortError") {
-        console.warn(`[JinaReader] ⚠️ Request timed out for ${url} (${TIMEOUT_MS}ms)`)
-        logger.warn({ url, timeout: TIMEOUT_MS }, "Jina Reader request timed out")
+        call.failure("Request timeout", { url, timeout: TIMEOUT_MS })
         return { content: "" }
       }
       throw error
     }
   } catch (error) {
-    console.error(`[JinaReader] ❌ Failed to extract content from ${url}:`, error)
-    logger.error({ error, url }, "Failed to extract content with Jina Reader")
+    call.failure(error instanceof Error ? error : String(error), { url })
     return { content: "" }
   }
 }
@@ -228,12 +221,15 @@ export const summarizeCompanyInfo = async (
   const contentHash = hashString(content.slice(0, 3000))
   const cached = await cache.get<GeminiCacheValue>(`gemini:${contentHash}`)
   if (cached) {
-    console.log(`[Gemini] ✅ Cache hit for ${companyName}`)
+    logger.debug({ service: "gemini", companyName, cached: true }, "[gemini] Cache hit")
     return cached
   }
 
-  console.log(`[Gemini] Summarizing company info for: ${companyName}`)
-  const startTime = Date.now()
+  const call = externalLogger.start({
+    service: "gemini",
+    operation: "summarize_company",
+    endpoint: companyName,
+  })
 
   try {
     const { GoogleGenAI } = await import("@google/genai")
@@ -255,7 +251,6 @@ Respond in JSON format:
 
 JSON response:`
 
-    console.log(`[Gemini] Calling Gemini API...`)
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: prompt,
@@ -263,24 +258,16 @@ JSON response:`
 
     const text = response.text?.trim() || "{}"
     const cleaned = text.replace(/```json\n?/gi, "").replace(/```\n?/gi, "")
-    const elapsed = Date.now() - startTime
 
     const result = JSON.parse(cleaned)
-    console.log(`[Gemini] ✅ Summarized ${companyName} (${elapsed}ms)`)
-    if (result.description) {
-      console.log(`[Gemini]   - description: ${result.description.substring(0, 50)}...`)
-    }
-    if (result.industry) {
-      console.log(`[Gemini]   - industry: ${result.industry}`)
-    }
+    call.success({ hasDescription: !!result.description, industry: result.industry })
 
     // Cache the result
     await cache.set(`gemini:${contentHash}`, result)
 
     return result
   } catch (error) {
-    console.error(`[Gemini] ❌ Failed to summarize ${companyName}:`, error)
-    logger.error({ error, companyName }, "Failed to summarize company info")
+    call.failure(error instanceof Error ? error : String(error), { companyName })
     return { description: "" }
   }
 }
@@ -298,7 +285,8 @@ export const enrichLead = async (
 ): Promise<EnrichmentResult> => {
   const domain = webAddress.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
 
-  logger.info({ domain, companyName }, "Starting lead enrichment")
+  // Debug level only - individual enrichment
+  logger.debug({ domain, companyName }, "[lead-enrichment] Starting enrichment")
 
   const result: EnrichmentResult = {
     domain,
@@ -362,9 +350,10 @@ export const enrichLead = async (
       result.companyInfo.description = hunterResult.description
     }
   }
-  logger.info(
+  // Debug level - individual completion
+  logger.debug(
     { domain, emailCount: result.emails.length, hasDescription: !!result.companyInfo.description },
-    "Lead enrichment completed",
+    "[lead-enrichment] Enrichment completed",
   )
 
   return result

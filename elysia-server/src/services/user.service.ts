@@ -1,5 +1,6 @@
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import { billingPlans, billingProducts, subscriptions } from "../db/schema/billing"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
 import { iamMemberRoles } from "../db/schema/iam"
@@ -44,6 +45,7 @@ export async function getUser(id: string) {
 }
 
 // CreateUser :one
+// Trial is now managed by subscriptions table, not users table
 export async function createUser(data: {
   username: string
   email: string
@@ -53,11 +55,6 @@ export async function createUser(data: {
   departmentId?: string
   employeeId?: string
 }) {
-  // Calculate trial period (7 days from now)
-  const trialStartDate = new Date()
-  const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 7)
-
   const [newUser] = await db
     .insert(users)
     .values({
@@ -68,9 +65,6 @@ export async function createUser(data: {
       isActive: data.isActive !== undefined ? data.isActive : true,
       departmentId: data.departmentId || null,
       employeeId: data.employeeId || null,
-      trialStartDate,
-      trialEndDate,
-      isTrialActive: true,
     })
     .returning({
       id: users.id,
@@ -80,9 +74,6 @@ export async function createUser(data: {
       isActive: users.isActive,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -880,11 +871,6 @@ export async function createOrUpdateGoogleUser(data: {
   // Check if user already exists
   const existingUser = await getUserByEmail(data.email)
 
-  // Calculate trial period (7 days from now)
-  const trialStartDate = new Date()
-  const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 7)
-
   // Prepare onboarding survey data
   const { industry, target, country, experience, lang } = data.onboardingParams || {}
   const hasOnboardingSurvey = industry || target || country || experience
@@ -911,9 +897,6 @@ export async function createOrUpdateGoogleUser(data: {
       authProvider: "google",
       oauthId: data.oauthId,
       profilePicture: data.profilePicture,
-      trialStartDate,
-      trialEndDate,
-      isTrialActive: true,
       lastLoginAt: new Date(),
       // 온보딩 데이터 저장
       onboardingSurvey,
@@ -940,9 +923,6 @@ export async function createOrUpdateGoogleUser(data: {
       authProvider: users.authProvider,
       oauthId: users.oauthId,
       profilePicture: users.profilePicture,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
       onboardingSurvey: users.onboardingSurvey,
       onboardingStep: users.onboardingStep,
       onboardingCompletedAt: users.onboardingCompletedAt,
@@ -951,8 +931,8 @@ export async function createOrUpdateGoogleUser(data: {
       lastLoginAt: users.lastLoginAt,
     })
 
-  // Create default workspace for new trial users
-  if (!existingUser && upsertedUser?.isTrialActive) {
+  // Create default workspace for new users (trial subscription will be created automatically)
+  if (!existingUser) {
     try {
       const workspace = await workspaceService.createWorkspace({
         name: `${upsertedUser.username}의 워크스페이스`,
@@ -1102,9 +1082,6 @@ export async function getUserByOAuthId(oauthId: string, authProvider: "google") 
       authProvider: users.authProvider,
       oauthId: users.oauthId,
       profilePicture: users.profilePicture,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
@@ -1119,89 +1096,98 @@ export async function getUserByOAuthId(oauthId: string, authProvider: "google") 
   return user
 }
 
-// CheckTrialStatus :one
-export async function checkTrialStatus(userId: string) {
-  const [user] = await db
+/**
+ * Get user's trial status from workspace subscription
+ * subscription 기반 trial 상태 조회 (workspace의 primary subscription 확인)
+ *
+ * @param userId - 사용자 ID
+ * @returns trial 상태 정보 (subscription 기반)
+ */
+export async function getUserTrialStatusFromSubscription(userId: string) {
+  // 1. 사용자가 소유한 workspace 조회
+  const ownedWorkspaces = await db
     .select({
-      id: users.id,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
+      id: workspaces.id,
+      name: workspaces.name,
     })
-    .from(users)
-    .where(eq(users.id, userId))
+    .from(workspaces)
+    .where(eq(workspaces.ownerId, userId))
     .limit(1)
 
-  if (!user) {
-    return null
+  if (!ownedWorkspaces[0]) {
+    // workspace가 없으면 trial 없음
+    return {
+      id: userId,
+      isTrialActive: false,
+      isTrialExpired: true,
+      trialStartDate: null,
+      trialEndDate: null,
+      daysRemaining: 0,
+    }
   }
 
-  // Check if trial has expired
+  const workspaceId = ownedWorkspaces[0].id
+
+  // 2. workspace의 primary subscription 조회
+  const [subscription] = await db
+    .select({
+      id: subscriptions.id,
+      status: subscriptions.status,
+      trialStart: subscriptions.trialStart,
+      trialEnd: subscriptions.trialEnd,
+      tier: billingProducts.tier,
+    })
+    .from(subscriptions)
+    .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(eq(subscriptions.workspaceId, workspaceId), eq(subscriptions.isPrimary, true)),
+    )
+    .limit(1)
+
+  if (!subscription) {
+    // subscription이 없으면 trial 없음
+    return {
+      id: userId,
+      isTrialActive: false,
+      isTrialExpired: true,
+      trialStartDate: null,
+      trialEndDate: null,
+      daysRemaining: 0,
+    }
+  }
+
+  // 3. trial 상태 계산
   const now = new Date()
-  const isTrialExpired = user.trialEndDate && now > user.trialEndDate
+  const isTrialActive = subscription.status === "trialing"
+  const isTrialExpired = subscription.trialEnd && now > subscription.trialEnd
 
   return {
-    ...user,
-    isTrialExpired,
-    daysRemaining: user.trialEndDate
+    id: userId,
+    isTrialActive: isTrialActive && !isTrialExpired,
+    isTrialExpired: !!isTrialExpired,
+    trialStartDate: subscription.trialStart,
+    trialEndDate: subscription.trialEnd,
+    daysRemaining: subscription.trialEnd
       ? Math.max(
           0,
-          Math.ceil((user.trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+          Math.ceil(
+            (subscription.trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          ),
         )
-      : null,
+      : 0,
   }
 }
 
-// UpdateTrialStatus :one
-export async function updateTrialStatus(userId: string, isTrialActive: boolean) {
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      isTrialActive,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      isTrialActive: users.isTrialActive,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-    })
-
-  return updatedUser
+// CheckTrialStatus :one
+// subscription 기반으로 trial 상태 조회 (users 테이블의 trial 필드는 더 이상 사용하지 않음)
+export async function checkTrialStatus(userId: string) {
+  return getUserTrialStatusFromSubscription(userId)
 }
 
-// ExtendTrial :one
-export async function extendTrial(userId: string, additionalDays: number) {
-  const user = await checkTrialStatus(userId)
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  const newEndDate = new Date()
-  if (user.trialEndDate && user.trialEndDate > new Date()) {
-    // Extend from current end date if trial is still active
-    newEndDate.setTime(user.trialEndDate.getTime())
-  }
-  newEndDate.setDate(newEndDate.getDate() + additionalDays)
-
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      trialEndDate: newEndDate,
-      isTrialActive: true,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
-    })
-
-  return updatedUser
-}
+// Note: updateTrialStatus and extendTrial functions have been removed.
+// Trial status is now managed directly through the subscriptions table.
+// To update trial status, modify the subscription record instead.
 
 // ====================================
 // ONBOARDING OPERATIONS

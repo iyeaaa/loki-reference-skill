@@ -55,10 +55,11 @@ export const users = pgTable(
     authProvider: authProviderEnum("auth_provider").notNull().default("local"),
     oauthId: varchar("oauth_id", { length: 255 }), // Google user ID or other OAuth provider ID
     profilePicture: text("profile_picture"), // Profile picture URL from OAuth provider
-    // Trial period fields
-    trialStartDate: timestamp("trial_start_date", { withTimezone: true }),
-    trialEndDate: timestamp("trial_end_date", { withTimezone: true }),
-    isTrialActive: boolean("is_trial_active").default(false),
+
+    // Trial period fields - REMOVED (now managed by subscriptions table)
+    // trialStartDate: timestamp("trial_start_date", { withTimezone: true }),
+    // trialEndDate: timestamp("trial_end_date", { withTimezone: true }),
+    // isTrialActive: boolean("is_trial_active").default(false),
 
     // Onboarding fields
     // 사전 설문 결과 저장 (industry, target, country, experience, lang)
@@ -84,7 +85,7 @@ export const users = pgTable(
     departmentIdx: index("users_department_id_idx").on(table.departmentId),
     authProviderIdx: index("users_auth_provider_idx").on(table.authProvider),
     oauthIdIdx: index("users_oauth_id_idx").on(table.oauthId),
-    trialActiveIdx: index("users_trial_active_idx").on(table.isTrialActive),
+    // trialActiveIdx: index("users_trial_active_idx").on(table.isTrialActive), // REMOVED
     onboardingStepIdx: index("users_onboarding_step_idx").on(table.onboardingStep),
   }),
 )

@@ -343,6 +343,97 @@ export async function deleteWebhook(webhookId: string): Promise<boolean> {
 }
 
 /**
+ * Email details response from Unipile API
+ */
+export interface UnipileEmailDetails {
+  id?: string
+  messageId?: string
+  providerId?: string
+  trackingId?: string
+  threadId?: string
+}
+
+/**
+ * Get email details from Unipile
+ * Used to retrieve actual RFC 822 Message-ID after sending email
+ * @param emailId - Unipile email ID (tracking_id from send response)
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param retryDelayMs - Delay between retries in ms (default: 1000)
+ */
+export async function getEmailDetails(
+  emailId: string,
+  maxRetries: number = 3,
+  retryDelayMs: number = 1000,
+): Promise<UnipileEmailDetails | null> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(`${UNIPILE_API_URL}/api/v1/emails/${emailId}`, {
+        headers: {
+          "X-API-KEY": UNIPILE_API_KEY,
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Email might not be ready yet, retry if attempts remaining
+          if (attempt < maxRetries) {
+            logger.info(
+              { emailId, attempt, maxRetries },
+              "Email not found yet, retrying after delay",
+            )
+            await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+            continue
+          }
+          return null
+        }
+        throw new Error(`Unipile API error: ${response.statusText}`)
+      }
+
+      interface UnipileEmailResponse {
+        id?: string
+        message_id?: string
+        provider_id?: string
+        tracking_id?: string
+        thread_id?: string
+      }
+      const data = (await response.json()) as UnipileEmailResponse
+
+      logger.info(
+        {
+          emailId,
+          messageId: data.message_id,
+          providerId: data.provider_id,
+          trackingId: data.tracking_id,
+          threadId: data.thread_id,
+        },
+        "Retrieved email details from Unipile",
+      )
+
+      return {
+        id: data.id,
+        messageId: data.message_id,
+        providerId: data.provider_id,
+        trackingId: data.tracking_id,
+        threadId: data.thread_id,
+      }
+    } catch (error) {
+      if (attempt < maxRetries) {
+        logger.warn(
+          { err: error, emailId, attempt, maxRetries },
+          "Error getting email details, retrying",
+        )
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+        continue
+      }
+      logger.error({ err: error, emailId }, "Error getting Unipile email details after all retries")
+      return null
+    }
+  }
+
+  return null
+}
+
+/**
  * Send email via Unipile
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
@@ -480,9 +571,10 @@ export async function syncAccountEmails(
     interface UnipileEmail {
       role?: string
       origin?: string
-      message_id?: string
-      id?: string
-      in_reply_to?: { message_id?: string }
+      message_id?: string // RFC 822 Message-ID
+      id?: string // Unipile email ID
+      tracking_id?: string // Unipile tracking ID (if sent via Unipile)
+      in_reply_to?: { message_id?: string; id?: string } // Both RFC 822 and Unipile ID
       headers?: Array<{ name?: string; value?: string }>
       from_attendee?: { identifier?: string }
       subject?: string
@@ -511,8 +603,9 @@ export async function syncAccountEmails(
     // Process each inbox email
     for (const inboxEmail of inboxEmails) {
       try {
-        // in_reply_to is an object with message_id and id fields
+        // in_reply_to is an object with message_id (RFC 822) and id (Unipile ID) fields
         const inReplyToMessageId = inboxEmail.in_reply_to?.message_id
+        const inReplyToUnipileId = inboxEmail.in_reply_to?.id
 
         // Extract References header from headers array
         const referencesHeader = inboxEmail.headers?.find(
@@ -529,15 +622,17 @@ export async function syncAccountEmails(
         const receivedAt = inboxEmail.date ? new Date(inboxEmail.date) : new Date()
 
         // Check if this is a reply to one of our sent emails
-        let originalEmailId: string | null = null
+        let originalEmail = null
+        let matchedBy = ""
 
-        // Try to find original email by In-Reply-To message_id
+        // Strategy 1: Try to find original email by RFC 822 Message-ID
         if (inReplyToMessageId) {
-          const originalEmail = await db.query.emails.findFirst({
-            where: (emails, { or, like }) =>
+          originalEmail = await db.query.emails.findFirst({
+            where: (emails, { or, like, eq }) =>
               or(
-                like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
+                eq(emails.messageId, inReplyToMessageId),
                 like(emails.messageId, `%${inReplyToMessageId}%`),
+                like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
               ),
             columns: {
               id: true,
@@ -553,71 +648,111 @@ export async function syncAccountEmails(
           })
 
           if (originalEmail) {
-            originalEmailId = originalEmail.id
-
-            // 1. Store reply as inbound email in emails table
-            const [inboundEmail] = await db
-              .insert(emails)
-              .values({
-                workspaceId: originalEmail.workspaceId,
-                userEmailAccountId: originalEmail.userEmailAccountId,
-                leadId: originalEmail.leadId,
-                sequenceId: originalEmail.sequenceId,
-                direction: "inbound",
-                fromEmail: from,
-                toEmail: originalEmail.fromEmail,
-                subject: subject,
-                bodyText: body,
-                status: "delivered",
-                sentAt: receivedAt,
-                deliveredAt: receivedAt,
-                messageId: inboxEmail.id,
-                inReplyTo: inReplyToMessageId,
-                threadId: originalEmail.threadId || inReplyToMessageId,
-                leadName: originalEmail.leadName,
-                sequenceName: originalEmail.sequenceName,
-              })
-              .returning({ id: emails.id })
-
-            if (!inboundEmail) {
-              logger.error({ accountId }, "Failed to save inbound email")
-              continue
-            }
-
-            // 2. Update original email repliedAt
-            await db
-              .update(emails)
-              .set({
-                repliedAt: receivedAt,
-                status: "replied",
-                updatedAt: new Date(),
-              })
-              .where(eq(emails.id, originalEmailId))
-
-            // 3. Create email_reply record
-            await db.insert(emailReplies).values({
-              workspaceId: originalEmail.workspaceId,
-              originalEmailId,
-              replyEmailId: inboundEmail.id,
-              sentiment: null,
-              isRead: false,
-            })
-
-            repliesDetected++
-            newEmails++
-
-            logger.info({ accountId, originalEmailId, from, subject }, "Reply detected and saved")
+            matchedBy = "messageId"
+            logger.info(
+              { originalEmailId: originalEmail.id, matchedBy, inReplyToMessageId },
+              "[syncAccountEmails] Found original email by RFC 822 Message-ID",
+            )
           }
         }
 
-        // If not a reply, check references header for thread matching
-        if (!originalEmailId && references.length > 0) {
+        // Strategy 2: Try to find original email by Unipile ID (tracking_id stored in sendgridMessageId)
+        if (!originalEmail && inReplyToUnipileId) {
+          originalEmail = await db.query.emails.findFirst({
+            where: (emails, { eq }) => eq(emails.sendgridMessageId, inReplyToUnipileId),
+            columns: {
+              id: true,
+              workspaceId: true,
+              userEmailAccountId: true,
+              leadId: true,
+              sequenceId: true,
+              leadName: true,
+              sequenceName: true,
+              threadId: true,
+              fromEmail: true,
+            },
+          })
+
+          if (originalEmail) {
+            matchedBy = "unipileId"
+            logger.info(
+              { originalEmailId: originalEmail.id, matchedBy, inReplyToUnipileId },
+              "[syncAccountEmails] Found original email by Unipile tracking ID",
+            )
+          }
+        }
+
+        if (originalEmail) {
+          const originalEmailId = originalEmail.id
+          const inReplyToValue = inReplyToMessageId || inReplyToUnipileId || inboxEmail.id
+
+          // 1. Store reply as inbound email in emails table
+          const [inboundEmail] = await db
+            .insert(emails)
+            .values({
+              workspaceId: originalEmail.workspaceId,
+              userEmailAccountId: originalEmail.userEmailAccountId,
+              leadId: originalEmail.leadId,
+              sequenceId: originalEmail.sequenceId,
+              direction: "inbound",
+              fromEmail: from,
+              toEmail: originalEmail.fromEmail,
+              subject: subject,
+              bodyText: body,
+              status: "delivered",
+              sentAt: receivedAt,
+              deliveredAt: receivedAt,
+              messageId: inboxEmail.message_id || inboxEmail.id, // RFC 822 Message-ID or Unipile ID
+              sendgridMessageId: inboxEmail.id, // Store Unipile email ID
+              inReplyTo: inReplyToValue,
+              threadId: originalEmail.threadId || inReplyToValue,
+              leadName: originalEmail.leadName,
+              sequenceName: originalEmail.sequenceName,
+            })
+            .returning({ id: emails.id })
+
+          if (!inboundEmail) {
+            logger.error({ accountId }, "Failed to save inbound email")
+            continue
+          }
+
+          // 2. Update original email repliedAt
+          await db
+            .update(emails)
+            .set({
+              repliedAt: receivedAt,
+              status: "replied",
+              updatedAt: new Date(),
+            })
+            .where(eq(emails.id, originalEmailId))
+
+          // 3. Create email_reply record
+          await db.insert(emailReplies).values({
+            workspaceId: originalEmail.workspaceId,
+            originalEmailId,
+            replyEmailId: inboundEmail.id,
+            sentiment: null,
+            isRead: false,
+          })
+
+          repliesDetected++
+          newEmails++
+
+          logger.info(
+            { accountId, originalEmailId, from, subject, matchedBy },
+            "Reply detected and saved",
+          )
+        }
+
+        // If not a reply via In-Reply-To, check References header for thread matching
+        if (!originalEmail && references.length > 0) {
           for (const refId of references) {
-            const originalEmail = await db.query.emails.findFirst({
-              where: (emails, { or, like }) =>
+            const refOriginalEmail = await db.query.emails.findFirst({
+              where: (emails, { or, like, eq }) =>
                 or(
-                  like(emails.sendgridMessageId, `%${refId}%`),
+                  eq(emails.messageId, refId),
                   like(emails.messageId, `%${refId}%`),
+                  like(emails.sendgridMessageId, `%${refId}%`),
                 ),
               columns: {
                 id: true,
@@ -632,30 +767,32 @@ export async function syncAccountEmails(
               },
             })
 
-            if (originalEmail) {
-              originalEmailId = originalEmail.id
+            if (refOriginalEmail) {
+              originalEmail = refOriginalEmail
+              matchedBy = "references"
 
               // 1. Store reply as inbound email
               const [inboundEmail] = await db
                 .insert(emails)
                 .values({
-                  workspaceId: originalEmail.workspaceId,
-                  userEmailAccountId: originalEmail.userEmailAccountId,
-                  leadId: originalEmail.leadId,
-                  sequenceId: originalEmail.sequenceId,
+                  workspaceId: refOriginalEmail.workspaceId,
+                  userEmailAccountId: refOriginalEmail.userEmailAccountId,
+                  leadId: refOriginalEmail.leadId,
+                  sequenceId: refOriginalEmail.sequenceId,
                   direction: "inbound",
                   fromEmail: from,
-                  toEmail: originalEmail.fromEmail,
+                  toEmail: refOriginalEmail.fromEmail,
                   subject: subject,
                   bodyText: body,
                   status: "delivered",
                   sentAt: receivedAt,
                   deliveredAt: receivedAt,
-                  messageId: inboxEmail.id,
+                  messageId: inboxEmail.message_id || inboxEmail.id,
+                  sendgridMessageId: inboxEmail.id,
                   inReplyTo: refId,
-                  threadId: originalEmail.threadId || refId,
-                  leadName: originalEmail.leadName,
-                  sequenceName: originalEmail.sequenceName,
+                  threadId: refOriginalEmail.threadId || refId,
+                  leadName: refOriginalEmail.leadName,
+                  sequenceName: refOriginalEmail.sequenceName,
                 })
                 .returning({ id: emails.id })
 
@@ -672,12 +809,12 @@ export async function syncAccountEmails(
                   status: "replied",
                   updatedAt: new Date(),
                 })
-                .where(eq(emails.id, originalEmailId))
+                .where(eq(emails.id, refOriginalEmail.id))
 
               // 3. Create email_reply record
               await db.insert(emailReplies).values({
-                workspaceId: originalEmail.workspaceId,
-                originalEmailId,
+                workspaceId: refOriginalEmail.workspaceId,
+                originalEmailId: refOriginalEmail.id,
                 replyEmailId: inboundEmail.id,
                 sentiment: null,
                 isRead: false,
@@ -687,7 +824,14 @@ export async function syncAccountEmails(
               newEmails++
 
               logger.info(
-                { accountId, originalEmailId, from, subject, refId },
+                {
+                  accountId,
+                  originalEmailId: refOriginalEmail.id,
+                  from,
+                  subject,
+                  refId,
+                  matchedBy,
+                },
                 "Reply detected and saved via References header",
               )
 
@@ -696,8 +840,10 @@ export async function syncAccountEmails(
           }
         }
 
-        // Count as new email (regardless of whether it's a reply or not)
-        newEmails++
+        // Count as new email only if it's not already counted as a reply
+        if (!originalEmail) {
+          newEmails++
+        }
       } catch (emailError) {
         logger.error(
           { accountId, error: emailError, email: inboxEmail },

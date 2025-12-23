@@ -487,7 +487,9 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           body?: string
           body_plain?: string
           date?: string
-          in_reply_to?: { message_id?: string }
+          in_reply_to?: { message_id?: string; id?: string }
+          message_id?: string // RFC 822 Message-ID of the inbound email
+          tracking_id?: string // Unipile tracking ID (if this was sent via Unipile)
           role?: string
           origin?: string
         }
@@ -514,27 +516,34 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
         const from = fromAttendee?.identifier || ""
         const receivedAt = dateStr ? new Date(dateStr) : new Date()
 
+        // Extract both message_id (RFC 822) and id (Unipile ID) from in_reply_to
+        const inReplyToMessageId = inReplyTo?.message_id
+        const inReplyToUnipileId = inReplyTo?.id
+
         logger.info(
           {
             accountId,
             emailId,
             from,
             subject,
-            inReplyTo: inReplyTo?.message_id,
+            inReplyToMessageId,
+            inReplyToUnipileId,
           },
           "[Unipile Webhook] Processing mail_received event",
         )
 
         // Check if this is a reply to one of our sent emails
-        const inReplyToMessageId = inReplyTo?.message_id
+        // Try matching by: 1) RFC 822 Message-ID, 2) Unipile tracking_id (stored in sendgridMessageId)
+        let originalEmail = null
 
         if (inReplyToMessageId) {
-          // Find original email by message ID
-          const originalEmail = await db.query.emails.findFirst({
-            where: (emails, { or, like }) =>
+          // First try: Match by RFC 822 Message-ID (stored in emails.messageId field)
+          originalEmail = await db.query.emails.findFirst({
+            where: (emails, { or, like, eq }) =>
               or(
-                like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
+                eq(emails.messageId, inReplyToMessageId),
                 like(emails.messageId, `%${inReplyToMessageId}%`),
+                like(emails.sendgridMessageId, `%${inReplyToMessageId}%`),
               ),
             columns: {
               id: true,
@@ -550,70 +559,106 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           })
 
           if (originalEmail) {
-            // 1. Store reply as inbound email in emails table
-            const [inboundEmail] = await db
-              .insert(emails)
-              .values({
-                workspaceId: originalEmail.workspaceId,
-                userEmailAccountId: originalEmail.userEmailAccountId,
-                leadId: originalEmail.leadId,
-                sequenceId: originalEmail.sequenceId,
-                direction: "inbound",
-                fromEmail: from,
-                toEmail: originalEmail.fromEmail, // Reply is sent to original sender
-                subject: subject,
-                bodyText: bodyContent,
-                status: "delivered",
-                sentAt: receivedAt,
-                deliveredAt: receivedAt,
-                messageId: emailId, // Unipile email ID
-                inReplyTo: inReplyToMessageId,
-                threadId: originalEmail.threadId || inReplyToMessageId,
-                leadName: originalEmail.leadName,
-                sequenceName: originalEmail.sequenceName,
-              })
-              .returning({ id: emails.id })
-
-            if (!inboundEmail) {
-              logger.error("[Unipile Webhook] Failed to save inbound email")
-              return errorResponse("Failed to save inbound email", ResponseCode.INTERNAL_ERROR)
-            }
-
-            // 2. Update original email repliedAt
-            await db
-              .update(emails)
-              .set({
-                repliedAt: receivedAt,
-                status: "replied",
-                updatedAt: new Date(),
-              })
-              .where(eq(emails.id, originalEmail.id))
-
-            // 3. Create email_reply record linking original and reply
-            await db.insert(emailReplies).values({
-              workspaceId: originalEmail.workspaceId,
-              originalEmailId: originalEmail.id,
-              replyEmailId: inboundEmail.id, // Reference to emails table
-              sentiment: null,
-              isRead: false,
-            })
-
             logger.info(
-              {
-                originalEmailId: originalEmail.id,
-                replyEmailId: inboundEmail.id,
-                from,
-                subject,
-              },
-              "[Unipile Webhook] Reply saved as inbound email",
+              { originalEmailId: originalEmail.id, matchedBy: "messageId", inReplyToMessageId },
+              "[Unipile Webhook] Found original email by RFC 822 Message-ID",
             )
-
-            return successResponse({
-              message: "Reply processed successfully",
-              replyDetected: true,
-              inboundEmailId: inboundEmail.id,
-            })
           }
+        }
+
+        // Second try: Match by Unipile ID (tracking_id stored in sendgridMessageId)
+        if (!originalEmail && inReplyToUnipileId) {
+          originalEmail = await db.query.emails.findFirst({
+            where: (emails, { eq }) => eq(emails.sendgridMessageId, inReplyToUnipileId),
+            columns: {
+              id: true,
+              workspaceId: true,
+              userEmailAccountId: true,
+              leadId: true,
+              sequenceId: true,
+              leadName: true,
+              sequenceName: true,
+              threadId: true,
+              fromEmail: true,
+            },
+          })
+
+          if (originalEmail) {
+            logger.info(
+              { originalEmailId: originalEmail.id, matchedBy: "unipileId", inReplyToUnipileId },
+              "[Unipile Webhook] Found original email by Unipile tracking ID",
+            )
+          }
+        }
+
+        if (originalEmail) {
+          // Determine the best inReplyTo value to store
+          const inReplyToValue = inReplyToMessageId || inReplyToUnipileId || emailId
+
+          // 1. Store reply as inbound email in emails table
+          const [inboundEmail] = await db
+            .insert(emails)
+            .values({
+              workspaceId: originalEmail.workspaceId,
+              userEmailAccountId: originalEmail.userEmailAccountId,
+              leadId: originalEmail.leadId,
+              sequenceId: originalEmail.sequenceId,
+              direction: "inbound",
+              fromEmail: from,
+              toEmail: originalEmail.fromEmail, // Reply is sent to original sender
+              subject: subject,
+              bodyText: bodyContent,
+              status: "delivered",
+              sentAt: receivedAt,
+              deliveredAt: receivedAt,
+              messageId: webhookBody.message_id || emailId, // RFC 822 Message-ID or Unipile email ID
+              sendgridMessageId: emailId, // Store Unipile email ID for future reference
+              inReplyTo: inReplyToValue,
+              threadId: originalEmail.threadId || inReplyToValue,
+              leadName: originalEmail.leadName,
+              sequenceName: originalEmail.sequenceName,
+            })
+            .returning({ id: emails.id })
+
+          if (!inboundEmail) {
+            logger.error("[Unipile Webhook] Failed to save inbound email")
+            return errorResponse("Failed to save inbound email", ResponseCode.INTERNAL_ERROR)
+          }
+
+          // 2. Update original email repliedAt
+          await db
+            .update(emails)
+            .set({
+              repliedAt: receivedAt,
+              status: "replied",
+              updatedAt: new Date(),
+            })
+            .where(eq(emails.id, originalEmail.id))
+
+          // 3. Create email_reply record linking original and reply
+          await db.insert(emailReplies).values({
+            workspaceId: originalEmail.workspaceId,
+            originalEmailId: originalEmail.id,
+            replyEmailId: inboundEmail.id, // Reference to emails table
+            sentiment: null,
+            isRead: false,
+          })
+
+          logger.info(
+            {
+              originalEmailId: originalEmail.id,
+              replyEmailId: inboundEmail.id,
+              from,
+              subject,
+            },
+            "[Unipile Webhook] Reply saved as inbound email",
+          )
+
+          return successResponse({
+            message: "Reply processed successfully",
+            replyDetected: true,
+            inboundEmailId: inboundEmail.id,
+          })
         }
 
         // Not a reply to our emails, just log it

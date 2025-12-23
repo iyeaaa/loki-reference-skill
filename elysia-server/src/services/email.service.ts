@@ -655,16 +655,52 @@ This email contains confidential information that is protected by law or under t
         }
       }
 
+      // Unipile returns tracking_id after sending
+      const trackingId = result.messageId
+
       logger.info(
-        { accountId, unipileMessageId: result.messageId, generatedMessageId },
-        "Email sent via Unipile successfully",
+        { accountId, trackingId, generatedMessageId },
+        "Email sent via Unipile, fetching actual message_id for reply matching",
       )
+
+      // Fetch actual RFC 822 Message-ID from Unipile
+      // Gmail generates its own Message-ID, so we MUST retrieve it for reply matching
+      // Without the actual Message-ID, replies cannot be matched to original emails
+      let actualMessageId = generatedMessageId // Fallback to generated one
+
+      if (trackingId) {
+        try {
+          // Brief delay to allow email to be processed by provider
+          await new Promise((resolve) => setTimeout(resolve, 800))
+
+          // Try to get actual message_id with retries
+          const emailDetails = await unipileService.getEmailDetails(trackingId, 3, 1500)
+
+          if (emailDetails?.messageId) {
+            actualMessageId = emailDetails.messageId
+            logger.info(
+              { accountId, trackingId, actualMessageId, generatedMessageId },
+              "✅ Retrieved actual RFC 822 Message-ID from Unipile (reply matching will work)",
+            )
+          } else {
+            logger.warn(
+              { accountId, trackingId, generatedMessageId },
+              "⚠️ Could not retrieve actual Message-ID - reply detection may fail for this email",
+            )
+          }
+        } catch (detailsError) {
+          logger.warn(
+            { err: detailsError, accountId, trackingId },
+            "⚠️ Error fetching email details - reply detection may fail for this email",
+          )
+        }
+      }
 
       return {
         success: true,
-        messageId: generatedMessageId,
-        sendgridMessageId: result.messageId, // Store Unipile messageId for webhook matching
-        unipileMessageId: result.messageId,
+        messageId: actualMessageId, // Use actual RFC 822 Message-ID for reply matching
+        sendgridMessageId: trackingId, // Store Unipile tracking_id for webhook matching
+        unipileMessageId: trackingId,
       }
     } catch (error) {
       logger.error({ err: error, accountId }, "Failed to send email via Unipile")

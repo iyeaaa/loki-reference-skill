@@ -1459,9 +1459,9 @@ export const EMAIL_TYPES_3TOUCH = [
   {
     type: "follow_up_2",
     promptKr:
-      "마지막 후속 이메일을 작성해주세요. 이전 이메일들을 간략히 언급하고, 고객이 놓치고 있는 가치를 강조하세요. 긴급성을 부드럽게 표현하면서 최종 행동 요청(예: '이번 주 내로 답변 부탁드립니다')으로 마무리해주세요.",
+      "마지막 후속 이메일을 작성해주세요. 고객이 현재 놓치고 있는 핵심 가치 1-2가지만 간결하게 강조하세요. 부드러운 긴급성을 표현하면서 명확한 행동 요청(예: '이번 주 내로 답변 부탁드립니다')으로 마무리해주세요. 이전 이메일을 직접 언급하지 마세요.",
     promptEn:
-      "Write a final follow-up email. Reference previous outreach briefly, emphasize the value they're missing, and create soft urgency. End with a final CTA (e.g., 'Would love to hear from you this week').",
+      "Write a final follow-up email. Focus on 1-2 specific values they're currently missing. Create soft urgency with a clear CTA (e.g., 'Would love to hear from you this week'). Do NOT reference previous emails directly.",
     delayDays: 2, // 2일 뒤 (같은 시간)
   },
 ]

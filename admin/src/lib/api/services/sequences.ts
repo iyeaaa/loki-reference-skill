@@ -527,7 +527,6 @@ export const sequencesApi = {
     workspaceId: string
     country: string
     prompt: string
-    model?: string
     temperature?: number
   }) =>
     apiFetch<{

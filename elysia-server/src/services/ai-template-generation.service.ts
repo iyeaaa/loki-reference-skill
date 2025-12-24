@@ -99,7 +99,7 @@ class AITemplateGenerationService {
       workspaceDescription,
       country,
       userPrompt,
-      model = "gpt-4.1-mini",
+      model = "gpt-5-mini",
       temperature = 0.7,
     } = options
 
@@ -225,9 +225,11 @@ Show you did homework. Reference something specific about THEM.
 "{{company_name}}'s expansion into [area] caught my eye..."
 
 LINE 2-3 - THE BRIDGE (Relevant Insight)
-Connect their situation to a relevant outcome. Use specifics.
+Connect their situation to a relevant outcome. Focus on value proposition.
 "Many [similar companies] we work with faced [specific challenge]..."
-"We helped [X companies] achieve [specific result] in [timeframe]..."
+"We've helped companies like yours tackle [problem] and improve [outcome]..."
+
+⚠️ CRITICAL: DO NOT fabricate statistics, percentages, or specific numbers (like "35% increase", "4 months", "50+ buyers") unless explicitly provided in the context. Focus on qualitative value and benefits instead.
 
 LINE 4 - THE ASK (Low-Friction CTA)
 One simple question. No commitment.
@@ -239,10 +241,10 @@ NOT: "Would you be available for a 30-minute call next Tuesday at 3pm?"
 ═══════════════════════════════════════════════════════════════
 WHAT MAKES EMAILS GET REPLIES (Data-Backed)
 ═══════════════════════════════════════════════════════════════
-✅ One question: 50% more replies than multiple questions
-✅ Personalized first line: 30%+ open rate increase
-✅ Specific numbers: 2x more credible than vague claims
-✅ "Quick question" in subject: 35% higher open rate
+✅ One question: More replies than multiple questions
+✅ Personalized first line: Higher open rates
+✅ Value-focused messaging: More credible than vague claims
+✅ "Quick question" in subject: Higher open rates
 
 ═══════════════════════════════════════════════════════════════
 STRICT PROHIBITIONS
@@ -258,6 +260,7 @@ STRICT PROHIBITIONS
 ❌ Feature lists (nobody cares about features)
 ❌ Generic industry pain points (too obvious)
 ❌ "We are the leading provider of..." (nobody believes this)
+❌ Fabricated statistics, percentages, or growth numbers (destroys credibility)
 
 ═══════════════════════════════════════════════════════════════
 EXAMPLES: BAD vs GOOD
@@ -271,7 +274,7 @@ EXAMPLES: BAD vs GOOD
 
 Noticed {{company_name}} has been making waves in the Middle East fragrance market.
 
-Many beauty distributors we've worked with struggled to find the right buyers when entering new regions. We helped 3 similar companies connect with 50+ qualified buyers in their first 90 days.
+Many beauty distributors we've worked with struggled to find the right buyers when entering new regions. We've helped similar companies build strong networks of qualified buyers and accelerate their market entry.
 
 Worth a quick chat about your expansion plans?"
 ${

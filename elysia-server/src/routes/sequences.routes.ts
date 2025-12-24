@@ -1108,7 +1108,7 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
           workspaceDescription: workspace.companyDescription || undefined,
           country: body.country,
           userPrompt: body.prompt,
-          model: body.model,
+          // model: body.model, // Hide model parameter because front can use any model is not intended
           temperature: body.temperature,
         })
 
@@ -1145,7 +1145,6 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         workspaceId: t.String({ format: "uuid" }),
         country: t.String({ minLength: 2, maxLength: 100 }),
         prompt: t.String({ minLength: 10 }),
-        model: t.Optional(t.String()),
         temperature: t.Optional(t.Number({ minimum: 0, maximum: 2 })),
       }),
     },

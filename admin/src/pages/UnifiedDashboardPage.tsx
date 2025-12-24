@@ -1,12 +1,15 @@
-import { lazy, Suspense, useEffect, useMemo } from "react"
+import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
+import { useSequence } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 // Lazy load the dashboard page and layout
 const AppDashboardPage = lazy(() => import("./app/AppDashboardPage"))
 const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"))
+
+const DISMISS_KEY = "campaign_resume_dismissed"
 
 /**
  * Unified Dashboard Page
@@ -31,13 +34,46 @@ export default function UnifiedDashboardPage() {
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   // Get onboarding progress
-  const { data: onboardingProgress, isLoading: onboardingLoading } = useOnboardingProgress(
-    workspaceId,
-    !!workspaceId,
-  )
+  const {
+    data: onboardingProgress,
+    isLoading: onboardingLoading,
+    refetch: refetchOnboardingProgress,
+  } = useOnboardingProgress(workspaceId, !!workspaceId)
 
   // Check if onboarding is complete
   const isOnboardingComplete = !!onboardingProgress?.completedAt
+
+  // Get sequence data if it exists
+  const sequenceId = onboardingProgress?.generatedSequenceId || ""
+  const {
+    data: sequence,
+    isLoading: sequenceLoading,
+    refetch: refetchSequence,
+  } = useSequence(sequenceId, !!sequenceId)
+
+  // Popup state - temporarily dismissed during session
+  const [temporarilyDismissed, setTemporarilyDismissed] = useState(false)
+
+  // Determine if popup should be shown
+  const shouldShowPopup = useMemo(() => {
+    // Don't show if onboarding not complete
+    if (!onboardingProgress?.completedAt) return false
+
+    // Don't show if no sequence
+    if (!sequence?.id) return false
+
+    // Only show if sequence is in draft status
+    if (sequence.status !== "draft") return false
+
+    // Check if user dismissed the popup permanently
+    const dismissed = localStorage.getItem(DISMISS_KEY)
+    if (dismissed === "true") return false
+
+    // Check if temporarily dismissed (during this session)
+    if (temporarilyDismissed) return false
+
+    return true
+  }, [onboardingProgress, sequence, temporarilyDismissed])
 
   // Redirect to /company if onboarding not complete
   useEffect(() => {
@@ -64,7 +100,18 @@ export default function UnifiedDashboardPage() {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <DashboardLayout>
-        <AppDashboardPage />
+        <AppDashboardPage
+          calloutSequenceId={sequenceId}
+          onCalloutComplete={() => {
+            setTemporarilyDismissed(true)
+            refetchSequence()
+            refetchOnboardingProgress()
+          }}
+          onCalloutDismiss={() => {
+            setTemporarilyDismissed(true)
+          }}
+          showCampaignCallout={shouldShowPopup && !!sequenceId}
+        />
       </DashboardLayout>
     </Suspense>
   )

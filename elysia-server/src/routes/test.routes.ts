@@ -6,6 +6,7 @@ import { APOLLO_LEADS_DATA_DICTIONARY } from "../services/lead-discovery/nodes/b
 import { enrichLead } from "../services/lead-enrichment.service"
 import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH, INDUSTRY_NAMES } from "../services/onboarding.service"
 import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 interface LeadData {
   company: string
@@ -227,56 +228,89 @@ async function generateEmails(options: {
   return templates
 }
 
-export const testRoutes = new Elysia({ prefix: "/test" }).post(
+export const testRoutes = new Elysia({ prefix: "/api/v1/test" }).post(
   "/onboarding",
-  async ({ body }) => {
-    console.log("[TestOnboarding] Starting full onboarding test")
+  async ({ body, set }) => {
+    try {
+      console.log("[TestOnboarding] Starting full onboarding test", {
+        industry: body.industry,
+        target: body.target,
+        country: body.country,
+      })
 
-    // Run lead discovery
-    const leadDiscoveryResult = await discoverLeads({
-      industry: body.industry,
-      target: body.target,
-      country: body.country,
-    })
+      // Run lead discovery
+      let leadDiscoveryResult: Awaited<ReturnType<typeof discoverLeads>>
+      try {
+        leadDiscoveryResult = await discoverLeads({
+          industry: body.industry,
+          target: body.target,
+          country: body.country,
+        })
+        console.log(
+          `[TestOnboarding] Lead discovery complete: ${leadDiscoveryResult.leads.length} leads`,
+        )
+      } catch (err) {
+        console.error("[TestOnboarding] Lead discovery failed:", err)
+        set.status = 500
+        return errorResponse(
+          `바이어 검색 중 오류가 발생했습니다: ${err instanceof Error ? err.message : "Unknown error"}`,
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
 
-    console.log(
-      `[TestOnboarding] Lead discovery complete: ${leadDiscoveryResult.leads.length} leads`,
-    )
+      // Run email generation
+      let emailTemplates: Awaited<ReturnType<typeof generateEmails>>
+      try {
+        emailTemplates = await generateEmails({
+          workspaceName: body.workspaceName,
+          workspaceDescription: body.workspaceDescription,
+          industry: body.industry,
+          target: body.target,
+          country: body.country,
+        })
+        console.log(
+          `[TestOnboarding] Email generation complete: ${emailTemplates.length} templates`,
+        )
+      } catch (err) {
+        console.error("[TestOnboarding] Email generation failed:", err)
+        set.status = 500
+        return errorResponse(
+          `이메일 생성 중 오류가 발생했습니다: ${err instanceof Error ? err.message : "Unknown error"}`,
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
 
-    // Run email generation
-    const emailTemplates = await generateEmails({
-      workspaceName: body.workspaceName,
-      workspaceDescription: body.workspaceDescription,
-      industry: body.industry,
-      target: body.target,
-      country: body.country,
-    })
-
-    console.log(`[TestOnboarding] Email generation complete: ${emailTemplates.length} templates`)
-
-    return {
-      leadDiscovery: {
-        stats: leadDiscoveryResult.stats,
-        leads: leadDiscoveryResult.leads.map((lead) => ({
-          company: lead.enriched?.companyName || lead.company,
-          website: lead.enriched?.websiteUrl || lead.website,
-          industry: lead.enriched?.businessType || lead.industry,
-          country: lead.enriched?.country || lead.country,
-          employees: lead.enriched?.employeeCount || lead.employees,
-          email: lead.enriched?.primaryEmail,
-          description: lead.enriched?.description,
-        })),
-      },
-      emailGeneration: {
-        templates: emailTemplates.map((t) => ({
-          step: t.stepOrder,
-          type: t.type,
-          delayDays: t.delayDays,
-          subject: t.template.subject,
-          bodyText: t.template.bodyText,
-          bodyHtml: t.template.bodyHtml,
-        })),
-      },
+      return {
+        leadDiscovery: {
+          stats: leadDiscoveryResult.stats,
+          leads: leadDiscoveryResult.leads.map((lead) => ({
+            company: lead.enriched?.companyName || lead.company,
+            website: lead.enriched?.websiteUrl || lead.website,
+            industry: lead.enriched?.businessType || lead.industry,
+            country: lead.enriched?.country || lead.country,
+            employees: lead.enriched?.employeeCount || lead.employees,
+            email: lead.enriched?.primaryEmail,
+            description: lead.enriched?.description,
+          })),
+        },
+        emailGeneration: {
+          templates: emailTemplates.map((t) => ({
+            step: t.stepOrder,
+            type: t.type,
+            delayDays: t.delayDays,
+            subject: t.template.subject,
+            bodyText: t.template.bodyText,
+            bodyHtml: t.template.bodyHtml,
+          })),
+        },
+      }
+    } catch (err) {
+      console.error("[TestOnboarding] Unexpected error:", err)
+      set.status = 500
+      return errorResponse(
+        `온보딩 테스트 중 오류가 발생했습니다: ${err instanceof Error ? err.message : "Unknown error"}`,
+        ResponseCode.INTERNAL_ERROR,
+      )
     }
   },
   {

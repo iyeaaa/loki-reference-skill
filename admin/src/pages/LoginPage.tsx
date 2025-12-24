@@ -458,7 +458,6 @@ export default function AdminLoginPage() {
                 </motion.form>
               </TabsContent>
             </Tabs>
-
           </CardContent>
         </Card>
       </motion.div>

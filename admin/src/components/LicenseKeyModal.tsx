@@ -10,12 +10,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { apiFetch } from "@/lib/api/client"
 
 const LICENSE_KEY_STORAGE_KEY = "rinda_license_key"
@@ -129,7 +127,7 @@ export function LicenseKeyModal({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+      <DialogContent className="overflow-hidden p-0 sm:max-w-md">
         {/* Header with Logo */}
         <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-6 pt-8 pb-6 text-center">
           <div className="mx-auto mb-4 h-16 w-16">
@@ -140,7 +138,7 @@ export function LicenseKeyModal({
             />
           </div>
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-xl font-semibold text-gray-900">
+            <DialogTitle className="font-semibold text-gray-900 text-xl">
               라이센스 키 입력
             </DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -157,7 +155,7 @@ export function LicenseKeyModal({
                 <div className="relative flex-1">
                   <Key className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
                   <Input
-                    className="h-12 pr-10 pl-10 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                    className="h-12 border-gray-200 pr-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
                     id="licenseKey"
                     placeholder="라이센스 키를 입력하세요"
                     type={showKey ? "text" : "password"}
@@ -173,7 +171,7 @@ export function LicenseKeyModal({
                   </button>
                 </div>
                 <Button
-                  className="h-12 px-6 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] shadow-md"
+                  className="h-12 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] px-6 shadow-md hover:from-[#5936B1] hover:to-[#2B72E6]"
                   disabled={isVerifying}
                   type="submit"
                 >
@@ -194,9 +192,9 @@ export function LicenseKeyModal({
                 <Button
                   className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={handleDelete}
+                  size="sm"
                   type="button"
                   variant="ghost"
-                  size="sm"
                 >
                   <Trash2 className="mr-1 h-3 w-3" />
                   삭제
@@ -206,10 +204,10 @@ export function LicenseKeyModal({
           </form>
 
           {/* Trial Link */}
-          <div className="mt-6 pt-4 border-t border-gray-100">
-            <p className="text-center text-gray-500 text-sm mb-3">Rinda에 처음 방문하셨나요?</p>
+          <div className="mt-6 border-gray-100 border-t pt-4">
+            <p className="mb-3 text-center text-gray-500 text-sm">Rinda에 처음 방문하셨나요?</p>
             <Button
-              className="w-full h-11"
+              className="h-11 w-full"
               onClick={() => navigate("/trial/survey/1")}
               variant="outline"
             >

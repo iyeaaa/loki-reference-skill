@@ -71,6 +71,7 @@ export type TrialDashboardParams = {
 }
 
 export type TrialFunnelData = {
+  scheduled: number // 발송 예정
   sent: number
   opened: number
   clicked: number

@@ -246,12 +246,15 @@ export default function AppDashboardPage({
 
   // Calculate totals and rates
   const totalStats = useMemo(() => {
+    const scheduled = stats?.funnel?.scheduled || 0
     const sent = stats?.funnel?.sent || 0
     const opened = stats?.funnel?.opened || 0
     const clicked = stats?.funnel?.clicked || 0
     const replied = stats?.funnel?.replied || 0
     return {
+      scheduled,
       sent,
+      total: scheduled + sent, // 발송 예정 + 발송 완료
       opened,
       clicked,
       replied,
@@ -402,7 +405,12 @@ export default function AppDashboardPage({
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
-              { label: "발송", value: totalStats.sent, color: "#64748b" },
+              {
+                label: "발송",
+                value: totalStats.total,
+                scheduled: totalStats.scheduled,
+                color: "#64748b",
+              },
               {
                 label: "오픈율",
                 value: totalStats.opened,
@@ -445,6 +453,13 @@ export default function AppDashboardPage({
                         </span>
                       )}
                     </div>
+                    {"scheduled" in stat &&
+                      typeof stat.scheduled === "number" &&
+                      stat.scheduled > 0 && (
+                        <div className="mt-1 text-amber-600 text-xs">
+                          {stat.scheduled}건 발송 대기 중
+                        </div>
+                      )}
                     {stat.ctr !== undefined && stat.ctr > 0 && (
                       <div className="mt-1 text-muted-foreground text-xs">
                         CTOR {stat.ctr.toFixed(1)}%
@@ -583,8 +598,8 @@ export default function AppDashboardPage({
                     {(() => {
                       const funnelData = [
                         {
-                          label: "발송",
-                          value: totalStats.sent,
+                          label: totalStats.scheduled > 0 ? "발송(예정 포함)" : "발송",
+                          value: totalStats.total, // scheduled + sent
                           rate: 100,
                           color: "#64748b",
                         },

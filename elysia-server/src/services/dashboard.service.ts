@@ -532,6 +532,7 @@ export interface TrialDashboardParams {
 }
 
 export interface TrialFunnelData {
+  scheduled: number // 발송 예정
   sent: number
   opened: number
   clicked: number
@@ -798,15 +799,21 @@ async function getTrialFunnelData(
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
+  // COALESCE: sentAt이 있으면 sentAt, 없으면 scheduledAt, 없으면 createdAt 기준
   if (startDate) {
-    conditions.push(gte(emails.sentAt, startDate))
+    conditions.push(
+      gte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, startDate),
+    )
   }
   if (endDate) {
-    conditions.push(lte(emails.sentAt, endDate))
+    conditions.push(
+      lte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, endDate),
+    )
   }
 
   const result = await db
     .select({
+      scheduled: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.status} = 'scheduled' THEN ${emails.id} END)::int`,
       sent: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.sentAt} IS NOT NULL THEN ${emails.id} END)::int`,
       opened: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
       clicked: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.clickedAt} IS NOT NULL THEN ${emails.id} END)::int`,
@@ -815,9 +822,10 @@ async function getTrialFunnelData(
     .from(emails)
     .where(and(...conditions))
 
-  const data = result[0] ?? { sent: 0, opened: 0, clicked: 0, replied: 0 }
+  const data = result[0] ?? { scheduled: 0, sent: 0, opened: 0, clicked: 0, replied: 0 }
 
   return {
+    scheduled: data.scheduled,
     sent: data.sent,
     opened: data.opened,
     clicked: data.clicked,
@@ -843,11 +851,16 @@ async function getTrialHotLeads(
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
+  // COALESCE: sentAt이 있으면 sentAt, 없으면 scheduledAt, 없으면 createdAt 기준
   if (startDate) {
-    conditions.push(gte(emails.sentAt, startDate))
+    conditions.push(
+      gte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, startDate),
+    )
   }
   if (endDate) {
-    conditions.push(lte(emails.sentAt, endDate))
+    conditions.push(
+      lte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, endDate),
+    )
   }
 
   // Get leads with high open counts (2+)
@@ -1008,35 +1021,39 @@ async function getTrialDailyStats(
       return d
     })()
 
+  // COALESCE로 날짜 기준 통일: sentAt > scheduledAt > createdAt
+  const dateCoalesce = sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`
+
   const conditions = [
     eq(emails.workspaceId, workspaceId),
     eq(emails.direction, "outbound"),
-    gte(emails.createdAt, effectiveStartDate),
+    gte(dateCoalesce, effectiveStartDate),
   ]
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
   if (endDate) {
-    conditions.push(lte(emails.createdAt, endDate))
+    conditions.push(lte(dateCoalesce, endDate))
   }
 
   const result = await db
     .select({
-      date: sql<string>`DATE(${emails.sentAt})`,
+      date: sql<string>`DATE(${dateCoalesce})`,
+      scheduled: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.status} = 'scheduled' THEN ${emails.id} END)::int`,
       sent: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.sentAt} IS NOT NULL THEN ${emails.id} END)::int`,
       opened: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
       clicked: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.clickedAt} IS NOT NULL THEN ${emails.id} END)::int`,
     })
     .from(emails)
     .where(and(...conditions))
-    .groupBy(sql`DATE(${emails.sentAt})`)
-    .orderBy(sql`DATE(${emails.sentAt})`)
+    .groupBy(sql`DATE(${dateCoalesce})`)
+    .orderBy(sql`DATE(${dateCoalesce})`)
 
   return result
     .filter((row) => row.date !== null)
     .map((row) => ({
       date: row.date,
-      sent: row.sent,
+      sent: row.sent + row.scheduled, // 발송 예정 + 발송 완료
       opened: row.opened,
       clicked: row.clicked,
     }))
@@ -1059,11 +1076,16 @@ async function getTrialCountryStats(
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
+  // COALESCE: sentAt이 있으면 sentAt, 없으면 scheduledAt, 없으면 createdAt 기준
   if (startDate) {
-    conditions.push(gte(emails.sentAt, startDate))
+    conditions.push(
+      gte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, startDate),
+    )
   }
   if (endDate) {
-    conditions.push(lte(emails.sentAt, endDate))
+    conditions.push(
+      lte(sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`, endDate),
+    )
   }
 
   const result = await db

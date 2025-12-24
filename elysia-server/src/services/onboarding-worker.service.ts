@@ -370,8 +370,8 @@ export async function runDiscoveryPhase(
         target,
         experience,
         lang,
-        // 🆕 찾고자 하는 회사 특성 - AI 리랭킹 및 Perplexity 검색에 사용
-        targetCompanyDescription: companyDescription,
+        // 🆕 본인 회사 설명 → ICP 기반 고객사 검색에 사용
+        myCompanyDescription: companyDescription,
       },
     )
 

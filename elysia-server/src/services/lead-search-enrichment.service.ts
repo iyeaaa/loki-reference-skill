@@ -19,6 +19,10 @@ import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
 import { findMatchingIndustries, generateHunterioQuery } from "./hunterio-query-generator.service"
+import {
+  generateIdealCustomerProfile,
+  type IdealCustomerProfile,
+} from "./ideal-customer-profile.service"
 import { enrichLeadsWithDescriptions } from "./lead-description-enrichment.service"
 import {
   APOLLO_LEADS_DATA_DICTIONARY,
@@ -32,6 +36,7 @@ import {
   convertPerplexityToBigQueryFormat,
   optimizeQueryForPerplexity,
   PERPLEXITY_CONFIG,
+  searchCustomersWithPerplexityEnhanced,
   searchLeadsWithPerplexity,
   searchLeadsWithPerplexityEnhanced,
 } from "./perplexity-search.service"
@@ -275,8 +280,10 @@ interface BigQuerySearchOptions {
   countryName: string
   targetCount: number
   onProgress?: ProgressCallback
-  /** 찾고자 하는 회사 특성 (예: "탈모 샴푸 제조업체") - Perplexity 검색에 직접 반영 */
-  targetCompanyDescription?: string
+  /** 🆕 본인 회사 설명 (예: "탈모 샴푸를 제조하는 K-뷰티 브랜드") - ICP 생성 및 고객사 검색에 사용 */
+  myCompanyDescription?: string
+  /** 🆕 ICP가 이미 생성된 경우 재사용 */
+  idealCustomerProfile?: IdealCustomerProfile
 }
 
 type LeadSource = "b2b" | "apollo" | "fresh" | "revation" | "perplexity"
@@ -591,7 +598,14 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
     fromPerplexity: number
   }
 }> {
-  const { targetIndustries, countryName, targetCount, onProgress } = options
+  const {
+    targetIndustries,
+    countryName,
+    targetCount,
+    onProgress,
+    myCompanyDescription,
+    idealCustomerProfile,
+  } = options
   const processedWebsites = new Set<string>()
   const leads: Array<{
     company: string
@@ -612,43 +626,78 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
   let fromRevation = 0
   let fromPerplexity = 0
 
-  // Build natural language query - prioritize targetCompanyDescription if provided
-  const { targetCompanyDescription } = options
-  let nlQuery: string
+  // 🆕 ICP 기반 검색: 본인 회사 설명 → 고객사 찾기
+  let icp = idealCustomerProfile
+  let useICPSearch = false
 
-  if (targetCompanyDescription && targetCompanyDescription.length > 3) {
-    // 사용자가 구체적인 제품/서비스를 입력한 경우, 그것을 최우선으로 사용
-    nlQuery = `${targetCompanyDescription} ${targetIndustries.join(" ")} companies in ${countryName}`
+  if (myCompanyDescription && myCompanyDescription.length > 10) {
     console.log(
-      `[LeadSearch] Perplexity-first: Using target description: "${targetCompanyDescription}"`,
+      `[LeadSearch] 🆕 ICP-based search: My company = "${myCompanyDescription.slice(0, 50)}..."`,
     )
-  } else {
-    nlQuery = `${targetIndustries.join(" or ")} companies in ${countryName}`
-  }
-  const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-  console.log(`[LeadSearch] Perplexity-first: Enhanced search for: "${nlQuery}"`)
-  console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
+    // ICP가 없으면 생성
+    if (!icp) {
+      console.log(`[LeadSearch] Generating ICP for customer search...`)
+      icp = await generateIdealCustomerProfile({
+        description: myCompanyDescription,
+        industry: targetIndustries[0],
+        target: "b2b",
+        country: countryName,
+      })
+      console.log(`[LeadSearch] ICP generated: ${icp.customerTypes.slice(0, 3).join(", ")}...`)
+    }
+
+    useICPSearch = true
+  }
 
   // Report progress
   if (onProgress) {
     await onProgress({
       phase: "bigquery",
-      message: "Searching with Perplexity-first strategy (enhanced for non-US countries)...",
+      message: useICPSearch
+        ? "Searching for potential CUSTOMERS using ICP strategy..."
+        : "Searching with Perplexity-first strategy (enhanced for non-US countries)...",
       currentCount: 0,
       targetCount,
     })
   }
 
-  // Step 1: Perplexity Enhanced 검색 (60-100개)
-  // Note: targetCompanyDescription은 이미 perplexityQuery에 포함되어 있음 (line 619-627)
-  console.log(
-    `[LeadSearch] Step 1: Perplexity Enhanced search (${SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT} leads)`,
-  )
-  const perplexityResult = await searchLeadsWithPerplexityEnhanced(
-    perplexityQuery,
-    SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT,
-  )
+  // BigQuery 보조 검색용 쿼리 (Step 2에서 사용)
+  const nlQuery =
+    useICPSearch && icp
+      ? `${icp.customerTypes.slice(0, 3).join(" ")} companies in ${countryName}`
+      : `${targetIndustries.join(" or ")} companies in ${countryName}`
+
+  // Step 1: Perplexity 검색
+  let perplexityResult: Awaited<ReturnType<typeof searchLeadsWithPerplexityEnhanced>>
+  if (useICPSearch && icp && myCompanyDescription) {
+    // 🆕 ICP 기반 고객사 검색
+    console.log(
+      `[LeadSearch] Step 1: ICP-based customer search (${SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT} leads)`,
+    )
+    console.log(`[LeadSearch] Finding: ${icp.customerTypes.join(", ")}`)
+
+    perplexityResult = await searchCustomersWithPerplexityEnhanced({
+      sellerDescription: myCompanyDescription,
+      idealCustomerTypes: icp.customerTypes,
+      country: countryName,
+      excludeTypes: icp.excludeTypes,
+      count: SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT,
+    })
+  } else {
+    // 기존 방식: 산업 키워드 기반 검색
+    const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
+
+    console.log(
+      `[LeadSearch] Step 1: Perplexity Enhanced search (${SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT} leads)`,
+    )
+    console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
+
+    perplexityResult = await searchLeadsWithPerplexityEnhanced(
+      perplexityQuery,
+      SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT,
+    )
+  }
 
   // Transform Perplexity results
   let perplexityLeads: Array<{
@@ -1164,7 +1213,9 @@ export async function searchAndEnrichLeads(
     experience?: string
     lang?: string
     target?: string
-    /** 찾고자 하는 회사 특성/설명 - AI 리랭킹에 사용 */
+    /** 🆕 본인 회사 설명 - ICP 생성 및 고객사 검색에 사용 */
+    myCompanyDescription?: string
+    /** @deprecated 이전 버전 호환성 - myCompanyDescription 사용 권장 */
     targetCompanyDescription?: string
   },
 ): Promise<SearchResult> {
@@ -1222,13 +1273,16 @@ export async function searchAndEnrichLeads(
   // Use 2x multiplier if scoring is enabled to reduce iterations
   const bigQueryTargetCount = minimumMatchScore > 0 ? targetLeadCount * 2 : targetLeadCount
 
+  // 🆕 myCompanyDescription 우선, fallback으로 targetCompanyDescription (이전 버전 호환성)
+  const myCompanyDesc = options?.myCompanyDescription || options?.targetCompanyDescription
+
   const bigQueryResult = await searchWithBigQuery({
     targetIndustries,
     countryName,
     targetCount: bigQueryTargetCount,
     onProgress,
-    // 🆕 찾고자 하는 회사 특성을 Perplexity 검색에 전달
-    targetCompanyDescription: options?.targetCompanyDescription,
+    // 🆕 본인 회사 설명 - ICP 기반 고객사 검색에 사용
+    myCompanyDescription: myCompanyDesc,
   })
 
   totalSkippedDuplicates += bigQueryResult.stats.skippedDuplicates
@@ -1571,16 +1625,17 @@ export async function searchAndEnrichLeads(
     )
   }
 
-  // Step 10: AI Reranking (if targetCompanyDescription is provided)
-  if (options?.targetCompanyDescription && options.targetCompanyDescription.length > 5) {
+  // Step 10: AI Reranking (if myCompanyDescription is provided)
+  // 🆕 "이 회사가 우리 제품을 살 가능성"을 평가
+  if (myCompanyDesc && myCompanyDesc.length > 5) {
     console.log(
-      `[LeadSearch] Step 10: AI Reranking with target description: "${options.targetCompanyDescription.slice(0, 50)}..."`,
+      `[LeadSearch] Step 10: AI Reranking - Finding customers for: "${myCompanyDesc.slice(0, 50)}..."`,
     )
 
     if (onProgress) {
       await onProgress({
         phase: "reranking",
-        message: `Reranking ${finalLeads.length} leads by relevance`,
+        message: `Reranking ${finalLeads.length} leads by customer fit`,
         currentCount: 0,
         targetCount: finalLeads.length,
       })
@@ -1598,26 +1653,35 @@ export async function searchAndEnrichLeads(
       leadSource: lead.leadSource,
     }))
 
-    const rankedResults = await rerankLeadsByRelevance(
-      options.targetCompanyDescription,
-      leadsForReranking,
-      {
-        topN: targetLeadCount,
-        minScore: 30, // 최소 30점 이상 우선
-        minCount: 10, // 🆕 최소 10개 보장 (minScore 미만이어도)
-        concurrency: 10,
-        onProgress: (completed, total, phase) => {
-          if (onProgress && completed % 5 === 0) {
-            onProgress({
-              phase: "reranking",
-              message: `${phase}: ${completed}/${total}`,
-              currentCount: completed,
-              targetCount: total,
-            })
-          }
-        },
+    // 🆕 ICP 기반 리랭킹 컨텍스트 생성
+    // "이 회사가 우리 제품을 구매할 가능성"을 평가
+    const rerankingQuery = `
+**SELLER (My Company):** ${myCompanyDesc}
+
+**SCORING CRITERIA:**
+- High score (70-100): Company is a potential BUYER/CUSTOMER of my products (distributor, retailer, reseller, importer)
+- Medium score (40-69): Company might buy my products but not an ideal fit
+- Low score (0-39): Company is a competitor, manufacturer, or unrelated industry
+
+**QUESTION:** Would this company BUY products from my company?
+`.trim()
+
+    const rankedResults = await rerankLeadsByRelevance(rerankingQuery, leadsForReranking, {
+      topN: targetLeadCount,
+      minScore: 30, // 최소 30점 이상 우선
+      minCount: 10, // 🆕 최소 10개 보장 (minScore 미만이어도)
+      concurrency: 10,
+      onProgress: (completed, total, phase) => {
+        if (onProgress && completed % 5 === 0) {
+          onProgress({
+            phase: "reranking",
+            message: `${phase}: ${completed}/${total}`,
+            currentCount: completed,
+            targetCount: total,
+          })
+        }
       },
-    )
+    })
 
     // 리랭킹된 결과로 최종 리드 목록 구성
     finalLeads = rankedResults.map((ranked) => ({
@@ -1633,7 +1697,9 @@ export async function searchAndEnrichLeads(
       relevanceReasoning: ranked.reasoning,
     }))
 
-    console.log(`[LeadSearch] Reranking complete: ${finalLeads.length} leads (min score: 30)`)
+    console.log(
+      `[LeadSearch] Reranking complete: ${finalLeads.length} potential customers (min score: 30)`,
+    )
   }
 
   const elapsed = Date.now() - startTime
@@ -1646,10 +1712,8 @@ export async function searchAndEnrichLeads(
   if (minimumMatchScore > 0) {
     console.log(`[LeadSearch]   - Filtered by score: ${totalSkippedLowScoring}`)
   }
-  if (options?.targetCompanyDescription) {
-    console.log(
-      `[LeadSearch]   - Reranked by: "${options.targetCompanyDescription.slice(0, 30)}..."`,
-    )
+  if (myCompanyDesc) {
+    console.log(`[LeadSearch]   - Customer search for: "${myCompanyDesc.slice(0, 30)}..."`)
   }
   console.log(`[LeadSearch]   - Skipped duplicates: ${totalSkippedDuplicates}`)
   console.log(`[LeadSearch]   - Skipped large companies: ${totalSkippedLargeCompanies}`)

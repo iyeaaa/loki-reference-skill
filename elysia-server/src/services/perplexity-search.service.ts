@@ -610,3 +610,236 @@ export const PERPLEXITY_CONFIG = {
   BIGQUERY_RICH_COUNTRIES,
   REGION_TO_COUNTRIES,
 }
+
+// ============================================================================
+// 🆕 ICP 기반 고객사 검색 (본인 회사 → 고객사 찾기)
+// ============================================================================
+
+/**
+ * ICP 기반 고객사 검색용 시스템 프롬프트
+ */
+function getCustomerSearchSystemPrompt(): string {
+  return `You are a B2B sales prospecting expert specializing in finding POTENTIAL CUSTOMERS for a company.
+Search the web thoroughly and return ONLY a valid JSON array of companies that would be BUYERS/CUSTOMERS.
+
+Each company object MUST have these exact fields:
+- companyName: string (official company name)
+- website: string (OFFICIAL company website URL only)
+- industry: string (primary industry sector - be specific)
+- description: string (2-3 sentences describing: what the company does, their main products/services, and who their target customers are. Max 200 chars)
+- country: string (country name where headquarters is located)
+- businessModel: string ("B2B", "B2C", or "Both")
+- estimatedSize: string ("Startup", "SMB", or "Enterprise")
+- buyerReason: string (1 sentence explaining why this company would BUY the seller's products/services)
+
+CRITICAL RULES FOR FINDING CUSTOMERS:
+- Find companies that would BUY the seller's products, NOT competitors
+- PRIORITIZE: distributors, wholesalers, retailers, importers, resellers, end-user businesses
+- For product companies: find retailers, distributors, and resellers
+- For service companies: find businesses that need those services
+- NEVER include: manufacturers of the same product, competitors, raw material suppliers
+
+WEBSITE RULES:
+- ONLY official corporate websites (e.g., companyname.com, company.co.jp)
+- NEVER include: blogs, social media, marketplaces, directories
+- If no official website exists, set website to empty string ""
+
+QUALITY RULES:
+- Return ONLY the JSON array, no markdown, no explanation
+- Each company must be real, active, and verifiable
+- Focus on companies that would genuinely benefit from the seller's products/services`
+}
+
+/**
+ * ICP 기반 고객사 검색용 사용자 프롬프트
+ */
+function getCustomerSearchUserPrompt(
+  sellerDescription: string,
+  idealCustomerTypes: string[],
+  count: number,
+  country: string,
+  excludeTypes: string[],
+): string {
+  return `I need to find exactly ${count} B2B CUSTOMERS (buyers) for this company:
+
+**SELLER COMPANY (the company that wants to sell):**
+${sellerDescription}
+
+**TARGET COUNTRY:**
+${country}
+
+**IDEAL CUSTOMER TYPES (who would BUY from this seller):**
+${idealCustomerTypes.map((type, i) => `${i + 1}. ${type}`).join("\n")}
+
+**DO NOT INCLUDE these types (competitors/wrong fit):**
+${excludeTypes.map((type) => `- ${type}`).join("\n")}
+
+**IMPORTANT DISTINCTION:**
+- ❌ WRONG: Finding similar companies that make/sell the same products (competitors)
+- ✅ CORRECT: Finding companies that would PURCHASE/DISTRIBUTE/RESELL the seller's products
+
+**EXAMPLE:**
+If the seller makes "hair loss shampoo":
+- ❌ Wrong: Other hair loss shampoo manufacturers
+- ✅ Correct: Drugstore chains, cosmetics distributors, beauty product importers, dermatology clinics, online beauty retailers
+
+Find ${count} companies in ${country} that match the ideal customer types above.
+
+Return as JSON array with buyerReason field explaining why each company would be a good customer.`
+}
+
+/**
+ * ICP 기반으로 고객사 검색
+ *
+ * 기존 searchLeadsWithPerplexity와 달리:
+ * - 입력: 본인 회사 설명 + ICP 정보
+ * - 출력: 구매할 가능성이 있는 고객사 목록
+ *
+ * @example
+ * ```typescript
+ * const result = await searchCustomersWithPerplexity({
+ *   sellerDescription: "탈모 샴푸를 제조하는 K-뷰티 브랜드",
+ *   idealCustomerTypes: ["cosmetics distributors", "drugstore chains"],
+ *   country: "Japan",
+ *   excludeTypes: ["shampoo manufacturers", "hair care manufacturers"],
+ *   count: 30,
+ * })
+ * ```
+ */
+export async function searchCustomersWithPerplexity(options: {
+  sellerDescription: string
+  idealCustomerTypes: string[]
+  country: string
+  excludeTypes?: string[]
+  count?: number
+}): Promise<PerplexitySearchResult> {
+  const {
+    sellerDescription,
+    idealCustomerTypes,
+    country,
+    excludeTypes = [],
+    count = DEFAULT_SEARCH_COUNT,
+  } = options
+
+  const apiKey = config.perplexity.apiKey
+  if (!apiKey) {
+    logger.warn("[Perplexity] API key not configured - skipping customer search")
+    return { leads: [], totalCount: 0, source: "perplexity" }
+  }
+
+  const startTime = Date.now()
+  logger.info(
+    `[Perplexity] 🆕 Customer search: "${sellerDescription.slice(0, 50)}..." in ${country}`,
+  )
+  logger.info(`[Perplexity] Ideal customers: ${idealCustomerTypes.slice(0, 3).join(", ")}...`)
+
+  try {
+    const systemPrompt = getCustomerSearchSystemPrompt()
+    const userPrompt = getCustomerSearchUserPrompt(
+      sellerDescription,
+      idealCustomerTypes,
+      count,
+      country,
+      excludeTypes,
+    )
+
+    // max_tokens를 count에 비례해서 조정 (리드당 약 200 토큰 - buyerReason 포함)
+    const maxTokens = Math.min(count * 200, 8000)
+
+    const response = await fetch(PERPLEXITY_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "sonar-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens: maxTokens,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error(`[Perplexity] Customer search API error: ${response.status} - ${errorText}`)
+      return { leads: [], totalCount: 0, source: "perplexity" }
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>
+    }
+    const content = data.choices?.[0]?.message?.content || ""
+
+    const leads = parseLeadsFromResponse(content)
+
+    const duration = Date.now() - startTime
+    logger.info(
+      `[Perplexity] 🆕 Customer search: ${leads.length} potential customers found in ${duration}ms`,
+    )
+
+    return {
+      leads,
+      totalCount: leads.length,
+      source: "perplexity",
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    logger.error(`[Perplexity] Customer search failed: ${errorMsg}`)
+    return { leads: [], totalCount: 0, source: "perplexity" }
+  }
+}
+
+/**
+ * ICP + 국가별 분할 고객사 검색 (Enhanced 버전)
+ *
+ * 지역 쿼리인 경우 여러 국가로 분할하여 병렬 검색
+ */
+export async function searchCustomersWithPerplexityEnhanced(options: {
+  sellerDescription: string
+  idealCustomerTypes: string[]
+  country: string
+  excludeTypes?: string[]
+  count?: number
+}): Promise<PerplexitySearchResult> {
+  const { country, count = 60 } = options
+
+  // 국가/지역 분석
+  const countryInfo = extractCountryFromQuery(`companies in ${country}`)
+
+  if (countryInfo.isRegion && countryInfo.regionCountries.length > 0) {
+    // 지역인 경우 국가별로 분할 검색
+    const countriesPerSearch = Math.min(3, countryInfo.regionCountries.length)
+    const countPerCountry = Math.ceil(count / countriesPerSearch)
+
+    logger.info(
+      `[Perplexity] 🆕 Regional customer search: ${countryInfo.regionCountries.slice(0, countriesPerSearch).join(", ")}`,
+    )
+
+    const results = await Promise.all(
+      countryInfo.regionCountries.slice(0, countriesPerSearch).map((c) =>
+        searchCustomersWithPerplexity({
+          ...options,
+          country: c,
+          count: countPerCountry,
+        }),
+      ),
+    )
+
+    // 결과 병합 및 중복 제거
+    const allLeads = results.flatMap((r) => r.leads)
+    const uniqueLeads = deduplicateLeads(allLeads)
+
+    return {
+      leads: uniqueLeads.slice(0, count),
+      totalCount: uniqueLeads.length,
+      source: "perplexity",
+    }
+  }
+
+  // 단일 국가 검색
+  return searchCustomersWithPerplexity(options)
+}

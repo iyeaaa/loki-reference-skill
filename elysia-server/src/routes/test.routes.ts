@@ -1,11 +1,7 @@
 import Elysia, { t } from "elysia"
-import { config } from "../config"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
-import { searchBigQuery } from "../services/bigquery-search.service"
-import { APOLLO_LEADS_DATA_DICTIONARY } from "../services/lead-discovery/nodes/bigquery-executor"
-import { enrichLead } from "../services/lead-enrichment.service"
+import { searchAndEnrichLeads } from "../services/lead-search-enrichment.service"
 import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH, INDUSTRY_NAMES } from "../services/onboarding.service"
-import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } from "../shared/mastra"
 import { errorResponse, ResponseCode } from "../types/response.types"
 
 // In-memory job storage
@@ -69,165 +65,71 @@ interface LeadData {
 }
 
 /**
- * Get target customer industries using B2B agent
+ * 🆕 Discover leads using ICP-based customer search
+ *
+ * workspaceDescription이 있으면 ICP 기반 고객사 검색 사용
+ * 없으면 기존 하이브리드 검색 사용
  */
-async function getB2BCustomerIndustries(
-  industryName: string,
-  countryName: string,
-): Promise<string[]> {
-  try {
-    const agent = createB2BCustomerIndustryAgent()
-    const prompt = generateB2BCustomerIndustryPrompt(industryName, countryName)
-    const result = await agent.generate(prompt)
-
-    if (result.text) {
-      try {
-        const parsed = JSON.parse(result.text)
-        if (parsed.target_industries && Array.isArray(parsed.target_industries)) {
-          return parsed.target_industries.slice(0, 3)
-        }
-      } catch (_e) {
-        // Fallback to original
-      }
-    }
-
-    return [industryName]
-  } catch (_error) {
-    return [industryName]
-  }
-}
-
-/**
- * Discover leads (same as test-lead-discovery.ts)
- */
-async function discoverLeads(options: { industry: string; target: string; country: string }) {
-  const TARGET_LEADS = 30
-  const MAX_ITERATIONS = 5
-  const BATCH_SIZE = 200
-
+async function discoverLeadsEnhanced(options: {
+  industry: string
+  target: string
+  country: string
+  /** 🆕 본인 회사 설명 - ICP 기반 고객사 검색에 사용 */
+  myCompanyDescription?: string
+}) {
   const countryName = COUNTRY_NAMES[options.country] || options.country
   const industryName = INDUSTRY_NAMES[options.industry] || options.industry
 
-  const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
-
-  const uniqueLeadsByWebsite = new Map<string, LeadData>()
-  const stats = {
-    totalFound: 0,
-    totalEnriched: 0,
-    totalWithEmail: 0,
-    duplicatesSkipped: 0,
-    iterations: 0,
+  console.log(
+    `[TestOnboarding] 🆕 Enhanced lead discovery: ICP search = ${!!options.myCompanyDescription}`,
+  )
+  if (options.myCompanyDescription) {
+    console.log(`[TestOnboarding] My company: "${options.myCompanyDescription.slice(0, 50)}..."`)
   }
 
-  // Step 1: Search BigQuery
-  for (const targetIndustry of targetIndustries) {
-    if (!targetIndustry) continue
+  const query = `${industryName} companies in ${countryName}`
 
-    const query = `${targetIndustry} companies in ${countryName}`
-    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY, {
-      limitOverride: BATCH_SIZE,
-    })
+  const result = await searchAndEnrichLeads(
+    30, // TARGET_LEADS
+    query,
+    0, // minimumMatchScore
+    undefined, // onProgress
+    {
+      industry: industryName,
+      country: countryName,
+      target: options.target,
+      // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
+      myCompanyDescription: options.myCompanyDescription,
+    },
+  )
 
-    if (!result.results.length) continue
-
-    for (const row of result.results) {
-      const website = row.website as string
-      if (!website || uniqueLeadsByWebsite.has(website)) {
-        stats.duplicatesSkipped++
-        continue
-      }
-
-      uniqueLeadsByWebsite.set(website, {
-        company: row.company as string,
-        website,
-        industry: row.industry as string,
-        employees: row.employees?.toString() || "",
-        country: row.country as string,
-      })
-      stats.totalFound++
-    }
-  }
-
-  // Step 2: Enrich leads
-  const hunterApiKey = config.hunter.apiKey
-  const geminiApiKey = config.gemini.apiKey
-
-  let iteration = 0
-  while (iteration < MAX_ITERATIONS) {
-    iteration++
-    stats.iterations = iteration
-
-    const enrichedWithEmails = Array.from(uniqueLeadsByWebsite.values()).filter(
-      (lead) => lead.enriched?.primaryEmail,
-    )
-
-    if (enrichedWithEmails.length >= TARGET_LEADS) break
-
-    const unenrichedLeads = Array.from(uniqueLeadsByWebsite.values()).filter(
-      (lead) => !lead.enriched,
-    )
-
-    if (unenrichedLeads.length === 0) break
-
-    const BATCH_SIZE_ENRICH = 20
-    const leadsThisBatch = unenrichedLeads.slice(0, BATCH_SIZE_ENRICH)
-
-    for (const lead of leadsThisBatch) {
-      try {
-        const enrichment = await enrichLead(lead.website, lead.company, {
-          hunterApiKey,
-          geminiApiKey,
-          skipHunter: false,
-        })
-
-        const primaryEmail = enrichment.emails?.[0]?.value
-
-        const isValidEmail =
-          primaryEmail &&
-          !primaryEmail.toLowerCase().includes("noreply") &&
-          !primaryEmail.toLowerCase().startsWith("postmaster@") &&
-          !primaryEmail.toLowerCase().startsWith("abuse@")
-
-        lead.enriched = {
-          companyName: lead.company || "Unknown Company",
-          websiteUrl: lead.website,
-          businessType: lead.industry,
-          country: lead.country,
-          employeeCount: lead.employees,
-          description: enrichment.companyInfo?.description,
-          primaryEmail: isValidEmail ? primaryEmail : undefined,
-        }
-
-        stats.totalEnriched++
-        if (isValidEmail) stats.totalWithEmail++
-
-        uniqueLeadsByWebsite.set(lead.website, lead)
-      } catch (_error) {
-        lead.enriched = {
-          companyName: lead.company || "Unknown Company",
-          websiteUrl: lead.website,
-          businessType: lead.industry,
-          country: lead.country,
-          employeeCount: lead.employees,
-        }
-        uniqueLeadsByWebsite.set(lead.website, lead)
-      }
-    }
-
-    const currentWithEmail = Array.from(uniqueLeadsByWebsite.values()).filter(
-      (lead) => lead.enriched?.primaryEmail,
-    ).length
-
-    if (currentWithEmail >= TARGET_LEADS) break
-  }
-
-  const leadsWithEmail = Array.from(uniqueLeadsByWebsite.values())
-    .filter((lead) => lead.enriched?.primaryEmail)
-    .slice(0, TARGET_LEADS)
+  // Transform to expected format
+  const leads: LeadData[] = result.leads.map((lead) => ({
+    company: lead.companyName,
+    website: lead.websiteUrl,
+    industry: lead.businessType || "",
+    employees: lead.employeeCount || "",
+    country: lead.country || countryName,
+    enriched: {
+      companyName: lead.companyName,
+      websiteUrl: lead.websiteUrl,
+      businessType: lead.businessType || "",
+      country: lead.country || countryName,
+      employeeCount: lead.employeeCount || "",
+      description: lead.description,
+      primaryEmail: lead.primaryEmail || undefined,
+    },
+  }))
 
   return {
-    leads: leadsWithEmail,
-    stats,
+    leads,
+    stats: {
+      totalFound: result.stats.totalFound,
+      totalEnriched: result.stats.totalFound,
+      totalWithEmail: result.stats.withEmails,
+      duplicatesSkipped: result.stats.skippedDuplicates,
+      iterations: 1,
+    },
   }
 }
 
@@ -294,11 +196,13 @@ async function processOnboardingTest(
     job.progress = 10
     jobs.set(jobId, job)
 
-    // Run lead discovery
-    const leadDiscoveryResult = await discoverLeads({
+    // 🆕 Run lead discovery with ICP-based customer search
+    // workspaceDescription이 있으면 ICP 기반으로 "이 회사의 고객"을 찾음
+    const leadDiscoveryResult = await discoverLeadsEnhanced({
       industry: params.industry,
       target: params.target,
       country: params.country,
+      myCompanyDescription: params.workspaceDescription, // 회사 설명 → 고객사 검색에 사용
     })
 
     console.log(

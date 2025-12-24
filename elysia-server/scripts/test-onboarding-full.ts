@@ -328,13 +328,16 @@ async function discoverLeads(options: {
 }
 
 /**
- * 🆕 NEW: Enhanced Lead Discovery using Hybrid Search Strategy
+ * 🆕 NEW: Enhanced Lead Discovery using ICP-based Customer Search
+ *
+ * 본인 회사 설명 → AI가 "이 회사의 고객이 될 회사"를 찾음
  */
 async function discoverLeadsEnhanced(options: {
   industry: string
   target: string
   country: string
-  companyDescription?: string
+  /** 🆕 본인 회사 설명 - ICP 기반 고객사 검색에 사용 */
+  myCompanyDescription?: string
 }): Promise<{
   leads: LeadData[]
   stats: {
@@ -355,13 +358,14 @@ async function discoverLeadsEnhanced(options: {
   )
 
   const s = p.spinner()
-  s.start(`1/2: 바이어 리스트 검색 중 (${isBigQueryRich ? "BigQuery 우선" : "Perplexity 우선"})...`)
+  s.start(
+    options.myCompanyDescription
+      ? `1/2: ICP 기반 고객사 검색 중...`
+      : `1/2: 바이어 리스트 검색 중 (${isBigQueryRich ? "BigQuery 우선" : "Perplexity 우선"})...`,
+  )
 
   try {
-    // 쿼리 구성: description이 있으면 더 구체적인 검색 수행
-    const query = options.companyDescription
-      ? `${options.companyDescription} ${industryName} companies in ${countryName}`
-      : `${industryName} companies in ${countryName}`
+    const query = `${industryName} companies in ${countryName}`
 
     const result = await searchAndEnrichLeads(
       30,
@@ -374,8 +378,8 @@ async function discoverLeadsEnhanced(options: {
         industry: industryName,
         country: countryName,
         target: options.target,
-        // 🆕 AI 리랭킹을 위한 찾고자 하는 회사 특성
-        targetCompanyDescription: options.companyDescription,
+        // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
+        myCompanyDescription: options.myCompanyDescription,
       },
     )
 
@@ -725,13 +729,13 @@ async function interactiveMode() {
     process.exit(0)
   }
 
-  // 🆕 찾고자 하는 회사 특성 입력 (description 기반 검색용)
-  const targetCompanyDescription = await p.text({
-    message: "찾고자 하는 회사 특성/설명 (예: 화장품 원료 공급업체, B2B 도매상)",
-    placeholder: "예: 화장품 유통 및 도매를 전문으로 하는 회사",
+  // 🆕 본인 회사 설명 입력 (ICP 기반 고객사 검색용)
+  const myCompanyDescription = await p.text({
+    message: "본인 회사/제품 설명 (예: 탈모 샴푸를 만드는 K-뷰티 브랜드)",
+    placeholder: "예: 비타민C 세럼과 히알루론산 크림을 제조하는 스킨케어 회사",
   })
 
-  if (p.isCancel(targetCompanyDescription)) {
+  if (p.isCancel(myCompanyDescription)) {
     p.cancel("작업이 취소되었습니다.")
     process.exit(0)
   }
@@ -765,8 +769,9 @@ async function interactiveMode() {
     industry: industry as string,
     target: target as string,
     country: country as string,
-    targetCompanyDescription: targetCompanyDescription
-      ? (targetCompanyDescription as string)
+    // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
+    myCompanyDescription: myCompanyDescription
+      ? (myCompanyDescription as string)
       : undefined,
   }
 
@@ -791,7 +796,8 @@ async function interactiveMode() {
       industry: testInput.industry,
       target: testInput.target,
       country: testInput.country,
-      companyDescription: testInput.targetCompanyDescription,
+      // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
+      myCompanyDescription: testInput.myCompanyDescription,
     })
   } else {
     leadDiscoveryResult = await discoverLeads({

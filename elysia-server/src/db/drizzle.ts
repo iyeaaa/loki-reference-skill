@@ -7,11 +7,23 @@ import * as schema from "./schema"
 // Create connection pool with optimized settings
 const pool = new Pool({
   connectionString: config.database.url,
-  min: config.database.poolMin, // Minimum number of connections
-  max: config.database.poolMax, // Maximum number of connections
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
+
+  // Pool size
+  min: config.database.poolMin, // Minimum connections (default: 2)
+  max: config.database.poolMax, // Maximum connections (default: 10)
+
+  // Timeout settings
+  idleTimeoutMillis: 60000, // Close idle connections after 60s
   connectionTimeoutMillis: 10000, // Fail if connection takes > 10s
-  // UTF-8 인코딩 명시 (다국어 문자 지원)
+
+  // TCP Keepalive - prevents connection drops by NAT/firewall
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000, // Start keepalive after 10s idle
+
+  // Prevent app exit while pool has connections
+  allowExitOnIdle: false,
+
+  // UTF-8 encoding for multi-language support
   options: "-c client_encoding=UTF8",
 })
 

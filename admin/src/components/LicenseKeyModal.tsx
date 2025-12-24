@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Eye, EyeOff, Key, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,7 @@ export function LicenseKeyModal({
   onVerified,
   showDeleteButton = false,
 }: LicenseKeyModalProps) {
+  const navigate = useNavigate()
   const [showKey, setShowKey] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
 
@@ -127,71 +129,94 @@ export function LicenseKeyModal({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-indigo-600" />
-            라이센스 키 입력
-          </DialogTitle>
-          <DialogDescription>
-            관리자 페이지에 접근하려면 유효한 라이센스 키가 필요합니다.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="space-y-2">
-            <Label htmlFor="licenseKey">라이센스 키</Label>
-            <div className="relative">
-              <Key className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
-              <Input
-                className="h-11 pr-10 pl-10"
-                id="licenseKey"
-                placeholder="라이센스 키를 입력하세요"
-                type={showKey ? "text" : "password"}
-                {...form.register("licenseKey")}
-                disabled={isVerifying}
-              />
-              <button
-                className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowKey(!showKey)}
-                type="button"
-              >
-                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {form.formState.errors.licenseKey && (
-              <p className="text-red-600 text-sm">{form.formState.errors.licenseKey.message}</p>
-            )}
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        {/* Header with Logo */}
+        <div className="bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-6 pt-8 pb-6 text-center">
+          <div className="mx-auto mb-4 h-16 w-16">
+            <img
+              alt="Rinda Logo"
+              className="h-full w-full rounded-2xl object-contain"
+              src="/images/rinda-logo.png"
+            />
           </div>
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              라이센스 키 입력
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              서비스 이용을 위해 라이센스 키를 입력해주세요
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            {showDeleteButton && getLicenseKey() && (
-              <Button
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                onClick={handleDelete}
-                type="button"
-                variant="outline"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                삭제
-              </Button>
-            )}
-            <Button
-              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700"
-              disabled={isVerifying}
-              type="submit"
-            >
-              {isVerifying ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-white border-b-2" />
-                  확인 중...
+        {/* Form */}
+        <div className="px-6 pb-6">
+          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Key className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    className="h-12 pr-10 pl-10 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                    id="licenseKey"
+                    placeholder="라이센스 키를 입력하세요"
+                    type={showKey ? "text" : "password"}
+                    {...form.register("licenseKey")}
+                    disabled={isVerifying}
+                  />
+                  <button
+                    className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowKey(!showKey)}
+                    type="button"
+                  >
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              ) : (
-                "확인"
+                <Button
+                  className="h-12 px-6 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] shadow-md"
+                  disabled={isVerifying}
+                  type="submit"
+                >
+                  {isVerifying ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-white border-b-2" />
+                  ) : (
+                    "확인"
+                  )}
+                </Button>
+              </div>
+              {form.formState.errors.licenseKey && (
+                <p className="text-red-600 text-sm">{form.formState.errors.licenseKey.message}</p>
               )}
+            </div>
+
+            {showDeleteButton && getLicenseKey() && (
+              <div className="flex justify-end">
+                <Button
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={handleDelete}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  삭제
+                </Button>
+              </div>
+            )}
+          </form>
+
+          {/* Trial Link */}
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <p className="text-center text-gray-500 text-sm mb-3">Rinda에 처음 방문하셨나요?</p>
+            <Button
+              className="w-full h-11"
+              onClick={() => navigate("/trial/survey/1")}
+              variant="outline"
+            >
+              무료 체험 시작하기
             </Button>
-          </DialogFooter>
-        </form>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

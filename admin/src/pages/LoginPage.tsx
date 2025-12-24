@@ -459,19 +459,6 @@ export default function AdminLoginPage() {
               </TabsContent>
             </Tabs>
 
-            {/* Trial Link */}
-            <div className="mt-6 border-gray-200 border-t pt-6">
-              <div className="text-center">
-                <p className="mb-3 text-gray-600 text-sm">처음 사용하시나요?</p>
-                <Button
-                  className="w-full"
-                  onClick={() => navigate("/trial/survey/1")}
-                  variant="outline"
-                >
-                  30일 무료 체험 시작하기
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </motion.div>

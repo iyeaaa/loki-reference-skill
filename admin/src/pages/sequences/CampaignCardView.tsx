@@ -269,7 +269,20 @@ export function CampaignCardView({
 
                     <div className="flex items-center gap-1.5 text-xs">
                       <Users className="h-4 w-4 text-purple-500" />
-                      <span className="font-medium">{sequence.enrollmentsCount || 0}명</span>
+                      <span className="font-medium">
+                        {sequence.enrollmentsCount ||
+                          (() => {
+                            try {
+                              const ids = sequence.selectedLeadIds
+                                ? JSON.parse(sequence.selectedLeadIds)
+                                : []
+                              return Array.isArray(ids) ? ids.length : 0
+                            } catch {
+                              return 0
+                            }
+                          })()}
+                        명
+                      </span>
                     </div>
 
                     {/* Step Progress (if available) */}
@@ -289,7 +302,17 @@ export function CampaignCardView({
                           <BarChart3 className="h-4 w-4 text-green-500" />
                           <span className="font-medium">
                             {sequence.completedEnrollmentsCount || 0}/
-                            {sequence.enrollmentsCount || 0}
+                            {sequence.enrollmentsCount ||
+                              (() => {
+                                try {
+                                  const ids = sequence.selectedLeadIds
+                                    ? JSON.parse(sequence.selectedLeadIds)
+                                    : []
+                                  return Array.isArray(ids) ? ids.length : 0
+                                } catch {
+                                  return 0
+                                }
+                              })()}
                           </span>
                           <span className="text-muted-foreground">진행중</span>
                         </div>

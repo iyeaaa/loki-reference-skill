@@ -350,7 +350,17 @@ export function SequencesTableWithPagination({
                     {sequence.customerGroupName || "-"}
                   </td>
                   <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
-                    {sequence.enrollmentsCount ?? 0}
+                    {sequence.enrollmentsCount ||
+                      (() => {
+                        try {
+                          const ids = sequence.selectedLeadIds
+                            ? JSON.parse(sequence.selectedLeadIds)
+                            : []
+                          return Array.isArray(ids) ? ids.length : 0
+                        } catch {
+                          return 0
+                        }
+                      })()}
                   </td>
                   <td className="whitespace-nowrap p-2 text-center text-gray-900 text-sm dark:text-gray-100">
                     {sequence.currentMaxStep ?? 0}/{sequence.stepsCount ?? 0}

@@ -321,7 +321,7 @@ export function StepConfirmation() {
   }
 
   const handleBack = () => {
-    setSearchParams({ step: "3" })
+    setSearchParams({ step: "3", from: "step4" })
   }
 
   const handleSkipToDashboard = async () => {

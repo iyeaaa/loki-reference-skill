@@ -92,8 +92,10 @@ function PhaseChecklist({
 
 export function StepBuyerLoading() {
   const { i18n } = useTranslation()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [viewState, setViewState] = useState<ViewState>("loading")
+  const currentStep = searchParams.get("step")
+  const isFromStep4 = searchParams.get("from") === "step4"
   const [leads, setLeads] = useState<LeadProgressItem[]>([])
   const isKorean = i18n.language === "ko"
 
@@ -156,6 +158,12 @@ export function StepBuyerLoading() {
 
   // Determine initial view state based on job status
   useEffect(() => {
+    // URL이 step=3이 아니면 이 컴포넌트의 로직을 실행하지 않음
+    // (다른 step으로 이동 중일 때 리다이렉트 방지)
+    if (currentStep !== "3") {
+      return
+    }
+
     if (workspacesLoading || onboardingLoading) {
       setViewState("loading")
       return
@@ -166,15 +174,32 @@ export function StepBuyerLoading() {
     if (jobStatus === "active" || jobStatus === "waiting") {
       setViewState("generating")
     } else if (jobStatus === "completed") {
-      // 이미 완료됨 - Step 4로 이동
-      setSearchParams({ step: "4" })
+      // Step 4에서 "이전" 버튼으로 돌아온 경우 리다이렉트하지 않음
+      if (isFromStep4) {
+        setViewState("complete")
+      } else {
+        // 이미 완료됨 - Step 4로 이동
+        setSearchParams({ step: "4" })
+      }
     } else if (jobStatus === "failed") {
       setViewState("error")
     } else {
-      // 알 수 없는 상태 - Step 4로 이동
-      setSearchParams({ step: "4" })
+      // Step 4에서 "이전" 버튼으로 돌아온 경우 리다이렉트하지 않음
+      if (isFromStep4) {
+        setViewState("complete")
+      } else {
+        // 알 수 없는 상태 - Step 4로 이동
+        setSearchParams({ step: "4" })
+      }
     }
-  }, [workspacesLoading, onboardingLoading, onboardingData?.jobStatus, setSearchParams])
+  }, [
+    currentStep,
+    workspacesLoading,
+    onboardingLoading,
+    onboardingData?.jobStatus,
+    setSearchParams,
+    isFromStep4,
+  ])
 
   // Handle SSE state changes
   useEffect(() => {
@@ -267,6 +292,40 @@ export function StepBuyerLoading() {
               </Button>
               <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleRetry}>
                 {isKorean ? "다시 시도" : "Try again"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Complete State (Step 4에서 "이전" 버튼으로 돌아온 경우)
+  if (viewState === "complete") {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <Card>
+          <CardContent className="flex flex-col items-center px-8 py-16">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-10 w-10 text-green-500" />
+            </div>
+            <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
+              {isKorean ? "바이어와 이메일이 준비됐어요" : "Buyers and emails are ready"}
+            </h2>
+            <p className="mb-6 text-center text-gray-500 text-sm">
+              {isKorean
+                ? `${leadCount}명의 바이어에게 보낼 이메일이 생성됐어요`
+                : `Emails for ${leadCount} buyers have been generated`}
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={handleBack} variant="outline">
+                {isKorean ? "이전" : "Back"}
+              </Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => setSearchParams({ step: "4" })}
+              >
+                {isKorean ? "다음" : "Next"}
               </Button>
             </div>
           </CardContent>

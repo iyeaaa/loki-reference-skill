@@ -47,7 +47,7 @@ import { CampaignResumeCallout } from "./components/CampaignResumeCallout"
 
 const UPGRADE_URL = "https://rinda.ai/contact"
 
-interface AppDashboardPageProps {
+type AppDashboardPageProps = {
   showCampaignCallout?: boolean
   calloutSequenceId?: string
   onCalloutComplete?: () => void

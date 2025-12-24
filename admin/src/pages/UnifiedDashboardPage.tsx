@@ -45,11 +45,7 @@ export default function UnifiedDashboardPage() {
 
   // Get sequence data if it exists
   const sequenceId = onboardingProgress?.generatedSequenceId || ""
-  const {
-    data: sequence,
-    isLoading: sequenceLoading,
-    refetch: refetchSequence,
-  } = useSequence(sequenceId, !!sequenceId)
+  const { data: sequence, refetch: refetchSequence } = useSequence(sequenceId, !!sequenceId)
 
   // Popup state - temporarily dismissed during session
   const [temporarilyDismissed, setTemporarilyDismissed] = useState(false)
@@ -57,20 +53,30 @@ export default function UnifiedDashboardPage() {
   // Determine if popup should be shown
   const shouldShowPopup = useMemo(() => {
     // Don't show if onboarding not complete
-    if (!onboardingProgress?.completedAt) return false
+    if (!onboardingProgress?.completedAt) {
+      return false
+    }
 
     // Don't show if no sequence
-    if (!sequence?.id) return false
+    if (!sequence?.id) {
+      return false
+    }
 
     // Only show if sequence is in draft status
-    if (sequence.status !== "draft") return false
+    if (sequence.status !== "draft") {
+      return false
+    }
 
     // Check if user dismissed the popup permanently
     const dismissed = localStorage.getItem(DISMISS_KEY)
-    if (dismissed === "true") return false
+    if (dismissed === "true") {
+      return false
+    }
 
     // Check if temporarily dismissed (during this session)
-    if (temporarilyDismissed) return false
+    if (temporarilyDismissed) {
+      return false
+    }
 
     return true
   }, [onboardingProgress, sequence, temporarilyDismissed])

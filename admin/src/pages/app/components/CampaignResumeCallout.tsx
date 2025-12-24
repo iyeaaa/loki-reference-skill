@@ -2,9 +2,13 @@ import { AlertCircle, Loader2, Rocket, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { useActivateStepBasedSequence, useSequence, useSequenceSteps } from "@/lib/api/hooks/sequences"
+import {
+  useActivateStepBasedSequence,
+  useSequence,
+  useSequenceSteps,
+} from "@/lib/api/hooks/sequences"
 
-interface CampaignResumeCalloutProps {
+type CampaignResumeCalloutProps = {
   sequenceId: string
   onComplete: () => void
   onDismiss: () => void
@@ -12,7 +16,11 @@ interface CampaignResumeCalloutProps {
 
 const DISMISS_KEY = "campaign_resume_dismissed"
 
-export function CampaignResumeCallout({ sequenceId, onComplete, onDismiss }: CampaignResumeCalloutProps) {
+export function CampaignResumeCallout({
+  sequenceId,
+  onComplete,
+  onDismiss,
+}: CampaignResumeCalloutProps) {
   const { i18n } = useTranslation()
   const isKorean = i18n.language === "ko"
 
@@ -32,11 +40,7 @@ export function CampaignResumeCallout({ sequenceId, onComplete, onDismiss }: Cam
     try {
       await activateMutation.mutateAsync(sequenceId)
 
-      toast.success(
-        isKorean
-          ? "캠페인이 시작되었습니다!"
-          : "Campaign launched successfully!"
-      )
+      toast.success(isKorean ? "캠페인이 시작되었습니다!" : "Campaign launched successfully!")
 
       onComplete()
     } catch (error) {
@@ -44,7 +48,7 @@ export function CampaignResumeCallout({ sequenceId, onComplete, onDismiss }: Cam
       toast.error(
         isKorean
           ? "캠페인 시작에 실패했습니다. 다시 시도해주세요."
-          : "Failed to launch campaign. Please try again."
+          : "Failed to launch campaign. Please try again.",
       )
     }
   }
@@ -95,7 +99,9 @@ export function CampaignResumeCallout({ sequenceId, onComplete, onDismiss }: Cam
               </p>
             </div>
             <div className="rounded-lg border border-blue-100 bg-white p-3">
-              <p className="text-gray-600 text-xs">{isKorean ? "총 예정 이메일" : "Total emails"}</p>
+              <p className="text-gray-600 text-xs">
+                {isKorean ? "총 예정 이메일" : "Total emails"}
+              </p>
               <p className="mt-1 font-bold text-blue-600">{totalEmails}</p>
             </div>
           </div>

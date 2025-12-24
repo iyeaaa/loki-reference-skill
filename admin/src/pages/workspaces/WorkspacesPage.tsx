@@ -87,12 +87,13 @@ export default function WorkspacesPage() {
       setShowCreateDialog(false)
       // 수동으로 쿼리 무효화
       window.location.reload()
-    } catch (error: any) {
-      if (error.message?.includes("Trial users can only create 1 workspace")) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage?.includes("Trial users can only create 1 workspace")) {
         setShowCreateDialog(false)
         setShowUpgradeModal(true)
       } else {
-        toast.error(error.message || "워크스페이스 생성에 실패했습니다")
+        toast.error(errorMessage || "워크스페이스 생성에 실패했습니다")
       }
     }
   }

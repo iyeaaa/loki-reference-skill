@@ -142,7 +142,7 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
     <!-- Greeting -->
     <p style="font-size: 16px; color: #475569; line-height: 1.6; margin-bottom: 24px;">
       안녕하세요 <strong>${name}</strong>님,<br/>
-      그린다 AI가 바이어 리스트와 이메일 초안을 준비했습니다.
+      린다(Rinda) AI가 바이어 리스트와 이메일 초안을 준비했습니다.
     </p>
     
     <!-- Stats Cards -->
@@ -170,7 +170,6 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
         다음 단계
       </h3>
       <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 2;">
-        <li>이메일 계정을 연결하세요</li>
         <li>생성된 이메일 초안을 검토하세요</li>
         <li>캠페인을 시작하세요!</li>
       </ul>
@@ -179,8 +178,8 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
     <!-- Footer -->
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e2e8f0;">
       <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-        이 이메일은 그린다 AI 온보딩 완료 알림입니다.<br/>
-        문의사항이 있으시면 support@grinda.ai로 연락해주세요.
+        이 이메일은 린다 AI 온보딩 완료 알림입니다.<br/>
+        문의사항이 있으시면 admin@grinda.ai로 연락해주세요.
       </p>
     </div>
     
@@ -210,7 +209,7 @@ export async function sendOnboardingCompleteEmail(
     const response = await sendTransactionalEmail({
       senderName: "Rinda",
       to: data.email,
-      subject: `[Grinda] Your ${data.leadCount} Global Buyer Leads are Ready`,
+      subject: `[Rinda] 당신의 캠페인이 준비되었습니다!`,
       body: JSON.stringify({ content }),
     })
 

@@ -62,6 +62,10 @@ const googleTokenSchema = t.Object({
   idToken: t.String(),
 })
 
+const licenseKeySchema = t.Object({
+  licenseKey: t.String({ minLength: 1 }),
+})
+
 const emailRegistrationSchema = t.Object({
   email: t.String({ format: "email" }),
   username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
@@ -994,6 +998,45 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       })),
     }
   })
+
+  // License key verification endpoint
+  .post(
+    "/verify-license",
+    async ({ body, set }) => {
+      try {
+        const { licenseKey } = body
+        const serverLicenseKey = process.env.LICENSE_KEY
+
+        if (!serverLicenseKey) {
+          // If no license key is configured on server, allow access (development mode)
+          return {
+            valid: true,
+            message: "License key not configured on server (development mode)",
+          }
+        }
+
+        if (licenseKey === serverLicenseKey) {
+          return {
+            valid: true,
+            message: "License key verified successfully",
+          }
+        }
+
+        set.status = 401
+        return {
+          valid: false,
+          message: "Invalid license key",
+        }
+      } catch (error) {
+        logger.error({ error }, "License key verification error")
+        set.status = 500
+        return errorResponse("License verification failed", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: licenseKeySchema,
+    },
+  )
 
   // アカウント削除エンドポイント
   .delete("/account", async ({ headers, set }) => {

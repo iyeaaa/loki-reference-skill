@@ -1252,6 +1252,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get trial dashboard statistics
+         * @description Returns all statistics for trial dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering.
+         */
+        get: operations["getApiV1DashboardTrial"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/stats": {
         parameters: {
             query?: never;
@@ -3979,8 +3999,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Unipile Webhook
-         * @description Receive and process Unipile webhook events (opens, clicks, replies, etc.)
+         * Unipile Webhook (email_tracking)
+         * @description Receive and process Unipile email_tracking webhook events (opens, clicks)
          */
         post: operations["postApiV1UnipileWebhooks"];
         delete?: never;
@@ -5036,6 +5056,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["postApiV1OnboardingWorkspaceByWorkspaceIdReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/workspace/{workspaceId}/job-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApiV1OnboardingWorkspaceByWorkspaceIdJob-status"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8334,6 +8370,30 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getApiV1DashboardTrial: {
+        parameters: {
+            query: {
+                workspaceId: string;
+                sequenceId?: string;
+                /** @description Start date in ISO 8601 format (e.g., 2024-01-01) */
+                startDate?: string;
+                /** @description End date in ISO 8601 format (e.g., 2024-01-31) */
+                endDate?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -19350,6 +19410,25 @@ export interface operations {
         };
     };
     postApiV1OnboardingWorkspaceByWorkspaceIdReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "getApiV1OnboardingWorkspaceByWorkspaceIdJob-status": {
         parameters: {
             query?: never;
             header?: never;

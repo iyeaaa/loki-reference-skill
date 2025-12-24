@@ -183,10 +183,8 @@ export default function EmailRepliesPage() {
     // Map sidebar items to intent filters
     if (itemId === "all" || itemId === "unread" || itemId === "important") {
       setSelectedIntent("all")
-      // Invalidate queries when switching to important/unread filters to get fresh data
-      if (itemId === "important" || itemId === "unread") {
-        queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
-      }
+      setDirection("all") // Reset direction to show all emails
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
     } else {
       setSelectedIntent(itemId)
     }

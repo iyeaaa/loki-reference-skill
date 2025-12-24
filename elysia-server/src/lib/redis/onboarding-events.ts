@@ -40,6 +40,7 @@ export interface LeadProgressItem {
   status: "discovering" | "enriching" | "generating" | "done" | "error"
   email?: string
   emailCount?: number
+  leadSource?: "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "hunterio-discover"
 }
 
 // Individual email for real-time display

@@ -142,10 +142,10 @@ export const router = createBrowserRouter([
       </AuthWrapper>
     ),
     children: [
-      {
-        path: "auth",
-        element: <LoginPage />,
-      },
+      // /auth route is development-only (use /trial in production)
+      ...(import.meta.env.DEV
+        ? [{ path: "auth", element: <LoginPage /> }]
+        : [{ path: "trial", element: <TrialRedirect /> }]),
       {
         path: "login",
         element: <LoginRedirect />,

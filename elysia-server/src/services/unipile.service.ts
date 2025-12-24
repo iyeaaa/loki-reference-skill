@@ -1152,7 +1152,7 @@ export async function processUnipileWebhook(payload: unknown): Promise<{ success
     const event = payload as Record<string, unknown>
 
     // Unipile email_tracking webhook uses 'event' field, not 'type'
-    const eventType = (event.event || event.type) as string
+    const eventType = (event.event || event.type || event.event_type) as string
     const trackingId = event.tracking_id as string | undefined
     const emailId = event.email_id as string | undefined
 

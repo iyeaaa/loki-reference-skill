@@ -493,7 +493,7 @@ export interface RankedLead<T> {
 export interface RerankOptions {
   topN?: number // 상위 N개만 반환 (기본값: 전체)
   minScore?: number // 최소 점수 (기본값: 0)
-  minCount?: number // 최소 반환 개수 - minScore 미만이어도 이 개수까지는 반환 (기본값: 10)
+  minCount?: number // 최소 반환 개수 - minScore 미만이어도 이 개수까지는 반환 (기본값: 30)
   concurrency?: number // 병렬 처리 동시성 (기본값: 10)
   onProgress?: (completed: number, total: number, phase: string) => void
 }
@@ -524,7 +524,7 @@ export async function rerankLeadsByRelevance<
     websiteUrl?: string
   },
 >(targetDescription: string, leads: T[], options?: RerankOptions): Promise<RankedLead<T>[]> {
-  const { topN, minScore = 0, minCount = 10, concurrency = 10, onProgress } = options || {}
+  const { topN, minScore = 0, minCount = 30, concurrency = 10, onProgress } = options || {}
 
   console.log(
     `[Reranking] Starting AI rerank for ${leads.length} leads ` +

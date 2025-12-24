@@ -91,7 +91,7 @@ export function OnboardingTest() {
   }
 
   const handleDownloadJSON = () => {
-    if (!testOnboarding.data) {
+    if (!(testOnboarding.data?.leadDiscovery && testOnboarding.data?.emailGeneration)) {
       return
     }
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)
@@ -103,7 +103,7 @@ export function OnboardingTest() {
   }
 
   const handleDownloadMarkdown = () => {
-    if (!testOnboarding.data) {
+    if (!(testOnboarding.data?.leadDiscovery && testOnboarding.data?.emailGeneration)) {
       return
     }
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)
@@ -248,66 +248,69 @@ export function OnboardingTest() {
             </div>
           )}
 
-          {testOnboarding.isSuccess && testOnboarding.data && (
-            <div className="mt-6 space-y-4 rounded-lg border p-4">
-              <h3 className="font-semibold text-lg">테스트 결과</h3>
+          {testOnboarding.isSuccess &&
+            testOnboarding.data &&
+            testOnboarding.data.leadDiscovery &&
+            testOnboarding.data.emailGeneration && (
+              <div className="mt-6 space-y-4 rounded-lg border p-4">
+                <h3 className="font-semibold text-lg">테스트 결과</h3>
 
-              <div className="space-y-2">
-                <h4 className="font-medium">📊 바이어 검색 결과</h4>
-                <div className="space-y-1 text-muted-foreground text-sm">
-                  <p>• 총 발견: {testOnboarding.data.leadDiscovery.stats.totalFound}개</p>
-                  <p>• 이메일 확보: {testOnboarding.data.leadDiscovery.stats.totalWithEmail}개</p>
-                  <p>• 최종 선정: {testOnboarding.data.leadDiscovery.leads.length}개</p>
+                <div className="space-y-2">
+                  <h4 className="font-medium">📊 바이어 검색 결과</h4>
+                  <div className="space-y-1 text-muted-foreground text-sm">
+                    <p>• 총 발견: {testOnboarding.data.leadDiscovery.stats.totalFound}개</p>
+                    <p>• 이메일 확보: {testOnboarding.data.leadDiscovery.stats.totalWithEmail}개</p>
+                    <p>• 최종 선정: {testOnboarding.data.leadDiscovery.leads.length}개</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">📧 이메일 생성 결과</h4>
+                  <div className="space-y-1 text-muted-foreground text-sm">
+                    <p>• 생성된 이메일: {testOnboarding.data.emailGeneration.templates.length}개</p>
+                    {testOnboarding.data.emailGeneration.templates.map((t) => (
+                      <p key={t.step}>
+                        &nbsp;&nbsp;Step {t.step} ({t.type}): {t.subject}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">👥 샘플 바이어 (처음 5개)</h4>
+                  <div className="space-y-1 text-muted-foreground text-sm">
+                    {testOnboarding.data.leadDiscovery.leads.slice(0, 5).map((lead, i) => (
+                      <p key={i}>
+                        {i + 1}. {lead.company} - {lead.email}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    className="gap-2"
+                    onClick={handleDownloadJSON}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <FileText className="h-4 w-4" />
+                    JSON 다운로드
+                  </Button>
+                  <Button
+                    className="gap-2"
+                    onClick={handleDownloadMarkdown}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Markdown 다운로드
+                  </Button>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <h4 className="font-medium">📧 이메일 생성 결과</h4>
-                <div className="space-y-1 text-muted-foreground text-sm">
-                  <p>• 생성된 이메일: {testOnboarding.data.emailGeneration.templates.length}개</p>
-                  {testOnboarding.data.emailGeneration.templates.map((t) => (
-                    <p key={t.step}>
-                      &nbsp;&nbsp;Step {t.step} ({t.type}): {t.subject}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-medium">👥 샘플 바이어 (처음 5개)</h4>
-                <div className="space-y-1 text-muted-foreground text-sm">
-                  {testOnboarding.data.leadDiscovery.leads.slice(0, 5).map((lead, i) => (
-                    <p key={i}>
-                      {i + 1}. {lead.company} - {lead.email}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  className="gap-2"
-                  onClick={handleDownloadJSON}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <FileText className="h-4 w-4" />
-                  JSON 다운로드
-                </Button>
-                <Button
-                  className="gap-2"
-                  onClick={handleDownloadMarkdown}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <FileText className="h-4 w-4" />
-                  Markdown 다운로드
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
 
           {testOnboarding.isError && (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-600 text-sm">

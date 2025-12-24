@@ -8,6 +8,7 @@
 
 import type { Job } from "bullmq"
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm"
+import { config } from "../config"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -41,6 +42,7 @@ import { getAITemplateGenerationService } from "./ai-template-generation.service
 import { createCustomerGroup } from "./customer-group.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
 import { searchAndEnrichLeads } from "./lead-search-enrichment.service"
+import { isLoopsConfigured, sendOnboardingCompleteEmail } from "./loops.service"
 import { upsertOnboardingProgressNotification } from "./notification.service"
 import {
   COUNTRY_NAMES,
@@ -1130,6 +1132,29 @@ export async function completeOnboarding(
 
     // Emit SSE + Save to DB: Complete
     await emitAndSaveNotification(createCompleteEvent(workspaceId, jobId, leadIds.length), userId)
+
+    // 🆕 Send completion email via Loops.so (helps reduce drop-off during long onboarding)
+    if (isLoopsConfigured()) {
+      try {
+        const user = await getUser(userId)
+        if (user?.email) {
+          const emailCount = leadIds.length * 3 // 3-touch sequence
+
+          await sendOnboardingCompleteEmail({
+            email: user.email,
+            firstName: user.username || undefined,
+            leadCount: leadIds.length,
+            emailCount,
+            dashboardUrl: `${config.frontendUrl}/app/sequences/${sequenceId}`,
+          })
+
+          console.log(`[CompletePhase] Sent completion email to ${user.email}`)
+        }
+      } catch (emailError) {
+        // Don't fail onboarding if email fails
+        console.error("[CompletePhase] Failed to send completion email:", emailError)
+      }
+    }
 
     console.log(
       "[CompletePhase] Onboarding auto-generation complete - user can now link email and start campaign",

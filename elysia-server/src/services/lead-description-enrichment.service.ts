@@ -87,7 +87,81 @@ function normalizeUrl(url: string): string {
 // ====================================
 
 /**
- * 웹사이트에서 HTML을 가져옴
+ * Content-Type 헤더에서 charset 추출
+ */
+function extractCharsetFromContentType(contentType: string): string | null {
+  const match = contentType.match(/charset=([^\s;]+)/i)
+  return match?.[1]?.replace(/['"]/g, "") || null
+}
+
+/**
+ * HTML에서 charset 메타 태그 추출 (바이너리에서 ASCII 부분만 파싱)
+ */
+function extractCharsetFromHtmlBytes(bytes: Uint8Array): string | null {
+  // HTML의 처음 2KB만 확인 (메타 태그는 보통 앞부분에 있음)
+  const headBytes = bytes.slice(0, 2048)
+  // iso-8859-1으로 임시 디코딩 (charset 태그는 ASCII 범위 내에 있음)
+  // biome-ignore lint/suspicious/noExplicitAny: TextDecoder accepts iso-8859-1 at runtime
+  const headText = new TextDecoder("iso-8859-1" as any).decode(headBytes)
+
+  // <meta charset="xxx">
+  const charsetMatch = headText.match(/<meta[^>]+charset=["']?([^"'\s>]+)/i)
+  if (charsetMatch?.[1]) {
+    return charsetMatch[1]
+  }
+
+  // <meta http-equiv="Content-Type" content="text/html; charset=xxx">
+  const httpEquivMatch = headText.match(
+    /<meta[^>]+http-equiv=["']?Content-Type["']?[^>]+content=["'][^"']*charset=([^"'\s;]+)/i,
+  )
+  if (httpEquivMatch?.[1]) {
+    return httpEquivMatch[1]
+  }
+
+  // content 먼저 오는 경우
+  const contentFirstMatch = headText.match(
+    /<meta[^>]+content=["'][^"']*charset=([^"'\s;]+)[^>]+http-equiv=["']?Content-Type/i,
+  )
+  if (contentFirstMatch?.[1]) {
+    return contentFirstMatch[1]
+  }
+
+  return null
+}
+
+/**
+ * charset 이름 정규화 (일본어 인코딩 처리)
+ */
+function normalizeCharset(charset: string): string {
+  const normalized = charset.toLowerCase().replace(/[_-]/g, "")
+
+  // 일본어 인코딩 매핑
+  const charsetMap: Record<string, string> = {
+    shiftjis: "shift-jis",
+    shift_jis: "shift-jis",
+    sjis: "shift-jis",
+    xsjis: "shift-jis",
+    eucjp: "euc-jp",
+    euc_jp: "euc-jp",
+    xeucjp: "euc-jp",
+    iso2022jp: "iso-2022-jp",
+    // 한국어 인코딩
+    euckr: "euc-kr",
+    ksc5601: "euc-kr",
+    // 중국어 인코딩
+    gb2312: "gb2312",
+    gbk: "gbk",
+    gb18030: "gb18030",
+    big5: "big5",
+    // 기본
+    utf8: "utf-8",
+  }
+
+  return charsetMap[normalized] || charset.toLowerCase()
+}
+
+/**
+ * 웹사이트에서 HTML을 가져옴 (인코딩 자동 감지)
  */
 async function fetchWebsiteHtml(url: string): Promise<string | null> {
   const normalizedUrl = normalizeUrl(url)
@@ -101,7 +175,7 @@ async function fetchWebsiteHtml(url: string): Promise<string | null> {
       headers: {
         "User-Agent": getRandomUserAgent(),
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9,ko;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,ko;q=0.8,ja;q=0.7",
         "Accept-Encoding": "gzip, deflate, br",
         Connection: "keep-alive",
         "Cache-Control": "no-cache",
@@ -123,7 +197,58 @@ async function fetchWebsiteHtml(url: string): Promise<string | null> {
       return null
     }
 
-    return await response.text()
+    // 바이너리로 가져와서 인코딩 감지
+    const arrayBuffer = await response.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+
+    // 1. Content-Type 헤더에서 charset 확인
+    let charset = extractCharsetFromContentType(contentType)
+
+    // 2. HTML 메타 태그에서 charset 확인
+    if (!charset) {
+      charset = extractCharsetFromHtmlBytes(bytes)
+    }
+
+    // 3. 기본값: UTF-8
+    if (!charset) {
+      charset = "utf-8"
+    }
+
+    // 4. charset 정규화
+    const normalizedCharset = normalizeCharset(charset)
+
+    // 5. 적절한 인코딩으로 디코딩
+    // TextDecoder가 지원하는 인코딩 목록: https://encoding.spec.whatwg.org/
+    const supportedEncodings = [
+      "utf-8",
+      "utf-16le",
+      "utf-16be",
+      "shift-jis",
+      "euc-jp",
+      "iso-2022-jp",
+      "euc-kr",
+      "gb2312",
+      "gbk",
+      "gb18030",
+      "big5",
+      "iso-8859-1",
+      "windows-1252",
+    ]
+
+    const encodingToUse = supportedEncodings.includes(normalizedCharset)
+      ? normalizedCharset
+      : "utf-8"
+
+    if (encodingToUse !== normalizedCharset) {
+      logger.warn(
+        `[DescriptionEnrich] Unsupported charset "${normalizedCharset}" for ${normalizedUrl}, using UTF-8`,
+      )
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: TextDecoder accepts these encodings at runtime
+    const decoder = new TextDecoder(encodingToUse as any)
+    const html = decoder.decode(bytes)
+    return html
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     logger.warn(`[DescriptionEnrich] Failed to fetch ${normalizedUrl}: ${errorMsg}`)

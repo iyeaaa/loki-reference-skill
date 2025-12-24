@@ -222,6 +222,18 @@ export const config = {
   perplexity: {
     apiKey: getEnvOrDefault("PERPLEXITY_API_KEY", ""),
   },
+
+  // Loops.so (Transactional Emails)
+  loops: {
+    apiKey: getEnvOrDefault("LOOPS_API_KEY", ""),
+    // Transactional Email Template IDs
+    transactionalIds: {
+      onboardingComplete: getEnvOrDefault(
+        "LOOPS_TRANSACTIONAL_ONBOARDING_COMPLETE",
+        "cm52nw1hp00xkmi7sxlnv3zqd",
+      ),
+    },
+  },
 } as const
 
 // Log configuration on startup (only in development)

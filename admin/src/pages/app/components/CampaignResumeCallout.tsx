@@ -33,7 +33,7 @@ export function CampaignResumeCallout({
 
   // Calculate stats
   const stepsCount = steps?.length || 0
-  const leadsCount = sequence?.enrollmentCount || 0
+  const leadsCount = sequence?.enrollmentsCount || 0
   const totalEmails = stepsCount * leadsCount
 
   const handleStartCampaign = async () => {

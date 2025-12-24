@@ -15,6 +15,7 @@ import {
   generateB2BHunterIndustryPrompt,
 } from "../shared/mastra"
 import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
+import { isBeautyRelatedIndustry, searchBeautyDatabase } from "./beauty-db-search.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
@@ -70,7 +71,15 @@ export interface EnrichedLead {
   country?: string
   employeeCount?: string
   description?: string
-  leadSource: "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "hunterio-discover"
+  leadSource:
+    | "b2b"
+    | "apollo"
+    | "fresh"
+    | "revation"
+    | "perplexity"
+    | "hunterio-discover"
+    | "beauty_db"
+    | "beauty_db"
   /** AI 리랭킹 점수 (0-100) */
   relevanceScore?: number
   /** AI 리랭킹 이유 */
@@ -286,7 +295,7 @@ interface BigQuerySearchOptions {
   idealCustomerProfile?: IdealCustomerProfile
 }
 
-type LeadSource = "b2b" | "apollo" | "fresh" | "revation" | "perplexity"
+type LeadSource = "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "beauty_db"
 
 /**
  * 국가가 BigQuery 데이터가 풍부한 국가인지 확인
@@ -394,12 +403,68 @@ async function searchBigQueryFirst(options: BigQuerySearchOptions): Promise<{
   console.log(`[LeadSearch] BigQuery-first: Querying 5 data sources in parallel: "${nlQuery}"`)
   console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
 
+  // 🆕 Step 0: 뷰티/화장품 산업이면 뷰티 DB 우선 검색
+  const isBeautyIndustry = targetIndustries.some((ind) => isBeautyRelatedIndustry(ind))
+
+  if (isBeautyIndustry) {
+    console.log(`[LeadSearch] 🆕 Beauty industry detected - searching internal Beauty DB first`)
+
+    const beautyResult = await searchBeautyDatabase({
+      country: countryName,
+      limit: Math.min(targetCount, 100),
+      excludeWebsites: processedWebsites,
+    })
+
+    if (beautyResult.leads.length > 0) {
+      console.log(`[LeadSearch] 🆕 Found ${beautyResult.leads.length} leads from Beauty DB`)
+
+      for (const bLead of beautyResult.leads) {
+        const normalizedUrl = bLead.websiteUrl?.toLowerCase().replace(/\/+$/, "")
+        if (!normalizedUrl || processedWebsites.has(normalizedUrl)) {
+          skippedDuplicates++
+          continue
+        }
+        processedWebsites.add(normalizedUrl)
+
+        leads.push({
+          company: bLead.companyName,
+          website: bLead.websiteUrl,
+          industry: bLead.businessType || "beauty",
+          employees: bLead.employeeCount || "",
+          country: bLead.country || countryName,
+          description: bLead.description || undefined,
+          source: "beauty_db" as LeadSource,
+        })
+        totalQueried++
+      }
+
+      console.log(`[LeadSearch] Added ${leads.length} leads from Beauty DB`)
+
+      // 충분한 리드를 찾았으면 바로 반환
+      if (leads.length >= targetCount) {
+        return {
+          leads: leads.slice(0, targetCount),
+          stats: {
+            totalQueried,
+            skippedDuplicates,
+            skippedLargeCompanies,
+            fromB2B,
+            fromApollo,
+            fromFresh,
+            fromRevation,
+            fromPerplexity: beautyResult.leads.length,
+          },
+        }
+      }
+    }
+  }
+
   // Report progress
   if (onProgress) {
     await onProgress({
       phase: "bigquery",
       message: "Searching 5 data sources in parallel (BigQuery-first strategy)...",
-      currentCount: 0,
+      currentCount: leads.length,
       targetCount,
     })
   }
@@ -667,6 +732,64 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
     useICPSearch && icp
       ? `${icp.customerTypes.slice(0, 3).join(" ")} companies in ${countryName}`
       : `${targetIndustries.join(" or ")} companies in ${countryName}`
+
+  // 🆕 Step 0: 뷰티/화장품 산업이면 뷰티 DB 우선 검색
+  const isBeautyIndustry = targetIndustries.some((ind) => isBeautyRelatedIndustry(ind))
+
+  if (isBeautyIndustry) {
+    console.log(`[LeadSearch] 🆕 Beauty industry detected - searching internal Beauty DB first`)
+
+    const beautyResult = await searchBeautyDatabase({
+      country: countryName,
+      limit: Math.min(targetCount, 100),
+      excludeWebsites: processedWebsites,
+    })
+
+    if (beautyResult.leads.length > 0) {
+      console.log(`[LeadSearch] 🆕 Found ${beautyResult.leads.length} leads from Beauty DB`)
+
+      for (const bLead of beautyResult.leads) {
+        const normalizedUrl = bLead.websiteUrl?.toLowerCase().replace(/\/+$/, "")
+        if (!normalizedUrl || processedWebsites.has(normalizedUrl)) {
+          skippedDuplicates++
+          continue
+        }
+        processedWebsites.add(normalizedUrl)
+
+        leads.push({
+          company: bLead.companyName,
+          website: bLead.websiteUrl,
+          industry: bLead.businessType || "beauty",
+          employees: bLead.employeeCount || "",
+          country: bLead.country || countryName,
+          description: bLead.description || undefined,
+          source: "beauty_db" as LeadSource,
+        })
+        totalQueried++
+      }
+
+      console.log(
+        `[LeadSearch] Added ${leads.length} leads from Beauty DB (skipped ${skippedDuplicates} duplicates)`,
+      )
+
+      // 충분한 리드를 찾았으면 바로 반환
+      if (leads.length >= targetCount) {
+        return {
+          leads: leads.slice(0, targetCount),
+          stats: {
+            totalQueried,
+            skippedDuplicates,
+            skippedLargeCompanies,
+            fromB2B,
+            fromApollo,
+            fromFresh,
+            fromRevation,
+            fromPerplexity: beautyResult.leads.length,
+          },
+        }
+      }
+    }
+  }
 
   // Step 1: Perplexity 검색
   let perplexityResult: Awaited<ReturnType<typeof searchLeadsWithPerplexityEnhanced>>
@@ -1669,7 +1792,7 @@ export async function searchAndEnrichLeads(
     const rankedResults = await rerankLeadsByRelevance(rerankingQuery, leadsForReranking, {
       topN: targetLeadCount,
       minScore: 30, // 최소 30점 이상 우선
-      minCount: 10, // 🆕 최소 10개 보장 (minScore 미만이어도)
+      minCount: 30, // 🆕 최소 30개 보장 (minScore 미만이어도)
       concurrency: 10,
       onProgress: (completed, total, phase) => {
         if (onProgress && completed % 5 === 0) {

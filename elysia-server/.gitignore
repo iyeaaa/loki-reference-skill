@@ -49,3 +49,4 @@ backups/
 compose.db.override.yml
 
 .mastra
+test-results/

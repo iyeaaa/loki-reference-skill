@@ -9,6 +9,8 @@
  *   bun run test:ai-email
  */
 
+import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import * as p from "@clack/prompts"
 import { getAITemplateGenerationService } from "../src/services/ai-template-generation.service"
 import { EMAIL_TYPES_3TOUCH } from "../src/services/onboarding.service"
@@ -211,6 +213,8 @@ async function generate3TouchSequence(options: {
     log(`Step ${t.stepOrder} (${t.type}, +${t.delayDays}일):`, colors.cyan)
     log(`  제목: ${t.template.subject}`, colors.dim)
   }
+
+  return templates
 }
 
 async function interactiveMode() {
@@ -287,13 +291,109 @@ async function interactiveMode() {
   }
 
   // Generate emails with validated inputs
-  await generate3TouchSequence({
+  const testInput = {
     workspaceName: workspaceName as string,
     workspaceDescription: workspaceDescription ? (workspaceDescription as string) : undefined,
     industry: INDUSTRY_OPTIONS[industry as keyof typeof INDUSTRY_OPTIONS],
     target: TARGET_OPTIONS[target as keyof typeof TARGET_OPTIONS],
     country: country as string,
+  }
+
+  const templates = await generate3TouchSequence(testInput)
+
+  // Ask to save results
+  const shouldSave = await p.confirm({
+    message: "결과를 파일로 저장하시겠습니까?",
+    initialValue: true,
   })
+
+  if (p.isCancel(shouldSave)) {
+    return
+  }
+
+  if (shouldSave) {
+    saveResults(testInput, templates)
+  }
+}
+
+/**
+ * Save test results to file
+ */
+function saveResults(
+  input: {
+    workspaceName: string
+    workspaceDescription?: string
+    industry: string
+    target: string
+    country: string
+  },
+  templates: Array<{
+    stepOrder: number
+    type: string
+    delayDays: number
+    template: { subject: string; bodyText: string; bodyHtml: string }
+  }>,
+) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)
+  const outputDir = join(process.cwd(), "test-results", "email-generation")
+
+  // Create output directory if not exists
+  if (!existsSync(outputDir)) {
+    mkdirSync(outputDir, { recursive: true })
+  }
+
+  // Save as JSON
+  const jsonFile = join(outputDir, `email-test-${timestamp}.json`)
+  const jsonData = {
+    timestamp: new Date().toISOString(),
+    input,
+    results: templates.map((t) => ({
+      step: t.stepOrder,
+      type: t.type,
+      delayDays: t.delayDays,
+      subject: t.template.subject,
+      bodyText: t.template.bodyText,
+      bodyHtml: t.template.bodyHtml,
+      qualityCheck: checkEmailQuality(t.template),
+    })),
+  }
+  writeFileSync(jsonFile, JSON.stringify(jsonData, null, 2), "utf-8")
+
+  // Save as Markdown
+  const mdFile = join(outputDir, `email-test-${timestamp}.md`)
+  let mdContent = `# AI 이메일 생성 테스트 결과\n\n`
+  mdContent += `**생성 시간**: ${new Date().toLocaleString("ko-KR")}\n\n`
+  mdContent += `## 입력 정보\n\n`
+  mdContent += `- **회사명**: ${input.workspaceName}\n`
+  if (input.workspaceDescription) {
+    mdContent += `- **회사 설명**: ${input.workspaceDescription}\n`
+  }
+  mdContent += `- **산업**: ${input.industry}\n`
+  mdContent += `- **타겟**: ${input.target}\n`
+  mdContent += `- **국가**: ${input.country}\n\n`
+
+  mdContent += `## 생성된 이메일 (${templates.length}개)\n\n`
+
+  for (const t of templates) {
+    mdContent += `### Step ${t.stepOrder}: ${t.type} (+${t.delayDays}일)\n\n`
+    mdContent += `**제목**: ${t.template.subject}\n\n`
+    mdContent += `**본문**:\n\`\`\`\n${t.template.bodyText}\n\`\`\`\n\n`
+
+    const issues = checkEmailQuality(t.template)
+    if (issues.length > 0) {
+      mdContent += `**품질 체크**:\n`
+      for (const issue of issues) {
+        mdContent += `- ${issue}\n`
+      }
+      mdContent += `\n`
+    }
+  }
+
+  writeFileSync(mdFile, mdContent, "utf-8")
+
+  log(`\n✅ 결과 저장 완료:`, colors.green)
+  log(`   JSON: ${jsonFile}`, colors.dim)
+  log(`   Markdown: ${mdFile}`, colors.dim)
 }
 
 async function main() {

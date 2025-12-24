@@ -40,7 +40,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:ai-email": "bun scripts/test-email-generation.ts --interactive"
+    "test:ai-email": "bun scripts/test-email-generation.ts --interactive",
+    "test:lead-discovery": "bun scripts/test-lead-discovery.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",

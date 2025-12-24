@@ -10,7 +10,7 @@ const pool = new Pool({
   min: config.database.poolMin, // Minimum number of connections
   max: config.database.poolMax, // Maximum number of connections
   idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 2000, // Fail fast if connection takes > 2s
+  connectionTimeoutMillis: 10000, // Fail if connection takes > 10s
   // UTF-8 인코딩 명시 (다국어 문자 지원)
   options: "-c client_encoding=UTF8",
 })

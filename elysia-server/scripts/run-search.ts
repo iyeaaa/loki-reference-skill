@@ -21,8 +21,10 @@ async function main() {
       "manufacturing companies in southeast asia",
       70, // minimumMatchScore
       async (progress) => {
-        console.log(`[Progress] ${progress.phase}: ${progress.message} (${progress.currentCount}/${progress.targetCount})`)
-      }
+        console.log(
+          `[Progress] ${progress.phase}: ${progress.message} (${progress.currentCount}/${progress.targetCount})`,
+        )
+      },
     )
 
     // Save results to file
@@ -75,12 +77,17 @@ Results:
 - Skipped low scoring: ${result.stats.skippedLowScoring}
 
 Sample Leads (first 5):
-${result.leads.slice(0, 5).map((lead, idx) => `
+${result.leads
+  .slice(0, 5)
+  .map(
+    (lead, idx) => `
 ${idx + 1}. ${lead.companyName}
    Website: ${lead.websiteUrl}
    Email: ${lead.primaryEmail || "N/A"}
    Source: ${lead.leadSource}
-`).join("")}
+`,
+  )
+  .join("")}
 
 Full results saved to: ${filename}
 ===========================================================
@@ -88,7 +95,6 @@ Full results saved to: ${filename}
 
     writeFileSync(summaryFilepath, summaryContent)
     console.log(`Summary saved to: ${summaryFilepath}`)
-
   } catch (error) {
     console.error("Error during search:", error)
     process.exit(1)

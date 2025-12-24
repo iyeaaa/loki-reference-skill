@@ -67,7 +67,7 @@ export function cleanLoggerPlugin(): Plugin {
       startTime = Date.now()
 
       // Override server print URLs to use our custom format
-      server.printUrls = function () {
+      server.printUrls = () => {
         const duration = Date.now() - startTime
         const urls = server.resolvedUrls
 
@@ -124,8 +124,11 @@ export function cleanLoggerPlugin(): Plugin {
       // Custom HMR logging - ultra minimal
       const shortFile = ctx.file.replace(server.config.root, "").replace(/^\//, "")
       const maxLength = 50
-      const displayFile = shortFile.length > maxLength ? "..." + shortFile.slice(-maxLength) : shortFile
-      process.stdout.write(`\r${colorize("↻", "dim")} ${colorize(displayFile, "dim")}${" ".repeat(10)}`)
+      const displayFile =
+        shortFile.length > maxLength ? "..." + shortFile.slice(-maxLength) : shortFile
+      process.stdout.write(
+        `\r${colorize("↻", "dim")} ${colorize(displayFile, "dim")}${" ".repeat(10)}`,
+      )
     },
   }
 }

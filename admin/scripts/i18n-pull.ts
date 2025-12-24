@@ -7,25 +7,22 @@
 
 import "dotenv/config"
 import { initializeSheetsClient, readSheetData } from "./google-sheets-client.js"
-import {
-  readAllLocalCSVs,
-  convertSheetRowsToLocal,
-  writeCSV,
-  calculateLocalHash,
-  readSyncMetadata,
-  writeSyncMetadata,
-  getCurrentTimestamp,
-} from "./i18n-utils.js"
-import type { ConflictInfo, LocalTranslationRow } from "./i18n-types.js"
 import { getLanguages } from "./i18n-config.js"
+import type { ConflictInfo, LocalTranslationRow } from "./i18n-types.js"
+import {
+  calculateLocalHash,
+  convertSheetRowsToLocal,
+  getCurrentTimestamp,
+  readAllLocalCSVs,
+  readSyncMetadata,
+  writeCSV,
+  writeSyncMetadata,
+} from "./i18n-utils.js"
 
 /**
  * Check if file content has changed
  */
-function hasFileChanged(
-  localRows: LocalTranslationRow[],
-  newRows: LocalTranslationRow[],
-): boolean {
+function hasFileChanged(localRows: LocalTranslationRow[], newRows: LocalTranslationRow[]): boolean {
   // Quick check: different number of rows
   if (localRows.length !== newRows.length) {
     return true
@@ -137,14 +134,18 @@ async function pullTranslations(): Promise<void> {
     // Sheet-first rule: By default, sheet content overwrites local conflicts
     // Show conflicts info but proceed with sheet content
     if (conflicts.length > 0) {
-      console.log(`\n⚠️  ${conflicts.length} conflict(s) detected (will be overwritten with sheet content):`)
+      console.log(
+        `\n⚠️  ${conflicts.length} conflict(s) detected (will be overwritten with sheet content):`,
+      )
       conflicts.slice(0, 5).forEach((conflict) => {
         console.log(`   - ${conflict.filename}.${conflict.key}`)
         // Show actual values for debugging
         const languages = getLanguages()
         for (const lang of languages) {
           if (conflict.localValue[lang] !== conflict.sheetValue[lang]) {
-            console.log(`     [${lang}] Local: "${conflict.localValue[lang]}" → Sheet: "${conflict.sheetValue[lang]}"`)
+            console.log(
+              `     [${lang}] Local: "${conflict.localValue[lang]}" → Sheet: "${conflict.sheetValue[lang]}"`,
+            )
           }
         }
       })
@@ -182,14 +183,16 @@ async function pullTranslations(): Promise<void> {
 
         if (hasFileChanged(localFileRows, mergedRows)) {
           writeCSV(filename, mergedRows)
-          console.log(`✅ ${filename}.csv updated (preserved ${localOnlyRows.length} local-only item(s))`)
+          console.log(
+            `✅ ${filename}.csv updated (preserved ${localOnlyRows.length} local-only item(s))`,
+          )
           changedFiles++
         }
       }
     }
 
     if (changedFiles === 0) {
-      console.log(`✅ No changes detected. All files are up to date.`)
+      console.log("✅ No changes detected. All files are up to date.")
     }
 
     // Update metadata only after successful download
@@ -202,7 +205,10 @@ async function pullTranslations(): Promise<void> {
         lastSheetRowCount: sheetRows.length,
       })
     } catch (error) {
-      console.warn("⚠️  Warning: Failed to update sync metadata:", error instanceof Error ? error.message : error)
+      console.warn(
+        "⚠️  Warning: Failed to update sync metadata:",
+        error instanceof Error ? error.message : error,
+      )
       console.warn("   Sync will still work, but status check may be inaccurate.")
     }
 
@@ -222,4 +228,3 @@ async function pullTranslations(): Promise<void> {
 
 // Execute script
 pullTranslations()
-

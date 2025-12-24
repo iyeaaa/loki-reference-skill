@@ -6,9 +6,13 @@
  */
 
 import "dotenv/config"
-import { calculateLocalHash, readSyncMetadata } from "./i18n-utils.js"
-import { getSheetRowCount, getSheetLastModified, initializeSheetsClient } from "./google-sheets-client.js"
+import {
+  getSheetLastModified,
+  getSheetRowCount,
+  initializeSheetsClient,
+} from "./google-sheets-client.js"
 import type { SyncStatus } from "./i18n-types.js"
+import { calculateLocalHash, readSyncMetadata } from "./i18n-utils.js"
 import { createLogger } from "./logger.js"
 
 const logger = createLogger("i18n:check")
@@ -32,7 +36,7 @@ async function checkSyncStatus(): Promise<SyncStatus> {
     const currentSheetLastModified = await getSheetLastModified()
 
     // First run or metadata lost - suggest initial sync
-    if (!metadata.lastLocalHash && !metadata.lastPullTime && !metadata.lastPushTime) {
+    if (!(metadata.lastLocalHash || metadata.lastPullTime || metadata.lastPushTime)) {
       logger.info("Translation sync status unknown")
       logger.item("No sync history found", 2)
       logger.item("Run: yarn i18n:pull or yarn i18n:push", 2)
@@ -52,11 +56,13 @@ async function checkSyncStatus(): Promise<SyncStatus> {
       logger.item("Google Sheet also has changes", 2)
       logger.item("Run: yarn i18n:push or yarn i18n:pull", 2)
       return "conflict"
-    } else if (localChanged) {
+    }
+    if (localChanged) {
       logger.info("Local translation changes detected")
       logger.item("Run: yarn i18n:push to upload", 2)
       return "local_ahead"
-    } else if (sheetChanged) {
+    }
+    if (sheetChanged) {
       logger.info("Google Sheet changes detected")
       logger.item("Run: yarn i18n:pull to download", 2)
       return "sheet_ahead"
@@ -91,4 +97,3 @@ if (import.meta.url.endsWith(process.argv[1]) || process.argv[1]?.includes("i18n
 }
 
 export { checkSyncStatus }
-

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -159,7 +160,7 @@ export function OnboardingTest() {
         </div>
         <CardDescription>
           바이어 검색 + AI 이메일 생성을 한번에 테스트합니다. 실제 온보딩 프로세스와 동일하게
-          동작합니다.
+          동작합니다. (소요 시간: 약 2~3분)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -235,8 +236,17 @@ export function OnboardingTest() {
           </div>
 
           <Button className="w-full sm:w-auto" disabled={!canSubmit} type="submit">
-            {testOnboarding.isPending ? "테스트 실행 중..." : "테스트 실행"}
+            {testOnboarding.isPending ? "테스트 실행 중... (2~3분 소요)" : "테스트 실행 (약 2~3분)"}
           </Button>
+
+          {testOnboarding.isPending && (
+            <div className="space-y-2">
+              <Progress value={testOnboarding.progress} />
+              <p className="text-center text-muted-foreground text-sm">
+                진행 중: {testOnboarding.progress}%
+              </p>
+            </div>
+          )}
 
           {testOnboarding.isSuccess && testOnboarding.data && (
             <div className="mt-6 space-y-4 rounded-lg border p-4">

@@ -4,8 +4,6 @@
  * i18n type definitions
  */
 
-import { getLanguages } from "./i18n-config.js"
-
 /**
  * Translation row type (dynamic language fields)
  */
@@ -60,4 +58,3 @@ export interface ConflictInfo {
  * Sync status type
  */
 export type SyncStatus = "synced" | "local_ahead" | "sheet_ahead" | "conflict" | "unknown"
-

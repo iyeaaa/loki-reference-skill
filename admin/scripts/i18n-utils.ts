@@ -5,7 +5,7 @@
  */
 
 import { createHash } from "node:crypto"
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { parse } from "csv-parse/sync"
 import { stringify } from "csv-stringify/sync"
@@ -67,14 +67,16 @@ export function readAllLocalCSVs(): Map<string, LocalTranslationRow[]> {
       }) as LocalTranslationRow[]
 
       const filename = csvFile.replace(".csv", "")
-      
+
       // Check for duplicate keys and warn
       const seenKeys = new Set<string>()
       const dedupedRecords: LocalTranslationRow[] = []
-      
+
       for (const record of records) {
         if (seenKeys.has(record.key)) {
-          console.warn(`⚠️  Warning: Duplicate key "${record.key}" found in ${csvFile}, using last occurrence`)
+          console.warn(
+            `⚠️  Warning: Duplicate key "${record.key}" found in ${csvFile}, using last occurrence`,
+          )
         } else {
           seenKeys.add(record.key)
         }
@@ -86,7 +88,7 @@ export function readAllLocalCSVs(): Map<string, LocalTranslationRow[]> {
           dedupedRecords.push(record)
         }
       }
-      
+
       result.set(filename, dedupedRecords)
     } catch (error) {
       console.error(`❌ Error reading ${csvFile}:`, error instanceof Error ? error.message : error)
@@ -100,10 +102,7 @@ export function readAllLocalCSVs(): Map<string, LocalTranslationRow[]> {
 /**
  * Write CSV file
  */
-export function writeCSV(
-  filename: string,
-  rows: LocalTranslationRow[],
-): void {
+export function writeCSV(filename: string, rows: LocalTranslationRow[]): void {
   const languages = getLanguages()
   const csvPath = join(LOCALES_DIR, `${filename}.csv`)
 
@@ -209,12 +208,9 @@ export function readSyncMetadata(): import("./i18n-types.js").SyncMetadata {
 /**
  * Write metadata file
  */
-export function writeSyncMetadata(
-  metadata: import("./i18n-types.js").SyncMetadata,
-): void {
+export function writeSyncMetadata(metadata: import("./i18n-types.js").SyncMetadata): void {
   const metadataPath = join(LOCALES_DIR, ".i18n-sync.json")
 
   mkdirSync(LOCALES_DIR, { recursive: true })
   writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), "utf-8")
 }
-

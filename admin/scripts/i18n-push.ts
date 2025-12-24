@@ -7,18 +7,18 @@
 
 import "dotenv/config"
 import { initializeSheetsClient, readSheetData, writeSheetData } from "./google-sheets-client.js"
+import { getLanguages } from "./i18n-config.js"
+import type { ConflictInfo, TranslationRow } from "./i18n-types.js"
 import {
-  readAllLocalCSVs,
-  convertLocalToSheetRows,
   calculateLocalHash,
+  convertLocalToSheetRows,
+  getCurrentTimestamp,
+  readAllLocalCSVs,
   readSyncMetadata,
   writeSyncMetadata,
-  getCurrentTimestamp,
 } from "./i18n-utils.js"
-import { getLanguages } from "./i18n-config.js"
-import type { TranslationRow, ConflictInfo } from "./i18n-types.js"
 
-async function pushTranslations(force: boolean = false): Promise<void> {
+async function pushTranslations(force = false): Promise<void> {
   try {
     await initializeSheetsClient()
 
@@ -77,7 +77,9 @@ async function pushTranslations(force: boolean = false): Promise<void> {
 
       // Show conflicts in force mode
       if (conflicts.length > 0) {
-        console.log(`\n⚠️  ${conflicts.length} conflict(s) detected (will be overwritten with local content):`)
+        console.log(
+          `\n⚠️  ${conflicts.length} conflict(s) detected (will be overwritten with local content):`,
+        )
         conflicts.slice(0, 5).forEach((conflict) => {
           console.log(`   - ${conflict.filename}.${conflict.key}`)
         })
@@ -100,9 +102,7 @@ async function pushTranslations(force: boolean = false): Promise<void> {
         const key = `${localRow.filename}:${localRow.key}`
         const sheetRow = sheetRowMap.get(key)
 
-        if (!sheetRow) {
-          newKeys.add(key)
-        } else {
+        if (sheetRow) {
           // Check if any language value changed
           const languages = getLanguages()
           const hasChange = languages.some((lang) => {
@@ -113,6 +113,8 @@ async function pushTranslations(force: boolean = false): Promise<void> {
           if (hasChange) {
             updatedKeys.add(key)
           }
+        } else {
+          newKeys.add(key)
         }
 
         rowsToUpload.push({
@@ -124,9 +126,7 @@ async function pushTranslations(force: boolean = false): Promise<void> {
       // Also include sheet-only items (not in local)
       for (const sheetRow of sheetRows) {
         const key = `${sheetRow.filename}:${sheetRow.key}`
-        const localRow = localSheetRows.find(
-          (r) => `${r.filename}:${r.key}` === key,
-        )
+        const localRow = localSheetRows.find((r) => `${r.filename}:${r.key}` === key)
         if (!localRow) {
           rowsToUpload.push(sheetRow)
         }
@@ -169,13 +169,18 @@ async function pushTranslations(force: boolean = false): Promise<void> {
         lastSheetRowCount: rowsToUpload.length,
       })
     } catch (error) {
-      console.warn("⚠️  Warning: Failed to update sync metadata:", error instanceof Error ? error.message : error)
+      console.warn(
+        "⚠️  Warning: Failed to update sync metadata:",
+        error instanceof Error ? error.message : error,
+      )
       console.warn("   Sync will still work, but status check may be inaccurate.")
     }
 
     // Show summary
     if (newKeys.size === 0 && updatedKeys.size === 0) {
-      console.log(`✅ No changes detected. Sheet is up to date. (${rowsToUpload.length} total items)`)
+      console.log(
+        `✅ No changes detected. Sheet is up to date. (${rowsToUpload.length} total items)`,
+      )
     } else {
       if (newKeys.size > 0) {
         console.log(`✅ Added ${newKeys.size} new translation(s)`)
@@ -201,4 +206,3 @@ async function pushTranslations(force: boolean = false): Promise<void> {
 // Execute script
 const force = process.argv.includes("--force")
 pushTranslations(force)
-

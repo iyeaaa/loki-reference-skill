@@ -71,7 +71,10 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
   // Create AbortController for timeout
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 300_000) // 5 minutes timeout
+  // Longer timeout for test endpoints (10 minutes) due to processing time
+  const isTestEndpoint = endpoint.includes("/test/")
+  const timeoutMs = isTestEndpoint ? 600_000 : 300_000 // 10 min for tests, 5 min for others
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const response = await fetch(url, {

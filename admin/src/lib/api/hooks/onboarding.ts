@@ -671,21 +671,76 @@ type TestOnboardingResponse = {
   }
 }
 
+type JobStatusResponse = {
+  jobId: string
+  status: "processing" | "completed" | "failed"
+  progress: number
+  data?: TestOnboardingResponse
+  error?: string
+}
+
 /**
- * 온보딩 전체 테스트 mutation (Admin 전용)
+ * 온보딩 전체 테스트 mutation with polling (Admin 전용)
  */
 export function useTestOnboarding() {
-  return useMutation<TestOnboardingResponse, Error, TestOnboardingRequest>({
-    mutationFn: async (data) =>
-      apiFetch<TestOnboardingResponse>("/api/v1/test/onboarding", {
+  const [progress, setProgress] = useState(0)
+
+  const mutation = useMutation<TestOnboardingResponse, Error, TestOnboardingRequest>({
+    mutationFn: async (data) => {
+      // Step 1: Start the job
+      const startResponse = await apiFetch<{ jobId: string }>("/api/v1/test/onboarding", {
         method: "POST",
         body: JSON.stringify(data),
-      }),
+      })
+
+      const { jobId } = startResponse
+      console.log("[TestOnboarding] Job started:", jobId)
+
+      // Step 2: Poll for status
+      const pollInterval = 2000 // 2 seconds
+      const maxPolls = 300 // 10 minutes max (300 * 2s)
+      let polls = 0
+
+      while (polls < maxPolls) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval))
+        polls++
+
+        const statusResponse = await apiFetch<JobStatusResponse>(
+          `/api/v1/test/onboarding/${jobId}`,
+          {
+            method: "GET",
+          },
+        )
+
+        setProgress(statusResponse.progress)
+        console.log("[TestOnboarding] Status:", statusResponse.status, statusResponse.progress)
+
+        if (statusResponse.status === "completed") {
+          if (!statusResponse.data) {
+            throw new Error("Job completed but no data returned")
+          }
+          return statusResponse.data
+        }
+
+        if (statusResponse.status === "failed") {
+          throw new Error(statusResponse.error || "Job failed")
+        }
+      }
+
+      throw new Error("Job timeout after 10 minutes")
+    },
     onSuccess: () => {
+      setProgress(0)
       sonnerToast.success("온보딩 테스트가 완료되었습니다")
     },
     onError: (error) => {
+      setProgress(0)
       sonnerToast.error(`온보딩 테스트 실패: ${error.message}`)
     },
   })
+
+  return {
+    ...mutation,
+    progress,
+  }
 }

@@ -24,7 +24,7 @@ export async function initializeSheetsClient(): Promise<void> {
     throw new Error(
       "GOOGLE_CREDENTIALS environment variable is not set.\n" +
         "Please add GOOGLE_CREDENTIALS to .env file.\n" +
-        "Example: GOOGLE_CREDENTIALS='{\"type\":\"service_account\",...}'",
+        'Example: GOOGLE_CREDENTIALS=\'{"type":"service_account",...}\'',
     )
   }
 
@@ -156,7 +156,7 @@ export async function readSheetData(): Promise<TranslationRow[]> {
     const seenKeys = new Map<string, number>() // Track seen keys with row index
 
     for (const row of dataRows) {
-      if (!row[filenameIndex] || !row[keyIndex]) {
+      if (!(row[filenameIndex] && row[keyIndex])) {
         continue // Skip if required fields are missing
       }
 
@@ -181,9 +181,11 @@ export async function readSheetData(): Promise<TranslationRow[]> {
       // Check for duplicate keys
       const compositeKey = `${translationRow.filename}:${translationRow.key}`
       const existingIndex = seenKeys.get(compositeKey)
-      
+
       if (existingIndex !== undefined) {
-        console.warn(`⚠️  Warning: Duplicate key "${compositeKey}" found in Google Sheet, using last occurrence`)
+        console.warn(
+          `⚠️  Warning: Duplicate key "${compositeKey}" found in Google Sheet, using last occurrence`,
+        )
         result[existingIndex] = translationRow // Overwrite with last occurrence
       } else {
         seenKeys.set(compositeKey, result.length)
@@ -351,4 +353,3 @@ export async function getSheetLastModified(): Promise<string | null> {
     return null
   }
 }
-

@@ -6,10 +6,10 @@
  * 키의 첫 번째 부분으로 파일명 결정 (예: common.logout → common.csv)
  */
 
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import { parse } from "csv-parse/sync"
 import { stringify } from "csv-stringify/sync"
-import { readFileSync, writeFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
 import { getLanguages } from "./i18n-config.js"
 
 interface TranslationRow {
@@ -39,11 +39,11 @@ try {
     if (!namespace || rest.length === 0) continue
 
     const keyWithoutNamespace = rest.join(".")
-    
+
     // 한국어 스캔에서 복수형 키가 나오면 무시
     // (한국어는 복수형이 없으므로 i18next-scanner가 잘못 생성한 것)
     const pluralSuffixes = ["_other", "_one", "_zero", "_two", "_few", "_many"]
-    if (pluralSuffixes.some(suffix => keyWithoutNamespace.endsWith(suffix))) {
+    if (pluralSuffixes.some((suffix) => keyWithoutNamespace.endsWith(suffix))) {
       continue // 복수형 키는 건너뛰기
     }
 
@@ -138,4 +138,3 @@ function flattenKeys(obj: Record<string, any>, prefix = ""): string[] {
 
   return keys
 }
-

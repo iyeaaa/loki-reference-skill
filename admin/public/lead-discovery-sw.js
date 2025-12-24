@@ -88,9 +88,14 @@ async function getActiveSessions() {
 
     request.onerror = () => reject(new Error("활성 세션 조회 실패"))
     request.onsuccess = () => {
-      const activeStatuses = ["connecting", "streaming", "waiting_selection", "waiting_clarification"]
+      const activeStatuses = [
+        "connecting",
+        "streaming",
+        "waiting_selection",
+        "waiting_clarification",
+      ]
       const activeSessions = (request.result || []).filter((session) =>
-        activeStatuses.includes(session.status)
+        activeStatuses.includes(session.status),
       )
       resolve(activeSessions)
     }
@@ -123,7 +128,7 @@ self.addEventListener("install", (event) => {
       // 오프라인 폴백 페이지 등 필수 리소스 캐시
       // 현재는 최소한만 캐시
       return cache.addAll([])
-    })
+    }),
   )
 
   // 즉시 활성화
@@ -139,16 +144,18 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
       // 이전 버전 캐시 삭제
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames
-            .filter((name) => name.startsWith("lead-discovery-") && name !== CACHE_NAME)
-            .map((name) => caches.delete(name))
-        )
-      }),
+      caches
+        .keys()
+        .then((cacheNames) =>
+          Promise.all(
+            cacheNames
+              .filter((name) => name.startsWith("lead-discovery-") && name !== CACHE_NAME)
+              .map((name) => caches.delete(name)),
+          ),
+        ),
       // 모든 클라이언트에 대해 즉시 제어
       self.clients.claim(),
-    ])
+    ]),
   )
 })
 
@@ -232,40 +239,36 @@ self.addEventListener("fetch", (event) => {
     // 세션 상태 조회 API는 네트워크 우선, 실패 시 IndexedDB 폴백
     if (url.pathname.includes("/session/") && url.pathname.includes("/status")) {
       event.respondWith(
-        fetch(event.request)
-          .catch(async () => {
-            // 네트워크 실패 시 IndexedDB에서 세션 상태 조회
-            const sessionId = url.pathname.split("/session/")[1]?.split("/")[0]
-            if (sessionId) {
-              try {
-                const session = await getSession(sessionId)
-                if (session) {
-                  return new Response(
-                    JSON.stringify({
-                      status: session.status,
-                      progress: session.progress,
-                      hasResults: false,
-                      offline: true,
-                    }),
-                    {
-                      headers: { "Content-Type": "application/json" },
-                    }
-                  )
-                }
-              } catch {
-                // IndexedDB 조회 실패
+        fetch(event.request).catch(async () => {
+          // 네트워크 실패 시 IndexedDB에서 세션 상태 조회
+          const sessionId = url.pathname.split("/session/")[1]?.split("/")[0]
+          if (sessionId) {
+            try {
+              const session = await getSession(sessionId)
+              if (session) {
+                return new Response(
+                  JSON.stringify({
+                    status: session.status,
+                    progress: session.progress,
+                    hasResults: false,
+                    offline: true,
+                  }),
+                  {
+                    headers: { "Content-Type": "application/json" },
+                  },
+                )
               }
+            } catch {
+              // IndexedDB 조회 실패
             }
+          }
 
-            // 오프라인 응답
-            return new Response(
-              JSON.stringify({ error: "offline", message: "네트워크 연결 없음" }),
-              {
-                status: 503,
-                headers: { "Content-Type": "application/json" },
-              }
-            )
+          // 오프라인 응답
+          return new Response(JSON.stringify({ error: "offline", message: "네트워크 연결 없음" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
           })
+        }),
       )
       return
     }
@@ -303,7 +306,7 @@ self.addEventListener("sync", (event) => {
         } catch (error) {
           console.error("[SW] 동기화 복구 실패:", error)
         }
-      })()
+      })(),
     )
   }
 })
@@ -325,7 +328,7 @@ self.addEventListener("push", (event) => {
           badge: "/favicon-32x32.png",
           tag: `lead-discovery-${data.sessionId}`,
           data: { sessionId: data.sessionId },
-        })
+        }),
       )
     }
   } catch {
@@ -354,9 +357,8 @@ self.addEventListener("notificationclick", (event) => {
       if (self.clients.openWindow) {
         return self.clients.openWindow(url)
       }
-    })
+    }),
   )
 })
 
 console.log("[SW] Lead Discovery Service Worker 로드됨")
-

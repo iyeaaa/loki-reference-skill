@@ -4,7 +4,7 @@
  */
 
 import { writeFileSync } from "node:fs"
-import { searchBigQuery, InvalidQueryError } from "../src/services/bigquery-search.service"
+import { InvalidQueryError, searchBigQuery } from "../src/services/bigquery-search.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "../src/services/lead-discovery/nodes/bigquery-executor"
 
 async function main() {

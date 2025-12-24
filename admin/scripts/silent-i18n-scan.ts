@@ -34,4 +34,3 @@ async function silentScan() {
 }
 
 silentScan()
-

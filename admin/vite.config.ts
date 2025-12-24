@@ -1,12 +1,12 @@
-import path from "node:path";
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react-swc";
-import { defineConfig, searchForWorkspaceRoot } from "vite";
-import { cleanLoggerPlugin } from "./vite-plugins/clean-logger";
+import path from "node:path"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react-swc"
+import { defineConfig, searchForWorkspaceRoot } from "vite"
+import { cleanLoggerPlugin } from "./vite-plugins/clean-logger"
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), cleanLoggerPlugin()],
-  // Optimize dependency pre-bundling 
+  // Optimize dependency pre-bundling
   optimizeDeps: {
     // Exclude heavy packages from pre-bundling to allow dynamic imports
     exclude: ["shiki", "mermaid"],
@@ -15,19 +15,19 @@ export default defineConfig({
     info: (msg) => {
       // Filter out verbose vite messages
       if (msg.includes("vite:react-swc") || msg.includes("ROLLDOWN-VITE")) {
-        return;
+        return
       }
-      console.log(msg);
+      console.log(msg)
     },
     warn: (msg) => {
       // Only show important warnings
       if (msg.includes("vite:react-swc")) {
-        return; // Suppress react-swc plugin recommendation
+        return // Suppress react-swc plugin recommendation
       }
-      console.warn(msg);
+      console.warn(msg)
     },
     error: (msg) => {
-      console.error(msg);
+      console.error(msg)
     },
     clearScreen: () => {
       // Disable default clear screen
@@ -85,17 +85,17 @@ export default defineConfig({
             // Shiki - 구문 강조 (언어/테마 포함, ~8MB)
             // streamdown이 shiki를 사용하므로 함께 묶음
             if (id.includes("shiki") || id.includes("@shikijs")) {
-              return "shiki-vendor";
+              return "shiki-vendor"
             }
 
             // Mermaid - 다이어그램 렌더링 (~2MB)
             if (id.includes("mermaid")) {
-              return "mermaid-vendor";
+              return "mermaid-vendor"
             }
 
             // Streamdown - 마크다운 스트리밍 (shiki/mermaid 의존)
             if (id.includes("streamdown")) {
-              return "streamdown-vendor";
+              return "streamdown-vendor"
             }
 
             // ===== 큰 라이브러리 분리 =====
@@ -106,24 +106,24 @@ export default defineConfig({
               id.includes("codemirror") ||
               id.includes("@codemirror")
             ) {
-              return "md-editor-vendor";
+              return "md-editor-vendor"
             }
 
             // Monaco Editor
             if (id.includes("@monaco-editor") || id.includes("monaco-editor")) {
-              return "monaco-vendor";
+              return "monaco-vendor"
             }
 
             // Flow 차트 (ReactFlow + elkjs)
             if (id.includes("@xyflow/react") || id.includes("elkjs")) {
-              return "flow-vendor";
+              return "flow-vendor"
             }
 
             // ===== React 생태계 =====
 
             // Radix UI를 먼저 체크 (React보다 우선)
             if (id.includes("@radix-ui")) {
-              return "ui-vendor";
+              return "ui-vendor"
             }
 
             // React 코어
@@ -133,7 +133,7 @@ export default defineConfig({
               id.includes("react-router") ||
               id.includes("scheduler")
             ) {
-              return "react-vendor";
+              return "react-vendor"
             }
 
             // React 유틸리티 (react-xxx 패키지들)
@@ -142,30 +142,26 @@ export default defineConfig({
               id.includes("react-resizable-panels") ||
               id.includes("react-day-picker")
             ) {
-              return "react-utils-vendor";
+              return "react-utils-vendor"
             }
 
             // ===== 폼 및 데이터 관리 =====
 
             // 폼 관련
-            if (
-              id.includes("react-hook-form") ||
-              id.includes("@hookform") ||
-              id.includes("zod")
-            ) {
-              return "form-vendor";
+            if (id.includes("react-hook-form") || id.includes("@hookform") || id.includes("zod")) {
+              return "form-vendor"
             }
 
             // TanStack (React Query + Table)
             if (id.includes("@tanstack")) {
-              return "tanstack-vendor";
+              return "tanstack-vendor"
             }
 
             // ===== 시각화 =====
 
             // 차트 (Recharts + D3)
             if (id.includes("recharts") || id.includes("d3-")) {
-              return "chart-vendor";
+              return "chart-vendor"
             }
 
             // ===== 마크다운 (shiki 제외) =====
@@ -181,7 +177,7 @@ export default defineConfig({
               id.includes("mdast") ||
               id.includes("hast")
             ) {
-              return "markdown-vendor";
+              return "markdown-vendor"
             }
 
             // 구문 강조 (shiki 외)
@@ -190,49 +186,49 @@ export default defineConfig({
               id.includes("highlight.js") ||
               id.includes("prism")
             ) {
-              return "syntax-vendor";
+              return "syntax-vendor"
             }
 
             // ===== 기타 유틸리티 =====
 
             // 엑셀 라이브러리
             if (id.includes("xlsx") || id.includes("papaparse")) {
-              return "excel-vendor";
+              return "excel-vendor"
             }
 
             // 애니메이션
             if (id.includes("framer-motion")) {
-              return "animation-vendor";
+              return "animation-vendor"
             }
 
             // 국제화
             if (id.includes("i18next") || id.includes("react-i18next")) {
-              return "i18n-vendor";
+              return "i18n-vendor"
             }
 
             // AI/OpenAI
             if (id.includes("openai")) {
-              return "ai-vendor";
+              return "ai-vendor"
             }
 
             // Date 관련
             if (id.includes("date-fns")) {
-              return "date-vendor";
+              return "date-vendor"
             }
 
             // 캐러셀
             if (id.includes("embla-carousel")) {
-              return "carousel-vendor";
+              return "carousel-vendor"
             }
 
             // 아이콘
             if (id.includes("lucide-react")) {
-              return "icon-vendor";
+              return "icon-vendor"
             }
 
             // 상태 관리 (jotai, nuqs)
             if (id.includes("jotai") || id.includes("nuqs")) {
-              return "state-vendor";
+              return "state-vendor"
             }
 
             // 기타 유틸리티
@@ -244,35 +240,35 @@ export default defineConfig({
               id.includes("encoding-japanese") ||
               id.includes("utf8")
             ) {
-              return "utils-vendor";
+              return "utils-vendor"
             }
 
             // 나머지 node_modules는 vendor로
-            return "vendor";
+            return "vendor"
           }
 
           // 페이지별 청크 분리
           if (id.includes("src/pages/")) {
             if (id.includes("src/pages/sequences/designer")) {
-              return "page-sequence-designer";
+              return "page-sequence-designer"
             }
             if (id.includes("src/pages/sequences")) {
-              return "page-sequences";
+              return "page-sequences"
             }
             if (id.includes("src/pages/leads")) {
-              return "page-leads";
+              return "page-leads"
             }
             if (id.includes("src/pages/customer-groups")) {
-              return "page-customer-groups";
+              return "page-customer-groups"
             }
             if (id.includes("src/pages/email-templates")) {
-              return "page-email-templates";
+              return "page-email-templates"
             }
             if (id.includes("src/pages/workspaces")) {
-              return "page-workspaces";
+              return "page-workspaces"
             }
             if (id.includes("src/pages/users")) {
-              return "page-users";
+              return "page-users"
             }
           }
         },
@@ -281,4 +277,4 @@ export default defineConfig({
     // 매니페스트 파일 생성 (선택적)
     manifest: true,
   },
-});
+})

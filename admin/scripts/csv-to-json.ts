@@ -5,9 +5,9 @@
  * locales/*.csv 파일들을 읽어서 각 언어별 JSON 파일로 변환
  */
 
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { basename, join } from "node:path"
 import { parse } from "csv-parse/sync"
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs"
-import { join, basename } from "node:path"
 import { getLanguages } from "./i18n-config.js"
 import { createLogger } from "./logger.js"
 
@@ -105,4 +105,3 @@ function setNestedValue(obj: Record<string, any>, path: string, value: string) {
 
   current[keys[keys.length - 1]] = value
 }
-

@@ -3,22 +3,22 @@
 /**
  * Find and remove duplicate keys in CSV files
  * yarn i18n:dedupe [--auto]
- * 
+ *
  * Without --auto flag, prompts user to select which occurrence to keep
  * With --auto flag, automatically keeps last occurrence
  */
 
-import { readFileSync, readdirSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { parse } from "csv-parse/sync"
 import { createInterface } from "node:readline/promises"
-import { writeCSV } from "./i18n-utils.js"
+import { parse } from "csv-parse/sync"
 import { getLanguages } from "./i18n-config.js"
 import type { LocalTranslationRow } from "./i18n-types.js"
+import { writeCSV } from "./i18n-utils.js"
 
 const LOCALES_DIR = join(process.cwd(), "locales")
 
-async function dedupeTranslations(auto: boolean = false): Promise<void> {
+async function dedupeTranslations(auto = false): Promise<void> {
   console.log("🔍 Checking for duplicate keys in CSV files...\n")
 
   const csvFiles = readdirSync(LOCALES_DIR).filter(
@@ -98,7 +98,9 @@ async function dedupeTranslations(auto: boolean = false): Promise<void> {
               selected = Number.parseInt(answer.trim(), 10)
 
               if (Number.isNaN(selected) || selected < 1 || selected > occurrences.length) {
-                console.log(`   ❌ Invalid input. Please enter a number between 1 and ${occurrences.length}`)
+                console.log(
+                  `   ❌ Invalid input. Please enter a number between 1 and ${occurrences.length}`,
+                )
               }
             }
 
@@ -155,6 +157,3 @@ if (auto) {
   console.log("🤖 Running in auto mode (keeping last occurrence)\n")
 }
 dedupeTranslations(auto)
-
-
-

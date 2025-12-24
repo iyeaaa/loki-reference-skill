@@ -67,9 +67,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/lib/api/generated/**"
-      ]
+      "includes": ["src/lib/api/generated/**"]
     }
   ],
   "formatter": {
@@ -92,8 +90,5 @@
       "bracketSameLine": false
     }
   },
-  "extends": [
-    "ultracite/core",
-    "ultracite/react"
-  ]
+  "extends": ["ultracite/core", "ultracite/react"]
 }

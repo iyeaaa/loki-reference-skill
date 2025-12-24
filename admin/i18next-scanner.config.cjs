@@ -1,3 +1,4 @@
+"use strict"
 /**
  * i18next-scanner 설정 파일
  * 소스 코드에서 t('key') 형태의 번역 키를 자동으로 스캔
@@ -29,9 +30,7 @@ module.exports = {
     ns: ["translation"], // 네임스페이스
     defaultLng: "ko",
     defaultNs: "translation",
-    defaultValue: (lng, ns, key) => {
-      return `[NO TRANSLATION] ${key}`
-    },
+    defaultValue: (lng, ns, key) => `[NO TRANSLATION] ${key}`,
     resource: {
       loadPath: "locales/.scanned/{{lng}}/{{ns}}.json",
       savePath: "{{lng}}/{{ns}}.json",
@@ -48,4 +47,3 @@ module.exports = {
     },
   },
 }
-

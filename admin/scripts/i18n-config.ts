@@ -26,7 +26,9 @@ export function getLanguages(): string[] {
     // This should match lngs: ["ko", "en"] pattern in the config
     const match = configContent.match(/lngs:\s*\[(.*?)\]/s)
     if (!match) {
-      console.warn("⚠️  Could not find lngs in i18next-scanner.config.cjs, using default: ['ko', 'en']")
+      console.warn(
+        "⚠️  Could not find lngs in i18next-scanner.config.cjs, using default: ['ko', 'en']",
+      )
       cachedLanguages = ["ko", "en"]
       return cachedLanguages
     }
@@ -60,4 +62,3 @@ export function getDefaultLanguage(): string {
   const languages = getLanguages()
   return languages[0] || "ko"
 }
-

@@ -772,6 +772,7 @@ export const INDUSTRY_NAMES: Record<string, string> = {
   food: "food beverage",
   it_saas: "software technology saas",
   manufacturing: "manufacturing",
+  other: "business services professional",
 }
 
 /**
@@ -1128,7 +1129,14 @@ async function discoverLeadsForOnboarding(
   const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
 
   // Get target customer industries from B2B agent (1-3 industries that would BUY from this industry)
-  const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
+  // For "other" industry, use generic business keywords without B2B agent analysis
+  let targetIndustries: string[]
+  if (surveyData.industry === "other") {
+    console.log(`[LeadDiscovery] "Other" industry selected - using generic business keywords`)
+    targetIndustries = ["business", "services", "professional"]
+  } else {
+    targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
+  }
   console.log(`[LeadDiscovery] Target customer industries: ${targetIndustries.join(", ")}`)
 
   // In-memory state tracking

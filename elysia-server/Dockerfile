@@ -20,6 +20,8 @@ COPY drizzle.config.ts ./
 COPY drizzle ./drizzle
 # Copy scripts
 COPY scripts ./scripts
+# Copy data files (email examples, etc.)
+COPY data ./data
 # Copy entrypoint script
 COPY entrypoint.sh ./
 # Copy .env files

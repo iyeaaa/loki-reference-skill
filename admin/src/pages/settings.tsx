@@ -7,7 +7,6 @@ import {
   FileText,
   FlaskConical,
   Globe,
-  Key,
   ListTree,
   Mail,
   Menu,
@@ -56,7 +55,6 @@ import { EmailDraftTest } from "./settings/EmailDraftTest"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 import { JobLogsPage } from "./settings/job-logs"
 import { LanguageSettings } from "./settings/LanguageSettings"
-import { LicenseKeySettings } from "./settings/LicenseKeySettings"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
@@ -316,12 +314,6 @@ export default function SettingsPage() {
         id: "activity-logs",
         label: "활동 로그",
         icon: <Activity className="h-4 w-4" />,
-        permission: "admin-only",
-      },
-      {
-        id: "license-key",
-        label: "라이센스 키",
-        icon: <Key className="h-4 w-4" />,
         permission: "admin-only",
       },
       // ───────────────────────────────────────────────────────────────────────
@@ -607,8 +599,6 @@ export default function SettingsPage() {
         return <AuditLogsPage />
       case "activity-logs":
         return <ActivityLogsPage />
-      case "license-key":
-        return <LicenseKeySettings />
       // Billing Pages
       case "billing-products":
         return <ProductsPage />

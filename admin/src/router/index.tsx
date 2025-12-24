@@ -8,7 +8,6 @@ import { getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
-import LicenseProtectedLoginPage from "../pages/LicenseProtectedLoginPage"
 // 로그인 페이지만 즉시 로드 (첫 진입점)
 import LoginPage from "../pages/LoginPage"
 import NewTrialPage from "../pages/NewTrialPage"
@@ -143,11 +142,10 @@ export const router = createBrowserRouter([
       </AuthWrapper>
     ),
     children: [
-      // /auth route - requires license key verification in production
-      {
-        path: "auth",
-        element: import.meta.env.DEV ? <LoginPage /> : <LicenseProtectedLoginPage />,
-      },
+      // /auth route is development-only (use /trial in production)
+      ...(import.meta.env.DEV
+        ? [{ path: "auth", element: <LoginPage /> }]
+        : [{ path: "trial", element: <TrialRedirect /> }]),
       {
         path: "login",
         element: <LoginRedirect />,

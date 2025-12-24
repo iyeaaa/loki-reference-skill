@@ -28,9 +28,10 @@ client.use({
     return request
   },
   onResponse({ response }) {
-    // Handle 401 unauthorized
+    // Handle 401 unauthorized (삭제된 사용자, 비활성화된 사용자 포함)
     if (response.status === 401) {
       localStorage.removeItem("authToken")
+      localStorage.removeItem("user")
       window.location.href = "/auth"
     }
     return response

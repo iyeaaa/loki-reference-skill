@@ -19,6 +19,7 @@ import {
   type IamResource,
 } from "../constants/iam-resources"
 import * as iamService from "../services/iam.service"
+import { getUser } from "../services/user.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import { getUserIdFromToken } from "../utils/auth.util"
 import logger from "../utils/logger"
@@ -374,14 +375,29 @@ export const permissionGuard = new Elysia({ name: "permission-guard" })
         }
       }
 
-      // 3. 워크스페이스 ID 추출 (body는 request에서 직접 읽지 않음)
+      // 3. 사용자 존재 및 활성화 상태 확인
+      const user = await getUser(userId)
+      if (!user || !user.isActive) {
+        logger.warn({ userId, userExists: !!user, isActive: user?.isActive }, "User not found or inactive")
+        return {
+          permission: {
+            userId: null,
+            memberId: null,
+            workspaceId: null,
+            isAuthenticated: false,
+            isAdmin: false,
+          },
+        }
+      }
+
+      // 4. 워크스페이스 ID 추출 (body는 request에서 직접 읽지 않음)
       const workspaceId = extractWorkspaceId(
         params as Record<string, string>,
         null, // body를 null로 전달하여 파싱 방지
         query as Record<string, string>,
       )
 
-      // 4. 멤버 ID 조회
+      // 5. 멤버 ID 조회
       let memberId: string | null = null
       let isAdmin = false
 

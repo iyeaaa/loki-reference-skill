@@ -282,8 +282,31 @@ export async function deleteAccount(accountId: string): Promise<boolean> {
       },
     })
 
-    logger.info({ accountId, success: response.ok }, "Unipile account deletion attempted")
-    return response.ok
+    if (response.ok) {
+      logger.info({ accountId }, "Unipile account deleted successfully")
+      return true
+    }
+
+    // 삭제 실패 시 상세 정보 로깅
+    const statusCode = response.status
+    let errorBody: string | object = ""
+    try {
+      errorBody = await response.json()
+    } catch {
+      errorBody = await response.text().catch(() => "")
+    }
+
+    // 404는 이미 삭제된 계정이므로 성공으로 처리
+    if (statusCode === 404) {
+      logger.info({ accountId }, "Unipile account already deleted (404)")
+      return true
+    }
+
+    logger.warn(
+      { accountId, statusCode, errorBody },
+      "Failed to delete Unipile account",
+    )
+    return false
   } catch (error) {
     logger.error({ err: error, accountId }, "Error deleting Unipile account")
     return false

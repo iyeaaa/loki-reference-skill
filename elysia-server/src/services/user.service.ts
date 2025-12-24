@@ -189,6 +189,7 @@ export async function softDeleteUser(id: string) {
     apiKey: string | null
     emailAddress: string
     workspaceId: string
+    provider: "sendgrid" | "nylas" | "unipile"
   }[] = []
 
   if (ownedWorkspaceIds.length > 0) {
@@ -198,6 +199,7 @@ export async function softDeleteUser(id: string) {
         apiKey: userEmailAccounts.apiKey,
         emailAddress: userEmailAccounts.emailAddress,
         workspaceId: userEmailAccounts.workspaceId,
+        provider: userEmailAccounts.provider,
       })
       .from(userEmailAccounts)
       .where(
@@ -213,6 +215,7 @@ export async function softDeleteUser(id: string) {
         apiKey: userEmailAccounts.apiKey,
         emailAddress: userEmailAccounts.emailAddress,
         workspaceId: userEmailAccounts.workspaceId,
+        provider: userEmailAccounts.provider,
       })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.userId, id))
@@ -223,13 +226,20 @@ export async function softDeleteUser(id: string) {
     "Found email accounts for user deletion",
   )
 
-  // 1-3. Nylas 그랜트 취소
+  // 1-3. 외부 서비스 연동 해제 (Nylas, Unipile)
   let nylasGrantsDeleted = 0
   let nylasGrantsFailed = 0
+  let unipileAccountsDeleted = 0
+  let unipileAccountsFailed = 0
+
+  // Unipile 삭제 함수 동적 import (순환 의존성 방지)
+  const { deleteAccount: deleteUnipileAccount } = await import("./unipile.service")
 
   for (const account of allEmailAccounts) {
-    // Nylas grantId인 경우만 취소 ("SG"로 시작하는 SendGrid API 키 제외)
-    if (account.apiKey && !account.apiKey.startsWith("SG")) {
+    if (!account.apiKey) continue
+
+    // Nylas 계정 삭제
+    if (account.provider === "nylas") {
       try {
         await deleteGrant(account.apiKey)
         nylasGrantsDeleted++
@@ -244,7 +254,6 @@ export async function softDeleteUser(id: string) {
         )
       } catch (error) {
         nylasGrantsFailed++
-        // 로그만 출력하고 실패시키지 않음 - 그랜트가 이미 무효할 수 있음
         logger.warn(
           {
             err: error,
@@ -257,6 +266,48 @@ export async function softDeleteUser(id: string) {
         )
       }
     }
+
+    // Unipile 계정 삭제
+    if (account.provider === "unipile") {
+      try {
+        const deleted = await deleteUnipileAccount(account.apiKey)
+        if (deleted) {
+          unipileAccountsDeleted++
+          logger.info(
+            {
+              unipileAccountId: account.apiKey,
+              userId: id,
+              emailAddress: account.emailAddress,
+              workspaceId: account.workspaceId,
+            },
+            "Successfully deleted Unipile account during user deletion",
+          )
+        } else {
+          unipileAccountsFailed++
+          logger.warn(
+            {
+              unipileAccountId: account.apiKey,
+              userId: id,
+              emailAddress: account.emailAddress,
+              workspaceId: account.workspaceId,
+            },
+            "Failed to delete Unipile account (API returned false)",
+          )
+        }
+      } catch (error) {
+        unipileAccountsFailed++
+        logger.warn(
+          {
+            err: error,
+            unipileAccountId: account.apiKey,
+            userId: id,
+            emailAddress: account.emailAddress,
+            workspaceId: account.workspaceId,
+          },
+          "Failed to delete Unipile account during user deletion (may be already deleted)",
+        )
+      }
+    }
   }
 
   logger.info(
@@ -265,8 +316,10 @@ export async function softDeleteUser(id: string) {
       totalEmailAccounts: allEmailAccounts.length,
       nylasGrantsDeleted,
       nylasGrantsFailed,
+      unipileAccountsDeleted,
+      unipileAccountsFailed,
     },
-    "Completed Nylas grant deletion process",
+    "Completed external service cleanup process",
   )
 
   // ============================================================================
@@ -406,16 +459,28 @@ export async function softDeleteUser(id: string) {
         "Deleted sequence_enrollments for remaining user email accounts",
       )
 
-      // 3-4-2. workflow_executions의 user_email_account_id 처리
+      // 3-4-2. workflow_executions의 user_email_account_id 처리 (테이블이 존재하는 경우에만)
       // workflow_executions.user_email_account_id -> user_email_accounts (no onDelete = RESTRICT)
-      await tx.execute(
-        sql`DELETE FROM workflow_executions
-            WHERE user_email_account_id IN (${sql.join(
-              accountIds.map((aid) => sql`${aid}`),
-              sql`, `,
-            )})`,
+      // Note: try-catch는 PostgreSQL 트랜잭션을 중단시키므로, 테이블 존재 확인 후 삭제
+      const tableExists = await tx.execute(
+        sql`SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'workflow_executions'
+        ) as exists`,
       )
-      logger.info({ userId: id }, "Deleted workflow_executions for remaining user email accounts")
+      if (tableExists.rows[0]?.exists) {
+        await tx.execute(
+          sql`DELETE FROM workflow_executions
+              WHERE user_email_account_id IN (${sql.join(
+                accountIds.map((aid) => sql`${aid}`),
+                sql`, `,
+              )})`,
+        )
+        logger.info({ userId: id }, "Deleted workflow_executions for remaining user email accounts")
+      } else {
+        logger.debug({ userId: id }, "workflow_executions table not found (skipping)")
+      }
 
       // 3-4-3. emails 삭제 (user_email_account_id RESTRICT 제약)
       const deletedEmails = await tx

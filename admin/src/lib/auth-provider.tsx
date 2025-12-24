@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
+import { env } from "@/lib/env"
 
 type User = {
   id: string
@@ -24,6 +25,38 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const API_BASE_URL = env.VITE_API_URL || "http://localhost:3001"
+
+/**
+ * 백엔드에서 사용자 세션 유효성 확인
+ * 삭제되거나 비활성화된 사용자는 null 반환
+ */
+async function verifyUserSession(token: string): Promise<User | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+
+    if (response.status === 401) {
+      // 사용자가 삭제되거나 비활성화됨
+      return null
+    }
+
+    if (!response.ok) {
+      throw new Error("Failed to verify user session")
+    }
+
+    const data = await response.json()
+    return data.data as User
+  } catch (error) {
+    console.error("Failed to verify user session:", error)
+    throw error
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -34,17 +67,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userData = localStorage.getItem("user")
 
     if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData)
-        setUser(parsedUser)
-      } catch (error) {
-        console.error("Failed to parse user data:", error)
-        localStorage.removeItem("authToken")
-        localStorage.removeItem("user")
-      }
+      // 토큰이 있으면 백엔드에서 사용자 유효성 확인
+      verifyUserSession(token)
+        .then((verifiedUser) => {
+          if (verifiedUser) {
+            setUser(verifiedUser)
+            // 최신 정보로 localStorage 업데이트
+            localStorage.setItem("user", JSON.stringify(verifiedUser))
+          } else {
+            // 사용자가 삭제됨 또는 비활성화됨
+            localStorage.removeItem("authToken")
+            localStorage.removeItem("user")
+            setUser(null)
+          }
+        })
+        .catch(() => {
+          // API 호출 실패 시 기존 데이터 사용 (오프라인 등)
+          try {
+            const parsedUser = JSON.parse(userData)
+            setUser(parsedUser)
+          } catch {
+            localStorage.removeItem("authToken")
+            localStorage.removeItem("user")
+          }
+        })
+        .finally(() => {
+          setIsLoading(false)
+        })
+    } else {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }, [])
 
   const login = async (emailOrToken: string, passwordOrUser?: string | User, isOAuth?: boolean) => {

@@ -53,6 +53,7 @@ import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
 import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
+import { testRoutes } from "./routes/test.routes"
 import { unipileRoutes } from "./routes/unipile.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
@@ -241,6 +242,8 @@ const app = new Elysia()
   .use(bullmqTestRoutes)
   // Job Logs routes
   .use(jobLogsRoutes)
+  // Test routes
+  .use(testRoutes)
 
   .listen(config.port)
 

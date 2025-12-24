@@ -8,7 +8,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { toast as sonnerToast } from "sonner"
 import { API_BASE_URL } from "@/lib/env"
+import { apiFetch } from "../client"
 import { type OnboardingSurveyData, onboardingApi } from "../services/onboarding"
 
 // ====================================
@@ -624,4 +626,66 @@ export function useOnboardingWithSSE(
     // Combined status
     isAutoGenerating: sse.isConnected && !sse.isComplete && !sse.hasError,
   }
+}
+
+// ====================================
+// TEST HOOK (Admin Only)
+// ====================================
+
+type TestOnboardingRequest = {
+  workspaceName: string
+  workspaceDescription?: string
+  industry: string
+  target: string
+  country: string
+}
+
+type TestOnboardingResponse = {
+  leadDiscovery: {
+    stats: {
+      totalFound: number
+      totalEnriched: number
+      totalWithEmail: number
+      duplicatesSkipped: number
+      iterations: number
+    }
+    leads: Array<{
+      company: string
+      website: string
+      industry: string
+      country: string
+      employees: string
+      email?: string
+      description?: string
+    }>
+  }
+  emailGeneration: {
+    templates: Array<{
+      step: number
+      type: string
+      delayDays: number
+      subject: string
+      bodyText: string
+      bodyHtml: string
+    }>
+  }
+}
+
+/**
+ * 온보딩 전체 테스트 mutation (Admin 전용)
+ */
+export function useTestOnboarding() {
+  return useMutation<TestOnboardingResponse, Error, TestOnboardingRequest>({
+    mutationFn: async (data) =>
+      apiFetch<TestOnboardingResponse>("/api/v1/test/onboarding", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      sonnerToast.success("온보딩 테스트가 완료되었습니다")
+    },
+    onError: (error) => {
+      sonnerToast.error(`온보딩 테스트 실패: ${error.message}`)
+    },
+  })
 }

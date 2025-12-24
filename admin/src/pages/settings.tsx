@@ -12,6 +12,7 @@ import {
   Mail,
   Menu,
   Package,
+  Rocket,
   ScrollText,
   Shield,
   ShieldCheck,
@@ -58,6 +59,7 @@ import { JobLogsPage } from "./settings/job-logs"
 import { LanguageSettings } from "./settings/LanguageSettings"
 import { LicenseKeySettings } from "./settings/LicenseKeySettings"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
+import { OnboardingTest } from "./settings/OnboardingTest"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
@@ -376,6 +378,12 @@ export default function SettingsPage() {
         icon: <Mail className="h-4 w-4" />,
         permission: "admin-only",
       },
+      {
+        id: "onboarding-test",
+        label: "온보딩 전체 테스트",
+        icon: <Rocket className="h-4 w-4" />,
+        permission: "admin-only",
+      },
     ],
     [t],
   )
@@ -625,6 +633,8 @@ export default function SettingsPage() {
         return <JobLogsPage />
       case "email-draft-test":
         return <EmailDraftTest />
+      case "onboarding-test":
+        return <OnboardingTest />
       default:
         return null
     }

@@ -130,14 +130,14 @@ export interface UploadProgress {
 // Gemini API 설정
 export interface GeminiConfig {
   apiKey: string
-  model: string // "gemini-2.0-flash-exp" 또는 "gemini-3-pro-preview"
+  model: string // "gemini-3-flash-preview-exp" 또는 "gemini-3-pro-preview"
   maxOutputTokens?: number
   temperature?: number
 }
 
 // 기본 설정
 export const DEFAULT_GEMINI_CONFIG: Partial<GeminiConfig> = {
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-3-flash-preview-exp",
   maxOutputTokens: 8192,
   temperature: 0.2,
 }

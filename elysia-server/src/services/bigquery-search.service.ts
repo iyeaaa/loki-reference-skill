@@ -608,7 +608,7 @@ export const convertNaturalLanguageToSql = async (
         `[BigQuery] Calling Gemini (attempt ${attempt}/${MAX_CORRECTION_ATTEMPTS + 1})...`,
       )
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
       })
       const geminiElapsed = Date.now() - startTime
@@ -683,7 +683,7 @@ SQL: ${sqlToValidate}
 설명:`
 
       const explanationResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-3-flash-preview",
         contents: explanationPrompt,
       })
 

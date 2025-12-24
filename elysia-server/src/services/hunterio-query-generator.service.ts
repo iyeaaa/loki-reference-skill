@@ -3,7 +3,7 @@
  *
  * Two-step LLM approach:
  * 1. GPT-4o: Generate initial query strategy from survey data
- * 2. GPT-4o-mini: Structured extraction with Zod schema
+ * 2. gpt-5-mini: Structured extraction with Zod schema
  */
 
 import { ChatOpenAI } from "@langchain/openai"
@@ -26,10 +26,10 @@ const generatorLLM = new ChatOpenAI({
   temperature: 0.3,
 })
 
-// Step 2: GPT-4o-mini for structured extraction
+// Step 2: gpt-5-mini for structured extraction
+// Note: gpt-5-mini does not support temperature, uses reasoning_effort instead
 const extractorLLM = new ChatOpenAI({
-  model: "gpt-4o-mini",
-  temperature: 0,
+  model: "gpt-5-mini",
 })
 
 /**
@@ -89,7 +89,7 @@ export interface SurveyData {
  *
  * Two-step LLM approach:
  * 1. GPT-4o generates search strategy
- * 2. GPT-4o-mini extracts structured params with Zod
+ * 2. gpt-5-mini extracts structured params with Zod
  */
 export async function generateHunterioQuery(
   surveyData: SurveyData,
@@ -125,7 +125,7 @@ Be specific and actionable. Focus on small to medium businesses.`
     console.log("[HunterioQueryGenerator] Strategy generated:", `${strategy.substring(0, 200)}...`)
 
     // =============================================
-    // STEP 2: GPT-4o-mini - Structured extraction
+    // STEP 2: gpt-5-mini - Structured extraction
     // =============================================
     const structuredLLM = extractorLLM.withStructuredOutput(HunterQueryOutputSchema)
 
@@ -149,7 +149,7 @@ Rules:
 - Keep industry list to 2-3 max
 - Industries MUST be exact matches from the valid list above`
 
-    console.log("[HunterioQueryGenerator] Step 2: Extracting structured params with GPT-4o-mini")
+    console.log("[HunterioQueryGenerator] Step 2: Extracting structured params with gpt-5-mini")
     const extracted = await structuredLLM.invoke(extractionPrompt)
 
     // Transform simplified schema to Hunter.io API format

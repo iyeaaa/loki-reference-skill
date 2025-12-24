@@ -65,10 +65,11 @@ IMPORTANT: Vary locations if it makes sense for the query. Don't always use the 
           ),
       })
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -78,7 +79,6 @@ IMPORTANT: Vary locations if it makes sense for the query. Don't always use the 
             text: {
               format: zodTextFormat(queriesSchema, "SearchQueries"),
             },
-            temperature: 0.8, // Higher temperature for more variety
           }),
         { retries: 3 },
       )

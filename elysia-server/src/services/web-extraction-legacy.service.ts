@@ -275,7 +275,7 @@ ${combinedContent.substring(0, 15000)}${customSearchFields}
     const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
 
     const { text: responseText } = await generateText({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-5-mini"),
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,

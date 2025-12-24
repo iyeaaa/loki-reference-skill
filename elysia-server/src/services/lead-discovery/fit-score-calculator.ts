@@ -8,9 +8,9 @@ import { ChatOpenAI } from "@langchain/openai"
 import { getDefaultFitScoreRedisCache } from "./fit-score-redis-cache"
 import { leadDiscoveryLogger } from "./logger"
 
+// Note: gpt-5-mini does not support temperature, uses reasoning_effort instead
 const llm = new ChatOpenAI({
-  model: "gpt-4o-mini",
-  temperature: 0,
+  model: "gpt-5-mini",
 })
 
 export interface LeadForScoring {

@@ -10,10 +10,10 @@ import { validateWebReaderSummaryParams } from "../core/validate"
 
 /**
  * Configuration for Web Reader Summary (optional overrides)
+ * Note: gpt-5-mini does not support temperature
  */
 export interface WebReaderSummaryConfig {
   model?: string
-  temperature?: number
   maxContentLength?: number
 }
 
@@ -99,13 +99,12 @@ export async function executeWebReaderSummary(
   // Step 4: Call LLM to get answer (I/O operation)
   try {
     const openai = createOpenAI({ apiKey: config.openai.apiKey })
-    const model = options?.model ?? "gpt-4o-mini"
-    const temperature = options?.temperature ?? 0.3
+    const model = options?.model ?? "gpt-5-mini"
 
+    // Note: gpt-5-mini does not support temperature
     const { text } = await generateText({
       model: openai(model),
       prompt,
-      temperature,
     })
 
     logger?.info("Web Reader Summary completed successfully", {

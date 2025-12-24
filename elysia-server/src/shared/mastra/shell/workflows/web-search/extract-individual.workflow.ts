@@ -96,10 +96,11 @@ Return results with priority >= 2, sorted by priority (highest first).`
         ),
       })
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -109,7 +110,6 @@ Return results with priority >= 2, sorted by priority (highest first).`
             text: {
               format: zodTextFormat(evalSchema, "PageEvaluation"),
             },
-            temperature: 0.3,
           }),
         { retries: 3 },
       )
@@ -219,10 +219,11 @@ RULES:
           .optional(),
       })
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -232,7 +233,6 @@ RULES:
             text: {
               format: zodTextFormat(companySchema, "CompanyExtraction"),
             },
-            temperature: 0.2,
           }),
         { retries: 3 },
       )

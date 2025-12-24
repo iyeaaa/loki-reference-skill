@@ -5,6 +5,11 @@
  * This script simulates the actual onboarding lead discovery process.
  * It uses the same fields and values as the real onboarding flow.
  *
+ * NEW: Now uses the enhanced hybrid search strategy with:
+ * - Perplexity-first for non-US countries
+ * - BigQuery-first for US/UK/Canada/Australia
+ * - Description enrichment and relevance scoring
+ *
  * Usage:
  *   bun run test:lead-discovery
  */
@@ -14,8 +19,13 @@ import { join } from "node:path"
 import * as p from "@clack/prompts"
 import { config } from "../src/config"
 import { searchBigQuery } from "../src/services/bigquery-search.service"
+import {
+  enrichLeadsWithDescriptions,
+  type LeadForDescriptionEnrichment,
+} from "../src/services/lead-description-enrichment.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "../src/services/lead-discovery/nodes/bigquery-executor"
 import { enrichLead } from "../src/services/lead-enrichment.service"
+import { SEARCH_CONFIG, searchAndEnrichLeads } from "../src/services/lead-search-enrichment.service"
 import { COUNTRY_NAMES, INDUSTRY_NAMES } from "../src/services/onboarding.service"
 import {
   createB2BCustomerIndustryAgent,
@@ -370,6 +380,9 @@ function displayLeads(
     totalWithEmail: number
     duplicatesSkipped: number
     iterations: number
+    fromBigQuery?: number
+    fromPerplexity?: number
+    fromHunterIO?: number
   },
 ) {
   console.log("\n")
@@ -382,6 +395,20 @@ function displayLeads(
   log(`   이메일 확보: ${stats.totalWithEmail}개`, colors.green)
   log(`   중복 제외: ${stats.duplicatesSkipped}개`, colors.dim)
   log(`   반복 횟수: ${stats.iterations}회`, colors.dim)
+
+  // Display source breakdown if available (Enhanced mode)
+  if (stats.fromBigQuery !== undefined || stats.fromPerplexity !== undefined) {
+    log(`\n📈 데이터 소스별 분포:`, colors.bright + colors.cyan)
+    if (stats.fromBigQuery !== undefined) {
+      log(`   BigQuery: ${stats.fromBigQuery}개`, colors.dim)
+    }
+    if (stats.fromPerplexity !== undefined) {
+      log(`   Perplexity: ${stats.fromPerplexity}개`, colors.dim)
+    }
+    if (stats.fromHunterIO !== undefined && stats.fromHunterIO > 0) {
+      log(`   Hunter.io: ${stats.fromHunterIO}개`, colors.dim)
+    }
+  }
 
   // Display sample leads
   console.log("\n")
@@ -425,10 +452,142 @@ function displayLeads(
   log(`   - 즉시 영업 가능한 리드: ${leads.length}개`, colors.dim)
 }
 
+/**
+ * 🆕 NEW: Enhanced Lead Discovery using Hybrid Search Strategy
+ * - Uses Perplexity-first for non-US countries
+ * - Uses BigQuery-first for US/UK/Canada/Australia
+ * - Includes description enrichment
+ */
+async function discoverLeadsEnhanced(options: {
+  industry: string
+  target: string
+  country: string
+  companyDescription?: string
+}): Promise<{
+  leads: LeadData[]
+  stats: {
+    totalFound: number
+    totalEnriched: number
+    totalWithEmail: number
+    duplicatesSkipped: number
+    iterations: number
+    fromBigQuery: number
+    fromPerplexity: number
+    fromHunterIO: number
+  }
+}> {
+  const countryName = COUNTRY_NAMES[options.country] || options.country
+  const industryName = INDUSTRY_NAMES[options.industry] || options.industry
+
+  log(`\n📍 검색 조건 (Enhanced Hybrid Strategy):`, colors.cyan)
+  log(`   산업: ${options.industry} → "${industryName}"`, colors.dim)
+  log(`   타겟: ${options.target}`, colors.dim)
+  log(`   국가: ${options.country} → "${countryName}"`, colors.dim)
+  if (options.companyDescription) {
+    log(`   회사 특성: "${options.companyDescription}"`, colors.dim)
+  }
+
+  // Check if this is a BigQuery-rich country
+  const isBigQueryRich = SEARCH_CONFIG.BIGQUERY_RICH_COUNTRIES.some(
+    (c) => c.toLowerCase() === countryName.toLowerCase(),
+  )
+  log(
+    `   전략: ${isBigQueryRich ? "BigQuery 우선 (데이터 풍부)" : "Perplexity 우선 (BigQuery 데이터 부족)"}`,
+    colors.yellow,
+  )
+
+  const s = p.spinner()
+  s.start(`하이브리드 검색으로 바이어 리스트 발견 중...`)
+
+  try {
+    // 쿼리 구성: description이 있으면 더 구체적인 검색 수행
+    const query = options.companyDescription
+      ? `${options.companyDescription} ${industryName} companies in ${countryName}`
+      : `${industryName} companies in ${countryName}`
+
+    // Use the new searchAndEnrichLeads function with hybrid strategy + AI reranking
+    const result = await searchAndEnrichLeads(
+      30, // targetLeadCount
+      query,
+      0, // minimumMatchScore (0 = no filtering)
+      async (progress) => {
+        s.message(`${progress.phase}: ${progress.message}`)
+      },
+      {
+        industry: industryName,
+        country: countryName,
+        target: options.target,
+        // 🆕 AI 리랭킹을 위한 찾고자 하는 회사 특성
+        targetCompanyDescription: options.companyDescription,
+      },
+    )
+
+    s.stop(`✅ ${result.leads.length}개의 검증된 바이어 리스트 발견 완료`)
+
+    // Transform to LeadData format
+    const leads: LeadData[] = result.leads.map((lead) => ({
+      company: lead.companyName,
+      website: lead.websiteUrl,
+      industry: lead.businessType || "",
+      employees: lead.employeeCount || "",
+      country: lead.country || countryName,
+      enriched: {
+        companyName: lead.companyName,
+        websiteUrl: lead.websiteUrl,
+        businessType: lead.businessType || "",
+        country: lead.country || countryName,
+        employeeCount: lead.employeeCount || "",
+        description: lead.description,
+        primaryEmail: lead.primaryEmail || undefined,
+      },
+    }))
+
+    return {
+      leads,
+      stats: {
+        totalFound: result.stats.totalFound,
+        totalEnriched: result.stats.totalFound,
+        totalWithEmail: result.stats.withEmails,
+        duplicatesSkipped: result.stats.skippedDuplicates,
+        iterations: 1,
+        fromBigQuery: result.stats.fromBigQuery,
+        fromPerplexity: result.stats.fromHunterIO, // Map to fromPerplexity for display
+        fromHunterIO: result.stats.fromHunterIO,
+      },
+    }
+  } catch (error) {
+    s.stop(`❌ 리드 검색 실패: ${error}`)
+    throw error
+  }
+}
+
 async function interactiveMode() {
   console.clear()
 
   p.intro("🔍 바이어 리스트 검색 테스트 (Lead Discovery)")
+
+  // Choose search mode
+  const searchMode = await p.select({
+    message: "검색 모드 선택",
+    options: [
+      {
+        value: "enhanced",
+        label: "🆕 Enhanced (하이브리드 검색 - Perplexity + BigQuery)",
+        hint: "국가에 따라 자동으로 최적 전략 선택",
+      },
+      {
+        value: "legacy",
+        label: "Legacy (기존 BigQuery 방식)",
+        hint: "기존 방식으로 BigQuery만 사용",
+      },
+    ],
+    initialValue: "enhanced",
+  })
+
+  if (p.isCancel(searchMode)) {
+    p.cancel("작업이 취소되었습니다.")
+    process.exit(0)
+  }
 
   // Survey Data (same as onboarding)
   const industry = await p.select({
@@ -473,14 +632,51 @@ async function interactiveMode() {
     process.exit(0)
   }
 
+  // 🆕 찾고자 하는 회사 특성 입력 (description 기반 검색용)
+  const companyDescription = await p.text({
+    message: "찾고자 하는 회사 특성/설명 (예: 화장품 원료 공급업체, B2B 도매상)",
+    placeholder: "예: 화장품 유통 및 도매를 전문으로 하는 회사",
+  })
+
+  if (p.isCancel(companyDescription)) {
+    p.cancel("작업이 취소되었습니다.")
+    process.exit(0)
+  }
+
   // Discover leads with validated inputs
   const testInput = {
     industry: industry as string,
     target: target as string,
     country: country as string,
+    companyDescription: companyDescription ? (companyDescription as string) : undefined,
   }
 
-  const { leads, stats } = await discoverLeads(testInput)
+  let leads: LeadData[]
+  let stats: {
+    totalFound: number
+    totalEnriched: number
+    totalWithEmail: number
+    duplicatesSkipped: number
+    iterations: number
+    fromBigQuery?: number
+    fromPerplexity?: number
+    fromHunterIO?: number
+  }
+
+  if (searchMode === "enhanced") {
+    const result = await discoverLeadsEnhanced({
+      industry: testInput.industry,
+      target: testInput.target,
+      country: testInput.country,
+      companyDescription: testInput.companyDescription,
+    })
+    leads = result.leads
+    stats = result.stats
+  } else {
+    const result = await discoverLeads(testInput)
+    leads = result.leads
+    stats = result.stats
+  }
 
   // Display results
   displayLeads(leads, stats)

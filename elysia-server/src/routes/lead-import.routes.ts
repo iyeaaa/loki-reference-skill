@@ -539,9 +539,9 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         let aiAnalysis: string | null = null
         try {
           const { ChatOpenAI } = await import("@langchain/openai")
+          // Note: gpt-5-mini does not support temperature
           const llm = new ChatOpenAI({
-            model: "gpt-4o-mini",
-            temperature: 0.7,
+            model: "gpt-5-mini",
           })
 
           // 최대 20행 랜덤 샘플링

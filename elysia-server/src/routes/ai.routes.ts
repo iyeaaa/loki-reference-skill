@@ -122,7 +122,7 @@ export const aiRoutes = new Elysia({ prefix: "/api/ai" })
 
         // Call OpenAI API
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",
@@ -295,7 +295,7 @@ Please write a professional follow-up email reply in Korean based on this conver
 
         // Call OpenAI API for summary
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-5-mini",
           messages: [
             {
               role: "system",

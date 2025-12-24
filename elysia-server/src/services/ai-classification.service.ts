@@ -27,7 +27,7 @@ class AIClassificationService {
   private openai: ReturnType<typeof createOpenAI>
   private defaultModel: string
 
-  constructor(apiKey: string, defaultModel = "gpt-4o-mini") {
+  constructor(apiKey: string, defaultModel = "gpt-5-mini") {
     this.openai = createOpenAI({
       apiKey: apiKey,
     })
@@ -229,7 +229,7 @@ export function getAIClassificationService(): AIClassificationService {
   }
 
   if (!aiClassificationService) {
-    const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
+    const model = process.env.OPENAI_MODEL || "gpt-5-mini"
     aiClassificationService = new AIClassificationService(apiKey, model)
     logger.info({
       msg: "AI Classification Service initialized",

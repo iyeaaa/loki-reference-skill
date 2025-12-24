@@ -191,7 +191,7 @@ export const config = {
 
   // Mastra
   mastra: {
-    model: getEnvOrDefault("MASTRA_MODEL", "gpt-4o-mini"),
+    model: getEnvOrDefault("MASTRA_MODEL", "gpt-5-mini"),
     maxTokens: getEnvInt("MASTRA_MAX_TOKENS", 1000),
     temperature: Number.parseFloat(getEnvOrDefault("MASTRA_TEMPERATURE", "0.7")),
     rindaLeadPgUrl: getEnv("RINDA_LEAD_PG_URL"),

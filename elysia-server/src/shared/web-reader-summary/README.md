@@ -48,7 +48,7 @@ const result = await executeWebReaderSummary(
     query: "What is the main topic of this article?"
   },
   {
-    model: "gpt-4o",              // Default: "gpt-4o-mini"
+    model: "gpt-4o",              // Default: "gpt-5-mini"
     temperature: 0.5,             // Default: 0.3
     maxContentLength: 100000      // Default: 50000
   }

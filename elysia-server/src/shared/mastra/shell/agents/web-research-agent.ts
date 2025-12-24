@@ -53,7 +53,7 @@ Tool selection:
 - Use googleSearch when: You need to find relevant sources first
 
 Always aim to provide comprehensive, accurate, and well-organized information with proper citations.`,
-    model: openai("gpt-4o-mini"),
+    model: openai("gpt-5-mini"),
     tools: {
       googleSearchTool,
       webReaderAgentTool,

@@ -8,6 +8,7 @@ import { B2B_HUNTER_INDUSTRY_SYSTEM_PROMPT } from "./prompts"
 export function createB2BHunterIndustryAgent(): Agent {
   const openai = createOpenAI({ apiKey: config.openai.apiKey })
 
+  // Note: gpt-5-mini does not support temperature
   return new Agent({
     name: "B2B Hunter Industry Analyst",
     instructions: B2B_HUNTER_INDUSTRY_SYSTEM_PROMPT,
@@ -15,7 +16,6 @@ export function createB2BHunterIndustryAgent(): Agent {
     memory,
     defaultGenerateOptions: {
       maxSteps: 3,
-      temperature: 0.3,
     },
   })
 }

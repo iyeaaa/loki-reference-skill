@@ -58,10 +58,11 @@ const generateQueriesStep = createStep({
       queries: z.array(SearchQuerySchema),
     })
 
+    // Note: gpt-5-mini does not support temperature
     const response = await pRetry(
       () =>
         openaiClient.responses.parse({
-          model: "gpt-4o-mini",
+          model: "gpt-5-mini",
           input: [
             {
               role: "user",
@@ -73,7 +74,6 @@ Each query should approach from a different angle. Vary search terms and synonym
           text: {
             format: zodTextFormat(queriesSchema, "SearchQueries"),
           },
-          temperature: 0.8,
         }),
       { retries: 3 },
     )
@@ -164,10 +164,11 @@ const searchAndExtractStep = createStep({
               ),
             })
 
+            // Note: gpt-5-mini does not support temperature
             const snippetResponse = await pRetry(
               () =>
                 openaiClient.responses.parse({
-                  model: "gpt-4o-mini",
+                  model: "gpt-5-mini",
                   input: [
                     {
                       role: "user",
@@ -177,7 +178,6 @@ const searchAndExtractStep = createStep({
                   text: {
                     format: zodTextFormat(snippetSchema, "SnippetExtraction"),
                   },
-                  temperature: 0.3,
                 }),
               { retries: 3 },
             )
@@ -219,10 +219,11 @@ const searchAndExtractStep = createStep({
               ),
             })
 
+            // Note: gpt-5-mini does not support temperature
             const dirDetectResponse = await pRetry(
               () =>
                 openaiClient.responses.parse({
-                  model: "gpt-4o-mini",
+                  model: "gpt-5-mini",
                   input: [
                     {
                       role: "user",
@@ -232,7 +233,6 @@ const searchAndExtractStep = createStep({
                   text: {
                     format: zodTextFormat(directoryDetectSchema, "DirectoryDetection"),
                   },
-                  temperature: 0.2,
                 }),
               { retries: 3 },
             )
@@ -341,10 +341,11 @@ const searchAndExtractStep = createStep({
               ),
             })
 
+            // Note: gpt-5-mini does not support temperature
             const evalResponse = await pRetry(
               () =>
                 openaiClient.responses.parse({
-                  model: "gpt-4o-mini",
+                  model: "gpt-5-mini",
                   input: [
                     {
                       role: "user",
@@ -354,7 +355,6 @@ const searchAndExtractStep = createStep({
                   text: {
                     format: zodTextFormat(evalSchema, "PageEvaluation"),
                   },
-                  temperature: 0.3,
                 }),
               { retries: 3 },
             )
@@ -395,10 +395,11 @@ const searchAndExtractStep = createStep({
                       .optional(),
                   })
 
+                  // Note: gpt-5-mini does not support temperature
                   const pageResponse = await pRetry(
                     () =>
                       openaiClient.responses.parse({
-                        model: "gpt-4o-mini",
+                        model: "gpt-5-mini",
                         input: [
                           {
                             role: "user",
@@ -408,7 +409,6 @@ const searchAndExtractStep = createStep({
                         text: {
                           format: zodTextFormat(pageCompanySchema, "PageCompany"),
                         },
-                        temperature: 0.2,
                       }),
                     { retries: 3 },
                   )

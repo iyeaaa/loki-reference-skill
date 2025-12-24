@@ -151,7 +151,7 @@ BODY:
       인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
       const { text } = await generateText({
-        model: this.openai("gpt-4o-mini"),
+        model: this.openai("gpt-5-mini"),
         system: systemPrompt,
         prompt: userPrompt,
       })

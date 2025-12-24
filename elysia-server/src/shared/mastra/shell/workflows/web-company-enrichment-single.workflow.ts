@@ -205,10 +205,11 @@ const extractStructuredDataStep = createStep({
       })
 
       // Use AI to extract structured data from research results
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -235,7 +236,6 @@ Return the complete company object with enriched data.
             text: {
               format: zodTextFormat(companyExtractionSchema, "CompanyExtraction"),
             },
-            temperature: 0.2,
           }),
         { retries: 3 },
       )

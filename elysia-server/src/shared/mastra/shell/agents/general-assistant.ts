@@ -40,7 +40,7 @@ Guidelines:
 - Use conversation history to provide contextual responses
 
 Always aim to provide the most useful and relevant information to help users accomplish their goals.`,
-    model: openai("gpt-4o-mini"),
+    model: openai("gpt-5-mini"),
     tools: {
       postgresQueryTool,
       dbSearchCompanyTool,

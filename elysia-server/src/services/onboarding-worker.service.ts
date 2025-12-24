@@ -290,6 +290,17 @@ export async function runDiscoveryPhase(
     const target = surveyData.target
     const lang = surveyData.lang
 
+    // 🆕 Fetch workspace to get companyDescription for targeted search
+    const workspace = await workspaceServiceImport.getWorkspace(workspaceId)
+    const companyDescription =
+      workspace?.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
+        ? workspace.companyDescription
+        : undefined
+
+    console.log(
+      `[DiscoveryPhase] Company description for search: "${companyDescription?.slice(0, 50) || "N/A"}..."`,
+    )
+
     // Update checkpoint in BullMQ job data
     await saveCheckpoint(job, {
       phase: "discovery",
@@ -305,7 +316,10 @@ export async function runDiscoveryPhase(
     await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
 
     // Build natural language query for the lead search service
-    const naturalLanguageQuery = `${industryName} companies in ${countryName}`
+    // 🆕 Include companyDescription in query if available
+    const naturalLanguageQuery = companyDescription
+      ? `${companyDescription} ${industryName} companies in ${countryName}`
+      : `${industryName} companies in ${countryName}`
     console.log(`[DiscoveryPhase] Natural language query: "${naturalLanguageQuery}"`)
 
     // Use the unified lead search and enrichment service
@@ -356,6 +370,8 @@ export async function runDiscoveryPhase(
         target,
         experience,
         lang,
+        // 🆕 찾고자 하는 회사 특성 - AI 리랭킹 및 Perplexity 검색에 사용
+        targetCompanyDescription: companyDescription,
       },
     )
 

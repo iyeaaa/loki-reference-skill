@@ -69,10 +69,11 @@ Important:
 Provide your validation result:
 `
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openai.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -82,7 +83,6 @@ Provide your validation result:
             text: {
               format: zodTextFormat(validationSchema, "ValidationResult"),
             },
-            temperature: 0.1, // Low temperature for consistent validation
           }),
         { retries: 3 },
       )

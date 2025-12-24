@@ -77,10 +77,11 @@ Return only results with MEDIUM or HIGH confidence.`
         ),
       })
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -90,7 +91,6 @@ Return only results with MEDIUM or HIGH confidence.`
             text: {
               format: zodTextFormat(directorySchema, "DirectoryDetection"),
             },
-            temperature: 0.2,
           }),
         { retries: 3 },
       )

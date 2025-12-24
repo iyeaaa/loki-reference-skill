@@ -19,18 +19,21 @@ import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
 import { findMatchingIndustries, generateHunterioQuery } from "./hunterio-query-generator.service"
+import { enrichLeadsWithDescriptions } from "./lead-description-enrichment.service"
 import {
   APOLLO_LEADS_DATA_DICTIONARY,
   B2B_LEADS_DATA_DICTIONARY,
   FRESH_LEADS_DATA_DICTIONARY,
   REVATION_LEADS_DATA_DICTIONARY,
 } from "./lead-discovery/nodes/bigquery-executor"
-import { formatLeadForScoring, scoreLeadFit } from "./lead-scoring.service"
+import { formatLeadForScoring, rerankLeadsByRelevance, scoreLeadFit } from "./lead-scoring.service"
 import { enrichLeadsForOnboarding } from "./onboarding.service"
 import {
   convertPerplexityToBigQueryFormat,
   optimizeQueryForPerplexity,
+  PERPLEXITY_CONFIG,
   searchLeadsWithPerplexity,
+  searchLeadsWithPerplexityEnhanced,
 } from "./perplexity-search.service"
 
 // ====================================
@@ -44,6 +47,10 @@ export const SEARCH_CONFIG = {
   MAX_EMPLOYEE_COUNT: 5000, // Skip companies with >5000 employees (target SMBs)
   HUNTERIO_MAX_PER_PAGE: 100,
   HUNTERIO_MAX_EMAIL_COUNT: 100, // Skip companies with >100 indexed emails (proxy for large companies)
+  // Hybrid search strategy config
+  BIGQUERY_RICH_COUNTRIES: PERPLEXITY_CONFIG.BIGQUERY_RICH_COUNTRIES,
+  PERPLEXITY_BASE_COUNT: 30, // 기본 Perplexity 검색 수
+  PERPLEXITY_ENHANCED_COUNT: 60, // 비미국 국가용 증가 검색 수
 } as const
 
 // ====================================
@@ -59,6 +66,10 @@ export interface EnrichedLead {
   employeeCount?: string
   description?: string
   leadSource: "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "hunterio-discover"
+  /** AI 리랭킹 점수 (0-100) */
+  relevanceScore?: number
+  /** AI 리랭킹 이유 */
+  relevanceReasoning?: string
 }
 
 export interface SearchResult {
@@ -75,7 +86,14 @@ export interface SearchResult {
 }
 
 export interface SearchProgress {
-  phase: "bigquery" | "hunterio" | "enrichment" | "scoring" | "complete"
+  phase:
+    | "bigquery"
+    | "hunterio"
+    | "enrichment"
+    | "description_enrichment"
+    | "scoring"
+    | "reranking"
+    | "complete"
   message: string
   currentCount: number
   targetCount: number
@@ -249,7 +267,7 @@ function isCompanyTooLargeByEmailCount(emailCount: number): boolean {
 }
 
 // ====================================
-// BIGQUERY SEARCH
+// BIGQUERY SEARCH (Hybrid Strategy)
 // ====================================
 
 interface BigQuerySearchOptions {
@@ -257,10 +275,27 @@ interface BigQuerySearchOptions {
   countryName: string
   targetCount: number
   onProgress?: ProgressCallback
+  /** 찾고자 하는 회사 특성 (예: "탈모 샴푸 제조업체") - Perplexity 검색에 직접 반영 */
+  targetCompanyDescription?: string
 }
 
 type LeadSource = "b2b" | "apollo" | "fresh" | "revation" | "perplexity"
 
+/**
+ * 국가가 BigQuery 데이터가 풍부한 국가인지 확인
+ */
+function isBigQueryRichCountry(country: string): boolean {
+  const normalizedCountry = country.toLowerCase().trim()
+  return SEARCH_CONFIG.BIGQUERY_RICH_COUNTRIES.some(
+    (rich) => rich.toLowerCase() === normalizedCountry,
+  )
+}
+
+/**
+ * 하이브리드 검색 전략:
+ * - BigQuery 풍부 국가 (미국, 영국, 캐나다, 호주): BigQuery 우선 + Perplexity 보조
+ * - 기타 국가: Perplexity 우선 (Enhanced 버전) + BigQuery 보조
+ */
 async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   leads: Array<{
     company: string
@@ -269,6 +304,49 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     employees: string
     country: string
     source: LeadSource
+    description?: string
+  }>
+  stats: {
+    totalQueried: number
+    skippedDuplicates: number
+    skippedLargeCompanies: number
+    fromB2B: number
+    fromApollo: number
+    fromFresh: number
+    fromRevation: number
+    fromPerplexity: number
+  }
+}> {
+  const { countryName } = options
+  const isBigQueryRich = isBigQueryRichCountry(countryName)
+
+  // 하이브리드 전략 결정
+  if (isBigQueryRich) {
+    console.log(
+      `[LeadSearch] Using BigQuery-first strategy for "${countryName}" (data-rich country)`,
+    )
+    return searchBigQueryFirst(options)
+  } else {
+    console.log(
+      `[LeadSearch] Using Perplexity-first strategy for "${countryName}" (limited BigQuery data)`,
+    )
+    return searchPerplexityFirst(options)
+  }
+}
+
+/**
+ * BigQuery 우선 검색 (미국 등 데이터 풍부 국가용)
+ * - BigQuery 4개 테이블 + Perplexity 30개
+ */
+async function searchBigQueryFirst(options: BigQuerySearchOptions): Promise<{
+  leads: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+    description?: string
   }>
   stats: {
     totalQueried: number
@@ -290,6 +368,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     employees: string
     country: string
     source: LeadSource
+    description?: string
   }> = []
 
   let totalQueried = 0
@@ -305,27 +384,27 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   const nlQuery = `${targetIndustries.join(" or ")} companies in ${countryName}`
   const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-  console.log(`[LeadSearch] Querying 5 data sources in parallel: "${nlQuery}"`)
+  console.log(`[LeadSearch] BigQuery-first: Querying 5 data sources in parallel: "${nlQuery}"`)
   console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
 
   // Report progress
   if (onProgress) {
     await onProgress({
       phase: "bigquery",
-      message: "Searching 5 data sources in parallel...",
+      message: "Searching 5 data sources in parallel (BigQuery-first strategy)...",
       currentCount: 0,
       targetCount,
     })
   }
 
-  // Search all 5 sources in parallel
+  // Search all 5 sources in parallel (BigQuery + Perplexity 30개)
   const [b2bResult, apolloResult, freshResult, revationResult, perplexityResult] =
     await Promise.allSettled([
       searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
       searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
       searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
       searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY, { limitOverride: targetCount }),
-      searchLeadsWithPerplexity(perplexityQuery, 10),
+      searchLeadsWithPerplexity(perplexityQuery, SEARCH_CONFIG.PERPLEXITY_BASE_COUNT),
     ])
 
   // Helper function to transform BigQuery results
@@ -343,6 +422,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     employees: string
     country: string
     source: LeadSource
+    description?: string
   }> {
     if (result.status !== "fulfilled") {
       console.warn(`[LeadSearch] ${source} search failed:`, result.reason)
@@ -356,6 +436,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
       industry: ((row.industry || row.industry_category) as string) || "",
       employees: row.employees?.toString() || row.employee_count?.toString() || "",
       country: (row.country as string) || "",
+      description: (row.description as string) || undefined,
       source,
     }))
   }
@@ -374,6 +455,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
     employees: string
     country: string
     source: LeadSource
+    description?: string
   }> = []
   if (perplexityResult.status === "fulfilled") {
     const pxResults = convertPerplexityToBigQueryFormat(perplexityResult.value.leads)
@@ -383,6 +465,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
       industry: r.mainIndustry || "",
       employees: r.employee || "",
       country: r.country || "",
+      description: r.description || undefined,
       source: "perplexity" as LeadSource,
     }))
     console.log(`[LeadSearch] perplexity: ${perplexityLeads.length} results`)
@@ -392,8 +475,8 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
 
   // Combine all results with priority order (Perplexity > Revation > Apollo > Fresh > B2B)
   const allResults = [
-    ...perplexityLeads, // Perplexity first (real-time)
-    ...revationLeads, // Premium curated leads
+    ...perplexityLeads, // Perplexity first (real-time with description)
+    ...revationLeads, // Premium curated leads with description
     ...apolloLeads, // High quality
     ...freshLeads, // Fresh leads
     ...b2bLeads, // B2B leads
@@ -404,7 +487,7 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   // Filter and deduplicate results
   for (const row of allResults) {
     if (leads.length >= targetCount) {
-      console.log(`[LeadSearch] BigQuery target reached: ${leads.length}/${targetCount}`)
+      console.log(`[LeadSearch] BigQuery-first target reached: ${leads.length}/${targetCount}`)
       break
     }
 
@@ -462,8 +545,275 @@ async function searchWithBigQuery(options: BigQuerySearchOptions): Promise<{
   }
 
   console.log(
-    `[LeadSearch] BigQuery complete: ${leads.length} leads from 5 sources ` +
+    `[LeadSearch] BigQuery-first complete: ${leads.length} leads from 5 sources ` +
       `(B2B: ${fromB2B}, Apollo: ${fromApollo}, Fresh: ${fromFresh}, Revation: ${fromRevation}, Perplexity: ${fromPerplexity}) ` +
+      `(${skippedDuplicates} duplicates, ${skippedLargeCompanies} large companies skipped)`,
+  )
+
+  return {
+    leads,
+    stats: {
+      totalQueried,
+      skippedDuplicates,
+      skippedLargeCompanies,
+      fromB2B,
+      fromApollo,
+      fromFresh,
+      fromRevation,
+      fromPerplexity,
+    },
+  }
+}
+
+/**
+ * Perplexity 우선 검색 (비미국 등 BigQuery 데이터 부족 국가용)
+ * - Perplexity Enhanced 60-100개 우선
+ * - BigQuery는 보조로 사용 (있으면 추가)
+ */
+async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
+  leads: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+    description?: string
+  }>
+  stats: {
+    totalQueried: number
+    skippedDuplicates: number
+    skippedLargeCompanies: number
+    fromB2B: number
+    fromApollo: number
+    fromFresh: number
+    fromRevation: number
+    fromPerplexity: number
+  }
+}> {
+  const { targetIndustries, countryName, targetCount, onProgress } = options
+  const processedWebsites = new Set<string>()
+  const leads: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+    description?: string
+  }> = []
+
+  let totalQueried = 0
+  let skippedDuplicates = 0
+  let skippedLargeCompanies = 0
+  let fromB2B = 0
+  let fromApollo = 0
+  let fromFresh = 0
+  let fromRevation = 0
+  let fromPerplexity = 0
+
+  // Build natural language query - prioritize targetCompanyDescription if provided
+  const { targetCompanyDescription } = options
+  let nlQuery: string
+
+  if (targetCompanyDescription && targetCompanyDescription.length > 3) {
+    // 사용자가 구체적인 제품/서비스를 입력한 경우, 그것을 최우선으로 사용
+    nlQuery = `${targetCompanyDescription} ${targetIndustries.join(" ")} companies in ${countryName}`
+    console.log(
+      `[LeadSearch] Perplexity-first: Using target description: "${targetCompanyDescription}"`,
+    )
+  } else {
+    nlQuery = `${targetIndustries.join(" or ")} companies in ${countryName}`
+  }
+  const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
+
+  console.log(`[LeadSearch] Perplexity-first: Enhanced search for: "${nlQuery}"`)
+  console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
+
+  // Report progress
+  if (onProgress) {
+    await onProgress({
+      phase: "bigquery",
+      message: "Searching with Perplexity-first strategy (enhanced for non-US countries)...",
+      currentCount: 0,
+      targetCount,
+    })
+  }
+
+  // Step 1: Perplexity Enhanced 검색 (60-100개)
+  // Note: targetCompanyDescription은 이미 perplexityQuery에 포함되어 있음 (line 619-627)
+  console.log(
+    `[LeadSearch] Step 1: Perplexity Enhanced search (${SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT} leads)`,
+  )
+  const perplexityResult = await searchLeadsWithPerplexityEnhanced(
+    perplexityQuery,
+    SEARCH_CONFIG.PERPLEXITY_ENHANCED_COUNT,
+  )
+
+  // Transform Perplexity results
+  let perplexityLeads: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+    source: LeadSource
+    description?: string
+  }> = []
+
+  if (perplexityResult.leads.length > 0) {
+    const pxResults = convertPerplexityToBigQueryFormat(perplexityResult.leads)
+    perplexityLeads = pxResults.map((r) => ({
+      company: r.companyName || "",
+      website: r.webAddress || "",
+      industry: r.mainIndustry || "",
+      employees: r.employee || "",
+      country: r.country || "",
+      description: r.description || undefined,
+      source: "perplexity" as LeadSource,
+    }))
+    console.log(`[LeadSearch] Perplexity enhanced: ${perplexityLeads.length} results`)
+  } else {
+    console.warn(`[LeadSearch] Perplexity enhanced search returned 0 results`)
+  }
+
+  // Add Perplexity leads first (they have descriptions)
+  for (const row of perplexityLeads) {
+    if (leads.length >= targetCount) break
+
+    const website = row.website
+    if (!website) continue
+
+    if (processedWebsites.has(website.toLowerCase())) {
+      skippedDuplicates++
+      continue
+    }
+
+    processedWebsites.add(website.toLowerCase())
+    fromPerplexity++
+    leads.push(row)
+  }
+
+  console.log(`[LeadSearch] After Perplexity: ${leads.length}/${targetCount} leads`)
+
+  // Step 2: BigQuery 보조 검색 (Perplexity로 부족한 경우에만)
+  if (leads.length < targetCount) {
+    const remaining = targetCount - leads.length
+    console.log(`[LeadSearch] Step 2: BigQuery supplementary search for ${remaining} more leads`)
+
+    // BigQuery 검색 (4개 테이블 병렬)
+    const [b2bResult, apolloResult, freshResult, revationResult] = await Promise.allSettled([
+      searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY, { limitOverride: remaining }),
+      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY, { limitOverride: remaining }),
+      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY, { limitOverride: remaining }),
+      searchBigQuery(nlQuery, REVATION_LEADS_DATA_DICTIONARY, { limitOverride: remaining }),
+    ])
+
+    // Helper function to transform BigQuery results
+    function transformBigQueryResults(
+      result: PromiseSettledResult<{
+        results: Record<string, unknown>[]
+        totalCount: number
+        sql: string
+      }>,
+      source: LeadSource,
+    ): Array<{
+      company: string
+      website: string
+      industry: string
+      employees: string
+      country: string
+      source: LeadSource
+      description?: string
+    }> {
+      if (result.status !== "fulfilled") {
+        console.warn(`[LeadSearch] ${source} search failed:`, result.reason)
+        return []
+      }
+
+      console.log(`[LeadSearch] ${source}: ${result.value.results.length} results`)
+      return result.value.results.map((row) => ({
+        company: (row.company as string) || "",
+        website: (row.website as string) || "",
+        industry: ((row.industry || row.industry_category) as string) || "",
+        employees: row.employees?.toString() || row.employee_count?.toString() || "",
+        country: (row.country as string) || "",
+        description: (row.description as string) || undefined,
+        source,
+      }))
+    }
+
+    const b2bLeads = transformBigQueryResults(b2bResult, "b2b")
+    const apolloLeads = transformBigQueryResults(apolloResult, "apollo")
+    const freshLeads = transformBigQueryResults(freshResult, "fresh")
+    const revationLeads = transformBigQueryResults(revationResult, "revation")
+
+    // BigQuery 결과 우선순위: Revation > Apollo > Fresh > B2B
+    const bigQueryLeads = [...revationLeads, ...apolloLeads, ...freshLeads, ...b2bLeads]
+
+    totalQueried += bigQueryLeads.length
+
+    // Filter and add BigQuery leads
+    for (const row of bigQueryLeads) {
+      if (leads.length >= targetCount) {
+        console.log(`[LeadSearch] Perplexity-first target reached: ${leads.length}/${targetCount}`)
+        break
+      }
+
+      const website = row.website
+      if (!website) continue
+
+      if (processedWebsites.has(website.toLowerCase())) {
+        skippedDuplicates++
+        continue
+      }
+
+      const employeeCount = parseInt(row.employees || "0", 10)
+      if (isCompanyTooLarge(employeeCount)) {
+        console.log(
+          `[LeadSearch] Skipping large company (${employeeCount} employees): ${row.company}`,
+        )
+        skippedLargeCompanies++
+        continue
+      }
+
+      processedWebsites.add(website.toLowerCase())
+
+      // Track source counts
+      switch (row.source) {
+        case "b2b":
+          fromB2B++
+          break
+        case "apollo":
+          fromApollo++
+          break
+        case "fresh":
+          fromFresh++
+          break
+        case "revation":
+          fromRevation++
+          break
+      }
+
+      leads.push(row)
+    }
+  }
+
+  totalQueried += perplexityLeads.length
+
+  // Report progress
+  if (onProgress) {
+    await onProgress({
+      phase: "bigquery",
+      message: `Found ${leads.length}/${targetCount} leads (Perplexity-first strategy)`,
+      currentCount: leads.length,
+      targetCount,
+    })
+  }
+
+  console.log(
+    `[LeadSearch] Perplexity-first complete: ${leads.length} leads ` +
+      `(Perplexity: ${fromPerplexity}, B2B: ${fromB2B}, Apollo: ${fromApollo}, Fresh: ${fromFresh}, Revation: ${fromRevation}) ` +
       `(${skippedDuplicates} duplicates, ${skippedLargeCompanies} large companies skipped)`,
   )
 
@@ -814,6 +1164,8 @@ export async function searchAndEnrichLeads(
     experience?: string
     lang?: string
     target?: string
+    /** 찾고자 하는 회사 특성/설명 - AI 리랭킹에 사용 */
+    targetCompanyDescription?: string
   },
 ): Promise<SearchResult> {
   console.log("=".repeat(60))
@@ -875,6 +1227,8 @@ export async function searchAndEnrichLeads(
     countryName,
     targetCount: bigQueryTargetCount,
     onProgress,
+    // 🆕 찾고자 하는 회사 특성을 Perplexity 검색에 전달
+    targetCompanyDescription: options?.targetCompanyDescription,
   })
 
   totalSkippedDuplicates += bigQueryResult.stats.skippedDuplicates
@@ -918,7 +1272,68 @@ export async function searchAndEnrichLeads(
     `[LeadSearch] BigQuery: ${bigQueryLeadsWithEmails.length} leads with valid emails (from ${bigQueryResult.leads.length} raw leads)`,
   )
 
-  // Step 5: Score BigQuery leads if threshold is set
+  // Step 5: Description Enrichment for leads without description
+  const leadsNeedingDescription = bigQueryLeadsWithEmails.filter(
+    (lead) => !lead.description || lead.description.length < 30,
+  )
+
+  if (leadsNeedingDescription.length > 0) {
+    console.log(
+      `[LeadSearch] Enriching descriptions for ${leadsNeedingDescription.length} leads without description`,
+    )
+
+    if (onProgress) {
+      await onProgress({
+        phase: "description_enrichment",
+        message: `Enriching descriptions for ${leadsNeedingDescription.length} leads`,
+        currentCount: 0,
+        targetCount: leadsNeedingDescription.length,
+      })
+    }
+
+    const descriptionEnrichmentInput = leadsNeedingDescription.map((lead) => ({
+      companyName: lead.companyName,
+      websiteUrl: lead.websiteUrl,
+      industry: lead.businessType,
+      country: lead.country,
+      existingDescription: lead.description,
+    }))
+
+    const enrichedDescriptions = await enrichLeadsWithDescriptions(descriptionEnrichmentInput, {
+      concurrency: 5,
+      onProgress: (completed, total) => {
+        if (onProgress && completed % 10 === 0) {
+          onProgress({
+            phase: "description_enrichment",
+            message: `Enriched ${completed}/${total} descriptions`,
+            currentCount: completed,
+            targetCount: total,
+          })
+        }
+      },
+    })
+
+    // Merge enriched descriptions back to leads
+    const descriptionByWebsite = new Map<string, string>()
+    for (const enriched of enrichedDescriptions) {
+      if (enriched.description) {
+        descriptionByWebsite.set(enriched.websiteUrl.toLowerCase(), enriched.description)
+      }
+    }
+
+    for (const lead of bigQueryLeadsWithEmails) {
+      const enrichedDesc = descriptionByWebsite.get(lead.websiteUrl.toLowerCase())
+      if (enrichedDesc) {
+        lead.description = enrichedDesc
+      }
+    }
+
+    console.log(
+      `[LeadSearch] Description enrichment complete: ${descriptionByWebsite.size} descriptions added`,
+    )
+  }
+
+  // Step 6: Score BigQuery leads if threshold is set
   if (minimumMatchScore > 0) {
     console.log("[LeadSearch] Scoring BigQuery leads")
 
@@ -987,7 +1402,7 @@ export async function searchAndEnrichLeads(
     `[LeadSearch] BigQuery phase complete: ${qualifiedLeads.length}/${targetLeadCount} qualified leads`,
   )
 
-  // Step 6: Hunter.io fallback if needed
+  // Step 7: Hunter.io fallback if needed
   if (qualifiedLeads.length < targetLeadCount) {
     console.log(
       `[LeadSearch] Phase 2: Hunter.io fallback (need ${targetLeadCount - qualifiedLeads.length} more leads)`,
@@ -1033,7 +1448,7 @@ export async function searchAndEnrichLeads(
 
     console.log(`[LeadSearch] Hunter.io: ${hunterIOLeadsWithSource.length} leads with emails`)
 
-    // Step 7: Score Hunter.io leads if threshold is set
+    // Step 8: Score Hunter.io leads if threshold is set
     if (minimumMatchScore > 0) {
       console.log("[LeadSearch] Scoring Hunter.io leads")
 
@@ -1103,8 +1518,123 @@ export async function searchAndEnrichLeads(
     )
   }
 
-  // Step 8: Limit to target count (in case we exceeded)
-  const finalLeads = qualifiedLeads.slice(0, targetLeadCount)
+  // Step 9: Limit to target count (in case we exceeded)
+  let finalLeads = qualifiedLeads.slice(0, targetLeadCount)
+
+  // Step 9.5: Description enrichment for ALL leads (including Hunter.io leads)
+  // Hunter.io leads don't have descriptions by default, so we enrich them before reranking
+  const leadsWithoutDescription = finalLeads.filter(
+    (lead) => !lead.description || lead.description.length < 20,
+  )
+  if (leadsWithoutDescription.length > 0) {
+    console.log(
+      `[LeadSearch] Enriching descriptions for ${leadsWithoutDescription.length} leads before reranking`,
+    )
+
+    if (onProgress) {
+      await onProgress({
+        phase: "description_enrichment",
+        message: `Enriching descriptions for ${leadsWithoutDescription.length} leads`,
+        currentCount: 0,
+        targetCount: leadsWithoutDescription.length,
+      })
+    }
+
+    const enrichedDescriptions = await enrichLeadsWithDescriptions(
+      leadsWithoutDescription.map((lead) => ({
+        companyName: lead.companyName,
+        websiteUrl: lead.websiteUrl,
+        industry: lead.businessType,
+        description: lead.description,
+      })),
+      {
+        concurrency: 5,
+      },
+    )
+
+    // Update leads with enriched descriptions
+    const enrichedMap = new Map(enrichedDescriptions.map((e) => [e.websiteUrl, e.description]))
+    for (const lead of finalLeads) {
+      if (!lead.description || lead.description.length < 20) {
+        const enrichedDesc = enrichedMap.get(lead.websiteUrl)
+        if (enrichedDesc && enrichedDesc.length > 20) {
+          lead.description = enrichedDesc
+        }
+      }
+    }
+
+    const leadsWithDescNow = finalLeads.filter(
+      (l) => l.description && l.description.length > 20,
+    ).length
+    console.log(
+      `[LeadSearch] Description enrichment complete: ${leadsWithDescNow}/${finalLeads.length} leads now have descriptions`,
+    )
+  }
+
+  // Step 10: AI Reranking (if targetCompanyDescription is provided)
+  if (options?.targetCompanyDescription && options.targetCompanyDescription.length > 5) {
+    console.log(
+      `[LeadSearch] Step 10: AI Reranking with target description: "${options.targetCompanyDescription.slice(0, 50)}..."`,
+    )
+
+    if (onProgress) {
+      await onProgress({
+        phase: "reranking",
+        message: `Reranking ${finalLeads.length} leads by relevance`,
+        currentCount: 0,
+        targetCount: finalLeads.length,
+      })
+    }
+
+    // 리랭킹을 위해 리드를 변환
+    const leadsForReranking = finalLeads.map((lead) => ({
+      companyName: lead.companyName,
+      description: lead.description,
+      industry: lead.businessType,
+      country: lead.country,
+      websiteUrl: lead.websiteUrl,
+      employeeCount: lead.employeeCount,
+      primaryEmail: lead.primaryEmail,
+      leadSource: lead.leadSource,
+    }))
+
+    const rankedResults = await rerankLeadsByRelevance(
+      options.targetCompanyDescription,
+      leadsForReranking,
+      {
+        topN: targetLeadCount,
+        minScore: 30, // 최소 30점 이상 우선
+        minCount: 10, // 🆕 최소 10개 보장 (minScore 미만이어도)
+        concurrency: 10,
+        onProgress: (completed, total, phase) => {
+          if (onProgress && completed % 5 === 0) {
+            onProgress({
+              phase: "reranking",
+              message: `${phase}: ${completed}/${total}`,
+              currentCount: completed,
+              targetCount: total,
+            })
+          }
+        },
+      },
+    )
+
+    // 리랭킹된 결과로 최종 리드 목록 구성
+    finalLeads = rankedResults.map((ranked) => ({
+      companyName: ranked.lead.companyName || "",
+      websiteUrl: ranked.lead.websiteUrl || "",
+      businessType: ranked.lead.industry,
+      country: ranked.lead.country,
+      employeeCount: ranked.lead.employeeCount,
+      description: ranked.lead.description,
+      primaryEmail: ranked.lead.primaryEmail,
+      leadSource: ranked.lead.leadSource as LeadSource,
+      relevanceScore: ranked.score,
+      relevanceReasoning: ranked.reasoning,
+    }))
+
+    console.log(`[LeadSearch] Reranking complete: ${finalLeads.length} leads (min score: 30)`)
+  }
 
   const elapsed = Date.now() - startTime
   console.log("=".repeat(60))
@@ -1115,6 +1645,11 @@ export async function searchAndEnrichLeads(
   console.log(`[LeadSearch]   - From Hunter.io: ${totalHunterIOLeads}`)
   if (minimumMatchScore > 0) {
     console.log(`[LeadSearch]   - Filtered by score: ${totalSkippedLowScoring}`)
+  }
+  if (options?.targetCompanyDescription) {
+    console.log(
+      `[LeadSearch]   - Reranked by: "${options.targetCompanyDescription.slice(0, 30)}..."`,
+    )
   }
   console.log(`[LeadSearch]   - Skipped duplicates: ${totalSkippedDuplicates}`)
   console.log(`[LeadSearch]   - Skipped large companies: ${totalSkippedLargeCompanies}`)

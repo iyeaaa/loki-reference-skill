@@ -91,10 +91,11 @@ Extract as many valid contacts as possible from the snippets.`
         ),
       })
 
+      // Note: gpt-5-mini does not support temperature
       const response = await pRetry(
         () =>
           openaiClient.responses.parse({
-            model: "gpt-4o-mini",
+            model: "gpt-5-mini",
             input: [
               {
                 role: "user",
@@ -104,7 +105,6 @@ Extract as many valid contacts as possible from the snippets.`
             text: {
               format: zodTextFormat(contactsSchema, "ContactsExtraction"),
             },
-            temperature: 0.3, // Lower temperature for accuracy
           }),
         { retries: 3 },
       )

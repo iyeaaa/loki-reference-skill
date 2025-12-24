@@ -6,7 +6,7 @@ import { z } from "zod"
  */
 export const MastraConfigSchema = z.object({
   openaiApiKey: z.string().min(1, "OpenAI API key is required"),
-  model: z.string().default("gpt-4o-mini"),
+  model: z.string().default("gpt-5-mini"),
   maxTokens: z.number().int().positive().default(1000),
   temperature: z.number().min(0).max(2).default(0.7),
   rindaLeadPgUrl: z.string().url().min(1, "Rinda Lead PostgreSQL connection URL is required"),

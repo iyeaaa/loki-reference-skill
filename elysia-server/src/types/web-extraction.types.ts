@@ -52,13 +52,13 @@ export interface ProgressLog {
   total?: number
 }
 
-// GPT API 비용 계산 상수 (GPT-4o-mini 기준)
+// GPT API 비용 계산 상수 (gpt-5-mini 기준)
 export const GPT_COST_PER_REQUEST = {
   // 평균 입력 토큰: 웹사이트 콘텐츠(7000) + 시스템 프롬프트(100) + 사용자 프롬프트(900) = 약 8000 토큰
   INPUT_TOKENS: 8000,
   // 평균 출력 토큰: JSON 응답 약 800 토큰
   OUTPUT_TOKENS: 800,
-  // GPT-4o-mini 가격 (2024년 기준)
+  // gpt-5-mini 가격 (2024년 기준)
   INPUT_PRICE_PER_MILLION: 0.15, // $0.15 per 1M tokens
   OUTPUT_PRICE_PER_MILLION: 0.6, // $0.60 per 1M tokens
 }

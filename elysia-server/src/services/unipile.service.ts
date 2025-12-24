@@ -291,7 +291,7 @@ export async function deleteAccount(accountId: string): Promise<boolean> {
     const statusCode = response.status
     let errorBody: string | object = ""
     try {
-      errorBody = await response.json()
+      errorBody = (await response.json()) as string | object
     } catch {
       errorBody = await response.text().catch(() => "")
     }
@@ -302,10 +302,7 @@ export async function deleteAccount(accountId: string): Promise<boolean> {
       return true
     }
 
-    logger.warn(
-      { accountId, statusCode, errorBody },
-      "Failed to delete Unipile account",
-    )
+    logger.warn({ accountId, statusCode, errorBody }, "Failed to delete Unipile account")
     return false
   } catch (error) {
     logger.error({ err: error, accountId }, "Error deleting Unipile account")

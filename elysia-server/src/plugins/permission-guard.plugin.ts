@@ -378,7 +378,10 @@ export const permissionGuard = new Elysia({ name: "permission-guard" })
       // 3. 사용자 존재 및 활성화 상태 확인
       const user = await getUser(userId)
       if (!user || !user.isActive) {
-        logger.warn({ userId, userExists: !!user, isActive: user?.isActive }, "User not found or inactive")
+        logger.warn(
+          { userId, userExists: !!user, isActive: user?.isActive },
+          "User not found or inactive",
+        )
         return {
           permission: {
             userId: null,

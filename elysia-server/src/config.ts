@@ -230,7 +230,7 @@ export const config = {
     transactionalIds: {
       onboardingComplete: getEnvOrDefault(
         "LOOPS_TRANSACTIONAL_ONBOARDING_COMPLETE",
-        "cm52nw1hp00xkmi7sxlnv3zqd",
+        "cmjju1bio06vt0hzt094zh3a4",
       ),
     },
   },

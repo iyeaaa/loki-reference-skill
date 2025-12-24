@@ -801,6 +801,213 @@ function truncate(str: string, maxLength: number): string {
 }
 
 // ============================================================================
+// LEAD SEARCH LOGGER - For lead discovery and search operations
+// ============================================================================
+
+interface LeadSearchContext {
+  traceId?: string
+  query?: string
+  country?: string
+  industry?: string
+}
+
+/**
+ * Lead Search Logger - For tracking lead discovery operations
+ * Always uses INFO level for visibility in production
+ */
+export const leadSearchLogger = {
+  // Phase start
+  phaseStart: (phase: string, ctx: LeadSearchContext, metadata?: Record<string, unknown>) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase,
+        query: ctx.query,
+        country: ctx.country,
+        industry: ctx.industry,
+        ...metadata,
+      },
+      `[LeadSearch] 🚀 Phase started: ${phase}`,
+    )
+  },
+
+  // Phase complete
+  phaseComplete: (
+    phase: string,
+    ctx: LeadSearchContext,
+    stats: Record<string, unknown>,
+    durationMs: number,
+  ) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase,
+        status: "complete",
+        durationMs,
+        ...stats,
+      },
+      `[LeadSearch] ✅ Phase complete: ${phase} (${formatDuration(durationMs)})`,
+    )
+  },
+
+  // Search source result
+  sourceResult: (
+    source: string,
+    count: number,
+    ctx: LeadSearchContext,
+    metadata?: Record<string, unknown>,
+  ) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        source,
+        resultCount: count,
+        ...metadata,
+      },
+      `[LeadSearch] 📊 ${source}: ${count} leads found`,
+    )
+  },
+
+  // Filter/skip events
+  filtered: (reason: string, count: number, ctx: LeadSearchContext) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        filterReason: reason,
+        filteredCount: count,
+      },
+      `[LeadSearch] 🔍 Filtered: ${count} leads (${reason})`,
+    )
+  },
+
+  // Enrichment progress
+  enrichmentProgress: (
+    current: number,
+    total: number,
+    withEmails: number,
+    ctx: LeadSearchContext,
+  ) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase: "enrichment",
+        current,
+        total,
+        withEmails,
+      },
+      `[LeadSearch] 📧 Enrichment: ${current}/${total} processed, ${withEmails} with emails`,
+    )
+  },
+
+  // Final summary
+  summary: (
+    ctx: LeadSearchContext,
+    stats: {
+      totalFound: number
+      fromBigQuery: number
+      fromPerplexity: number
+      fromBeautyDB: number
+      fromHunterIO: number
+      withEmails: number
+      skippedDuplicates: number
+      skippedLargeCompanies: number
+      skippedLowScoring: number
+      durationMs: number
+    },
+  ) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase: "complete",
+        status: "success",
+        ...stats,
+      },
+      `[LeadSearch] 🎯 COMPLETE: ${stats.totalFound} leads (BQ:${stats.fromBigQuery}, PX:${stats.fromPerplexity}, Beauty:${stats.fromBeautyDB}, HIO:${stats.fromHunterIO}) ` +
+        `Emails:${stats.withEmails}, Filtered: dup=${stats.skippedDuplicates}, large=${stats.skippedLargeCompanies}, lowScore=${stats.skippedLowScoring} ` +
+        `(${formatDuration(stats.durationMs)})`,
+    )
+  },
+
+  // Error
+  error: (phase: string, error: string | Error, ctx: LeadSearchContext) => {
+    const errorMsg = error instanceof Error ? error.message : error
+    logger.error(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase,
+        status: "error",
+        error: errorMsg,
+      },
+      `[LeadSearch] ❌ Error in ${phase}: ${errorMsg}`,
+    )
+  },
+
+  // Debug info (always shown as info in production for debugging)
+  debug: (message: string, ctx: LeadSearchContext, metadata?: Record<string, unknown>) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        ...metadata,
+      },
+      `[LeadSearch] ${message}`,
+    )
+  },
+
+  // ICP generation
+  icpGenerated: (ctx: LeadSearchContext, customerTypes: string[]) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase: "icp",
+        customerTypes: customerTypes.slice(0, 5),
+      },
+      `[LeadSearch] 🎯 ICP generated: ${customerTypes.slice(0, 3).join(", ")}...`,
+    )
+  },
+
+  // Beauty DB specific
+  beautyDBSearch: (ctx: LeadSearchContext, found: number, country: string) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        source: "beauty_db",
+        country,
+        resultCount: found,
+      },
+      `[LeadSearch] 💄 Beauty DB: ${found} leads found for ${country}`,
+    )
+  },
+
+  // Strategy selection
+  strategySelected: (
+    strategy: "bigquery-first" | "perplexity-first",
+    country: string,
+    ctx: LeadSearchContext,
+  ) => {
+    logger.info(
+      {
+        traceId: ctx.traceId,
+        component: "lead-search",
+        phase: "strategy",
+        strategy,
+        country,
+      },
+      `[LeadSearch] 🔄 Strategy: ${strategy} for ${country}`,
+    )
+  },
+}
+
+// ============================================================================
 // LEGACY SUPPORT - Chatbot Logger (kept for backward compatibility)
 // ============================================================================
 

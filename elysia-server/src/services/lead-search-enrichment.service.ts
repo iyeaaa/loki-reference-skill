@@ -15,6 +15,7 @@ import {
   generateB2BHunterIndustryPrompt,
 } from "../shared/mastra"
 import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
+import { generateTraceId, leadSearchLogger } from "../utils/logger"
 import { isBeautyRelatedIndustry, searchBeautyDatabase } from "./beauty-db-search.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { searchDomainWithHunter } from "./hunterio-domain-search.service"
@@ -400,14 +401,25 @@ async function searchBigQueryFirst(options: BigQuerySearchOptions): Promise<{
   const nlQuery = `${targetIndustries.join(" or ")} companies in ${countryName}`
   const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-  console.log(`[LeadSearch] BigQuery-first: Querying 5 data sources in parallel: "${nlQuery}"`)
-  console.log(`[LeadSearch] Perplexity query: "${perplexityQuery}"`)
+  // Create local logging context
+  const localLogCtx = {
+    traceId: generateTraceId(),
+    query: nlQuery,
+    country: countryName,
+    industry: targetIndustries.join(", "),
+  }
+
+  leadSearchLogger.strategySelected("bigquery-first", countryName, localLogCtx)
+  leadSearchLogger.debug(`Query: "${nlQuery}"`, localLogCtx, { perplexityQuery })
 
   // 🆕 Step 0: 뷰티/화장품 산업이면 뷰티 DB 우선 검색
   const isBeautyIndustry = targetIndustries.some((ind) => isBeautyRelatedIndustry(ind))
 
   if (isBeautyIndustry) {
-    console.log(`[LeadSearch] 🆕 Beauty industry detected - searching internal Beauty DB first`)
+    leadSearchLogger.debug(
+      "Beauty industry detected - checking internal Beauty DB first",
+      localLogCtx,
+    )
 
     const beautyResult = await searchBeautyDatabase({
       country: countryName,
@@ -415,9 +427,9 @@ async function searchBigQueryFirst(options: BigQuerySearchOptions): Promise<{
       excludeWebsites: processedWebsites,
     })
 
-    if (beautyResult.leads.length > 0) {
-      console.log(`[LeadSearch] 🆕 Found ${beautyResult.leads.length} leads from Beauty DB`)
+    leadSearchLogger.beautyDBSearch(localLogCtx, beautyResult.leads.length, countryName)
 
+    if (beautyResult.leads.length > 0) {
       for (const bLead of beautyResult.leads) {
         const normalizedUrl = bLead.websiteUrl?.toLowerCase().replace(/\/+$/, "")
         if (!normalizedUrl || processedWebsites.has(normalizedUrl)) {
@@ -438,7 +450,7 @@ async function searchBigQueryFirst(options: BigQuerySearchOptions): Promise<{
         totalQueried++
       }
 
-      console.log(`[LeadSearch] Added ${leads.length} leads from Beauty DB`)
+      leadSearchLogger.sourceResult("BeautyDB", leads.length, localLogCtx)
 
       // 충분한 리드를 찾았으면 바로 반환
       if (leads.length >= targetCount) {
@@ -691,25 +703,37 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
   let fromRevation = 0
   let fromPerplexity = 0
 
+  // Create local logging context
+  const localLogCtx = {
+    traceId: generateTraceId(),
+    query: `${targetIndustries.join(" or ")} in ${countryName}`,
+    country: countryName,
+    industry: targetIndustries.join(", "),
+  }
+
+  leadSearchLogger.strategySelected("perplexity-first", countryName, localLogCtx)
+
   // 🆕 ICP 기반 검색: 본인 회사 설명 → 고객사 찾기
   let icp = idealCustomerProfile
   let useICPSearch = false
 
   if (myCompanyDescription && myCompanyDescription.length > 10) {
-    console.log(
-      `[LeadSearch] 🆕 ICP-based search: My company = "${myCompanyDescription.slice(0, 50)}..."`,
+    leadSearchLogger.debug(
+      `ICP-based search: My company = "${myCompanyDescription.slice(0, 50)}..."`,
+      localLogCtx,
+      { myCompanyDescriptionLength: myCompanyDescription.length },
     )
 
     // ICP가 없으면 생성
     if (!icp) {
-      console.log(`[LeadSearch] Generating ICP for customer search...`)
+      leadSearchLogger.phaseStart("icp_generation", localLogCtx)
       icp = await generateIdealCustomerProfile({
         description: myCompanyDescription,
         industry: targetIndustries[0],
         target: "b2b",
         country: countryName,
       })
-      console.log(`[LeadSearch] ICP generated: ${icp.customerTypes.slice(0, 3).join(", ")}...`)
+      leadSearchLogger.icpGenerated(localLogCtx, icp.customerTypes)
     }
 
     useICPSearch = true
@@ -737,7 +761,10 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
   const isBeautyIndustry = targetIndustries.some((ind) => isBeautyRelatedIndustry(ind))
 
   if (isBeautyIndustry) {
-    console.log(`[LeadSearch] 🆕 Beauty industry detected - searching internal Beauty DB first`)
+    leadSearchLogger.debug(
+      "Beauty industry detected - checking internal Beauty DB first",
+      localLogCtx,
+    )
 
     const beautyResult = await searchBeautyDatabase({
       country: countryName,
@@ -745,9 +772,9 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
       excludeWebsites: processedWebsites,
     })
 
-    if (beautyResult.leads.length > 0) {
-      console.log(`[LeadSearch] 🆕 Found ${beautyResult.leads.length} leads from Beauty DB`)
+    leadSearchLogger.beautyDBSearch(localLogCtx, beautyResult.leads.length, countryName)
 
+    if (beautyResult.leads.length > 0) {
       for (const bLead of beautyResult.leads) {
         const normalizedUrl = bLead.websiteUrl?.toLowerCase().replace(/\/+$/, "")
         if (!normalizedUrl || processedWebsites.has(normalizedUrl)) {
@@ -768,9 +795,9 @@ async function searchPerplexityFirst(options: BigQuerySearchOptions): Promise<{
         totalQueried++
       }
 
-      console.log(
-        `[LeadSearch] Added ${leads.length} leads from Beauty DB (skipped ${skippedDuplicates} duplicates)`,
-      )
+      leadSearchLogger.sourceResult("BeautyDB", leads.length, localLogCtx, {
+        skippedDuplicates,
+      })
 
       // 충분한 리드를 찾았으면 바로 반환
       if (leads.length >= targetCount) {
@@ -1342,14 +1369,23 @@ export async function searchAndEnrichLeads(
     targetCompanyDescription?: string
   },
 ): Promise<SearchResult> {
-  console.log("=".repeat(60))
-  console.log("[LeadSearch] Starting lead search and enrichment")
-  console.log(`[LeadSearch] Target: ${targetLeadCount} qualifying leads`)
-  console.log(`[LeadSearch] Query: "${query}"`)
-  console.log(`[LeadSearch] Minimum match score: ${minimumMatchScore}`)
-  console.log("=".repeat(60))
-
+  const traceId = generateTraceId()
   const startTime = Date.now()
+
+  // Create logging context
+  const logCtx = {
+    traceId,
+    query,
+    country: options?.country,
+    industry: options?.industry,
+  }
+
+  leadSearchLogger.phaseStart("search_and_enrich", logCtx, {
+    targetLeadCount,
+    minimumMatchScore,
+    hasMyCompanyDescription: !!options?.myCompanyDescription,
+    hasTargetCompanyDescription: !!options?.targetCompanyDescription,
+  })
 
   // Step 1: Parse natural language query (skip if industry/country provided directly)
   let industryName: string
@@ -1360,28 +1396,45 @@ export async function searchAndEnrichLeads(
   if (options?.industry && options?.country) {
     industryName = options.industry
     countryName = options.country
-    console.log(
-      `[LeadSearch] Using provided industry: "${industryName}", country: "${countryName}"`,
+    leadSearchLogger.debug(
+      `Using provided: industry="${industryName}", country="${countryName}"`,
+      logCtx,
     )
   } else {
     const parsed = await parseNaturalLanguageQuery(query)
     industryName = parsed.industry
     countryName = parsed.country
+    leadSearchLogger.debug(
+      `Parsed from query: industry="${industryName}", country="${countryName}"`,
+      logCtx,
+    )
   }
+
+  // Update logging context with parsed values
+  logCtx.country = countryName
+  logCtx.industry = industryName
 
   // Step 2: Get target B2B customer industries
   const targetIndustries = await getB2BCustomerIndustries(industryName, countryName)
+  leadSearchLogger.debug(`Target industries: ${targetIndustries.join(", ")}`, logCtx, {
+    targetIndustries,
+  })
 
   // Track qualified leads and statistics
   const qualifiedLeads: EnrichedLead[] = []
   let totalBigQueryLeads = 0
   let totalHunterIOLeads = 0
+  const totalPerplexityLeads = 0
+  const totalBeautyDBLeads = 0
   let totalSkippedDuplicates = 0
   let totalSkippedLargeCompanies = 0
   let totalSkippedLowScoring = 0
 
   // Step 3: BigQuery search with iterative scoring
-  console.log("[LeadSearch] Phase 1: BigQuery search with scoring")
+  leadSearchLogger.phaseStart("bigquery_search", logCtx, {
+    targetCount: targetLeadCount,
+    minimumMatchScore,
+  })
 
   if (onProgress) {
     await onProgress({
@@ -1411,7 +1464,28 @@ export async function searchAndEnrichLeads(
   totalSkippedDuplicates += bigQueryResult.stats.skippedDuplicates
   totalSkippedLargeCompanies += bigQueryResult.stats.skippedLargeCompanies
 
+  // Log BigQuery/Perplexity search result
+  leadSearchLogger.phaseComplete(
+    "bigquery_search",
+    logCtx,
+    {
+      totalLeads: bigQueryResult.leads.length,
+      fromB2B: bigQueryResult.stats.fromB2B,
+      fromApollo: bigQueryResult.stats.fromApollo,
+      fromFresh: bigQueryResult.stats.fromFresh,
+      fromRevation: bigQueryResult.stats.fromRevation,
+      fromPerplexity: bigQueryResult.stats.fromPerplexity,
+      skippedDuplicates: bigQueryResult.stats.skippedDuplicates,
+      skippedLargeCompanies: bigQueryResult.stats.skippedLargeCompanies,
+    },
+    Date.now() - startTime,
+  )
+
   // Step 4: Enrich BigQuery leads
+  leadSearchLogger.phaseStart("enrichment", logCtx, {
+    leadCount: bigQueryResult.leads.length,
+  })
+
   if (onProgress) {
     await onProgress({
       phase: "enrichment",
@@ -1427,6 +1501,7 @@ export async function searchAndEnrichLeads(
     sourceByWebsite.set(lead.website.toLowerCase(), lead.source)
   }
 
+  const enrichmentStartTime = Date.now()
   const enrichedBigQueryLeads = await enrichLeads(bigQueryResult.leads, onProgress)
 
   // Filter leads with valid emails
@@ -1445,8 +1520,24 @@ export async function searchAndEnrichLeads(
       leadSource: sourceByWebsite.get(lead.websiteUrl.toLowerCase()) || "apollo",
     }))
 
-  console.log(
-    `[LeadSearch] BigQuery: ${bigQueryLeadsWithEmails.length} leads with valid emails (from ${bigQueryResult.leads.length} raw leads)`,
+  leadSearchLogger.phaseComplete(
+    "enrichment",
+    logCtx,
+    {
+      inputLeads: bigQueryResult.leads.length,
+      enrichedLeads: enrichedBigQueryLeads.length,
+      withValidEmails: bigQueryLeadsWithEmails.length,
+      filteredNoEmail: enrichedBigQueryLeads.length - bigQueryLeadsWithEmails.length,
+    },
+    Date.now() - enrichmentStartTime,
+  )
+
+  // Critical log: How many leads have emails
+  leadSearchLogger.enrichmentProgress(
+    bigQueryLeadsWithEmails.length,
+    bigQueryResult.leads.length,
+    bigQueryLeadsWithEmails.length,
+    logCtx,
   )
 
   // Step 5: Description Enrichment for leads without description
@@ -1455,9 +1546,10 @@ export async function searchAndEnrichLeads(
   )
 
   if (leadsNeedingDescription.length > 0) {
-    console.log(
-      `[LeadSearch] Enriching descriptions for ${leadsNeedingDescription.length} leads without description`,
-    )
+    leadSearchLogger.phaseStart("description_enrichment", logCtx, {
+      leadsNeedingDescription: leadsNeedingDescription.length,
+      leadsWithDescription: bigQueryLeadsWithEmails.length - leadsNeedingDescription.length,
+    })
 
     if (onProgress) {
       await onProgress({
@@ -1505,14 +1597,22 @@ export async function searchAndEnrichLeads(
       }
     }
 
-    console.log(
-      `[LeadSearch] Description enrichment complete: ${descriptionByWebsite.size} descriptions added`,
+    leadSearchLogger.phaseComplete(
+      "description_enrichment",
+      logCtx,
+      {
+        descriptionsAdded: descriptionByWebsite.size,
+      },
+      Date.now() - startTime,
     )
   }
 
   // Step 6: Score BigQuery leads if threshold is set
   if (minimumMatchScore > 0) {
-    console.log("[LeadSearch] Scoring BigQuery leads")
+    leadSearchLogger.phaseStart("scoring", logCtx, {
+      leadsToScore: bigQueryLeadsWithEmails.length,
+      minimumMatchScore,
+    })
 
     if (onProgress) {
       await onProgress({
@@ -1820,27 +1920,32 @@ export async function searchAndEnrichLeads(
       relevanceReasoning: ranked.reasoning,
     }))
 
-    console.log(
-      `[LeadSearch] Reranking complete: ${finalLeads.length} potential customers (min score: 30)`,
+    leadSearchLogger.phaseComplete(
+      "reranking",
+      logCtx,
+      {
+        rerankedLeads: finalLeads.length,
+        minScore: 30,
+      },
+      Date.now() - startTime,
     )
   }
 
   const elapsed = Date.now() - startTime
-  console.log("=".repeat(60))
-  console.log("[LeadSearch] Search and enrichment complete")
-  console.log(`[LeadSearch] Total time: ${(elapsed / 1000).toFixed(2)}s`)
-  console.log(`[LeadSearch] Qualified leads: ${finalLeads.length}/${targetLeadCount}`)
-  console.log(`[LeadSearch]   - From BigQuery: ${totalBigQueryLeads}`)
-  console.log(`[LeadSearch]   - From Hunter.io: ${totalHunterIOLeads}`)
-  if (minimumMatchScore > 0) {
-    console.log(`[LeadSearch]   - Filtered by score: ${totalSkippedLowScoring}`)
-  }
-  if (myCompanyDesc) {
-    console.log(`[LeadSearch]   - Customer search for: "${myCompanyDesc.slice(0, 30)}..."`)
-  }
-  console.log(`[LeadSearch]   - Skipped duplicates: ${totalSkippedDuplicates}`)
-  console.log(`[LeadSearch]   - Skipped large companies: ${totalSkippedLargeCompanies}`)
-  console.log("=".repeat(60))
+
+  // Final comprehensive summary log
+  leadSearchLogger.summary(logCtx, {
+    totalFound: finalLeads.length,
+    fromBigQuery: totalBigQueryLeads,
+    fromPerplexity: totalPerplexityLeads,
+    fromBeautyDB: totalBeautyDBLeads,
+    fromHunterIO: totalHunterIOLeads,
+    withEmails: finalLeads.filter((l) => l.primaryEmail).length,
+    skippedDuplicates: totalSkippedDuplicates,
+    skippedLargeCompanies: totalSkippedLargeCompanies,
+    skippedLowScoring: totalSkippedLowScoring,
+    durationMs: elapsed,
+  })
 
   if (onProgress) {
     await onProgress({

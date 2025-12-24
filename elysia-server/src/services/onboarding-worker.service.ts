@@ -325,10 +325,11 @@ export async function runDiscoveryPhase(
     console.log(`[DiscoveryPhase] Natural language query: "${naturalLanguageQuery}"`)
 
     // Use the unified lead search and enrichment service
+    // TODO: minimumMatchScore를 0으로 임시 변경 (디버깅용) - 원래는 60
     const searchResult = await searchAndEnrichLeads(
       TARGET_LEADS,
       naturalLanguageQuery,
-      60, // minimumMatchScore: 60 = filter out low-quality leads
+      0, // minimumMatchScore: 0 = 필터링 없음 (디버깅용, 원래는 60)
       // Progress callback for SSE updates
       async (progress) => {
         console.log(`[DiscoveryPhase] Progress: ${progress.phase} - ${progress.message}`)
@@ -382,6 +383,7 @@ export async function runDiscoveryPhase(
     console.log(`[DiscoveryPhase]   - From Hunter.io: ${searchResult.stats.fromHunterIO}`)
     console.log(`[DiscoveryPhase]   - With emails: ${searchResult.stats.withEmails}`)
     console.log(`[DiscoveryPhase]   - Skipped duplicates: ${searchResult.stats.skippedDuplicates}`)
+    console.log(`[DiscoveryPhase]   - Skipped low scoring: ${searchResult.stats.skippedLowScoring}`)
     console.log(
       `[DiscoveryPhase]   - Skipped large companies: ${searchResult.stats.skippedLargeCompanies}`,
     )

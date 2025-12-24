@@ -129,6 +129,33 @@ async function getOrCreateBillingCustomer(userId: string): Promise<{ id: string 
 }
 
 /**
+ * 사용자가 소유한 Trial 워크스페이스 개수 조회
+ *
+ * @param userId - 사용자 ID
+ * @returns Trial tier인 활성 워크스페이스 개수
+ */
+export async function countTrialWorkspaces(userId: string): Promise<number> {
+  const result = await db
+    .select({ count: count() })
+    .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      and(eq(workspaces.id, subscriptions.workspaceId), eq(subscriptions.isPrimary, true)),
+    )
+    .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(
+        eq(workspaces.ownerId, userId),
+        eq(billingProducts.tier, "trial"),
+        eq(workspaces.isActive, true),
+      ),
+    )
+
+  return Number(result[0]?.count) || 0
+}
+
+/**
  * 워크스페이스에 Trial 구독 생성
  * 새 워크스페이스는 기본적으로 Trial(체험판) 등급으로 시작
  * 데이터베이스에서 동적으로 Trial 요금제 조회
@@ -283,6 +310,15 @@ export async function createWorkspace(data: {
   competitiveAdvantages?: string[]
   rawResearchOutput?: unknown
 }) {
+  // Check trial workspace limit
+  const trialCount = await countTrialWorkspaces(data.ownerId)
+
+  if (trialCount >= 1) {
+    throw new Error(
+      "TRIAL_WORKSPACE_LIMIT_EXCEEDED: Trial users can only create 1 workspace. Please upgrade your subscription to create more workspaces.",
+    )
+  }
+
   const [newWorkspace] = await db
     .insert(workspaces)
     .values({

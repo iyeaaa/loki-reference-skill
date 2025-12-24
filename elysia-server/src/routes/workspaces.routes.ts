@@ -135,12 +135,42 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
     },
   )
 
+  // Check if user can create workspace (trial limit validation)
+  .get("/can-create/:ownerId", async ({ params: { ownerId }, set }) => {
+    try {
+      const trialCount = await workspaceService.countTrialWorkspaces(ownerId)
+      const canCreate = trialCount < 1
+
+      return {
+        canCreate,
+        trialWorkspaceCount: trialCount,
+        message: canCreate
+          ? "Can create workspace"
+          : "Trial users can only create 1 workspace. Please upgrade your subscription to create more workspaces.",
+      }
+    } catch (error: any) {
+      set.status = 500
+      return errorResponse(error.message || "Failed to check workspace limit", ResponseCode.ERROR)
+    }
+  })
+
   // Create new workspace
   .post(
     "/",
-    async ({ body }) => {
-      const workspace = await workspaceService.createWorkspace(body)
-      return workspace
+    async ({ body, set }) => {
+      try {
+        const workspace = await workspaceService.createWorkspace(body)
+        return workspace
+      } catch (error: any) {
+        if (error.message?.includes("TRIAL_WORKSPACE_LIMIT_EXCEEDED")) {
+          set.status = 403
+          return errorResponse(
+            error.message.replace("TRIAL_WORKSPACE_LIMIT_EXCEEDED: ", ""),
+            ResponseCode.FORBIDDEN,
+          )
+        }
+        throw error
+      }
     },
     {
       body: workspaceSchema,

@@ -1,19 +1,20 @@
 import { Plus, Search, Trash2, UserCheck, X } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import { UpgradePlanModal } from "@/components/UpgradePlanModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   useBulkUpdateWorkspaceStatus,
-  useCreateWorkspace,
   useDeleteWorkspace,
   useUpdateWorkspace,
   useWorkspaceMembers,
 } from "@/lib/api/hooks/workspaces"
 import { usersApi } from "@/lib/api/services/users"
+import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { AddMemberDialog } from "./AddMemberDialog"
@@ -37,11 +38,21 @@ export default function WorkspacesPage() {
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"status" | null>(null)
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
-  const createWorkspace = useCreateWorkspace()
   const updateWorkspace = useUpdateWorkspace()
   const deleteWorkspace = useDeleteWorkspace()
   const bulkUpdateStatus = useBulkUpdateWorkspaceStatus()
+
+  // Get current user
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}")
+    } catch {
+      return {}
+    }
+  }, [])
+  const userId = currentUser?.id || ""
 
   // Fetch members for the editing workspace (only when editing)
   const { data: members = [] } = useWorkspaceMembers(editingWorkspace?.id || "", !!editingWorkspace)
@@ -70,11 +81,20 @@ export default function WorkspacesPage() {
   }, [searchInput])
 
   const _handleCreateWorkspace = async (workspaceData: unknown) => {
-    createWorkspace.mutate(workspaceData as Workspace, {
-      onSuccess: () => {
+    try {
+      await workspacesApi.create(workspaceData as Workspace)
+      toast.success("워크스페이스가 생성되었습니다")
+      setShowCreateDialog(false)
+      // 수동으로 쿼리 무효화
+      window.location.reload()
+    } catch (error: any) {
+      if (error.message?.includes("Trial users can only create 1 workspace")) {
         setShowCreateDialog(false)
-      },
-    })
+        setShowUpgradeModal(true)
+      } else {
+        toast.error(error.message || "워크스페이스 생성에 실패했습니다")
+      }
+    }
   }
 
   const handleUpdateWorkspace = async (workspaceData: unknown) => {
@@ -160,6 +180,37 @@ export default function WorkspacesPage() {
     setSelectedWorkspaces((prev) => (prev.length === workspaceIds.length ? [] : workspaceIds))
   }, [])
 
+  // Handle create workspace button click - check trial limit first
+  const handleCreateWorkspaceClick = async () => {
+    if (!userId) {
+      setShowCreateDialog(true)
+      return
+    }
+
+    try {
+      // Check if user can create workspace (trial limit validation)
+      const response = await fetch(
+        `${window.location.origin}/api/v1/workspaces/can-create/${userId}`,
+        {
+          credentials: "include",
+        },
+      )
+      const result = await response.json()
+
+      if (result.canCreate) {
+        // User can create workspace - show create dialog
+        setShowCreateDialog(true)
+      } else {
+        // Trial limit reached - show upgrade modal
+        setShowUpgradeModal(true)
+      }
+    } catch (error) {
+      console.error("Failed to check trial limit:", error)
+      // On error, just show the create dialog
+      setShowCreateDialog(true)
+    }
+  }
+
   return (
     <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
@@ -177,7 +228,7 @@ export default function WorkspacesPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{t("settings.workspaces.management")}</CardTitle>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={handleCreateWorkspaceClick}>
               <Plus className="mr-1 h-4 w-4" />
               {t("settings.workspaces.create")}
             </Button>
@@ -312,6 +363,9 @@ export default function WorkspacesPage() {
           workspaceId={editingWorkspace.id}
         />
       )}
+
+      {/* Upgrade Plan Modal */}
+      <UpgradePlanModal onOpenChange={setShowUpgradeModal} open={showUpgradeModal} />
     </div>
   )
 }

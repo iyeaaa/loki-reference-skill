@@ -91,6 +91,97 @@ class AITemplateGenerationService {
   }
 
   /**
+   * 회사명을 타겟 언어로 번역
+   */
+  private async translateCompanyName(companyName: string, targetLanguage: string): Promise<string> {
+    try {
+      console.log(`[AITemplate] Translating company name: "${companyName}" to ${targetLanguage}`)
+
+      const translationPrompt = `You are a professional translator specializing in company names and business terminology.
+
+**Task**: Translate the company name to ${targetLanguage}, but ONLY if translation is needed.
+
+**Company name**: "${companyName}"
+**Target language**: ${targetLanguage}
+
+**IMPORTANT - Follow these rules strictly**:
+
+1. **Detect the source language** of the company name first.
+
+2. **If the company name is ALREADY in ${targetLanguage}**, return it as-is without any changes.
+   - Example: If target is English and name is "Apple Inc.", return "Apple Inc."
+   - Example: If target is Japanese and name is "ソニー株式会社", return "ソニー株式会社"
+
+3. **If multiple languages are mixed** (e.g., "Samsung Electronics 주식회사"), return the original name as-is.
+
+4. **If translation is needed**, follow these guidelines:
+
+   **To Japanese (日本語)**:
+   - Convert business entity types: "Inc./Corp./Ltd./주식회사/㈜/有限公司" → "株式会社"
+   - Transliterate company name to katakana (for foreign words) or use standard Japanese name
+   - Examples:
+     * "주식회사 거목" → "株式会社ゴモク"
+     * "Apple Inc." → "アップル株式会社" (or just "アップル" if well-known)
+     * "微软公司" → "マイクロソフト株式会社"
+
+   **To English**:
+   - Convert business entity types: "주식회사/㈜/株式会社/有限公司" → "Ltd." or "Co., Ltd." or "Corporation"
+   - Romanize or use standard English name
+   - Examples:
+     * "주식회사 거목" → "Geomok Ltd."
+     * "ソニー株式会社" → "Sony Corporation"
+     * "阿里巴巴集团" → "Alibaba Group"
+
+   **To Korean (한국어)**:
+   - Convert business entity types: "Inc./Corp./Ltd./株式会社/有限公司" → "주식회사"
+   - Transliterate company name to Hangul
+   - Examples:
+     * "Apple Inc." → "주식회사 애플"
+     * "ソニー株式会社" → "주식회사 소니"
+
+   **To Chinese (中文)**:
+   - Convert business entity types: "Inc./Corp./Ltd./주식회사/㈜/株式会社" → "有限公司" or "公司"
+   - Translate or transliterate to Chinese
+   - Examples:
+     * "주식회사 거목" → "巨木有限公司"
+     * "Apple Inc." → "苹果公司"
+
+   **To other languages**:
+   - Adapt business entity format to local conventions
+   - Transliterate or translate the company name appropriately
+
+5. **For well-known brands** (e.g., Apple, Google, Samsung, Sony, Toyota), use the standard translation/transliteration for that brand in the target language.
+
+6. **Maintain professional tone** and business naming conventions of the target language.
+
+**Output**: Respond with ONLY the company name (translated or original), nothing else. No explanations, no quotes, no additional text.`
+
+      const result = await generateText({
+        model: this.openai("gpt-5-nano"),
+        prompt: translationPrompt,
+        temperature: 0.3,
+      })
+
+      const translatedName = result.text.trim()
+
+      // If translation failed or returned empty, use original
+      if (!translatedName || translatedName === companyName) {
+        console.log(
+          `[AITemplate] No translation needed or failed, using original: "${companyName}"`,
+        )
+        return companyName
+      }
+
+      console.log(`[AITemplate] Translated: "${companyName}" → "${translatedName}"`)
+      return translatedName
+    } catch (error) {
+      console.error(`[AITemplate] Failed to translate company name:`, error)
+      // Fallback: return original name
+      return companyName
+    }
+  }
+
+  /**
    * 국가 정보로부터 언어 감지 및 이메일 템플릿 생성
    */
   async generateEmailTemplate(options: GenerateTemplateOptions): Promise<GeneratedTemplate> {
@@ -161,6 +252,19 @@ ${ex.content}
         ? "Write the ENTIRE email in English. Do NOT mix languages."
         : `Write the email in the primary language of "${country}". Keep it consistent - do NOT mix languages.`
 
+      // 3. 회사명 번역 (한글 → 타겟 언어)
+      const targetLanguage = isEnglishTarget
+        ? "English"
+        : country.toLowerCase().includes("japan") || country.toLowerCase() === "jp"
+          ? "Japanese"
+          : country.toLowerCase().includes("china") || country.toLowerCase() === "cn"
+            ? "Chinese"
+            : country.toLowerCase() === "kr"
+              ? "Korean"
+              : "English" // fallback
+
+      const translatedWorkspaceName = await this.translateCompanyName(workspaceName, targetLanguage)
+
       const systemPrompt = `You are a world-class cold email strategist who has personally written emails that generated $50M+ in pipeline for B2B companies.
 
 Your philosophy: "The best cold email doesn't feel cold. It feels like someone did their homework."
@@ -168,7 +272,7 @@ Your philosophy: "The best cold email doesn't feel cold. It feels like someone d
 ═══════════════════════════════════════════════════════════════
 WHO IS SENDING THIS EMAIL
 ═══════════════════════════════════════════════════════════════
-Company: ${workspaceName}
+Company: ${translatedWorkspaceName}
 ${workspaceDescription ? `What we do (translate to ${isEnglishTarget ? "English" : `the primary language of ${country}`} if not already): ${workspaceDescription}` : ""}
 
 ═══════════════════════════════════════════════════════════════

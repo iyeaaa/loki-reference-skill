@@ -89,6 +89,10 @@ usage() {
   echo "  full    - Lint + Type check + Build (1-2분)"
   echo "  (none)  - Same as 'full' (default)"
   echo ""
+  printf "%s\n" "${BOLD}Campaign Scripts:${NC}"
+  echo "  pause   - Pause all active campaigns"
+  echo "  resume  - Resume all paused campaigns (with rescheduling)"
+  echo ""
   printf "%s\n" "${BOLD}Flags:${NC}"
   echo "  --only-changed  - Check only changed projects (staged files)"
   echo "  --quiet         - Minimal output (no banner)"
@@ -99,12 +103,17 @@ usage() {
   echo "  ./send-ci.sh fast --only-changed  # 변경된 프로젝트만 빠른 검사"
   echo "  ./send-ci.sh full --only-changed  # 변경된 프로젝트만 빌드"
   echo "  ./send-ci.sh fast --quiet         # 최소 출력"
+  echo "  ./send-ci.sh pause                # 모든 활성 캠페인 일시정지"
+  echo "  ./send-ci.sh pause --dry-run      # 일시정지 미리보기"
+  echo "  ./send-ci.sh resume               # 모든 일시정지 캠페인 재개"
+  echo "  ./send-ci.sh resume --dry-run     # 재개 미리보기"
 }
 
 # 옵션 파싱
 MODE=${1:-full}
 ONLY_CHANGED=false
 QUIET=false
+DRY_RUN=false
 
 # 인자 파싱
 for arg in "$@"; do
@@ -115,7 +124,10 @@ for arg in "$@"; do
     --quiet)
       QUIET=true
       ;;
-    fast|full)
+    --dry-run)
+      DRY_RUN=true
+      ;;
+    fast|full|pause|resume)
       MODE=$arg
       ;;
     *)
@@ -130,11 +142,41 @@ for arg in "$@"; do
 done
 
 # MODE 검증
-if [ "$MODE" != "fast" ] && [ "$MODE" != "full" ]; then
+if [ "$MODE" != "fast" ] && [ "$MODE" != "full" ] && [ "$MODE" != "pause" ] && [ "$MODE" != "resume" ]; then
   log_error "Invalid option: $MODE"
   echo ""
   usage
   exit 1
+fi
+
+# Campaign script modes (pause/resume)
+if [ "$MODE" = "pause" ] || [ "$MODE" = "resume" ]; then
+  echo ""
+  if [ "$MODE" = "pause" ]; then
+    log_system "${YELLOW}Running Pause All Campaigns Script${NC}"
+  else
+    log_system "${YELLOW}Running Resume All Campaigns Script${NC}"
+  fi
+
+  if [ "$DRY_RUN" = true ]; then
+    log_system "Mode: ${WHITE}DRY RUN${NC} ${GRAY}(no changes)${NC}"
+  else
+    log_system "Mode: ${WHITE}LIVE${NC} ${GRAY}(changes will be applied)${NC}"
+  fi
+  echo ""
+
+  cd elysia-server
+  if [ "$DRY_RUN" = true ]; then
+    export DRY_RUN=true
+  fi
+
+  if [ "$MODE" = "pause" ]; then
+    bun run scripts/pause-all-campaigns.ts
+  else
+    bun run scripts/resume-all-campaigns.ts
+  fi
+
+  exit $?
 fi
 
 # 임시 파일 디렉토리

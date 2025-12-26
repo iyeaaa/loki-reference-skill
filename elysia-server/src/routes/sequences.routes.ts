@@ -175,7 +175,8 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       // 상태가 없으면 기본값 draft 설정
       const sequence = await sequenceService.createSequence({
         ...body,
-        status: body.status || "draft",
+        // status: body.status || "draft",
+        status: "paused",
       })
       return sequence
     },

@@ -53,3 +53,9 @@ echo "[+] Running database migrations..."
 bun run db:migrate
 
 echo "[+] Migrations completed successfully"
+
+# Pause all active campaigns after migration
+echo "[+] Pausing all active campaigns..."
+bun run scripts/pause-all-campaigns.ts
+
+echo "[+] All campaigns paused successfully"

@@ -54,11 +54,4 @@ bun run db:migrate
 
 echo "[+] Migrations completed successfully"
 
-echo "[+] Logging all campaigns and their status..."
-DRY_RUN=true bun run scripts/pause-all-campaigns.ts > pause-campaigns.log 2>&1
-bun run scripts/pause-all-campaigns.ts
-echo "[+] Campaign status logged to pause-campaigns.log"
-
-echo "[+] Starting undeliverable contacts cleanup in background..."
-nohup bun run scripts/clean-undeliverable-contacts.ts > clean-contacts.log 2>&1 &
 echo "[+] Cleanup running in background. Check clean-contacts.log for progress."

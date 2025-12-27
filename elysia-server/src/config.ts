@@ -123,6 +123,13 @@ export const config = {
       ttlMs: getEnvInt("LEAD_DISCOVERY_CACHE_TTL_MS", 24 * 60 * 60 * 1000), // 24 hours
       timeoutMs: getEnvInt("LEAD_DISCOVERY_REDIS_TIMEOUT_MS", 250),
     },
+    emailVerification: {
+      enabled:
+        getEnvOrDefault("EMAIL_VERIFICATION_REDIS_CACHE_ENABLED", "true").toLowerCase() === "true",
+      keyPrefix: getEnvOrDefault("EMAIL_VERIFICATION_REDIS_CACHE_PREFIX", "email_verification:v1:"),
+      ttlMs: getEnvInt("EMAIL_VERIFICATION_CACHE_TTL_MS", 365 * 24 * 60 * 60 * 1000), // 365 days
+      timeoutMs: getEnvInt("EMAIL_VERIFICATION_REDIS_TIMEOUT_MS", 250),
+    },
   },
 
   // Monitoring (optional)

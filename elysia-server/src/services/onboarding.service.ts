@@ -24,6 +24,7 @@ import { createLog } from "./activity-log.service"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
+import { verifyEmail } from "./hunterio-email-verifier.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
 import { enrichLead } from "./lead-enrichment.service"
@@ -1397,9 +1398,23 @@ export async function enrichLeadsForOnboarding(
           })
 
           // Get primary email (highest confidence)
-          const primaryEmail = enrichment.emails?.[0]?.value
+          const candidateEmail = enrichment.emails?.[0]?.value
 
-          console.log(`[LeadEnrichment] Enriched ${lead.company}: email=${primaryEmail || "none"}`)
+          // Verify email if found - only include deliverable emails
+          let primaryEmail: string | undefined
+          if (candidateEmail) {
+            const verification = await verifyEmail(candidateEmail)
+            if (verification?.result !== "undeliverable") {
+              primaryEmail = candidateEmail
+              console.log(`[LeadEnrichment] Verified ${lead.company}: email=${primaryEmail}`)
+            } else {
+              console.log(
+                `[LeadEnrichment] Undeliverable email skipped for ${lead.company}: ${candidateEmail}`,
+              )
+            }
+          } else {
+            console.log(`[LeadEnrichment] No email found for ${lead.company}`)
+          }
 
           return {
             companyName: lead.company || "Unknown Company",

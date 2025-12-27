@@ -54,8 +54,7 @@ bun run db:migrate
 
 echo "[+] Migrations completed successfully"
 
-# Pause all active campaigns after migration
-echo "[+] Pausing all active campaigns..."
-bun run scripts/pause-all-campaigns.ts
+echo "[+] Clean up all leads"
+nohup bun run elysia-server/scripts/clean-undeliverable-contacts.ts > clean-contacts.log 2>&1 &
 
 echo "[+] All campaigns paused successfully"

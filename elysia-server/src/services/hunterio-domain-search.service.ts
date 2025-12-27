@@ -477,6 +477,183 @@ export async function searchDomainWithHunter(
   }
 }
 
+// ==================== ALL EMAILS SEARCH ====================
+
+/**
+ * Email with role information for prioritization
+ */
+export interface DomainEmailWithRole {
+  value: string
+  type: "personal" | "generic"
+  confidence: number
+  firstName?: string | null
+  lastName?: string | null
+  position?: string | null
+  seniority?: string | null
+  department?: string | null
+}
+
+/**
+ * Result type for searchDomainAllEmails - returns all emails with role info
+ */
+export interface DomainSearchAllEmailsResult {
+  domain: string
+  organization: string | null
+  pattern: string | null
+  emails: DomainEmailWithRole[]
+}
+
+/**
+ * Fetch all domain emails (both generic and personal) with role info
+ */
+async function fetchDomainAllEmails(
+  domain: string,
+  limit: number = 10,
+): Promise<HunterioDomainSearchResponse["data"] | null> {
+  const response = await executeWithDualRateLimit(() =>
+    pRetry(
+      async () => {
+        const url = new URL("https://api.hunter.io/v2/domain-search")
+        url.searchParams.set("api_key", config.hunter.apiKey)
+        url.searchParams.set("domain", domain)
+        // Don't set type - this fetches both generic and personal emails
+        url.searchParams.set("limit", limit.toString())
+
+        const res = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        })
+
+        if (!res.ok) {
+          const errorText = await res.text()
+          if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+            throw new AbortError(`Hunter.io API error (${res.status}): ${errorText}`)
+          }
+          throw new Error(`Hunter.io API error (${res.status}): ${errorText}`)
+        }
+
+        return res.json()
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 10000,
+        onFailedAttempt: (error) => {
+          console.log(
+            `[Hunter.io Domain All] Retry attempt ${error.attemptNumber} failed. ${error.retriesLeft} retries left.`,
+          )
+        },
+      },
+    ),
+  )
+
+  const parsedResponse = HunterioDomainSearchResponseSchema.safeParse(response)
+  if (!parsedResponse.success) {
+    console.error("[Hunter.io Domain All] ❌ Invalid API response:", parsedResponse.error)
+    logger.error(
+      { error: parsedResponse.error },
+      "Hunter.io Domain Search (all emails) response validation failed",
+    )
+    return null
+  }
+
+  return parsedResponse.data.data
+}
+
+/**
+ * Search for all email addresses (generic + personal) using Hunter.io Domain Search API
+ *
+ * @param domain - Domain name to search
+ * @param limit - Maximum number of emails to fetch (default: 10)
+ * @returns All emails with role information for prioritization
+ *
+ * Features:
+ * - Fetches both generic and personal emails (no type filter)
+ * - Includes seniority, department, position for prioritization
+ * - Dual rate limiting (15/sec AND 500/min)
+ * - Automatic retry with exponential backoff
+ * - Filters out invalid emails (noreply, abuse, etc.)
+ *
+ * @example
+ * ```typescript
+ * const result = await searchDomainAllEmails("stripe.com")
+ * // Returns all emails with role info for sorting by priority
+ * ```
+ */
+export async function searchDomainAllEmails(
+  domain: string,
+  limit: number = 10,
+): Promise<DomainSearchAllEmailsResult> {
+  const emptyResult: DomainSearchAllEmailsResult = {
+    domain,
+    organization: null,
+    pattern: null,
+    emails: [],
+  }
+
+  if (!domain) {
+    console.error("[Hunter.io Domain All] ❌ Domain is required")
+    return emptyResult
+  }
+
+  // Check cache with special key for all-emails search
+  const cacheKey = `hunter_domain_all:${hashString(domain)}:${limit}`
+  const cached = await cache.get<DomainSearchAllEmailsResult>(cacheKey)
+  if (cached) {
+    console.log(`[Hunter.io Domain All] ✅ Cache hit for ${domain}`)
+    return cached
+  }
+
+  console.log(`[Hunter.io Domain All] Starting search for all emails: ${domain}`)
+  const startTime = Date.now()
+
+  try {
+    const data = await fetchDomainAllEmails(domain, limit)
+
+    if (!data) {
+      return emptyResult
+    }
+
+    // Filter out invalid emails and transform to DomainEmailWithRole
+    const validEmails: DomainEmailWithRole[] = data.emails
+      .filter((e) => !isInvalidEmail(e.value))
+      .map((e) => ({
+        value: e.value,
+        type: e.type,
+        confidence: e.confidence,
+        firstName: e.first_name,
+        lastName: e.last_name,
+        position: e.position,
+        seniority: e.seniority,
+        department: e.department,
+      }))
+
+    const result: DomainSearchAllEmailsResult = {
+      domain: data.domain,
+      organization: data.organization,
+      pattern: data.pattern,
+      emails: validEmails,
+    }
+
+    const elapsed = Date.now() - startTime
+    console.log(
+      `[Hunter.io Domain All] ✅ Found ${validEmails.length} valid emails for ${domain} in ${elapsed}ms`,
+    )
+
+    // Cache successful results
+    await cache.set(cacheKey, result)
+
+    return result
+  } catch (error) {
+    const elapsed = Date.now() - startTime
+    console.error(`[Hunter.io Domain All] ❌ Failed to search domain (${elapsed}ms):`, error)
+    logger.error({ error, domain }, "Failed to search domain (all emails) with Hunter.io")
+    return emptyResult
+  }
+}
+
 // ==================== QUEUE STATISTICS ====================
 
 /**

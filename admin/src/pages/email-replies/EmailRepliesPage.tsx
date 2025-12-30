@@ -71,84 +71,84 @@ export default function EmailRepliesPage() {
   // Fetch real category counts from API
   const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "all")
 
-  // Email sidebar sections with counts
+  // Email sidebar sections with counts (3-section structure with i18n)
   const emailSidebarSections = [
     {
-      title: "MAILBOX",
+      title: t("email-replies.sidebar.sections.mailbox"),
       items: [
         {
           id: "all_mail",
-          label: "All Mail",
+          label: t("email-replies.sidebar.mailbox.allMail"),
           icon: <Mail className="h-4 w-4" />,
-          count: undefined,
+          count: intentCounts?.all_mail,
         },
         {
           id: "inbox",
-          label: "Inbox",
+          label: t("email-replies.sidebar.mailbox.inbox"),
           icon: <Inbox className="h-4 w-4" />,
-          count: undefined, // No count for mailbox filter
+          count: intentCounts?.inbox,
         },
         {
           id: "sent",
-          label: "Sent",
+          label: t("email-replies.sidebar.mailbox.sent"),
           icon: <Send className="h-4 w-4" />,
-          count: undefined,
+          count: intentCounts?.sent,
         },
       ],
     },
     {
-      title: "OVERVIEW",
+      title: t("email-replies.sidebar.sections.important"),
       items: [
         {
           id: "all",
-          label: "All",
+          label: t("email-replies.sidebar.important.all"),
           icon: <Mail className="h-4 w-4" />,
           count: intentCounts?.all || 0,
         },
         {
           id: "important",
-          label: "Important",
+          label: t("email-replies.sidebar.important.important"),
           icon: <Star className="h-4 w-4" />,
           count: intentCounts?.important || 0,
         },
         {
           id: "unread",
-          label: "Unread",
+          label: t("email-replies.sidebar.important.unread"),
           icon: <MailOpen className="h-4 w-4" />,
           count: intentCounts?.unread || 0,
         },
       ],
     },
     {
-      title: "LABELS",
+      title: t("email-replies.sidebar.sections.aiCategories"),
       items: [
         {
           id: "positive_interest",
-          label: "Positive",
+          label: t("email-replies.sidebar.aiCategories.positive"),
           icon: <ThumbsUp className="h-4 w-4" />,
           count: intentCounts?.positive_interest || 0,
         },
         {
           id: "not_interested",
-          label: "Negative",
+          label: t("email-replies.sidebar.aiCategories.negative"),
           icon: <ThumbsDown className="h-4 w-4" />,
           count: intentCounts?.not_interested || 0,
         },
         {
           id: "out_of_office",
-          label: "Auto Messages",
+          label: t("email-replies.sidebar.aiCategories.autoMessages"),
           icon: <MessageSquare className="h-4 w-4" />,
           count: intentCounts?.out_of_office || 0,
         },
         {
           id: "neutral",
-          label: "Other",
+          label: t("email-replies.sidebar.aiCategories.other"),
           icon: <Minus className="h-4 w-4" />,
           count: intentCounts?.neutral || 0,
         },
         {
           id: "unclassified",
-          label: "Unclassified",
+          label: t("email-replies.sidebar.aiCategories.unclassified"),
           icon: <HelpCircle className="h-4 w-4" />,
           count: intentCounts?.unclassified || 0,
         },

@@ -109,3 +109,29 @@ ai.success.reply,AI 답장이 생성되었습니다!,AI reply has been generated
 auth.loginRequired,로그인이 필요합니다,Login required
 workspace.notSelected,워크스페이스가 선택되지 않았습니다,Workspace not selected
 email.invalidRecipient,유효한 받는사람 이메일 주소를 입력하세요,Please enter a valid recipient email address
+sidebar.sections.mailbox,메일함,MAILBOX
+sidebar.sections.important,중요,IMPORTANT
+sidebar.sections.aiCategories,AI 분류,AI CATEGORIES
+sidebar.mailbox.allMail,전체메일,All Mail
+sidebar.mailbox.inbox,받은메일함,Inbox
+sidebar.mailbox.sent,보낸메일함,Sent
+sidebar.important.all,전체,All
+sidebar.important.important,중요,Important
+sidebar.important.unread,안읽음,Unread
+sidebar.aiCategories.positive,긍정적,Positive
+sidebar.aiCategories.negative,관심 없음,Not Interested
+sidebar.aiCategories.autoMessages,자동 응답,Auto Replies
+sidebar.aiCategories.other,기타,Other
+sidebar.aiCategories.unclassified,미분류,Unclassified
+intent.positive_interest,긍정적,Positive
+intent.not_interested,관심 없음,Not Interested
+intent.out_of_office,자동 응답,Auto Replies
+intent.neutral,기타,Other
+intent.meeting_request,미팅 요청,Meeting Request
+intent.question,질문,Question
+intent.objection,반대 의견,Objection
+intent.unclassified,미분류,Unclassified
+intentSelector.change,변경,Change
+intentSelector.addTag,태그 추가,Add Tag
+intentSelector.selectIntent,Intent 선택,Select Intent
+intentSelector.removeTag,태그 제거,Remove Tag

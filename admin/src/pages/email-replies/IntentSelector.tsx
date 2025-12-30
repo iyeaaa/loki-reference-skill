@@ -10,6 +10,7 @@ import {
   ThumbsUp,
   XCircle,
 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,16 +34,20 @@ type IntentSelectorProps = {
 
 const intentOptions: Array<{
   value: EmailIntent
-  label: string
+  labelKey: string
   icon: React.ComponentType<{ className?: string }>
 }> = [
-  { value: "positive_interest", label: "Positive Interest", icon: ThumbsUp },
-  { value: "meeting_request", label: "Meeting Request", icon: Calendar },
-  { value: "question", label: "Question", icon: HelpCircle },
-  { value: "neutral", label: "Neutral", icon: Minus },
-  { value: "objection", label: "Objection", icon: XCircle },
-  { value: "not_interested", label: "Not Interested", icon: ThumbsDown },
-  { value: "out_of_office", label: "Out of Office", icon: Coffee },
+  {
+    value: "positive_interest",
+    labelKey: "email-replies.intent.positive_interest",
+    icon: ThumbsUp,
+  },
+  { value: "meeting_request", labelKey: "email-replies.intent.meeting_request", icon: Calendar },
+  { value: "question", labelKey: "email-replies.intent.question", icon: HelpCircle },
+  { value: "neutral", labelKey: "email-replies.intent.neutral", icon: Minus },
+  { value: "objection", labelKey: "email-replies.intent.objection", icon: XCircle },
+  { value: "not_interested", labelKey: "email-replies.intent.not_interested", icon: ThumbsDown },
+  { value: "out_of_office", labelKey: "email-replies.intent.out_of_office", icon: Coffee },
 ]
 
 export function IntentSelector({
@@ -51,6 +56,7 @@ export function IntentSelector({
   currentIntent,
   size = "md",
 }: IntentSelectorProps) {
+  const { t } = useTranslation()
   const updateEmailReply = useUpdateEmailReply()
   const updateEmailIntent = useUpdateEmailIntent()
 
@@ -72,7 +78,7 @@ export function IntentSelector({
   return (
     // biome-ignore lint/a11y/useSemanticElements: wrapper for event propagation control
     <div
-      aria-label="Intent 태그 선택"
+      aria-label={t("email-replies.intentSelector.selectIntent")}
       className="flex items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
@@ -95,19 +101,21 @@ export function IntentSelector({
             {currentIntent ? (
               <>
                 <Edit2 className="h-3 w-3" />
-                <span>변경</span>
+                <span>{t("email-replies.intentSelector.change")}</span>
               </>
             ) : (
               <>
                 <Plus className="h-3 w-3" />
-                <span>태그 추가</span>
+                <span>{t("email-replies.intentSelector.addTag")}</span>
               </>
             )}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel className="text-xs">Intent 선택</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs">
+            {t("email-replies.intentSelector.selectIntent")}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {intentOptions.map((option) => {
             const Icon = option.icon
@@ -122,7 +130,7 @@ export function IntentSelector({
                 }}
               >
                 <Icon className="mr-2 h-4 w-4" />
-                <span>{option.label}</span>
+                <span>{t(option.labelKey)}</span>
               </DropdownMenuItem>
             )
           })}
@@ -137,7 +145,7 @@ export function IntentSelector({
                 }}
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                태그 제거
+                {t("email-replies.intentSelector.removeTag")}
               </DropdownMenuItem>
             </>
           )}

@@ -455,16 +455,51 @@ function buildInboundFilterConditions(filters: EmailReplyFilters) {
  * Uses LEFT JOIN to include emails without email_replies records (counted as unclassified)
  */
 export async function getIntentCounts(workspaceId: string) {
-  const whereClause =
+  // Base workspace condition (without direction filter)
+  const workspaceCondition = workspaceId === "all" ? undefined : eq(emails.workspaceId, workspaceId)
+
+  // Inbound-only condition for OVERVIEW and LABELS sections
+  const inboundWhereClause =
     workspaceId === "all"
       ? eq(emails.direction, "inbound")
       : and(eq(emails.workspaceId, workspaceId), eq(emails.direction, "inbound"))
 
+  // ========== MAILBOX Section Counts ==========
+  // All Mail: All threads (both inbound and outbound)
+  const allMailResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
+    .from(emails)
+    .where(workspaceCondition)
+
+  const allMail = allMailResult[0]?.count || 0
+
+  // Inbox: Inbound threads only
+  const inboxResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
+    .from(emails)
+    .where(inboundWhereClause)
+
+  const inbox = inboxResult[0]?.count || 0
+
+  // Sent: Outbound threads only
+  const outboundWhereClause =
+    workspaceId === "all"
+      ? eq(emails.direction, "outbound")
+      : and(eq(emails.workspaceId, workspaceId), eq(emails.direction, "outbound"))
+
+  const sentResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
+    .from(emails)
+    .where(outboundWhereClause)
+
+  const sent = sentResult[0]?.count || 0
+
+  // ========== OVERVIEW Section Counts (inbound only) ==========
   // Get total count of distinct threads with inbound emails
   const totalResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
     .from(emails)
-    .where(whereClause)
+    .where(inboundWhereClause)
 
   const total = totalResult[0]?.count || 0
 
@@ -472,7 +507,7 @@ export async function getIntentCounts(workspaceId: string) {
   const importantResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
     .from(emails)
-    .where(and(whereClause, eq(emails.isImportant, true)))
+    .where(and(inboundWhereClause, eq(emails.isImportant, true)))
 
   const important = importantResult[0]?.count || 0
 
@@ -480,12 +515,13 @@ export async function getIntentCounts(workspaceId: string) {
   const unreadResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
     .from(emails)
-    .where(and(whereClause, eq(emails.isRead, false)))
+    .where(and(inboundWhereClause, eq(emails.isRead, false)))
 
   const unread = unreadResult[0]?.count || 0
 
   // Get intent counts using LEFT JOIN to include emails without email_replies records
   // Emails without email_replies or with NULL intent will be counted as unclassified
+  // ========== LABELS Section Counts (inbound only, by intent) ==========
   const intentCountsResult = await db
     .select({
       intent: sql<string | null>`COALESCE(${emailReplies.intent}, '__NO_RECORD__')`,
@@ -493,14 +529,20 @@ export async function getIntentCounts(workspaceId: string) {
     })
     .from(emails)
     .leftJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
-    .where(whereClause)
+    .where(inboundWhereClause)
     .groupBy(sql`COALESCE(${emailReplies.intent}, '__NO_RECORD__')`)
 
-  // Format the response
+  // Format the response with MAILBOX, OVERVIEW, and LABELS counts
   const intentCounts: Record<string, number> = {
+    // MAILBOX section
+    all_mail: allMail,
+    inbox: inbox,
+    sent: sent,
+    // OVERVIEW section (inbound only)
     all: total,
     important: important,
     unread: unread,
+    // LABELS section (inbound only, by intent)
     meeting_request: 0,
     question: 0,
     objection: 0,

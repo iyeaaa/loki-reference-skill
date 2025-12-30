@@ -1,4 +1,5 @@
 import { Calendar, Coffee, HelpCircle, Minus, ThumbsDown, ThumbsUp, XCircle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import type { EmailIntent } from "@/lib/api/types/email"
 
@@ -8,50 +9,52 @@ type IntentBadgeProps = {
 }
 
 type IntentConfig = {
-  label: string
+  labelKey: string
   color: string
   icon: React.ComponentType<{ className?: string }>
 }
 
 const intentConfig: Record<EmailIntent, IntentConfig> = {
   meeting_request: {
-    label: "Meeting Request",
+    labelKey: "email-replies.intent.meeting_request",
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
     icon: Calendar,
   },
   question: {
-    label: "Question",
+    labelKey: "email-replies.intent.question",
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
     icon: HelpCircle,
   },
   objection: {
-    label: "Objection",
+    labelKey: "email-replies.intent.objection",
     color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
     icon: XCircle,
   },
   out_of_office: {
-    label: "Out of Office",
+    labelKey: "email-replies.intent.out_of_office",
     color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
     icon: Coffee,
   },
   not_interested: {
-    label: "Not Interested",
+    labelKey: "email-replies.intent.not_interested",
     color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
     icon: ThumbsDown,
   },
   positive_interest: {
-    label: "Positive Interest",
+    labelKey: "email-replies.intent.positive_interest",
     color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
     icon: ThumbsUp,
   },
   neutral: {
-    label: "Neutral",
+    labelKey: "email-replies.intent.neutral",
     color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
     icon: Minus,
   },
 }
 
 export function IntentBadge({ intent, size = "md" }: IntentBadgeProps) {
+  const { t } = useTranslation()
+
   if (!intent) {
     return null
   }
@@ -81,17 +84,17 @@ export function IntentBadge({ intent, size = "md" }: IntentBadgeProps) {
       variant="outline"
     >
       <Icon className={iconSizes[size]} />
-      {config.label}
+      {t(config.labelKey)}
     </Badge>
   )
 }
 
-// Helper function to get intent label without rendering component
-export function getIntentLabel(intent: EmailIntent | null | undefined): string {
+// Helper function to get intent label key for translation
+export function getIntentLabelKey(intent: EmailIntent | null | undefined): string {
   if (!intent) {
     return ""
   }
-  return intentConfig[intent]?.label || ""
+  return intentConfig[intent]?.labelKey || ""
 }
 
 // Helper function to get intent color class

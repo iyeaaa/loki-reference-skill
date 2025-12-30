@@ -10,6 +10,7 @@ export const QUEUE_NAMES = {
   METRICS_SYNC: "metrics-sync",
   ONBOARDING_GENERATION: "onboarding-generation",
   UNIPILE_INBOX_POLL: "unipile-inbox-poll", // Unipile inbox polling for replied emails
+  TRIAL_EXPIRATION: "trial-expiration", // Trial expiration check
   TEST_QUEUE: "test-queue", // For testing purposes
 } as const
 
@@ -143,6 +144,23 @@ export interface UnipileInboxPollResult {
     accountId: string
     error: string
   }>
+}
+
+/**
+ * Trial Expiration Job - checks and expires trial subscriptions
+ */
+export interface TrialExpirationJob {
+  /** Trigger type: 'scheduled' for automatic check, 'manual' for on-demand */
+  trigger: "scheduled" | "manual"
+  /** Optional: specific date to check against (for testing) */
+  checkDate?: string
+}
+
+export interface TrialExpirationResult {
+  success: boolean
+  expiredCount: number
+  pausedSequencesCount: number
+  errors: string[]
 }
 
 // Job Options

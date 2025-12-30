@@ -11,6 +11,7 @@ import {
   type ScheduledEmailJob,
   type TestJob,
   type TestJobResult,
+  type TrialExpirationJob,
   type UnipileInboxPollJob,
   type WorkflowStepJob,
 } from "./types"
@@ -134,6 +135,29 @@ export const unipileInboxPollQueue = new Queue<UnipileInboxPollJob>(
 )
 
 /**
+ * Trial Expiration Queue
+ * Checks for expired trial subscriptions daily at midnight
+ * Marks expired trials and pauses their active campaigns
+ */
+export const trialExpirationQueue = new Queue<TrialExpirationJob>(QUEUE_NAMES.TRIAL_EXPIRATION, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2, // Retry once on failure
+    backoff: {
+      type: "fixed",
+      delay: 60000, // 1 minute between retries
+    },
+    removeOnComplete: {
+      age: 7 * 24 * 3600, // Keep completed jobs for 7 days
+      count: 30, // Keep max 30 completed jobs (1 month if daily)
+    },
+    removeOnFail: {
+      age: 30 * 24 * 3600, // Keep failed jobs for 30 days
+    },
+  },
+})
+
+/**
  * Test Queue
  * For testing BullMQ functionality
  * DB에 로그가 저장되므로 Redis 보존 기간은 짧게 유지
@@ -167,6 +191,7 @@ export function getAllQueues() {
     [QUEUE_NAMES.METRICS_SYNC]: metricsSyncQueue,
     [QUEUE_NAMES.ONBOARDING_GENERATION]: onboardingGenerationQueue,
     [QUEUE_NAMES.UNIPILE_INBOX_POLL]: unipileInboxPollQueue,
+    [QUEUE_NAMES.TRIAL_EXPIRATION]: trialExpirationQueue,
     [QUEUE_NAMES.TEST_QUEUE]: testQueue,
   }
 }
@@ -182,6 +207,7 @@ export async function closeAllQueues(): Promise<void> {
     metricsSyncQueue.close(),
     onboardingGenerationQueue.close(),
     unipileInboxPollQueue.close(),
+    trialExpirationQueue.close(),
     testQueue.close(),
   ])
 }

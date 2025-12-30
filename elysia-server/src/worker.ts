@@ -17,18 +17,21 @@
 
 import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
-import { unipileInboxPollQueue } from "./lib/queue/queues"
+import { trialExpirationQueue, unipileInboxPollQueue } from "./lib/queue/queues"
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
 import {
   getOnboardingAutoGenerateWorkerStatus,
   getTestWorkerStatus,
+  getTrialExpirationWorkerStatus,
   getUnipileInboxPollWorkerStatus,
   startOnboardingAutoGenerateWorker,
   startTestWorker,
+  startTrialExpirationWorker,
   startUnipileInboxPollWorker,
   stopOnboardingAutoGenerateWorker,
   stopTestWorker,
+  stopTrialExpirationWorker,
   stopUnipileInboxPollWorker,
 } from "./workers/bullmq"
 
@@ -86,6 +89,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
     await stopOnboardingAutoGenerateWorker()
     logger.info("[Worker] OnboardingWorker stopped")
+
+    await stopTrialExpirationWorker()
+    logger.info("[Worker] TrialExpirationWorker stopped")
 
     await stopUnipileInboxPollWorker()
     logger.info("[Worker] UnipileInboxPollWorker stopped")
@@ -167,7 +173,7 @@ async function main(): Promise<void> {
   Environment:   ${config.nodeEnv}
   Redis Host:    ${config.redis.host}:${config.redis.port}
   Health Port:   ${HEALTH_SERVER_PORT}
-  Workers:       TestWorker, OnboardingAutoGenerateWorker, UnipileInboxPollWorker
+  Workers:       TestWorker, OnboardingAutoGenerateWorker, TrialExpirationWorker, UnipileInboxPollWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 
@@ -222,6 +228,37 @@ async function main(): Promise<void> {
     { running: onboardingStatus.running, concurrency: onboardingStatus.concurrency },
     "[Worker] OnboardingAutoGenerateWorker started",
   )
+
+  // Start Trial Expiration Worker
+  const trialWorker = startTrialExpirationWorker()
+  const trialStatus = getTrialExpirationWorkerStatus()
+  if (trialWorker) {
+    logger.info(
+      { running: trialStatus.running },
+      "[Worker] TrialExpirationWorker started",
+    )
+
+    // Schedule daily trial expiration check at midnight (KST - UTC+9)
+    // Cron: "0 15 * * *" = 15:00 UTC = 00:00 KST (next day)
+    await trialExpirationQueue.add(
+      "daily-check",
+      { trigger: "scheduled" },
+      {
+        repeat: {
+          pattern: "0 15 * * *", // Daily at 00:00 KST (15:00 UTC)
+        },
+        jobId: "trial-expiration-daily", // Prevent duplicates
+      },
+    )
+    logger.info(
+      "[Worker] Trial expiration check scheduled (daily at 00:00 KST)",
+    )
+  } else {
+    logger.error(
+      { running: trialStatus.running },
+      "[Worker] TrialExpirationWorker failed to start",
+    )
+  }
 
   // Start Unipile Inbox Poll Worker (only if enabled)
   const unipileWorker = startUnipileInboxPollWorker()

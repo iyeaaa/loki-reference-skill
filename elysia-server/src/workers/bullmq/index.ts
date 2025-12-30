@@ -6,6 +6,11 @@ export {
 } from "./onboarding-auto-generate.worker"
 export { getTestWorkerStatus, startTestWorker, stopTestWorker, testWorker } from "./test.worker"
 export {
+  getTrialExpirationWorkerStatus,
+  startTrialExpirationWorker,
+  stopTrialExpirationWorker,
+} from "./trial-expiration.worker"
+export {
   getUnipileInboxPollWorkerStatus,
   startUnipileInboxPollWorker,
   stopUnipileInboxPollWorker,

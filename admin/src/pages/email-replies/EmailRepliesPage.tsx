@@ -180,13 +180,17 @@ export default function EmailRepliesPage() {
       return
     }
 
-    // Map sidebar items to intent filters
+    // Map sidebar items to intent filters (OVERVIEW and LABELS sections)
+    // These sections show inbound email statistics, so direction should be "inbound"
     if (itemId === "all" || itemId === "unread" || itemId === "important") {
       setSelectedIntent("all")
-      setDirection("all") // Reset direction to show all emails
+      setDirection("inbound") // OVERVIEW section - inbound only
       queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
     } else {
+      // LABELS section (positive_interest, not_interested, etc.)
       setSelectedIntent(itemId)
+      setDirection("inbound") // LABELS section - inbound only
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
     }
   }
 

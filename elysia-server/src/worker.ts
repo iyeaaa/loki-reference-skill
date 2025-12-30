@@ -235,19 +235,43 @@ async function main(): Promise<void> {
   if (trialWorker) {
     logger.info({ running: trialStatus.running }, "[Worker] TrialExpirationWorker started")
 
-    // Schedule daily trial expiration check at midnight (KST - UTC+9)
-    // Cron: "0 15 * * *" = 15:00 UTC = 00:00 KST (next day)
+    // Clean up old daily job (migrated to hourly)
+    try {
+      const repeatableJobs = await trialExpirationQueue.getRepeatableJobs()
+      const oldDailyJob = repeatableJobs.find((job) => job.id === "trial-expiration-daily")
+      if (oldDailyJob) {
+        await trialExpirationQueue.removeRepeatableByKey(oldDailyJob.key)
+        logger.info("[Worker] Removed old daily trial expiration job (migrated to hourly)")
+      }
+    } catch (error) {
+      logger.warn({ error }, "[Worker] Failed to clean up old daily job")
+    }
+
+    // 1. Run immediately on startup to catch any missed expirations (deployment timing issue)
     await trialExpirationQueue.add(
-      "daily-check",
+      "startup-check",
+      { trigger: "manual" },
+      {
+        jobId: `trial-expiration-startup-${Date.now()}`,
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    )
+    logger.info("[Worker] Trial expiration startup check queued (immediate execution)")
+
+    // 2. Schedule hourly trial expiration check (changed from daily for faster response)
+    // Cron: "0 * * * *" = Every hour at minute 0
+    await trialExpirationQueue.add(
+      "hourly-check",
       { trigger: "scheduled" },
       {
         repeat: {
-          pattern: "0 15 * * *", // Daily at 00:00 KST (15:00 UTC)
+          pattern: "0 * * * *", // Every hour at minute 0
         },
-        jobId: "trial-expiration-daily", // Prevent duplicates
+        jobId: "trial-expiration-hourly", // Prevent duplicates
       },
     )
-    logger.info("[Worker] Trial expiration check scheduled (daily at 00:00 KST)")
+    logger.info("[Worker] Trial expiration check scheduled (hourly at minute 0)")
   } else {
     logger.error({ running: trialStatus.running }, "[Worker] TrialExpirationWorker failed to start")
   }

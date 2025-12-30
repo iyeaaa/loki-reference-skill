@@ -792,26 +792,37 @@ async function sendSequenceEmail(execution: {
   }
 }
 
+// Flag to prevent concurrent batch processing
+let isProcessing = false
+
 async function _processSequenceEmails() {
+  // Prevent concurrent batch processing - if previous batch is still running, skip
+  if (isProcessing) {
+    logger.debug("[email-worker] Previous batch still processing, skipping this cycle")
+    return
+  }
+
+  isProcessing = true
   const startTime = Date.now()
   const traceId = generateTraceId()
 
   try {
-    // Get pending step executions
-    const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
+    // Claim pending executions using optimistic locking (no limit - process all available)
+    // This prevents race conditions where multiple workers process the same execution
+    const claimedExecutions = await sequenceService.claimPendingExecutions()
 
-    if (pendingExecutions.length === 0) {
+    if (claimedExecutions.length === 0) {
       return
     }
 
     // Single log for batch start - no individual execution details
-    emailWorkerLogger.batchStart(traceId, pendingExecutions.length)
+    emailWorkerLogger.batchStart(traceId, claimedExecutions.length)
 
     let successCount = 0
     let failureCount = 0
 
     // Process each execution
-    for (const execution of pendingExecutions) {
+    for (const execution of claimedExecutions) {
       // Individual execution logged at debug level only
       logger.debug(
         {
@@ -827,10 +838,7 @@ async function _processSequenceEmails() {
       // IMPORTANT: Update status to 'scheduled' BEFORE sending
       // This prevents duplicate sends if the worker crashes/restarts
       try {
-        await sequenceService.updateStepExecutionStatus(
-          execution.executionId,
-          "scheduled",
-        )
+        await sequenceService.updateStepExecutionStatus(execution.executionId, "scheduled")
       } catch (statusError) {
         logger.error(
           {
@@ -914,19 +922,34 @@ async function _processSequenceEmails() {
     // Single summary log at the end
     const durationMs = Date.now() - startTime
     emailWorkerLogger.batchComplete(traceId, {
-      total: pendingExecutions.length,
+      total: claimedExecutions.length,
       sent: successCount,
       failed: failureCount,
       durationMs,
     })
   } catch (error) {
     logger.error({ traceId, err: error }, "[email-worker] Error in batch processing")
+  } finally {
+    isProcessing = false
   }
 }
 
 // Run worker every minute
-export function startEmailSequenceWorker() {
-  logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started")
+export async function startEmailSequenceWorker() {
+  logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started with optimistic locking")
+
+  // Release any stale processing executions from previous crashed workers
+  try {
+    const releasedCount = await sequenceService.releaseStaleProcessingExecutions(10) // 10 minutes
+    if (releasedCount > 0) {
+      logger.info(
+        { releasedCount },
+        "🔄 [STEP-WORKER-V2] Released stale processing executions on startup",
+      )
+    }
+  } catch (error) {
+    logger.error({ error }, "❌ [STEP-WORKER-V2] Failed to release stale executions on startup")
+  }
 
   // Run immediately
   _processSequenceEmails()

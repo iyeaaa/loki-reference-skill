@@ -2019,7 +2019,7 @@ export async function getEnrollmentStepExecutions(enrollmentId: string) {
   return result
 }
 
-// GetPendingStepExecutions - Get step executions that need to be sent
+// GetPendingStepExecutions - Get step executions that need to be sent (DEPRECATED: use claimPendingExecutions instead)
 export async function getPendingStepExecutions(limit: number = 100) {
   const { default: logger } = await import("../utils/logger")
   const now = new Date()
@@ -2084,6 +2084,172 @@ export async function getPendingStepExecutions(limit: number = 100) {
   }
 
   return result
+}
+
+/**
+ * ClaimPendingExecutions - Atomically claim pending step executions using optimistic locking
+ *
+ * This function prevents race conditions by:
+ * 1. Finding pending executions
+ * 2. Atomically updating their status to 'processing' using UPDATE ... WHERE status = 'pending'
+ * 3. Only returning executions that were successfully claimed
+ *
+ * If another worker claims the same execution first, the UPDATE will not match (status != 'pending')
+ * and the execution will not be returned.
+ */
+export async function claimPendingExecutions() {
+  const { default: logger } = await import("../utils/logger")
+  const now = new Date()
+
+  logger.debug(
+    {
+      currentTime: now.toISOString(),
+    },
+    "🔍 [STEP-BASED] Claiming pending step executions with optimistic locking",
+  )
+
+  // Step 1: Find all pending execution IDs (no limit - process all available)
+  const pendingIds = await db
+    .select({
+      id: sequenceStepExecutions.id,
+    })
+    .from(sequenceStepExecutions)
+    .innerJoin(sequenceEnrollments, eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id))
+    .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .where(
+      and(
+        eq(sequenceStepExecutions.status, "pending"),
+        lte(sequenceStepExecutions.scheduledAt, now),
+        eq(sequenceEnrollments.status, "active"),
+        eq(sequences.status, "active"),
+        ne(leads.leadStatus, "unsubscribed"),
+      ),
+    )
+    .orderBy(sequenceStepExecutions.scheduledAt)
+
+  if (pendingIds.length === 0) {
+    return []
+  }
+
+  logger.info(
+    {
+      pendingCount: pendingIds.length,
+    },
+    "📋 [STEP-BASED] Found pending executions, attempting to claim",
+  )
+
+  // Step 2: Atomically claim executions by updating status to 'processing'
+  // Only rows that are still 'pending' will be updated (optimistic locking)
+  const claimedIds = await db
+    .update(sequenceStepExecutions)
+    .set({
+      status: "processing",
+    })
+    .where(
+      and(
+        inArray(
+          sequenceStepExecutions.id,
+          pendingIds.map((p) => p.id),
+        ),
+        eq(sequenceStepExecutions.status, "pending"), // Optimistic lock: only claim if still pending
+      ),
+    )
+    .returning({
+      id: sequenceStepExecutions.id,
+    })
+
+  if (claimedIds.length === 0) {
+    logger.debug("⏭️ [STEP-BASED] No executions claimed (already claimed by another worker)")
+    return []
+  }
+
+  // Step 3: Fetch full details for claimed executions only
+  const result = await db
+    .select({
+      executionId: sequenceStepExecutions.id,
+      enrollmentId: sequenceStepExecutions.enrollmentId,
+      stepId: sequenceStepExecutions.stepId,
+      stepOrder: sequenceStepExecutions.stepOrder,
+      scheduledAt: sequenceStepExecutions.scheduledAt,
+      emailSubject: sequenceSteps.emailSubject,
+      emailBodyText: sequenceSteps.emailBodyText,
+      emailBodyHtml: sequenceSteps.emailBodyHtml,
+      attachments: sql<Array<{
+        filename: string
+        type: string
+        content: string
+      }> | null>`${sequenceSteps.attachments}`,
+      leadId: sequenceEnrollments.leadId,
+      leadCompanyName: leads.companyName,
+      emailAccountId: sequenceEnrollments.userEmailAccountId,
+      sequenceId: sequenceEnrollments.sequenceId,
+      sequenceName: sequences.name,
+      workspaceId: sequences.workspaceId,
+      userId: sequences.createdBy,
+    })
+    .from(sequenceStepExecutions)
+    .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+    .innerJoin(sequenceEnrollments, eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id))
+    .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .where(
+      inArray(
+        sequenceStepExecutions.id,
+        claimedIds.map((c) => c.id),
+      ),
+    )
+    .orderBy(sequenceStepExecutions.scheduledAt)
+
+  logger.info(
+    {
+      claimedCount: result.length,
+      sequences: [...new Set(result.map((r) => r.sequenceName))],
+      earliestSchedule: result[0]?.scheduledAt,
+    },
+    "🔒 [STEP-BASED] Successfully claimed executions with optimistic locking",
+  )
+
+  return result
+}
+
+/**
+ * Release stale processing executions
+ * Call this on worker startup to release any executions that were left in 'processing' state
+ * due to worker crash or restart
+ */
+export async function releaseStaleProcessingExecutions(staleMinutes: number = 10) {
+  const { default: logger } = await import("../utils/logger")
+  const staleThreshold = new Date(Date.now() - staleMinutes * 60 * 1000)
+
+  // Find executions that have been in 'processing' state for too long
+  // These are likely from crashed workers
+  const staleExecutions = await db
+    .update(sequenceStepExecutions)
+    .set({
+      status: "pending", // Reset to pending so they can be picked up again
+    })
+    .where(
+      and(
+        eq(sequenceStepExecutions.status, "processing"),
+        lte(sequenceStepExecutions.scheduledAt, staleThreshold),
+      ),
+    )
+    .returning({
+      id: sequenceStepExecutions.id,
+    })
+
+  if (staleExecutions.length > 0) {
+    logger.warn(
+      {
+        count: staleExecutions.length,
+        staleMinutes,
+      },
+      "🔄 [STEP-BASED] Released stale processing executions back to pending",
+    )
+  }
+
+  return staleExecutions.length
 }
 
 // UpdateStepExecutionStatus - Update step execution status after sending

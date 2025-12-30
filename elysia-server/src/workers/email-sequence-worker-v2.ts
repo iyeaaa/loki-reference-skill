@@ -897,6 +897,13 @@ async function _processSequenceEmails() {
           result.error,
         )
 
+        // Check if enrollment should be completed (only if this was the last step)
+        // Unlike success case, we don't update lastEmailSentAt/firstEmailSentAt
+        await sequenceService.checkAndCompleteEnrollmentIfLastStep(
+          execution.enrollmentId,
+          execution.stepOrder,
+        )
+
         failureCount++
         // Failures logged at warn level
         emailWorkerLogger.emailFailed(
@@ -933,9 +940,9 @@ export async function startEmailSequenceWorker() {
   logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started")
 
   // Recover any stuck 'processing' executions from previous crashes
-  // This handles the case where server crashed while processing a batch
+  // On single-instance startup, ALL processing executions are considered stuck
   try {
-    const recovered = await sequenceService.recoverStuckProcessingExecutions(30) // 30 min timeout
+    const recovered = await sequenceService.recoverStuckProcessingExecutions()
     if (recovered > 0) {
       logger.info(
         { recoveredCount: recovered },

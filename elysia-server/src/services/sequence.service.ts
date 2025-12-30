@@ -2222,45 +2222,35 @@ export async function releaseClaimedExecutions(executionIds: string[]) {
  * Recover stuck 'processing' executions
  *
  * If a server crashes while processing executions, they will be stuck in 'processing' status.
- * This function recovers those executions by resetting them to 'pending' if they've been
- * in 'processing' status for longer than the specified timeout.
+ * This function recovers ALL 'processing' executions back to 'pending' on server startup.
+ *
+ * Since this runs on single-instance server startup, any 'processing' execution is considered
+ * stuck (the previous server instance that was processing them is no longer running).
  *
  * Should be called on worker startup to recover from crashes.
- *
- * @param timeoutMinutes - How long an execution can be in 'processing' before being considered stuck (default: 30 minutes)
  */
-export async function recoverStuckProcessingExecutions(timeoutMinutes: number = 30) {
+export async function recoverStuckProcessingExecutions() {
   const { default: logger } = await import("../utils/logger")
 
-  // Calculate the cutoff time (executions in 'processing' longer than this are considered stuck)
-  const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000)
-
-  // Find and recover stuck executions
-  // Note: We use scheduled_at as a proxy for when processing started
-  // since there's no 'processing_started_at' column
+  // Recover ALL processing executions back to pending
+  // Since this runs on server startup, any processing execution is stuck
+  // (the previous server that was processing them has crashed/restarted)
   const result = await db
     .update(sequenceStepExecutions)
     .set({ status: "pending" })
-    .where(
-      and(
-        eq(sequenceStepExecutions.status, "processing"),
-        lte(sequenceStepExecutions.scheduledAt, cutoffTime),
-      ),
-    )
+    .where(eq(sequenceStepExecutions.status, "processing"))
     .returning({ id: sequenceStepExecutions.id })
 
   if (result.length > 0) {
     logger.warn(
       {
         recoveredCount: result.length,
-        timeoutMinutes,
-        cutoffTime: cutoffTime.toISOString(),
         executionIds: result.map((r) => r.id),
       },
-      "⚠️ [STEP-BASED] Recovered stuck processing executions back to pending",
+      "⚠️ [STEP-BASED] Recovered stuck processing executions back to pending on startup",
     )
   } else {
-    logger.debug({ timeoutMinutes }, "✅ [STEP-BASED] No stuck processing executions found")
+    logger.debug("✅ [STEP-BASED] No stuck processing executions found")
   }
 
   return result.length
@@ -2298,6 +2288,87 @@ export async function updateStepExecutionStatus(
       enrollmentId: sequenceStepExecutions.enrollmentId,
       stepOrder: sequenceStepExecutions.stepOrder,
     })
+
+  return updated
+}
+
+/**
+ * Check if enrollment should be completed after a failed step
+ *
+ * Unlike updateEnrollmentProgress, this function:
+ * - Only marks enrollment as 'completed' if this was the last step
+ * - Does NOT update lastEmailSentAt or firstEmailSentAt (since email failed)
+ * - Used when a step fails to ensure enrollment is properly completed
+ */
+export async function checkAndCompleteEnrollmentIfLastStep(
+  enrollmentId: string,
+  stepOrder: number,
+) {
+  const { default: logger } = await import("../utils/logger")
+
+  // Get enrollment and total steps
+  const enrollment = await db
+    .select({
+      sequenceId: sequenceEnrollments.sequenceId,
+      status: sequenceEnrollments.status,
+    })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .limit(1)
+
+  if (!enrollment[0]) {
+    logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found")
+    return null
+  }
+
+  // Skip if already completed
+  if (enrollment[0].status === "completed") {
+    return null
+  }
+
+  const steps = await getSequenceSteps(enrollment[0].sequenceId)
+  const isLastStep = stepOrder >= steps.length
+
+  if (!isLastStep) {
+    // Not the last step, nothing to do
+    // Note: For failed steps, we don't schedule the next step
+    // The enrollment stays active but won't progress further
+    logger.debug(
+      {
+        enrollmentId,
+        stepOrder,
+        totalSteps: steps.length,
+      },
+      "📊 [STEP-BASED] Step failed but not last step - enrollment stays active",
+    )
+    return null
+  }
+
+  // Last step failed - mark enrollment as completed
+  const [updated] = await db
+    .update(sequenceEnrollments)
+    .set({
+      status: "completed",
+      completedAt: new Date(),
+      currentStepOrder: stepOrder,
+      nextStepScheduledAt: null,
+    })
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .returning({
+      id: sequenceEnrollments.id,
+      status: sequenceEnrollments.status,
+    })
+
+  if (updated) {
+    logger.info(
+      {
+        enrollmentId: updated.id,
+        stepOrder,
+        totalSteps: steps.length,
+      },
+      "🏁 [STEP-BASED] Enrollment completed - last step failed",
+    )
+  }
 
   return updated
 }

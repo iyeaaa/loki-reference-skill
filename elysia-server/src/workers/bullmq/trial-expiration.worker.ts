@@ -8,7 +8,7 @@
  * - 로그 기록
  */
 
-import { Job, Worker } from "bullmq"
+import { type Job, Worker } from "bullmq"
 import { and, eq, lt } from "drizzle-orm"
 import { db } from "../../db"
 import { subscriptions } from "../../db/schema/billing"
@@ -60,12 +60,7 @@ async function processTrialExpiration(
         trialEnd: subscriptions.trialEnd,
       })
       .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.status, "trialing"),
-          lt(subscriptions.trialEnd, now),
-        ),
-      )
+      .where(and(eq(subscriptions.status, "trialing"), lt(subscriptions.trialEnd, now)))
 
     logger.info(
       { count: expiredSubscriptions.length },
@@ -244,6 +239,6 @@ export function getTrialExpirationWorkerStatus(): {
 } {
   return {
     running: worker !== null && !worker.closing,
-    activeJobs: worker?.["active"] || 0,
+    activeJobs: 0, // BullMQ Worker doesn't expose active job count directly
   }
 }

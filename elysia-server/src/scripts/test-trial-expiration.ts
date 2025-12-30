@@ -7,12 +7,13 @@
  * 3. 결과 확인
  */
 
+import { QueueEvents } from "bullmq"
+import { and, eq, lt } from "drizzle-orm"
+import { db } from "../db"
+import { subscriptions } from "../db/schema/billing"
 import { trialExpirationQueue } from "../lib/queue/queues"
 import { redisConnection } from "../lib/redis"
 import logger from "../utils/logger"
-import { db } from "../db"
-import { subscriptions } from "../db/schema/billing"
-import { and, eq, lt } from "drizzle-orm"
 
 async function main() {
   logger.info("[TestTrialExpiration] Starting test...")
@@ -28,12 +29,7 @@ async function main() {
         trialEnd: subscriptions.trialEnd,
       })
       .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.status, "trialing"),
-          lt(subscriptions.trialEnd, now),
-        ),
-      )
+      .where(and(eq(subscriptions.status, "trialing"), lt(subscriptions.trialEnd, now)))
 
     logger.info(
       { count: expiredTrials.length, now: now.toISOString() },
@@ -66,12 +62,13 @@ async function main() {
     )
 
     // 3. Wait for job completion (max 30 seconds)
-    const result = await job.waitUntilFinished(undefined, 30000)
+    const queueEvents = new QueueEvents(trialExpirationQueue.name, {
+      connection: redisConnection,
+    })
+    const result = await job.waitUntilFinished(queueEvents, 30000)
+    await queueEvents.close()
 
-    logger.info(
-      { jobId: job.id, result },
-      "[TestTrialExpiration] Job completed!",
-    )
+    logger.info({ jobId: job.id, result }, "[TestTrialExpiration] Job completed!")
 
     if (result.success) {
       logger.info(
@@ -82,10 +79,7 @@ async function main() {
         "✅ [TestTrialExpiration] Success!",
       )
     } else {
-      logger.error(
-        { errors: result.errors },
-        "❌ [TestTrialExpiration] Job completed with errors",
-      )
+      logger.error({ errors: result.errors }, "❌ [TestTrialExpiration] Job completed with errors")
     }
 
     // 4. Clean up

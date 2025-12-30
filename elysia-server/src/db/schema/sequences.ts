@@ -41,7 +41,8 @@ export const enrollmentStatusEnum = pgEnum("enrollment_status_enum", [
 
 export const stepExecutionStatusEnum = pgEnum("step_execution_status_enum", [
   "pending",
-  "scheduled",
+  "processing", // Claimed by worker, currently being processed (prevents race conditions)
+  "scheduled", // Deprecated: kept for backward compatibility, use 'processing' instead
   "sent",
   "delivered",
   "failed",

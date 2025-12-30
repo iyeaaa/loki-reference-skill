@@ -233,10 +233,7 @@ async function main(): Promise<void> {
   const trialWorker = startTrialExpirationWorker()
   const trialStatus = getTrialExpirationWorkerStatus()
   if (trialWorker) {
-    logger.info(
-      { running: trialStatus.running },
-      "[Worker] TrialExpirationWorker started",
-    )
+    logger.info({ running: trialStatus.running }, "[Worker] TrialExpirationWorker started")
 
     // Schedule daily trial expiration check at midnight (KST - UTC+9)
     // Cron: "0 15 * * *" = 15:00 UTC = 00:00 KST (next day)
@@ -250,14 +247,9 @@ async function main(): Promise<void> {
         jobId: "trial-expiration-daily", // Prevent duplicates
       },
     )
-    logger.info(
-      "[Worker] Trial expiration check scheduled (daily at 00:00 KST)",
-    )
+    logger.info("[Worker] Trial expiration check scheduled (daily at 00:00 KST)")
   } else {
-    logger.error(
-      { running: trialStatus.running },
-      "[Worker] TrialExpirationWorker failed to start",
-    )
+    logger.error({ running: trialStatus.running }, "[Worker] TrialExpirationWorker failed to start")
   }
 
   // Start Unipile Inbox Poll Worker (only if enabled)

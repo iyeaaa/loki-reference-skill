@@ -44,6 +44,7 @@ export const subscriptionStatusEnum = pgEnum("subscription_status_enum", [
   "past_due",
   "unpaid",
   "paused",
+  "expired", // Trial expired without payment
 ])
 
 /**

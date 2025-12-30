@@ -2086,6 +2086,186 @@ export async function getPendingStepExecutions(limit: number = 100) {
   return result
 }
 
+/**
+ * ClaimPendingStepExecutions - Atomically claim pending step executions
+ *
+ * This function prevents race conditions by using optimistic locking:
+ * 1. Find pending executions (with FOR UPDATE SKIP LOCKED to avoid contention)
+ * 2. Atomically update their status to 'scheduled' in a single transaction
+ * 3. Return only the successfully claimed executions
+ *
+ * This ensures that even if multiple worker instances run concurrently,
+ * each execution is claimed by only one worker.
+ */
+export async function claimPendingStepExecutions(limit: number = 50) {
+  const { default: logger } = await import("../utils/logger")
+  const now = new Date()
+
+  logger.debug(
+    {
+      currentTime: now.toISOString(),
+      limit,
+    },
+    "🔒 [STEP-BASED] Claiming pending step executions with lock",
+  )
+
+  // Use raw SQL for atomic SELECT FOR UPDATE SKIP LOCKED + UPDATE pattern
+  // This ensures no race conditions between workers
+  const claimedExecutions = await db.transaction(async (tx) => {
+    // Step 1: Find and lock pending executions atomically
+    // FOR UPDATE SKIP LOCKED: Skip rows locked by other transactions (no blocking)
+    const pendingIds = await tx.execute<{ id: string }>(sql`
+      SELECT sse.id
+      FROM sequence_step_executions sse
+      INNER JOIN sequence_enrollments se ON sse.enrollment_id = se.id
+      INNER JOIN sequences s ON se.sequence_id = s.id
+      INNER JOIN leads l ON se.lead_id = l.id
+      WHERE sse.status = 'pending'
+        AND sse.scheduled_at <= ${now}
+        AND se.status = 'active'
+        AND s.status = 'active'
+        AND l.lead_status != 'unsubscribed'
+      ORDER BY sse.scheduled_at
+      LIMIT ${limit}
+      FOR UPDATE OF sse SKIP LOCKED
+    `)
+
+    if (pendingIds.rows.length === 0) {
+      return []
+    }
+
+    const executionIds = pendingIds.rows.map((row) => row.id)
+
+    // Step 2: Update status to 'processing' for all claimed executions
+    await tx
+      .update(sequenceStepExecutions)
+      .set({ status: "processing" })
+      .where(inArray(sequenceStepExecutions.id, executionIds))
+
+    // Step 3: Return full execution data for claimed executions
+    const result = await tx
+      .select({
+        executionId: sequenceStepExecutions.id,
+        enrollmentId: sequenceStepExecutions.enrollmentId,
+        stepId: sequenceStepExecutions.stepId,
+        stepOrder: sequenceStepExecutions.stepOrder,
+        scheduledAt: sequenceStepExecutions.scheduledAt,
+        emailSubject: sequenceSteps.emailSubject,
+        emailBodyText: sequenceSteps.emailBodyText,
+        emailBodyHtml: sequenceSteps.emailBodyHtml,
+        attachments: sql<Array<{
+          filename: string
+          type: string
+          content: string
+        }> | null>`${sequenceSteps.attachments}`,
+        leadId: sequenceEnrollments.leadId,
+        leadCompanyName: leads.companyName,
+        emailAccountId: sequenceEnrollments.userEmailAccountId,
+        sequenceId: sequenceEnrollments.sequenceId,
+        sequenceName: sequences.name,
+        workspaceId: sequences.workspaceId,
+        userId: sequences.createdBy,
+      })
+      .from(sequenceStepExecutions)
+      .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+      .innerJoin(
+        sequenceEnrollments,
+        eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id),
+      )
+      .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+      .where(inArray(sequenceStepExecutions.id, executionIds))
+
+    return result
+  })
+
+  if (claimedExecutions.length > 0) {
+    logger.info(
+      {
+        count: claimedExecutions.length,
+        sequences: [...new Set(claimedExecutions.map((r) => r.sequenceName))],
+        executionIds: claimedExecutions.map((e) => e.executionId),
+      },
+      "🔒 [STEP-BASED] Successfully claimed pending step executions",
+    )
+  }
+
+  return claimedExecutions
+}
+
+/**
+ * Release claimed executions back to pending status
+ * Used when a batch fails and executions need to be retried
+ */
+export async function releaseClaimedExecutions(executionIds: string[]) {
+  const { default: logger } = await import("../utils/logger")
+
+  if (executionIds.length === 0) return
+
+  await db
+    .update(sequenceStepExecutions)
+    .set({ status: "pending" })
+    .where(
+      and(
+        inArray(sequenceStepExecutions.id, executionIds),
+        eq(sequenceStepExecutions.status, "processing"), // Only release if still processing
+      ),
+    )
+
+  logger.info(
+    { count: executionIds.length },
+    "🔓 [STEP-BASED] Released claimed executions back to pending",
+  )
+}
+
+/**
+ * Recover stuck 'processing' executions
+ *
+ * If a server crashes while processing executions, they will be stuck in 'processing' status.
+ * This function recovers those executions by resetting them to 'pending' if they've been
+ * in 'processing' status for longer than the specified timeout.
+ *
+ * Should be called on worker startup to recover from crashes.
+ *
+ * @param timeoutMinutes - How long an execution can be in 'processing' before being considered stuck (default: 30 minutes)
+ */
+export async function recoverStuckProcessingExecutions(timeoutMinutes: number = 30) {
+  const { default: logger } = await import("../utils/logger")
+
+  // Calculate the cutoff time (executions in 'processing' longer than this are considered stuck)
+  const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000)
+
+  // Find and recover stuck executions
+  // Note: We use scheduled_at as a proxy for when processing started
+  // since there's no 'processing_started_at' column
+  const result = await db
+    .update(sequenceStepExecutions)
+    .set({ status: "pending" })
+    .where(
+      and(
+        eq(sequenceStepExecutions.status, "processing"),
+        lte(sequenceStepExecutions.scheduledAt, cutoffTime),
+      ),
+    )
+    .returning({ id: sequenceStepExecutions.id })
+
+  if (result.length > 0) {
+    logger.warn(
+      {
+        recoveredCount: result.length,
+        timeoutMinutes,
+        cutoffTime: cutoffTime.toISOString(),
+        executionIds: result.map((r) => r.id),
+      },
+      "⚠️ [STEP-BASED] Recovered stuck processing executions back to pending",
+    )
+  } else {
+    logger.debug({ timeoutMinutes }, "✅ [STEP-BASED] No stuck processing executions found")
+  }
+
+  return result.length
+}
+
 // UpdateStepExecutionStatus - Update step execution status after sending
 export async function updateStepExecutionStatus(
   executionId: string,

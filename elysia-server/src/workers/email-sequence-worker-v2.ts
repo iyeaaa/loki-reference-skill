@@ -792,26 +792,47 @@ async function sendSequenceEmail(execution: {
   }
 }
 
+// Track if a batch is currently being processed to prevent overlapping
+let isProcessingBatch = false
+
 async function _processSequenceEmails() {
   const startTime = Date.now()
   const traceId = generateTraceId()
 
-  try {
-    // Get pending step executions
-    const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
+  // Prevent overlapping batch processing (race condition prevention)
+  if (isProcessingBatch) {
+    logger.debug({ traceId }, "[email-worker] Previous batch still processing, skipping this cycle")
+    return
+  }
 
-    if (pendingExecutions.length === 0) {
+  isProcessingBatch = true
+
+  try {
+    // CRITICAL FIX: Use atomic claim to prevent race conditions
+    // This atomically:
+    // 1. Finds pending executions with FOR UPDATE SKIP LOCKED
+    // 2. Updates their status to 'processing' in a single transaction
+    // 3. Returns only the successfully claimed executions
+    //
+    // Batch size: 100 (optimized for)
+    // - Hunter.io rate limits (100 × 2s avg = ~3 min processing time)
+    // - Server crash recovery (100 max in 'processing' state)
+    // - Real-time monitoring visibility
+    // - Memory usage optimization
+    const claimedExecutions = await sequenceService.claimPendingStepExecutions(100)
+
+    if (claimedExecutions.length === 0) {
       return
     }
 
     // Single log for batch start - no individual execution details
-    emailWorkerLogger.batchStart(traceId, pendingExecutions.length)
+    emailWorkerLogger.batchStart(traceId, claimedExecutions.length)
 
     let successCount = 0
     let failureCount = 0
 
-    // Process each execution
-    for (const execution of pendingExecutions) {
+    // Process each execution (status is already 'processing' from claim)
+    for (const execution of claimedExecutions) {
       // Individual execution logged at debug level only
       logger.debug(
         {
@@ -823,23 +844,6 @@ async function _processSequenceEmails() {
         },
         "[email-worker] Processing execution",
       )
-
-      // IMPORTANT: Update status to 'scheduled' BEFORE sending
-      // This prevents duplicate sends if the worker crashes/restarts
-      try {
-        await sequenceService.updateStepExecutionStatus(execution.executionId, "scheduled")
-      } catch (statusError) {
-        logger.error(
-          {
-            traceId,
-            executionId: execution.executionId,
-            error: statusError,
-          },
-          "[email-worker] Failed to update status to scheduled, skipping",
-        )
-        failureCount++
-        continue // Skip this execution to avoid duplicate sends
-      }
 
       // Send email (checks for draft first, falls back to template)
       const result = await sendSequenceEmail(execution)
@@ -911,19 +915,36 @@ async function _processSequenceEmails() {
     // Single summary log at the end
     const durationMs = Date.now() - startTime
     emailWorkerLogger.batchComplete(traceId, {
-      total: pendingExecutions.length,
+      total: claimedExecutions.length,
       sent: successCount,
       failed: failureCount,
       durationMs,
     })
   } catch (error) {
     logger.error({ traceId, err: error }, "[email-worker] Error in batch processing")
+  } finally {
+    // Always release the lock, even if an error occurred
+    isProcessingBatch = false
   }
 }
 
 // Run worker every minute
-export function startEmailSequenceWorker() {
+export async function startEmailSequenceWorker() {
   logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started")
+
+  // Recover any stuck 'processing' executions from previous crashes
+  // This handles the case where server crashed while processing a batch
+  try {
+    const recovered = await sequenceService.recoverStuckProcessingExecutions(30) // 30 min timeout
+    if (recovered > 0) {
+      logger.info(
+        { recoveredCount: recovered },
+        "✅ [STEP-WORKER-V2] Recovered stuck executions on startup",
+      )
+    }
+  } catch (error) {
+    logger.error({ err: error }, "❌ [STEP-WORKER-V2] Failed to recover stuck executions")
+  }
 
   // Run immediately
   _processSequenceEmails()

@@ -68,3 +68,5 @@ elysia-server/index
 tmp
 
 .claude
+
+scripts/leads-db

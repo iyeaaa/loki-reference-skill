@@ -333,7 +333,7 @@ async function fetchDomainEmails(
 
   const parsedResponse = HunterioDomainSearchResponseSchema.safeParse(response)
   if (!parsedResponse.success) {
-    console.error("[Hunter.io Domain] ❌ Invalid API response:", parsedResponse.error)
+    console.error("[Hunter.io Domain] [ERROR] Invalid API response:", parsedResponse.error)
     logger.error(
       { error: parsedResponse.error },
       "Hunter.io Domain Search response validation failed",
@@ -382,7 +382,7 @@ export async function searchDomainWithHunter(
   // 1. Validate input parameters
   const validationResult = HunterioDomainSearchParamsSchema.safeParse(params)
   if (!validationResult.success) {
-    console.error("[Hunter.io Domain] ❌ Invalid parameters:", validationResult.error)
+    console.error("[Hunter.io Domain] [ERROR] Invalid parameters:", validationResult.error)
     logger.warn({ error: validationResult.error }, "Hunter.io Domain Search validation failed")
     return emptyResult
   }
@@ -393,7 +393,7 @@ export async function searchDomainWithHunter(
   const cached = await cache.get<HunterioDomainSearchResult>(cacheKey)
   if (cached) {
     console.log(
-      `[Hunter.io Domain] ✅ Cache hit for ${validatedParams.domain || validatedParams.company}`,
+      `[Hunter.io Domain] [CACHE] Cache hit for ${validatedParams.domain || validatedParams.company}`,
     )
     return cached
   }
@@ -418,7 +418,7 @@ export async function searchDomainWithHunter(
 
     if (firstGenericEmail && isInvalidEmail(firstGenericEmail.value)) {
       console.log(
-        `[Hunter.io Domain] ⚠️ First email is invalid (${firstGenericEmail.value}), fetching more...`,
+        `[Hunter.io Domain] [WARN] First email is invalid (${firstGenericEmail.value}), fetching more...`,
       )
 
       // Retry with limit=5 to get more options
@@ -438,11 +438,11 @@ export async function searchDomainWithHunter(
       .find((e) => !isInvalidEmail(e.value))
 
     if (validGenericEmail) {
-      console.log(`[Hunter.io Domain] ✓ Found valid generic email: ${validGenericEmail.value}`)
+      console.log(`[Hunter.io Domain] [OK] Found valid generic email: ${validGenericEmail.value}`)
     } else if (data.emails.some((e) => e.type === "generic")) {
-      console.log("[Hunter.io Domain] ⚠️ Only invalid generic emails found (noreply/abuse/etc)")
+      console.log("[Hunter.io Domain] [WARN] Only invalid generic emails found (noreply/abuse/etc)")
     } else {
-      console.log("[Hunter.io Domain] ℹ️ No generic emails found")
+      console.log("[Hunter.io Domain] [INFO] No generic emails found")
     }
 
     const result: HunterioDomainSearchResult = {
@@ -463,7 +463,7 @@ export async function searchDomainWithHunter(
     }
 
     const elapsed = Date.now() - startTime
-    console.log(`[Hunter.io Domain] ✅ Completed search for ${data.domain} in ${elapsed}ms`)
+    console.log(`[Hunter.io Domain] [OK] Completed search for ${data.domain} in ${elapsed}ms`)
 
     // 6. Cache successful results
     await cache.set(cacheKey, result)
@@ -471,7 +471,7 @@ export async function searchDomainWithHunter(
     return result
   } catch (error) {
     const elapsed = Date.now() - startTime
-    console.error(`[Hunter.io Domain] ❌ Failed to search domain (${elapsed}ms):`, error)
+    console.error(`[Hunter.io Domain] [ERROR] Failed to search domain (${elapsed}ms):`, error)
     logger.error({ error, params: validatedParams }, "Failed to search domain with Hunter.io")
     return emptyResult
   }
@@ -551,7 +551,7 @@ async function fetchDomainAllEmails(
 
   const parsedResponse = HunterioDomainSearchResponseSchema.safeParse(response)
   if (!parsedResponse.success) {
-    console.error("[Hunter.io Domain All] ❌ Invalid API response:", parsedResponse.error)
+    console.error("[Hunter.io Domain All] [ERROR] Invalid API response:", parsedResponse.error)
     logger.error(
       { error: parsedResponse.error },
       "Hunter.io Domain Search (all emails) response validation failed",
@@ -594,7 +594,7 @@ export async function searchDomainAllEmails(
   }
 
   if (!domain) {
-    console.error("[Hunter.io Domain All] ❌ Domain is required")
+    console.error("[Hunter.io Domain All] [ERROR] Domain is required")
     return emptyResult
   }
 
@@ -602,7 +602,7 @@ export async function searchDomainAllEmails(
   const cacheKey = `hunter_domain_all:${hashString(domain)}:${limit}`
   const cached = await cache.get<DomainSearchAllEmailsResult>(cacheKey)
   if (cached) {
-    console.log(`[Hunter.io Domain All] ✅ Cache hit for ${domain}`)
+    console.log(`[Hunter.io Domain All] [CACHE] Cache hit for ${domain}`)
     return cached
   }
 
@@ -639,7 +639,7 @@ export async function searchDomainAllEmails(
 
     const elapsed = Date.now() - startTime
     console.log(
-      `[Hunter.io Domain All] ✅ Found ${validEmails.length} valid emails for ${domain} in ${elapsed}ms`,
+      `[Hunter.io Domain All] [OK] Found ${validEmails.length} valid emails for ${domain} in ${elapsed}ms`,
     )
 
     // Cache successful results
@@ -648,7 +648,7 @@ export async function searchDomainAllEmails(
     return result
   } catch (error) {
     const elapsed = Date.now() - startTime
-    console.error(`[Hunter.io Domain All] ❌ Failed to search domain (${elapsed}ms):`, error)
+    console.error(`[Hunter.io Domain All] [ERROR] Failed to search domain (${elapsed}ms):`, error)
     logger.error({ error, domain }, "Failed to search domain (all emails) with Hunter.io")
     return emptyResult
   }

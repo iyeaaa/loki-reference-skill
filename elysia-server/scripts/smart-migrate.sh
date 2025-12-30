@@ -54,4 +54,8 @@ bun run db:migrate
 
 echo "[+] Migrations completed successfully"
 
-echo "[+] Cleanup running in background. Check clean-contacts.log for progress."
+# Resume all paused campaigns in background
+echo "[+] Resuming all paused campaigns..."
+bun run ./scripts/resume-all-campaigns.ts > resume-campaigns.log 2>&1 &
+
+echo "[+] Resume campaigns running in background. Check resume-campaigns.log for progress."

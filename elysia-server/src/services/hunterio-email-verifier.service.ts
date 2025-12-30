@@ -217,7 +217,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
   // 1. Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
-    console.error(`[Hunter.io Verifier] ❌ Invalid email format: ${email}`)
+    console.error(`[Hunter.io Verifier] [ERROR] Invalid email format: ${email}`)
     return null
   }
 
@@ -227,7 +227,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
   const cacheKey = generateCacheKey(normalizedEmail)
   const cached = await cache.get<EmailVerificationResult>(cacheKey)
   if (cached) {
-    console.log(`[Hunter.io Verifier] ✅ Cache hit for ${normalizedEmail}`)
+    console.log(`[Hunter.io Verifier] [CACHE] Cache hit for ${normalizedEmail}`)
     return cached
   }
 
@@ -250,7 +250,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
         // Handle polling for 202 status
         if (res.status === 202) {
           console.log(
-            `[Hunter.io Verifier] ⏳ Verification in progress (attempt ${attempt}/${maxPollingAttempts})`,
+            `[Hunter.io Verifier] [WAIT] Verification in progress (attempt ${attempt}/${maxPollingAttempts})`,
           )
           if (attempt < maxPollingAttempts) {
             await sleep(pollingDelay)
@@ -282,7 +282,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
     // 4. Validate response schema
     const parsedResponse = EmailVerifierResponseSchema.safeParse(response)
     if (!parsedResponse.success) {
-      console.error("[Hunter.io Verifier] ❌ Invalid API response:", parsedResponse.error)
+      console.error("[Hunter.io Verifier] [ERROR] Invalid API response:", parsedResponse.error)
       logger.error({ error: parsedResponse.error }, "Hunter.io Verifier response validation failed")
       return null
     }
@@ -292,7 +292,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
 
     const elapsed = Date.now() - startTime
     console.log(
-      `[Hunter.io Verifier] ✅ Verified ${normalizedEmail}: ${result.status} (score: ${result.score}) (${elapsed}ms)`,
+      `[Hunter.io Verifier] [OK] Verified ${normalizedEmail}: ${result.status} (score: ${result.score}) (${elapsed}ms)`,
     )
 
     // 6. Cache successful results
@@ -302,7 +302,7 @@ export async function verifyEmail(email: string): Promise<EmailVerificationResul
   } catch (error) {
     const elapsed = Date.now() - startTime
     console.error(
-      `[Hunter.io Verifier] ❌ Failed to verify ${normalizedEmail} (${elapsed}ms):`,
+      `[Hunter.io Verifier] [ERROR] Failed to verify ${normalizedEmail} (${elapsed}ms):`,
       error,
     )
     logger.error({ error, email: normalizedEmail }, "Failed to verify email with Hunter.io")
@@ -377,7 +377,7 @@ export async function verifyEmailBatch(
 
   const elapsed = Date.now() - startTime
   console.log(
-    `[Hunter.io Verifier] ✅ Batch verification completed: ${summary.valid}/${summary.total} valid (${elapsed}ms)`,
+    `[Hunter.io Verifier] [OK] Batch verification completed: ${summary.valid}/${summary.total} valid (${elapsed}ms)`,
   )
 
   return { results, summary }

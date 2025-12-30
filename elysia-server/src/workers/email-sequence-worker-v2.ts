@@ -6,15 +6,19 @@
  * and falls back to template variable replacement if no draft exists.
  */
 
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
+import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
-import { sequenceEnrollments } from "../db/schema/sequences"
+import { sequenceEnrollments, sequences } from "../db/schema/sequences"
 import { emailService } from "../services/email.service"
+import { searchDomainAllEmails } from "../services/hunterio-domain-search.service"
+import { verifyEmail } from "../services/hunterio-email-verifier.service"
 import * as leadService from "../services/lead.service"
+import { extractWebsiteContent, summarizeCompanyInfo } from "../services/lead-enrichment.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger, { emailWorkerLogger, generateTraceId } from "../utils/logger"
@@ -24,6 +28,25 @@ interface EmailSendResult {
   messageId?: string
   emailRecordId?: string // UUID from emails table
   error?: string
+}
+
+/**
+ * Extract domain from URL
+ */
+function extractDomain(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const urlWithProtocol = url.startsWith("http") ? url : `https://${url}`
+    const parsed = new URL(urlWithProtocol)
+    return parsed.hostname.replace(/^www\./, "")
+  } catch {
+    return (
+      url
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .split("/")[0] || null
+    )
+  }
 }
 
 async function sendSequenceEmail(execution: {
@@ -53,10 +76,11 @@ async function sendSequenceEmail(execution: {
       "🔍 [STEP-WORKER-V2] Processing email",
     )
 
-    // Get lead's primary email and contact name
+    // Get lead's primary email and contact name (include id for updates)
     const [leadContact] =
       (await db
         .select({
+          id: leadContacts.id,
           email: leadContacts.contactValue,
           contactName: leadContacts.contactName,
         })
@@ -71,6 +95,7 @@ async function sendSequenceEmail(execution: {
         .limit(1)) ||
       (await db // fallback to non-primary email
         .select({
+          id: leadContacts.id,
           email: leadContacts.contactValue,
           contactName: leadContacts.contactName,
         })
@@ -100,7 +125,7 @@ async function sendSequenceEmail(execution: {
       "✅ [STEP-WORKER-V2] Found lead email and contact",
     )
 
-    // Get full lead information
+    // Get full lead information (needed for verification fallback enrichment)
     const [lead] = await db
       .select({
         companyName: leads.companyName,
@@ -130,6 +155,186 @@ async function sendSequenceEmail(execution: {
         success: false,
         error: "Lead not found",
       }
+    }
+
+    // Verify email deliverability before sending
+    const verificationResult = await verifyEmail(leadContact.email)
+
+    if (verificationResult?.result === "undeliverable") {
+      logger.warn(
+        {
+          executionId: execution.executionId,
+          leadId: execution.leadId,
+          email: leadContact.email,
+        },
+        "⚠️ [STEP-WORKER-V2] Email is undeliverable, trying to find replacement...",
+      )
+
+      let newEmail: string | null = null
+      const domain = extractDomain(lead.websiteUrl)
+      let geminiEnrichmentData: {
+        description: string
+        industry?: string
+        products?: string
+        attachedEmailValue?: string
+        attachedEmailType?: string
+      } | null = null
+
+      // 1. Try Gemini enrichment first
+      if (lead.websiteUrl) {
+        try {
+          logger.debug(
+            { executionId: execution.executionId, websiteUrl: lead.websiteUrl },
+            "[STEP-WORKER-V2] Trying Gemini enrichment...",
+          )
+          const websiteContent = await extractWebsiteContent(lead.websiteUrl)
+          if (websiteContent.content) {
+            geminiEnrichmentData = await summarizeCompanyInfo(
+              websiteContent.content,
+              lead.companyName || domain || "",
+              config.gemini.apiKey,
+            )
+            if (
+              geminiEnrichmentData.attachedEmailValue &&
+              geminiEnrichmentData.attachedEmailValue !== "example@example.com"
+            ) {
+              const geminiVerification = await verifyEmail(geminiEnrichmentData.attachedEmailValue)
+              if (geminiVerification?.result !== "undeliverable") {
+                newEmail = geminiEnrichmentData.attachedEmailValue
+                logger.info(
+                  { executionId: execution.executionId, email: newEmail },
+                  "✅ [STEP-WORKER-V2] Found valid email via Gemini",
+                )
+              } else {
+                logger.debug(
+                  {
+                    executionId: execution.executionId,
+                    email: geminiEnrichmentData.attachedEmailValue,
+                  },
+                  "[STEP-WORKER-V2] Gemini email is also undeliverable",
+                )
+              }
+            }
+          }
+        } catch (error) {
+          logger.debug(
+            { executionId: execution.executionId, error },
+            "[STEP-WORKER-V2] Gemini enrichment failed",
+          )
+        }
+      }
+
+      // 2. Fallback to Hunter.io domain search if no valid email from Gemini
+      if (!newEmail && domain) {
+        try {
+          logger.debug(
+            { executionId: execution.executionId, domain },
+            "[STEP-WORKER-V2] Trying Hunter.io domain search...",
+          )
+          const hunterResult = await searchDomainAllEmails(domain, 5)
+          for (const hunterEmail of hunterResult.emails) {
+            const hunterVerification = await verifyEmail(hunterEmail.value)
+            if (hunterVerification?.result !== "undeliverable") {
+              newEmail = hunterEmail.value
+              logger.info(
+                { executionId: execution.executionId, email: newEmail },
+                "✅ [STEP-WORKER-V2] Found valid email via Hunter.io",
+              )
+              break
+            }
+          }
+        } catch (error) {
+          logger.debug(
+            { executionId: execution.executionId, error },
+            "[STEP-WORKER-V2] Hunter.io domain search failed",
+          )
+        }
+      }
+
+      // 3. Update lead contact and lead table, or delete everything
+      if (newEmail) {
+        // Update lead contact with new email
+        await db
+          .update(leadContacts)
+          .set({ contactValue: newEmail, isVerified: true })
+          .where(eq(leadContacts.id, leadContact.id))
+
+        // Update lead table with enrichment data from Gemini (if available)
+        if (geminiEnrichmentData) {
+          const leadUpdates: Record<string, unknown> = {}
+          if (geminiEnrichmentData.description && !lead.description) {
+            leadUpdates.description = geminiEnrichmentData.description
+          }
+          if (geminiEnrichmentData.industry && !lead.businessType) {
+            leadUpdates.businessType = geminiEnrichmentData.industry
+          }
+          if (Object.keys(leadUpdates).length > 0) {
+            leadUpdates.updatedAt = new Date()
+            await db.update(leads).set(leadUpdates).where(eq(leads.id, execution.leadId))
+            logger.debug(
+              { executionId: execution.executionId, updates: Object.keys(leadUpdates) },
+              "[STEP-WORKER-V2] Updated lead with Gemini enrichment data",
+            )
+          }
+        }
+
+        leadContact.email = newEmail
+        logger.info(
+          { executionId: execution.executionId, newEmail },
+          "✅ [STEP-WORKER-V2] Updated lead with new email, continuing to send",
+        )
+      } else {
+        // No valid email found - delete lead and all related records
+        logger.warn(
+          { executionId: execution.executionId, leadId: execution.leadId },
+          "❌ [STEP-WORKER-V2] No valid email found - deleting lead and cleaning up",
+        )
+
+        // 1. Remove from sequences.selectedLeadIds
+        const sequencesWithLead = await db
+          .select({ id: sequences.id, selectedLeadIds: sequences.selectedLeadIds })
+          .from(sequences)
+          .where(
+            sql`${sequences.selectedLeadIds}::jsonb @> ${JSON.stringify([execution.leadId])}::jsonb`,
+          )
+
+        for (const seq of sequencesWithLead) {
+          const leadIds = JSON.parse(seq.selectedLeadIds || "[]") as string[]
+          const updated = leadIds.filter((id) => id !== execution.leadId)
+          await db
+            .update(sequences)
+            .set({ selectedLeadIds: JSON.stringify(updated), updatedAt: new Date() })
+            .where(eq(sequences.id, seq.id))
+        }
+
+        // 2. Delete enrollment (cascade handles step_executions)
+        await db.delete(sequenceEnrollments).where(eq(sequenceEnrollments.leadId, execution.leadId))
+
+        // 3. Nullify leadId in emails table
+        await db.update(emails).set({ leadId: null }).where(eq(emails.leadId, execution.leadId))
+
+        // 4. Delete lead (cascade handles lead_contacts)
+        await db.delete(leads).where(eq(leads.id, execution.leadId))
+
+        logger.info(
+          { executionId: execution.executionId, leadId: execution.leadId },
+          "✅ [STEP-WORKER-V2] Lead and related records deleted",
+        )
+
+        return {
+          success: false,
+          error: "Email undeliverable, lead deleted",
+        }
+      }
+    } else {
+      logger.debug(
+        {
+          executionId: execution.executionId,
+          email: leadContact.email,
+          verificationStatus: verificationResult?.result || verificationResult?.status,
+        },
+        "✅ [STEP-WORKER-V2] Email verification passed",
+      )
     }
 
     // Get industry types for this lead

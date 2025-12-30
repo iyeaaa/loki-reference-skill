@@ -452,6 +452,7 @@ function buildInboundFilterConditions(filters: EmailReplyFilters) {
 /**
  * Get count of inbound threads by intent category
  * Counts DISTINCT threads (conversations), not individual emails
+ * Uses LEFT JOIN to include emails without email_replies records (counted as unclassified)
  */
 export async function getIntentCounts(workspaceId: string) {
   const whereClause =
@@ -483,17 +484,17 @@ export async function getIntentCounts(workspaceId: string) {
 
   const unread = unreadResult[0]?.count || 0
 
-  // Get intent counts from email_replies (for threads that have replies)
-  // Count distinct threads by intent
+  // Get intent counts using LEFT JOIN to include emails without email_replies records
+  // Emails without email_replies or with NULL intent will be counted as unclassified
   const intentCountsResult = await db
     .select({
-      intent: emailReplies.intent,
+      intent: sql<string | null>`COALESCE(${emailReplies.intent}, '__NO_RECORD__')`,
       count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int`,
     })
     .from(emails)
-    .innerJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
+    .leftJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
     .where(whereClause)
-    .groupBy(emailReplies.intent)
+    .groupBy(sql`COALESCE(${emailReplies.intent}, '__NO_RECORD__')`)
 
   // Format the response
   const intentCounts: Record<string, number> = {
@@ -511,10 +512,11 @@ export async function getIntentCounts(workspaceId: string) {
   }
 
   for (const row of intentCountsResult) {
-    if (row.intent) {
+    if (row.intent === "__NO_RECORD__" || row.intent === null) {
+      // email_replies record doesn't exist or intent is NULL - count as unclassified
+      intentCounts.unclassified = (intentCounts.unclassified || 0) + Number(row.count)
+    } else if (row.intent) {
       intentCounts[row.intent] = Number(row.count)
-    } else {
-      intentCounts.unclassified = Number(row.count)
     }
   }
 

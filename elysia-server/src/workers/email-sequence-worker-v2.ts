@@ -824,6 +824,26 @@ async function _processSequenceEmails() {
         "[email-worker] Processing execution",
       )
 
+      // IMPORTANT: Update status to 'scheduled' BEFORE sending
+      // This prevents duplicate sends if the worker crashes/restarts
+      try {
+        await sequenceService.updateStepExecutionStatus(
+          execution.executionId,
+          "scheduled",
+        )
+      } catch (statusError) {
+        logger.error(
+          {
+            traceId,
+            executionId: execution.executionId,
+            error: statusError,
+          },
+          "[email-worker] Failed to update status to scheduled, skipping",
+        )
+        failureCount++
+        continue // Skip this execution to avoid duplicate sends
+      }
+
       // Send email (checks for draft first, falls back to template)
       const result = await sendSequenceEmail(execution)
 

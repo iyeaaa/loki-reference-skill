@@ -2089,18 +2089,29 @@ export async function getPendingStepExecutions(limit: number = 100) {
 // UpdateStepExecutionStatus - Update step execution status after sending
 export async function updateStepExecutionStatus(
   executionId: string,
-  status: "sent" | "delivered" | "failed" | "skipped",
+  status: "scheduled" | "sent" | "delivered" | "failed" | "skipped",
   errorMessage?: string,
   emailId?: string,
 ) {
+  const updateData: {
+    status: "scheduled" | "sent" | "delivered" | "failed" | "skipped"
+    executedAt?: Date
+    errorMessage?: string | null
+    emailId?: string | null
+  } = {
+    status,
+    errorMessage: errorMessage || null,
+    emailId: emailId || null,
+  }
+
+  // Only set executedAt for final states (not for "scheduled")
+  if (status !== "scheduled") {
+    updateData.executedAt = new Date()
+  }
+
   const [updated] = await db
     .update(sequenceStepExecutions)
-    .set({
-      status,
-      executedAt: new Date(),
-      errorMessage: errorMessage || null,
-      emailId: emailId || null,
-    })
+    .set(updateData)
     .where(eq(sequenceStepExecutions.id, executionId))
     .returning({
       id: sequenceStepExecutions.id,

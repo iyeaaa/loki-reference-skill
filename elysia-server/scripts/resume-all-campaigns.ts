@@ -433,22 +433,86 @@ async function resumeCampaignsAndReschedule(
 
     console.log(`[OK] Rescheduled ${rescheduledCount} pending email(s)\n`)
 
-    // 3. Reactivate paused enrollments for these sequences
-    const reactivatedEnrollments = await db
-      .update(sequenceEnrollments)
-      .set({
-        status: "active",
+    // 3. Reactivate paused enrollments for these sequences (with duplicate email check)
+    console.log("[CHECK] Checking for duplicate emails in paused enrollments...\n")
+
+    // Get all paused enrollments with their email addresses
+    const pausedEnrollmentsWithEmails = await db
+      .select({
+        enrollmentId: sequenceEnrollments.id,
+        sequenceId: sequenceEnrollments.sequenceId,
+        leadId: sequenceEnrollments.leadId,
+        email: leadContacts.contactValue,
+        enrolledAt: sequenceEnrollments.enrolledAt,
       })
+      .from(sequenceEnrollments)
+      .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .innerJoin(
+        leadContacts,
+        and(
+          eq(leadContacts.leadId, leads.id),
+          eq(leadContacts.contactType, "email"),
+          eq(leadContacts.isPrimary, true),
+        ),
+      )
       .where(
         and(
           eq(sequenceEnrollments.status, "paused"),
           inArray(sequenceEnrollments.sequenceId, campaignIds),
         ),
       )
-      .returning({ id: sequenceEnrollments.id })
+
+    // Group by (sequenceId, email) to find duplicates
+    const emailGroups = new Map<string, typeof pausedEnrollmentsWithEmails>()
+    for (const enrollment of pausedEnrollmentsWithEmails) {
+      const key = `${enrollment.sequenceId}:${enrollment.email.toLowerCase()}`
+      const existing = emailGroups.get(key) || []
+      existing.push(enrollment)
+      emailGroups.set(key, existing)
+    }
+
+    // For each group, keep only the first enrollment (oldest by enrolledAt)
+    const enrollmentsToReactivate: string[] = []
+    const duplicatesSkipped: Array<{ email: string; count: number }> = []
+
+    for (const [key, group] of emailGroups.entries()) {
+      // Sort by enrolledAt (oldest first)
+      group.sort((a, b) => a.enrolledAt.getTime() - b.enrolledAt.getTime())
+
+      // Keep the first one
+      enrollmentsToReactivate.push(group[0].enrollmentId)
+
+      // Track duplicates
+      if (group.length > 1) {
+        duplicatesSkipped.push({
+          email: group[0].email,
+          count: group.length - 1,
+        })
+      }
+    }
+
+    // Log duplicate information
+    if (duplicatesSkipped.length > 0) {
+      console.log(`[WARN] Found ${duplicatesSkipped.length} email(s) with duplicate enrollments:`)
+      duplicatesSkipped.forEach((dup) => {
+        console.log(`  - ${dup.email}: skipping ${dup.count} duplicate(s)`)
+      })
+      console.log(`  [INFO] Total enrollments skipped: ${duplicatesSkipped.reduce((sum, d) => sum + d.count, 0)}\n`)
+    }
+
+    // Reactivate only unique enrollments
+    const reactivatedEnrollments = enrollmentsToReactivate.length > 0
+      ? await db
+          .update(sequenceEnrollments)
+          .set({
+            status: "active",
+          })
+          .where(inArray(sequenceEnrollments.id, enrollmentsToReactivate))
+          .returning({ id: sequenceEnrollments.id })
+      : []
 
     if (reactivatedEnrollments.length > 0) {
-      console.log(`[OK] Reactivated ${reactivatedEnrollments.length} paused enrollment(s)\n`)
+      console.log(`[OK] Reactivated ${reactivatedEnrollments.length} unique enrollment(s)\n`)
     }
 
     // Log details

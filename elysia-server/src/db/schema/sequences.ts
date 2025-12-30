@@ -41,7 +41,6 @@ export const enrollmentStatusEnum = pgEnum("enrollment_status_enum", [
 
 export const stepExecutionStatusEnum = pgEnum("step_execution_status_enum", [
   "pending",
-  "processing", // Added: prevents race condition by marking execution as claimed
   "scheduled",
   "sent",
   "delivered",

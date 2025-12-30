@@ -479,16 +479,13 @@ async function resumeCampaignsAndReschedule(
       // Sort by enrolledAt (oldest first)
       group.sort((a, b) => a.enrolledAt.getTime() - b.enrolledAt.getTime())
 
-      const firstEnrollment = group[0]
-      if (!firstEnrollment) continue
-
       // Keep the first one
-      enrollmentsToReactivate.push(firstEnrollment.enrollmentId)
+      enrollmentsToReactivate.push(group[0].enrollmentId)
 
       // Track duplicates
       if (group.length > 1) {
         duplicatesSkipped.push({
-          email: firstEnrollment.email,
+          email: group[0].email,
           count: group.length - 1,
         })
       }

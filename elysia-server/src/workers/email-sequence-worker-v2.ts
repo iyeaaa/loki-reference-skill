@@ -827,10 +827,7 @@ async function _processSequenceEmails() {
       // IMPORTANT: Update status to 'scheduled' BEFORE sending
       // This prevents duplicate sends if the worker crashes/restarts
       try {
-        await sequenceService.updateStepExecutionStatus(
-          execution.executionId,
-          "scheduled",
-        )
+        await sequenceService.updateStepExecutionStatus(execution.executionId, "scheduled")
       } catch (statusError) {
         logger.error(
           {

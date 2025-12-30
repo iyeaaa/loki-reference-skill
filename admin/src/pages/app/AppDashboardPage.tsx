@@ -5,6 +5,7 @@ import {
   CalendarIcon,
   ChevronDown,
   ExternalLink,
+  HelpCircle,
   Mail,
   RefreshCw,
   TrendingUp,
@@ -37,6 +38,12 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useTrialDashboardStats } from "@/lib/api/hooks/dashboard"
 import { useSequencesByWorkspace } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
@@ -330,7 +337,7 @@ export default function AppDashboardPage({
                         format(dateRange.from, "MM/dd", { locale: ko })
                       )
                     ) : (
-                      "날짜 선택"
+                      "기간 선택"
                     )}
                     <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                   </Button>
@@ -373,7 +380,7 @@ export default function AppDashboardPage({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-                    <DropdownMenuLabel>지역 필터</DropdownMenuLabel>
+                    <DropdownMenuLabel>국가 필터</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuCheckboxItem
                       checked={selectedCountries.length === availableCountries.length}
@@ -403,73 +410,93 @@ export default function AppDashboardPage({
 
         <TabsContent className="space-y-4" value="overview">
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[
-              {
-                label: "발송",
-                value: totalStats.total,
-                scheduled: totalStats.scheduled,
-                color: "#64748b",
-              },
-              {
-                label: "오픈율",
-                value: totalStats.opened,
-                rate: totalStats.openRate,
-                color: "#0ea5e9",
-              },
-              {
-                label: "클릭율",
-                value: totalStats.clicked,
-                rate: totalStats.clickRate,
-                ctr: totalStats.ctr,
-                color: "#f59e0b",
-              },
-              {
-                label: "답장율",
-                value: totalStats.replied,
-                rate: totalStats.replyRate,
-                color: "#22c55e",
-              },
-            ].map((stat) => (
-              <div className="rounded-lg border bg-background p-4" key={stat.label}>
-                {isLoading ? (
-                  <Skeleton className="h-14 w-full" />
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: stat.color }}
-                      />
-                      <span className="text-muted-foreground text-sm">{stat.label}</span>
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="font-semibold text-3xl tabular-nums">
-                        {formatNumber(stat.value)}
-                      </span>
-                      {stat.rate !== undefined && (
-                        <span className="text-muted-foreground text-sm tabular-nums">
-                          {formatPercent(stat.rate)}
-                        </span>
-                      )}
-                    </div>
-                    {"scheduled" in stat &&
-                      typeof stat.scheduled === "number" &&
-                      stat.scheduled > 0 && (
-                        <div className="mt-1 text-amber-600 text-xs">
-                          {stat.scheduled}건 발송 대기 중
+          <TooltipProvider>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                {
+                  label: "발송",
+                  value: totalStats.total,
+                  scheduled: totalStats.scheduled,
+                  color: "#64748b",
+                },
+                {
+                  label: "오픈",
+                  value: totalStats.opened,
+                  rate: totalStats.openRate,
+                  rateLabel: "전체 발송 대비",
+                  color: "#0ea5e9",
+                },
+                {
+                  label: "클릭",
+                  value: totalStats.clicked,
+                  rate: totalStats.clickRate,
+                  rateLabel: "전체 발송 대비",
+                  ctr: totalStats.ctr,
+                  color: "#f59e0b",
+                },
+                {
+                  label: "답장",
+                  value: totalStats.replied,
+                  rate: totalStats.replyRate,
+                  rateLabel: "전체 발송 대비",
+                  color: "#22c55e",
+                },
+              ].map((stat) => (
+                <div className="rounded-lg border bg-background p-4" key={stat.label}>
+                  {isLoading ? (
+                    <Skeleton className="h-14 w-full" />
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: stat.color }}
+                        />
+                        <span className="text-muted-foreground text-sm">{stat.label}</span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-semibold text-3xl tabular-nums">
+                            {formatNumber(stat.value)}
+                          </span>
+                          <span className="text-muted-foreground text-base">회</span>
+                        </div>
+                        {stat.rate !== undefined && (
+                          <div className="mt-0.5 text-muted-foreground text-sm">
+                            {formatPercent(stat.rate)}{" "}
+                            <span className="text-xs">({stat.rateLabel})</span>
+                          </div>
+                        )}
+                      </div>
+                      {"scheduled" in stat &&
+                        typeof stat.scheduled === "number" &&
+                        stat.scheduled > 0 && (
+                          <div className="mt-1 text-amber-600 text-xs">
+                            +{stat.scheduled}건 발송 예정
+                          </div>
+                        )}
+                      {stat.ctr !== undefined && stat.ctr > 0 && (
+                        <div className="mt-1.5 flex items-center gap-1 text-muted-foreground text-xs">
+                          <span>CTOR {stat.ctr.toFixed(1)}%</span>
+                          <UITooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[200px]">
+                              <p className="font-medium">오픈 대비 클릭률</p>
+                              <p className="text-xs text-muted-foreground">
+                                이메일을 연 사람 중 클릭한 비율
+                              </p>
+                            </TooltipContent>
+                          </UITooltip>
                         </div>
                       )}
-                    {stat.ctr !== undefined && stat.ctr > 0 && (
-                      <div className="mt-1 text-muted-foreground text-xs">
-                        CTOR {stat.ctr.toFixed(1)}%
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </TooltipProvider>
 
           {/* Charts Grid */}
           <div className="grid grid-cols-12 gap-4">
@@ -477,18 +504,25 @@ export default function AppDashboardPage({
             <div className="col-span-12 rounded-lg border bg-background lg:col-span-8">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
-                  <h3 className="font-medium">성과 추이</h3>
-                  <p className="text-muted-foreground text-sm">일별 발송 및 참여 현황</p>
+                  <h3 className="font-medium">린다가 보낸 이메일</h3>
+                  <p className="text-muted-foreground text-sm">매일 린다가 발송하고 바이어가 열어본 현황이에요</p>
                 </div>
                 <div className="flex gap-4">
                   {[
-                    { key: "sent", label: "발송", color: "#64748b" },
-                    { key: "opened", label: "오픈", color: "#0ea5e9" },
+                    { key: "sent", label: "발송", color: "#64748b", dashed: false },
+                    { key: "opened", label: "오픈", color: "#0ea5e9", dashed: true },
                   ].map((item) => (
                     <div className="flex items-center gap-1.5" key={item.key}>
                       <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: item.color }}
+                        className="h-0.5 w-4"
+                        style={{
+                          backgroundColor: item.color,
+                          ...(item.dashed && {
+                            backgroundImage: `linear-gradient(to right, ${item.color} 50%, transparent 50%)`,
+                            backgroundSize: "6px 100%",
+                            backgroundColor: "transparent",
+                          }),
+                        }}
                       />
                       <span className="text-muted-foreground text-sm">{item.label}</span>
                     </div>
@@ -533,7 +567,17 @@ export default function AppDashboardPage({
                             borderRadius: "8px",
                             padding: "12px",
                           }}
-                          formatter={(value) => [value ?? 0, "발송"]}
+                          formatter={(value, name) => {
+                            const label = name === "sent" ? "발송" : "오픈"
+                            const color = name === "sent" ? "#64748b" : "#0ea5e9"
+                            return [
+                              <span key={name} style={{ color }}>
+                                {label}: <strong>{value ?? 0}건</strong>
+                              </span>,
+                              "",
+                            ]
+                          }}
+                          labelFormatter={(label) => `${label}`}
                         />
                         <Area
                           dataKey="sent"
@@ -548,6 +592,7 @@ export default function AppDashboardPage({
                           dot={false}
                           fill="url(#openedGradient)"
                           stroke="#0ea5e9"
+                          strokeDasharray="5 3"
                           strokeWidth={2}
                           type="monotone"
                         />
@@ -562,8 +607,8 @@ export default function AppDashboardPage({
             <div className="col-span-12 rounded-lg border bg-background lg:col-span-4">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
-                  <h3 className="font-medium">전환 퍼널</h3>
-                  <p className="text-muted-foreground text-sm">단계별 전환율</p>
+                  <h3 className="font-medium">린다의 영업 성과</h3>
+                  <p className="text-muted-foreground text-sm">발송부터 답장까지, 린다가 만든 성과예요</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -602,24 +647,28 @@ export default function AppDashboardPage({
                           value: totalStats.total, // scheduled + sent
                           rate: 100,
                           color: "#64748b",
+                          prevValue: null as number | null,
                         },
                         {
                           label: "오픈",
                           value: totalStats.opened,
                           rate: totalStats.openRate,
                           color: "#0ea5e9",
+                          prevValue: totalStats.total,
                         },
                         {
                           label: "클릭",
                           value: totalStats.clicked,
                           rate: totalStats.clickRate,
                           color: "#f59e0b",
+                          prevValue: totalStats.opened,
                         },
                         {
                           label: "답장",
                           value: totalStats.replied,
                           rate: totalStats.replyRate,
                           color: "#22c55e",
+                          prevValue: totalStats.clicked,
                         },
                       ]
                       // 급격한 깔때기 모양 - 고정 비율 사용
@@ -636,25 +685,53 @@ export default function AppDashboardPage({
                         const bottomLeft = (100 - bottomWidth) / 2
                         const bottomRight = 100 - bottomLeft
 
+                        // 드롭오프율 계산 (이전 단계 대비 이탈율)
+                        const dropOffRate =
+                          item.prevValue && item.prevValue > 0
+                            ? ((item.prevValue - item.value) / item.prevValue) * 100
+                            : null
+
                         return (
-                          <div
-                            className="relative flex h-11 w-full items-center justify-center transition-all"
-                            key={item.label}
-                            style={{
-                              backgroundColor: item.color,
-                              clipPath: `polygon(${topLeft}% 0%, ${topRight}% 0%, ${bottomRight}% 100%, ${bottomLeft}% 100%)`,
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm text-white">{item.label}</span>
-                              <span className="font-semibold text-white tabular-nums">
-                                {formatNumber(item.value)}
-                              </span>
-                              <span className="rounded bg-white/20 px-1.5 py-0.5 text-white text-xs tabular-nums">
-                                {formatPercent(item.rate)}
-                              </span>
-                            </div>
-                          </div>
+                          <TooltipProvider key={item.label}>
+                            <UITooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="relative flex h-11 w-full cursor-pointer items-center justify-center transition-all hover:opacity-90"
+                                  style={{
+                                    backgroundColor: item.color,
+                                    clipPath: `polygon(${topLeft}% 0%, ${topRight}% 0%, ${bottomRight}% 100%, ${bottomLeft}% 100%)`,
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm text-white">
+                                      {item.label}
+                                    </span>
+                                    <span className="font-semibold text-white tabular-nums">
+                                      {formatNumber(item.value)}
+                                    </span>
+                                    <span className="rounded bg-white/20 px-1.5 py-0.5 text-white text-xs tabular-nums">
+                                      {formatPercent(item.rate)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-[220px]">
+                                <div className="space-y-1">
+                                  <p className="font-medium">
+                                    {item.label}: {formatNumber(item.value)}건
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    전체 발송 대비 {formatPercent(item.rate)}
+                                  </p>
+                                  {dropOffRate !== null && dropOffRate > 0 && (
+                                    <p className="text-xs text-red-500">
+                                      이전 단계 대비 이탈률: {dropOffRate.toFixed(1)}%
+                                    </p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </UITooltip>
+                          </TooltipProvider>
                         )
                       })
                     })()}
@@ -666,8 +743,8 @@ export default function AppDashboardPage({
             {/* Country Distribution */}
             <div className="col-span-12 rounded-lg border bg-background md:col-span-6 lg:col-span-4">
               <div className="border-b px-4 py-3">
-                <h3 className="font-medium">지역별 분포</h3>
-                <p className="text-muted-foreground text-sm">지역별 잠재고객 현황</p>
+                <h3 className="font-medium">국가별 바이어</h3>
+                <p className="text-muted-foreground text-sm">린다가 연락한 바이어들의 국가 분포예요</p>
               </div>
               <div className="p-4">
                 {isLoading ? (
@@ -717,11 +794,11 @@ export default function AppDashboardPage({
             <div className="col-span-12 rounded-lg border bg-background md:col-span-6 lg:col-span-4">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
-                  <h3 className="font-medium">관심 잠재고객</h3>
-                  <p className="text-muted-foreground text-sm">2회 이상 오픈</p>
+                  <h3 className="font-medium">관심 보이는 바이어</h3>
+                  <p className="text-muted-foreground text-sm">이메일을 여러 번 열어봤어요 — 관심 신호!</p>
                 </div>
                 <span className="rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 text-xs">
-                  {stats?.hotLeads?.length || 0}
+                  {stats?.hotLeads?.length || 0}명
                 </span>
               </div>
               <div className="p-3">
@@ -770,8 +847,17 @@ export default function AppDashboardPage({
                           <p className="truncate font-medium text-sm">{lead.companyName}</p>
                           <p className="truncate text-muted-foreground text-xs">{lead.email}</p>
                         </div>
-                        <span className="rounded-md bg-purple-100 px-2 py-1 font-medium text-purple-700 text-xs tabular-nums">
-                          {lead.openCount}x
+                        <span
+                          className={cn(
+                            "rounded-md px-2 py-1 font-medium text-xs tabular-nums",
+                            lead.openCount >= 30
+                              ? "bg-red-100 text-red-700"
+                              : lead.openCount >= 10
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-purple-100 text-purple-700",
+                          )}
+                        >
+                          오픈 {lead.openCount}회
                         </span>
                       </div>
                     ))}
@@ -782,7 +868,7 @@ export default function AppDashboardPage({
                         size="sm"
                         variant="ghost"
                       >
-                        연락처 보기
+                        상세 정보 확인하기
                         <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                       </Button>
                     )}
@@ -795,11 +881,11 @@ export default function AppDashboardPage({
             <div className="col-span-12 rounded-lg border bg-background lg:col-span-4">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <div>
-                  <h3 className="font-medium">활동 내역</h3>
-                  <p className="text-muted-foreground text-sm">실시간 이벤트</p>
+                  <h3 className="font-medium">린다가 하는 일</h3>
+                  <p className="text-muted-foreground text-sm">지금 이 순간에도 린다가 영업 중이에요</p>
                 </div>
                 <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700 text-xs">
-                  {filteredActivity.length}
+                  {filteredActivity.length}건
                 </span>
               </div>
               <div className="max-h-[200px] overflow-y-auto p-3">
@@ -881,8 +967,9 @@ export default function AppDashboardPage({
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Users className="mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="text-muted-foreground">
-                이메일 캠페인을 생성하면 바이어 목록이 표시됩니다
+              <p className="font-medium text-muted-foreground">아직 바이어가 없어요</p>
+              <p className="mt-1 text-muted-foreground/70 text-sm">
+                캠페인을 시작하면 린다가 바이어를 찾아드릴게요!
               </p>
             </div>
           )}
@@ -894,7 +981,10 @@ export default function AppDashboardPage({
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Mail className="mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="text-muted-foreground">이메일 캠페인을 생성하면 여기에 표시됩니다</p>
+              <p className="font-medium text-muted-foreground">아직 캠페인이 없어요</p>
+              <p className="mt-1 text-muted-foreground/70 text-sm">
+                첫 캠페인을 만들면 린다가 바로 영업을 시작해요!
+              </p>
             </div>
           )}
         </TabsContent>
@@ -904,10 +994,10 @@ export default function AppDashboardPage({
       <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
         <ul className="space-y-1 text-blue-700 text-sm">
-          <li>• 바이어가 답장하면 해당 리드의 이메일 시퀀스가 자동으로 중지됩니다.</li>
+          <li>• 바이어가 답장하면 린다가 자동으로 발송을 멈춰요. 스팸 걱정 없이 안심하세요!</li>
           <li>
-            • 특정 시퀀스의 이메일 오픈 수가 10회 이상이면 시퀀스가 중지되고, 린다 세일즈 전문팀과
-            상담이 진행됩니다.
+            • 바이어가 이메일을 10회 이상 열어보면 린다 팀이 직접 연락드려요. 영업 기회를 놓치지
+            마세요!
           </li>
         </ul>
       </div>

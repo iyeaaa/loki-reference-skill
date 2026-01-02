@@ -1,4 +1,5 @@
 import { AlertCircle, Loader2, Rocket, X } from "lucide-react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -31,9 +32,21 @@ export function CampaignResumeCallout({
   // Activate mutation
   const activateMutation = useActivateStepBasedSequence()
 
-  // Calculate stats
+  // Parse selectedLeadIds from JSON string (used before enrollment)
+  const selectedLeadIds = useMemo(() => {
+    if (!sequence?.selectedLeadIds) {
+      return []
+    }
+    try {
+      return JSON.parse(sequence.selectedLeadIds) as string[]
+    } catch {
+      return []
+    }
+  }, [sequence?.selectedLeadIds])
+
+  // Calculate stats - use selectedLeadIds if not yet enrolled, otherwise use enrollmentsCount
   const stepsCount = steps?.length || 0
-  const leadsCount = sequence?.enrollmentsCount || 0
+  const leadsCount = selectedLeadIds.length || sequence?.enrollmentsCount || 0
   const totalEmails = stepsCount * leadsCount
 
   const handleStartCampaign = async () => {

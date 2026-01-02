@@ -62,8 +62,8 @@ export default function UnifiedDashboardPage() {
       return false
     }
 
-    // Only show if sequence is in draft status
-    if (sequence.status !== "draft") {
+    // Only show if sequence is not yet activated (draft or ready status)
+    if (sequence.status !== "draft" && sequence.status !== "ready") {
       return false
     }
 

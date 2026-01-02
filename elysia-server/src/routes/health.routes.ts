@@ -4,6 +4,7 @@ import logger from "../utils/logger"
 
 /**
  * Check database connectivity
+ * Test comment for elysia-only rebuild verification - 2026-01-02 07:23 UTC
  */
 async function checkDatabase(): Promise<{ healthy: boolean; latency?: number; error?: string }> {
   const start = Date.now()

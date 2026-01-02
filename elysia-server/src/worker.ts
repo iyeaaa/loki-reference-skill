@@ -7,12 +7,43 @@
  * Workers:
  * - TestWorker: Test job processing
  * - OnboardingAutoGenerateWorker: Auto-generate onboarding data
+ * - SequenceEmailWorker: Email sending via BullMQ
+ * - TrialExpirationWorker: Trial expiration handling
+ * - UnipileInboxPollWorker: Inbox polling backup
  *
  * Features:
  * - Graceful shutdown handling
  * - Health monitoring with HTTP endpoints
  * - Independent from API server lifecycle
  * - PostgreSQL job logging
+ *
+ * ============================================================================
+ * DEPLOYMENT: Worker Independent Rebuild Conditions
+ * ============================================================================
+ *
+ * This worker is deployed independently from the API server (elysia-server).
+ * The CI/CD pipeline (.github/workflows/ci-cd.yml) detects changes and only
+ * rebuilds/restarts the worker when worker-related files are modified.
+ *
+ * Worker is REBUILT when these files change:
+ * - elysia-server/src/worker.ts           (this file)
+ * - elysia-server/src/workers/*           (worker implementations)
+ * - elysia-server/Dockerfile.worker       (worker Dockerfile)
+ * - elysia-server/src/lib/queue/*         (BullMQ queue configurations)
+ * - elysia-server/src/lib/redis/*         (Redis connection settings)
+ * - elysia-server/src/lib/health.ts       (health check endpoints)
+ * - elysia-server/package.json            (dependencies)
+ * - elysia-server/bun.lockb               (lockfile)
+ *
+ * Worker is PRESERVED (not rebuilt) when these files change:
+ * - elysia-server/src/routes/*            (API routes)
+ * - elysia-server/src/services/*          (API services)
+ * - elysia-server/src/index.ts            (API entry point)
+ * - admin/*                               (Admin frontend)
+ * - docs/*                                (Documentation)
+ *
+ * This ensures email processing continues uninterrupted during API deployments.
+ * See: .github/workflows/ci-cd.yml "Detect Changed Components" step
  */
 
 import { config } from "./config"

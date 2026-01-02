@@ -901,7 +901,12 @@ export async function cancelExecutionJob(executionId: string): Promise<boolean> 
  * 기존 pending execution을 BullMQ Job으로 마이그레이션
  *
  * 60초 워커에서 BullMQ 워커로 전환 시 일회성 실행
- * 모든 pending 상태의 step execution에 대해 BullMQ Job 생성
+ * Active 시퀀스의 pending 상태 step execution만 BullMQ Job으로 생성
+ *
+ * 최적화:
+ * - Active 시퀀스만 필터링 (paused 시퀀스는 resume 시 enqueueExistingPendingExecutions로 처리)
+ * - 배치 처리 (50개씩) - 메모리 효율성
+ * - 커서 기반 페이지네이션 - OFFSET 성능 이슈 방지
  *
  * @param sequenceId - 특정 시퀀스만 마이그레이션 (optional, 없으면 전체)
  * @returns 마이그레이션 결과
@@ -913,7 +918,7 @@ export async function migratePendingExecutionsToBullMQ(sequenceId?: string): Pro
 }> {
   // Lazy import to avoid circular dependencies
   const { db } = await import("../../db")
-  const { and, eq, lte } = await import("drizzle-orm")
+  const { and, eq, lte, gt, asc } = await import("drizzle-orm")
   const { sequenceStepExecutions, sequenceSteps, sequenceEnrollments, sequences } = await import(
     "../../db/schema/sequences"
   )
@@ -923,107 +928,148 @@ export async function migratePendingExecutionsToBullMQ(sequenceId?: string): Pro
   let skipped = 0
   let failed = 0
 
+  const BATCH_SIZE = 50 // 메모리 효율을 위해 50개씩 처리
+  let lastId: string | null = null
+  let batchNumber = 0
+
   try {
-    // Build query conditions
     const now = new Date()
-    const conditions = [
-      eq(sequenceStepExecutions.status, "pending"),
-      lte(sequenceStepExecutions.scheduledAt, now),
-    ]
-
-    if (sequenceId) {
-      conditions.push(eq(sequences.id, sequenceId))
-    }
-
-    // Get all pending executions with related data
-    const pendingExecutions = await db
-      .select({
-        executionId: sequenceStepExecutions.id,
-        enrollmentId: sequenceStepExecutions.enrollmentId,
-        stepId: sequenceStepExecutions.stepId,
-        stepOrder: sequenceStepExecutions.stepOrder,
-        scheduledAt: sequenceStepExecutions.scheduledAt,
-        emailSubject: sequenceSteps.emailSubject,
-        emailBodyText: sequenceSteps.emailBodyText,
-        emailBodyHtml: sequenceSteps.emailBodyHtml,
-        attachments: sequenceSteps.attachments,
-        leadId: sequenceEnrollments.leadId,
-        emailAccountId: sequenceEnrollments.userEmailAccountId,
-        sequenceId: sequenceEnrollments.sequenceId,
-        sequenceName: sequences.name,
-        workspaceId: sequences.workspaceId,
-        userId: sequences.createdBy,
-        leadCompanyName: leads.companyName,
-      })
-      .from(sequenceStepExecutions)
-      .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
-      .innerJoin(
-        sequenceEnrollments,
-        eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id),
-      )
-      .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
-      .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
-      .where(and(...conditions))
 
     logger.info(
-      { count: pendingExecutions.length, sequenceId },
-      "[SequenceEmailQueue] Found pending executions to migrate",
+      { sequenceId, batchSize: BATCH_SIZE },
+      "[SequenceEmailQueue] Starting batch migration for ACTIVE sequences only",
     )
 
-    // Create BullMQ jobs for each execution
-    for (const exec of pendingExecutions) {
-      try {
-        // Check if job already exists
-        const existingJob = await sequenceEmailQueue.getJob(`seq-email-${exec.executionId}`)
-        if (existingJob) {
-          const state = await existingJob.getState()
-          if (state === "waiting" || state === "delayed" || state === "active") {
-            skipped++
-            continue
+    // 배치 처리 루프 (커서 기반)
+    while (true) {
+      // Build query conditions
+      // Active 시퀀스 + Active enrollment만 마이그레이션
+      // Paused 시퀀스의 pending은 resume 시 enqueueExistingPendingExecutions()로 처리됨
+      const conditions = [
+        eq(sequenceStepExecutions.status, "pending"),
+        lte(sequenceStepExecutions.scheduledAt, now),
+        eq(sequences.status, "active"), // Active 시퀀스만
+        eq(sequenceEnrollments.status, "active"), // Active enrollment만
+      ]
+
+      if (sequenceId) {
+        conditions.push(eq(sequences.id, sequenceId))
+      }
+
+      // 커서 기반 페이지네이션 (OFFSET 대신 ID 기반)
+      if (lastId) {
+        conditions.push(gt(sequenceStepExecutions.id, lastId))
+      }
+
+      // 배치 조회
+      const batch = await db
+        .select({
+          executionId: sequenceStepExecutions.id,
+          enrollmentId: sequenceStepExecutions.enrollmentId,
+          stepId: sequenceStepExecutions.stepId,
+          stepOrder: sequenceStepExecutions.stepOrder,
+          scheduledAt: sequenceStepExecutions.scheduledAt,
+          emailSubject: sequenceSteps.emailSubject,
+          emailBodyText: sequenceSteps.emailBodyText,
+          emailBodyHtml: sequenceSteps.emailBodyHtml,
+          attachments: sequenceSteps.attachments,
+          leadId: sequenceEnrollments.leadId,
+          emailAccountId: sequenceEnrollments.userEmailAccountId,
+          sequenceId: sequenceEnrollments.sequenceId,
+          sequenceName: sequences.name,
+          workspaceId: sequences.workspaceId,
+          userId: sequences.createdBy,
+          leadCompanyName: leads.companyName,
+        })
+        .from(sequenceStepExecutions)
+        .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+        .innerJoin(
+          sequenceEnrollments,
+          eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id),
+        )
+        .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+        .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+        .where(and(...conditions))
+        .orderBy(asc(sequenceStepExecutions.id))
+        .limit(BATCH_SIZE)
+
+      // 더 이상 처리할 데이터 없음
+      if (batch.length === 0) {
+        break
+      }
+
+      batchNumber++
+      logger.info(
+        { batchNumber, batchSize: batch.length, totalProcessed: migrated + skipped + failed },
+        "[SequenceEmailQueue] Processing batch",
+      )
+
+      // 배치 내 각 execution 처리
+      for (const exec of batch) {
+        try {
+          // Check if job already exists
+          const existingJob = await sequenceEmailQueue.getJob(`seq-email-${exec.executionId}`)
+          if (existingJob) {
+            const state = await existingJob.getState()
+            if (state === "waiting" || state === "delayed" || state === "active") {
+              skipped++
+              continue
+            }
+            // Remove completed/failed job to recreate
+            await existingJob.remove()
           }
-          // Remove completed/failed job to recreate
-          await existingJob.remove()
+
+          const delayMs = Math.max(0, exec.scheduledAt.getTime() - Date.now())
+
+          await addSequenceEmailJob(
+            {
+              executionId: exec.executionId,
+              enrollmentId: exec.enrollmentId,
+              stepId: exec.stepId,
+              stepOrder: exec.stepOrder,
+              leadId: exec.leadId,
+              leadCompanyName: exec.leadCompanyName,
+              emailAccountId: exec.emailAccountId,
+              emailSubject: exec.emailSubject || "",
+              emailBodyText: exec.emailBodyText,
+              emailBodyHtml: exec.emailBodyHtml,
+              sequenceName: exec.sequenceName,
+              sequenceId: exec.sequenceId,
+              workspaceId: exec.workspaceId,
+              userId: exec.userId,
+              attachments: exec.attachments as Array<{
+                filename: string
+                type: string
+                content: string
+              }> | null,
+            },
+            { delay: delayMs },
+          )
+
+          migrated++
+        } catch (error) {
+          failed++
+          logger.warn(
+            { executionId: exec.executionId, error },
+            "[SequenceEmailQueue] Failed to migrate execution to BullMQ",
+          )
         }
+      }
 
-        const delayMs = Math.max(0, exec.scheduledAt.getTime() - Date.now())
+      // 다음 배치를 위해 마지막 ID 저장
+      const lastItem = batch[batch.length - 1]
+      if (lastItem) {
+        lastId = lastItem.executionId
+      }
 
-        await addSequenceEmailJob(
-          {
-            executionId: exec.executionId,
-            enrollmentId: exec.enrollmentId,
-            stepId: exec.stepId,
-            stepOrder: exec.stepOrder,
-            leadId: exec.leadId,
-            leadCompanyName: exec.leadCompanyName,
-            emailAccountId: exec.emailAccountId,
-            emailSubject: exec.emailSubject || "",
-            emailBodyText: exec.emailBodyText,
-            emailBodyHtml: exec.emailBodyHtml,
-            sequenceName: exec.sequenceName,
-            sequenceId: exec.sequenceId,
-            workspaceId: exec.workspaceId,
-            userId: exec.userId,
-            attachments: exec.attachments as Array<{
-              filename: string
-              type: string
-              content: string
-            }> | null,
-          },
-          { delay: delayMs },
-        )
-
-        migrated++
-      } catch (error) {
-        failed++
-        logger.warn(
-          { executionId: exec.executionId, error },
-          "[SequenceEmailQueue] Failed to migrate execution to BullMQ",
-        )
+      // 배치가 BATCH_SIZE보다 작으면 마지막 배치
+      if (batch.length < BATCH_SIZE) {
+        break
       }
     }
 
     logger.info(
-      { migrated, skipped, failed, sequenceId },
+      { migrated, skipped, failed, sequenceId, totalBatches: batchNumber },
       "[SequenceEmailQueue] Migration completed",
     )
 

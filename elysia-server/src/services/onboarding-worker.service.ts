@@ -1121,7 +1121,8 @@ export async function completeOnboarding(
       .set({
         generatedSequenceId: sequenceId,
         currentStep: 2, // Set to step 2 so user proceeds to email linking
-        status: "lead_search", // Keep at lead_search status
+        status: "completed", // Mark as completed so dashboard shows campaign restart callout
+        completedAt: new Date(), // Required for shouldShowPopup to return true
         updatedAt: new Date(),
       })
       .where(eq(onboardingProgress.workspaceId, workspaceId))

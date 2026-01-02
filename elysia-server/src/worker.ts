@@ -310,9 +310,12 @@ async function main(): Promise<void> {
     "[Worker] SequenceEmailWorker started",
   )
 
-  // Run one-time migration of pending executions to BullMQ
+  // Run one-time migration of pending executions to BullMQ (non-blocking)
   // This migrates existing DB records to Redis jobs (runs only once via Redis flag)
-  await runOneTimePendingMigration()
+  // Run in background to avoid blocking worker startup and health checks
+  runOneTimePendingMigration().catch((error) => {
+    logger.error({ error }, "[Worker] Background migration failed")
+  })
 
   // Start Trial Expiration Worker
   const trialWorker = startTrialExpirationWorker()

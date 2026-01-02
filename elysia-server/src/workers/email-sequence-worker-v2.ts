@@ -7,6 +7,7 @@
  */
 
 import { and, eq, sql } from "drizzle-orm"
+import pLimit from "p-limit"
 import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -22,6 +23,13 @@ import { extractWebsiteContent, summarizeCompanyInfo } from "../services/lead-en
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger, { emailWorkerLogger, generateTraceId } from "../utils/logger"
+
+/**
+ * Parallel processing concurrency limit
+ * Based on Hunter.io Email Verifier API rate limit: 10 requests/second
+ * See: https://help.hunter.io/en/articles/1970956-hunter-api
+ */
+const PARALLEL_CONCURRENCY = 10
 
 interface EmailSendResult {
   success: boolean
@@ -831,90 +839,130 @@ async function _processSequenceEmails() {
     let successCount = 0
     let failureCount = 0
 
-    // Process each execution (status is already 'processing' from claim)
-    for (const execution of claimedExecutions) {
-      // Individual execution logged at debug level only
-      logger.debug(
-        {
-          traceId,
-          component: "email-worker",
-          executionId: execution.executionId,
-          leadCompanyName: execution.leadCompanyName,
-          stepOrder: execution.stepOrder,
-        },
-        "[email-worker] Processing execution",
-      )
+    // Parallel processing with concurrency limit (Hunter.io rate limit: 10 req/sec)
+    // Using p-limit for controlled concurrency instead of sequential for loop
+    const limit = pLimit(PARALLEL_CONCURRENCY)
 
-      // Send email (checks for draft first, falls back to template)
-      const result = await sendSequenceEmail(execution)
+    logger.info(
+      {
+        traceId,
+        totalExecutions: claimedExecutions.length,
+        concurrency: PARALLEL_CONCURRENCY,
+      },
+      "[email-worker] Starting parallel batch processing",
+    )
 
-      if (result.success) {
-        // Update execution status to 'sent' with email record UUID
-        await sequenceService.updateStepExecutionStatus(
-          execution.executionId,
-          "sent",
-          undefined,
-          result.emailRecordId,
-        )
-
-        // Update enrollment progress
-        await sequenceService.updateEnrollmentProgress(execution.enrollmentId, execution.stepOrder)
-
-        // Update lead status to 'contacted' (debug level - not critical)
-        try {
-          await leadService.updateLead(execution.leadId, {
-            leadStatus: "contacted",
-            lastContactedAt: new Date(),
-          })
-        } catch (leadUpdateError) {
+    // Process executions in parallel with concurrency limit
+    const results = await Promise.allSettled(
+      claimedExecutions.map((execution) =>
+        limit(async () => {
+          // Individual execution logged at debug level only
           logger.debug(
             {
               traceId,
-              leadId: execution.leadId,
-              error: leadUpdateError,
+              component: "email-worker",
+              executionId: execution.executionId,
+              leadCompanyName: execution.leadCompanyName,
+              stepOrder: execution.stepOrder,
             },
-            "[email-worker] Failed to update lead status",
+            "[email-worker] Processing execution",
           )
+
+          // Send email (checks for draft first, falls back to template)
+          const result = await sendSequenceEmail(execution)
+
+          if (result.success) {
+            // Update execution status to 'sent' with email record UUID
+            await sequenceService.updateStepExecutionStatus(
+              execution.executionId,
+              "sent",
+              undefined,
+              result.emailRecordId,
+            )
+
+            // Update enrollment progress
+            await sequenceService.updateEnrollmentProgress(
+              execution.enrollmentId,
+              execution.stepOrder,
+            )
+
+            // Update lead status to 'contacted' (debug level - not critical)
+            try {
+              await leadService.updateLead(execution.leadId, {
+                leadStatus: "contacted",
+                lastContactedAt: new Date(),
+              })
+            } catch (leadUpdateError) {
+              logger.debug(
+                {
+                  traceId,
+                  leadId: execution.leadId,
+                  error: leadUpdateError,
+                },
+                "[email-worker] Failed to update lead status",
+              )
+            }
+
+            // Success logged at debug level - summary will be at info level
+            emailWorkerLogger.emailSent(
+              {
+                traceId,
+                enrollmentId: execution.enrollmentId,
+                sequenceId: execution.sequenceId,
+                stepOrder: execution.stepOrder,
+                leadCompany: execution.leadCompanyName || undefined,
+              },
+              result.messageId || "",
+            )
+
+            return { success: true as const, execution }
+          } else {
+            // Update execution status to 'failed'
+            await sequenceService.updateStepExecutionStatus(
+              execution.executionId,
+              "failed",
+              result.error,
+            )
+
+            // Check if enrollment should be completed (only if this was the last step)
+            // Unlike success case, we don't update lastEmailSentAt/firstEmailSentAt
+            await sequenceService.checkAndCompleteEnrollmentIfLastStep(
+              execution.enrollmentId,
+              execution.stepOrder,
+            )
+
+            // Failures logged at warn level
+            emailWorkerLogger.emailFailed(
+              {
+                traceId,
+                enrollmentId: execution.enrollmentId,
+                sequenceId: execution.sequenceId,
+                stepOrder: execution.stepOrder,
+                leadCompany: execution.leadCompanyName || undefined,
+              },
+              result.error || "Unknown error",
+            )
+
+            return { success: false as const, execution, error: result.error }
+          }
+        }),
+      ),
+    )
+
+    // Count successes and failures from Promise.allSettled results
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        if (result.value.success) {
+          successCount++
+        } else {
+          failureCount++
         }
-
-        successCount++
-        // Success logged at debug level - summary will be at info level
-        emailWorkerLogger.emailSent(
-          {
-            traceId,
-            enrollmentId: execution.enrollmentId,
-            sequenceId: execution.sequenceId,
-            stepOrder: execution.stepOrder,
-            leadCompany: execution.leadCompanyName || undefined,
-          },
-          result.messageId || "",
-        )
       } else {
-        // Update execution status to 'failed'
-        await sequenceService.updateStepExecutionStatus(
-          execution.executionId,
-          "failed",
-          result.error,
-        )
-
-        // Check if enrollment should be completed (only if this was the last step)
-        // Unlike success case, we don't update lastEmailSentAt/firstEmailSentAt
-        await sequenceService.checkAndCompleteEnrollmentIfLastStep(
-          execution.enrollmentId,
-          execution.stepOrder,
-        )
-
+        // Promise rejected (unexpected error)
         failureCount++
-        // Failures logged at warn level
-        emailWorkerLogger.emailFailed(
-          {
-            traceId,
-            enrollmentId: execution.enrollmentId,
-            sequenceId: execution.sequenceId,
-            stepOrder: execution.stepOrder,
-            leadCompany: execution.leadCompanyName || undefined,
-          },
-          result.error || "Unknown error",
+        logger.error(
+          { traceId, error: result.reason },
+          "[email-worker] Unexpected error in parallel execution",
         )
       }
     }

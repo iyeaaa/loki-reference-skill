@@ -28,6 +28,57 @@ jobs:
         echo "${{ secrets.ADMIN_ENV }}" > ./admin/.env
         echo "${{ secrets.ELYSIA_SERVER_ENV }}" > ./elysia-server/.env
 
+    - name: Detect Changed Components
+      id: changes
+      run: |
+        # Get list of changed files compared to previous commit
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+
+        # Worker-specific files that require worker restart
+        WORKER_PATTERNS=(
+          "elysia-server/src/worker.ts"
+          "elysia-server/src/workers/"
+          "elysia-server/Dockerfile.worker"
+          "elysia-server/src/lib/queue/"
+          "elysia-server/src/lib/redis/"
+          "elysia-server/src/lib/health.ts"
+          "elysia-server/package.json"
+          "elysia-server/bun.lockb"
+        )
+
+        # Check if any worker-related files changed
+        WORKER_CHANGED="false"
+        for pattern in "${WORKER_PATTERNS[@]}"; do
+          if echo "$CHANGED_FILES" | grep -q "$pattern"; then
+            WORKER_CHANGED="true"
+            echo "Worker file changed: $pattern"
+            break
+          fi
+        done
+
+        # Check if API/Admin files changed
+        API_CHANGED="false"
+        if echo "$CHANGED_FILES" | grep -qE "^elysia-server/"; then
+          API_CHANGED="true"
+        fi
+
+        ADMIN_CHANGED="false"
+        if echo "$CHANGED_FILES" | grep -qE "^admin/"; then
+          ADMIN_CHANGED="true"
+        fi
+
+        echo "worker_changed=$WORKER_CHANGED" >> $GITHUB_OUTPUT
+        echo "api_changed=$API_CHANGED" >> $GITHUB_OUTPUT
+        echo "admin_changed=$ADMIN_CHANGED" >> $GITHUB_OUTPUT
+
+        echo ""
+        echo "[+] Change Detection Results:"
+        echo "    - Worker changed: $WORKER_CHANGED"
+        echo "    - API changed: $API_CHANGED"
+        echo "    - Admin changed: $ADMIN_CHANGED"
+
     - name: Deploy SendGrinda to EC2 via Rsync
       run: |
         echo "[+] Creating deployment directory on EC2"
@@ -86,8 +137,10 @@ jobs:
         EOF
 
     - name: Build and Deploy SendGrinda with Docker Compose
+      env:
+        WORKER_CHANGED: ${{ steps.changes.outputs.worker_changed }}
       run: |
-        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "WORKER_CHANGED=$WORKER_CHANGED" << 'DEPLOY_EOF'
           set -e
           set -o pipefail
 
@@ -96,11 +149,37 @@ jobs:
           echo "[+] Backing up current containers for rollback"
           docker compose ps -q > /tmp/previous_containers.txt
 
-          echo "[+] Building SendGrinda Docker images"
-          docker compose build --pull
+          echo ""
+          echo "[+] Selective Build Strategy"
+          echo "    - Worker code changed: $WORKER_CHANGED"
 
-          echo "[+] Deploying SendGrinda containers"
-          docker compose up -d --no-build --remove-orphans
+          if [ "$WORKER_CHANGED" = "true" ]; then
+            echo ""
+            echo "[+] Building ALL Docker images (worker code changed)"
+            docker compose build --pull
+
+            echo "[+] Deploying ALL containers"
+            docker compose up -d --no-build --remove-orphans
+          else
+            echo ""
+            echo "[+] Building API/Admin images only (worker unchanged)"
+            docker compose build --pull elysia-server admin
+
+            echo "[+] Deploying API/Admin containers only (preserving worker)"
+            # Get current worker container ID before deployment
+            WORKER_CONTAINER_ID=$(docker ps -q -f name=send-grid-test-bullmq-worker-1)
+
+            # Only restart non-worker services
+            docker compose up -d --no-build --no-deps elysia-server admin nginx
+
+            # Verify worker is still running (not restarted)
+            NEW_WORKER_CONTAINER_ID=$(docker ps -q -f name=send-grid-test-bullmq-worker-1)
+            if [ "$WORKER_CONTAINER_ID" = "$NEW_WORKER_CONTAINER_ID" ]; then
+              echo "[+] ✅ Worker preserved (Container ID: $WORKER_CONTAINER_ID)"
+            else
+              echo "[!] ⚠️ Worker was restarted (Old: $WORKER_CONTAINER_ID, New: $NEW_WORKER_CONTAINER_ID)"
+            fi
+          fi
 
           echo "[+] Running health checks (timeout: 90s)"
           HEALTH_CHECK_TIMEOUT=90
@@ -155,7 +234,7 @@ jobs:
           echo ""
           echo "[+] SendGrinda Service Logs (last 10 lines):"
           docker compose logs --tail=10
-        EOF
+        DEPLOY_EOF
 
     - name: Verify SendGrinda Deployment
       run: |

@@ -59,7 +59,7 @@ export const config = {
   nodeEnv: NODE_ENV,
 
   // Frontend URL (for email notification links)
-  frontendUrl: getEnvOrDefault("FRONTEND_URL", "https://app.grinda.ai"),
+  frontendUrl: getEnvOrDefault("FRONTEND_URL", "https://app.rinda.ai"),
 
   // Database
   database: {

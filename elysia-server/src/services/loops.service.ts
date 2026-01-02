@@ -108,15 +108,12 @@ export async function sendTransactionalEmail(
     // Sanitize recipient email
     const sanitizedTo = params.to.trim()
 
-    // Filter out non-ASCII characters from subject
-    const sanitizedSubject = params.subject.replace(/[^\x20-\x7E]/g, "")
-
     // Parse body to get content
     const parsedBody = JSON.parse(params.body)
 
     const dataVariables = {
       senderName,
-      subject: sanitizedSubject,
+      subject: params.subject,
       ...parsedBody,
     }
 
@@ -178,77 +175,58 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
   <!-- Outer container -->
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0f4f8;">
     <tr>
-      <td align="center" style="padding: 32px 16px;">
+      <td align="center" style="padding: 20px 12px;">
         <!-- Inner container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="480" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
           
           <!-- Header with gradient -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px 16px 0 0; padding: 32px 40px; text-align: center;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <!-- Logo -->
-                    <div style="font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin-bottom: 8px;">Rinda</div>
-                    <div style="font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500;">AI-Powered Global Sales</div>
-                  </td>
-                </tr>
-              </table>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; padding: 20px 24px; text-align: center;">
+              <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Rinda</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; margin-top: 2px;">AI-Powered Global Sales</div>
             </td>
           </tr>
           
           <!-- Main content -->
           <tr>
-            <td style="padding: 32px 40px 24px;">
+            <td style="padding: 20px 24px 16px;">
               
-              <!-- Success badge -->
+              <!-- Success badge + Greeting combined -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="center" style="padding-bottom: 20px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background-color: #ecfdf5; border-radius: 50px; padding: 8px 16px;">
-                          <span style="color: #059669; font-size: 13px; font-weight: 600;">✓ ${t.title}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Greeting -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td style="padding-bottom: 24px; text-align: center;">
-                    <h2 style="font-size: 20px; font-weight: 700; color: #1a202c; margin: 0 0 8px 0; line-height: 1.3;">
+                  <td align="center" style="padding-bottom: 16px;">
+                    <div style="display: inline-block; background-color: #ecfdf5; border-radius: 50px; padding: 6px 14px; margin-bottom: 12px;">
+                      <span style="color: #059669; font-size: 12px; font-weight: 600;">✓ ${t.title}</span>
+                    </div>
+                    <h2 style="font-size: 18px; font-weight: 700; color: #1a202c; margin: 0 0 6px 0; line-height: 1.3;">
                       ${t.greeting(name)}
                     </h2>
-                    <p style="font-size: 15px; color: #64748b; line-height: 1.5; margin: 0;">
+                    <p style="font-size: 14px; color: #64748b; line-height: 1.4; margin: 0;">
                       ${t.intro}
                     </p>
                   </td>
                 </tr>
               </table>
               
-              <!-- Stats Cards - Horizontal layout -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+              <!-- Stats Cards - Compact -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
                 <tr>
-                  <td width="50%" style="padding-right: 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px;">
+                  <td width="50%" style="padding-right: 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px;">
                       <tr>
-                        <td align="center" style="padding: 20px 16px;">
-                          <div style="font-size: 28px; font-weight: 800; color: #ffffff; line-height: 1;">${leadCount}</div>
-                          <div style="font-size: 12px; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 500;">${t.leadsFound}</div>
+                        <td align="center" style="padding: 14px 12px;">
+                          <div style="font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1;">${leadCount}</div>
+                          <div style="font-size: 11px; color: rgba(255,255,255,0.9); margin-top: 2px; font-weight: 500;">${t.leadsFound}</div>
                         </td>
                       </tr>
                     </table>
                   </td>
-                  <td width="50%" style="padding-left: 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 12px;">
+                  <td width="50%" style="padding-left: 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 8px;">
                       <tr>
-                        <td align="center" style="padding: 20px 16px;">
-                          <div style="font-size: 28px; font-weight: 800; color: #ffffff; line-height: 1;">${emailCount}</div>
-                          <div style="font-size: 12px; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 500;">${t.emailsGenerated}</div>
+                        <td align="center" style="padding: 14px 12px;">
+                          <div style="font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1;">${emailCount}</div>
+                          <div style="font-size: 11px; color: rgba(255,255,255,0.9); margin-top: 2px; font-weight: 500;">${t.emailsGenerated}</div>
                         </td>
                       </tr>
                     </table>
@@ -259,11 +237,11 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
               <!-- CTA Button -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="center" style="padding-bottom: 24px;">
+                  <td align="center" style="padding-bottom: 16px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td align="center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px;">
-                          <a href="${dashboardUrl}" target="_blank" style="display: block; padding: 14px 24px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; text-align: center;">
+                          <a href="${dashboardUrl}" target="_blank" style="display: block; padding: 12px 20px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; text-align: center;">
                             ${t.ctaButton}
                           </a>
                         </td>
@@ -273,15 +251,15 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
                 </tr>
               </table>
               
-              <!-- Next Steps -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+              <!-- Next Steps - Compact -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                 <tr>
-                  <td style="padding: 16px 20px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  <td style="padding: 12px 16px;">
+                    <div style="font-size: 10px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                       ${t.nextStepsTitle}
                     </div>
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      ${t.nextSteps.map((step, i) => `<tr><td style="color: #475569; font-size: 13px; padding: 6px 0; line-height: 1.4;"><span style="display: inline-block; width: 20px; height: 20px; background-color: #667eea; color: #fff; border-radius: 50%; text-align: center; line-height: 20px; font-size: 11px; font-weight: 600; margin-right: 10px;">${i + 1}</span>${step}</td></tr>`).join("")}
+                      ${t.nextSteps.map((step, i) => `<tr><td style="color: #475569; font-size: 12px; padding: 4px 0; line-height: 1.4;"><span style="display: inline-block; width: 16px; height: 16px; background-color: #667eea; color: #fff; border-radius: 50%; text-align: center; line-height: 16px; font-size: 10px; font-weight: 600; margin-right: 8px;">${i + 1}</span>${step}</td></tr>`).join("")}
                     </table>
                   </td>
                 </tr>
@@ -290,31 +268,22 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
             </td>
           </tr>
           
-          <!-- Footer -->
+          <!-- Footer - Compact -->
           <tr>
-            <td style="padding: 20px 40px 28px; border-top: 1px solid #e2e8f0;">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="font-size: 12px; color: #94a3b8; margin: 0 0 4px 0; line-height: 1.5;">
-                      ${t.footer}
-                    </p>
-                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-                      ${t.footerContact}
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding: 12px 24px 16px; border-top: 1px solid #e2e8f0;">
+              <p style="font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.5; text-align: center;">
+                ${t.footer}<br/>${t.footerContact}
+              </p>
             </td>
           </tr>
           
         </table>
         
         <!-- Bottom branding -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width: 520px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="480" style="max-width: 480px;">
           <tr>
-            <td align="center" style="padding-top: 20px;">
-              <span style="font-size: 11px; color: #94a3b8;">Powered by Rinda AI · grinda.ai</span>
+            <td align="center" style="padding-top: 12px;">
+              <span style="font-size: 10px; color: #94a3b8;">Powered by Rinda AI</span>
             </td>
           </tr>
         </table>

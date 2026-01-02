@@ -1148,7 +1148,7 @@ export async function completeOnboarding(
             firstName: user.username || undefined,
             leadCount: leadIds.length,
             emailCount,
-            dashboardUrl: `${config.frontendUrl}/app/sequences/${sequenceId}`,
+            dashboardUrl: `${config.frontendUrl}/company?step=4`,
             language: surveyData.lang === "en" ? "en" : "ko",
           })
 

@@ -17,6 +17,7 @@ import { workspaces } from "../db/schema/workspaces"
 import { addSequenceEmailJobs } from "../lib/queue/queues"
 import type { SequenceEmailJob } from "../lib/queue/types"
 import { calculateScheduledTime } from "../utils/timezone"
+import * as jobLogService from "./job-log.service"
 
 // ====================================
 // SEQUENCE CRUD OPERATIONS
@@ -119,6 +120,21 @@ export async function updateSequence(
     selectedLeadIds?: string[] // Array of lead IDs to target
   },
 ) {
+  // 상태 변경 로깅을 위해 이전 상태 조회
+  let previousStatus: string | undefined
+  if (data.status !== undefined) {
+    const [current] = await db
+      .select({
+        status: sequences.status,
+        name: sequences.name,
+        workspaceId: sequences.workspaceId,
+      })
+      .from(sequences)
+      .where(eq(sequences.id, id))
+      .limit(1)
+    previousStatus = current?.status
+  }
+
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
   }
@@ -159,16 +175,22 @@ export async function updateSequence(
     throw new Error("Failed to update sequence")
   }
 
-  // logger.info(
-  //   {
-  //     sequenceId: id,
-  //     savedSequence: {
-  //       customerGroupId: updatedSequence.customerGroupId,
-  //       selectedLeadIds: updatedSequence.selectedLeadIds,
-  //     },
-  //   },
-  //   "✅ Sequence updated successfully",
-  // )
+  // 시퀀스 상태 변경 로깅 (비동기 - 실패해도 주요 작업 영향 없음)
+  if (data.status !== undefined && data.status !== previousStatus) {
+    if (data.status === "active" && previousStatus === "paused") {
+      jobLogService
+        .logSequenceResumed(updatedSequence.id, updatedSequence.name, updatedSequence.workspaceId)
+        .catch(() => {})
+    } else if (data.status === "active") {
+      jobLogService
+        .logSequenceStarted(updatedSequence.id, updatedSequence.name, updatedSequence.workspaceId)
+        .catch(() => {})
+    } else if (data.status === "paused") {
+      jobLogService
+        .logSequencePaused(updatedSequence.id, updatedSequence.name, updatedSequence.workspaceId)
+        .catch(() => {})
+    }
+  }
 
   return updatedSequence
 }
@@ -1210,6 +1232,23 @@ export async function updateEnrollmentStatus(
   id: string,
   status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed",
 ) {
+  // 로깅을 위해 enrollment 정보 조회
+  const [enrollmentInfo] = await db
+    .select({
+      id: sequenceEnrollments.id,
+      sequenceId: sequenceEnrollments.sequenceId,
+      leadId: sequenceEnrollments.leadId,
+      previousStatus: sequenceEnrollments.status,
+      sequenceName: sequences.name,
+      workspaceId: sequences.workspaceId,
+      companyName: leads.companyName,
+    })
+    .from(sequenceEnrollments)
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .where(eq(sequenceEnrollments.id, id))
+    .limit(1)
+
   const [updatedEnrollment] = await db
     .update(sequenceEnrollments)
     .set({
@@ -1224,6 +1263,36 @@ export async function updateEnrollmentStatus(
       completedAt: sequenceEnrollments.completedAt,
       stoppedAt: sequenceEnrollments.stoppedAt,
     })
+
+  // Enrollment 상태 변경 로깅 (비동기 - 실패해도 주요 작업 영향 없음)
+  if (enrollmentInfo && enrollmentInfo.previousStatus !== status) {
+    if (status === "completed") {
+      jobLogService
+        .logEnrollmentCompleted(
+          enrollmentInfo.sequenceId,
+          enrollmentInfo.sequenceName,
+          enrollmentInfo.workspaceId,
+          id,
+          enrollmentInfo.leadId,
+          enrollmentInfo.companyName ?? undefined,
+        )
+        .catch(() => {})
+    } else if (status === "paused" || status === "stopped") {
+      jobLogService
+        .logSequenceEvent({
+          eventType: status === "paused" ? "enrollment_paused" : "enrollment_stopped",
+          sequenceId: enrollmentInfo.sequenceId,
+          sequenceName: enrollmentInfo.sequenceName,
+          workspaceId: enrollmentInfo.workspaceId,
+          enrollmentId: id,
+          leadId: enrollmentInfo.leadId,
+          leadCompanyName: enrollmentInfo.companyName ?? undefined,
+          previousStatus: enrollmentInfo.previousStatus,
+          newStatus: status,
+        })
+        .catch(() => {})
+    }
+  }
 
   return updatedEnrollment
 }
@@ -1418,6 +1487,17 @@ export async function bulkUpdateStatus(
     return 0
   }
 
+  // 상태 변경 로깅을 위해 이전 상태 조회
+  const previousStates = await db
+    .select({
+      id: sequences.id,
+      name: sequences.name,
+      workspaceId: sequences.workspaceId,
+      status: sequences.status,
+    })
+    .from(sequences)
+    .where(sequenceCondition)
+
   const result = await db
     .update(sequences)
     .set({
@@ -1426,6 +1506,19 @@ export async function bulkUpdateStatus(
     })
     .where(sequenceCondition)
     .returning({ id: sequences.id })
+
+  // 상태 변경 로깅 (비동기 - 실패해도 주요 작업 영향 없음)
+  for (const seq of previousStates) {
+    if (seq.status !== status) {
+      if (status === "active" && seq.status === "paused") {
+        jobLogService.logSequenceResumed(seq.id, seq.name, seq.workspaceId).catch(() => {})
+      } else if (status === "active") {
+        jobLogService.logSequenceStarted(seq.id, seq.name, seq.workspaceId).catch(() => {})
+      } else if (status === "paused") {
+        jobLogService.logSequencePaused(seq.id, seq.name, seq.workspaceId).catch(() => {})
+      }
+    }
+  }
 
   return result.length
 }
@@ -2434,27 +2527,35 @@ export async function checkAndCompleteEnrollmentIfLastStep(
 ) {
   const { default: logger } = await import("../utils/logger")
 
-  // Get enrollment and total steps
-  const enrollment = await db
+  // Get enrollment and total steps (로깅을 위해 sequence 정보도 조회)
+  const enrollmentData = await db
     .select({
       sequenceId: sequenceEnrollments.sequenceId,
+      leadId: sequenceEnrollments.leadId,
       status: sequenceEnrollments.status,
+      sequenceName: sequences.name,
+      workspaceId: sequences.workspaceId,
+      companyName: leads.companyName,
     })
     .from(sequenceEnrollments)
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
     .where(eq(sequenceEnrollments.id, enrollmentId))
     .limit(1)
 
-  if (!enrollment[0]) {
+  const enrollment = enrollmentData[0]
+
+  if (!enrollment) {
     logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found")
     return null
   }
 
   // Skip if already completed
-  if (enrollment[0].status === "completed") {
+  if (enrollment.status === "completed") {
     return null
   }
 
-  const steps = await getSequenceSteps(enrollment[0].sequenceId)
+  const steps = await getSequenceSteps(enrollment.sequenceId)
   const isLastStep = stepOrder >= steps.length
 
   if (!isLastStep) {
@@ -2496,6 +2597,19 @@ export async function checkAndCompleteEnrollmentIfLastStep(
       },
       "🏁 [STEP-BASED] Enrollment completed - last step failed",
     )
+
+    // Enrollment 완료 로깅 (비동기)
+    jobLogService
+      .logEnrollmentCompleted(
+        enrollment.sequenceId,
+        enrollment.sequenceName,
+        enrollment.workspaceId,
+        enrollmentId,
+        enrollment.leadId,
+        enrollment.companyName ?? undefined,
+        stepOrder,
+      )
+      .catch(() => {})
   }
 
   return updated
@@ -2513,15 +2627,23 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
     "📊 [STEP-BASED] Updating enrollment progress",
   )
 
-  // Get total steps for this enrollment
-  const enrollment = await db
+  // Get total steps for this enrollment (로깅을 위해 sequence 정보도 조회)
+  const enrollmentData = await db
     .select({
       sequenceId: sequenceEnrollments.sequenceId,
+      leadId: sequenceEnrollments.leadId,
       currentStepOrder: sequenceEnrollments.currentStepOrder,
+      sequenceName: sequences.name,
+      workspaceId: sequences.workspaceId,
+      companyName: leads.companyName,
     })
     .from(sequenceEnrollments)
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
     .where(eq(sequenceEnrollments.id, enrollmentId))
     .limit(1)
+
+  const enrollment = enrollmentData
 
   if (!enrollment[0]) {
     logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found")
@@ -2622,6 +2744,22 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
 
     // If enrollment is completed, check if all enrollments are completed
     if (updated.status === "completed") {
+      // Enrollment 완료 로깅 (비동기)
+      const enrollmentInfo = enrollment[0]
+      if (enrollmentInfo) {
+        jobLogService
+          .logEnrollmentCompleted(
+            enrollmentInfo.sequenceId,
+            enrollmentInfo.sequenceName,
+            enrollmentInfo.workspaceId,
+            enrollmentId,
+            enrollmentInfo.leadId,
+            enrollmentInfo.companyName ?? undefined,
+            stepOrder,
+          )
+          .catch(() => {})
+      }
+
       await checkAndUpdateSequenceCompletion(enrollment[0].sequenceId)
     }
   }
@@ -2634,6 +2772,17 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
   const { default: logger } = await import("../utils/logger")
 
   logger.debug({ sequenceId }, "🔍 [SEQUENCE-COMPLETION] Checking sequence completion")
+
+  // Get sequence info for logging
+  const [sequenceInfo] = await db
+    .select({
+      id: sequences.id,
+      name: sequences.name,
+      workspaceId: sequences.workspaceId,
+    })
+    .from(sequences)
+    .where(eq(sequences.id, sequenceId))
+    .limit(1)
 
   // Get all enrollments for this sequence
   const enrollments = await db
@@ -2652,12 +2801,13 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
 
   // Check if all enrollments are completed
   const allCompleted = enrollments.every((enrollment) => enrollment.status === "completed")
+  const completedCount = enrollments.filter((e) => e.status === "completed").length
 
   logger.info(
     {
       sequenceId,
       totalEnrollments: enrollments.length,
-      completedEnrollments: enrollments.filter((e) => e.status === "completed").length,
+      completedEnrollments: completedCount,
       allCompleted,
     },
     "📊 [SEQUENCE-COMPLETION] Completion status check",
@@ -2677,6 +2827,16 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
       { sequenceId },
       "🎉 [SEQUENCE-COMPLETION] Sequence marked as completed - all enrollments finished",
     )
+
+    // 시퀀스 완료 로깅 (비동기)
+    if (sequenceInfo) {
+      jobLogService
+        .logSequenceCompleted(sequenceId, sequenceInfo.name, sequenceInfo.workspaceId, {
+          totalEnrollments: enrollments.length,
+          completedEnrollments: completedCount,
+        })
+        .catch(() => {})
+    }
   }
 }
 

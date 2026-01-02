@@ -6,20 +6,29 @@
  * - Detects new emails and saves them to database
  * - Updates replied-emails when replies are detected
  * - Only runs on deployment servers (controlled by UNIPILE_INBOX_POLL_ENABLED env var)
+ *
+ * Job Logging: 모든 Job 라이프사이클이 job_logs 테이블에 기록됨
  */
 
 import { type Job, Worker } from "bullmq"
 import { eq } from "drizzle-orm"
 import { db } from "../../db"
 import { userEmailAccounts } from "../../db/schema/email-accounts"
+import { recordJobCompleted, recordJobFailed } from "../../lib/health"
 import {
   QUEUE_NAMES,
   type UnipileInboxPollJob,
   type UnipileInboxPollResult,
 } from "../../lib/queue/types"
 import { createRedisConnection } from "../../lib/redis/connection"
+import * as jobLogService from "../../services/job-log.service"
 import * as unipileService from "../../services/unipile.service"
 import logger from "../../utils/logger"
+
+const WORKER_NAME = "unipile-inbox-poll-worker"
+
+/** Job별 시작 시간 추적 (duration 계산용) */
+const jobStartTimes = new Map<string, number>()
 
 // ============================================================================
 // Worker State
@@ -40,7 +49,18 @@ async function processUnipileInboxPoll(
   const { trigger, accountId } = job.data
   const jobId = job.id || "unknown"
 
+  // 시작 시간 기록
+  const startTime = Date.now()
+  jobStartTimes.set(jobId, startTime)
+
   logger.info({ jobId, trigger, accountId }, "[UnipileInboxPoll] Starting inbox poll")
+
+  // DB에 Job 시작 기록
+  try {
+    await jobLogService.logJobStarted(job, WORKER_NAME)
+  } catch (logError) {
+    logger.warn({ jobId, error: logError }, "[UnipileInboxPoll] Failed to log job start")
+  }
 
   const result: UnipileInboxPollResult = {
     success: true,
@@ -194,10 +214,24 @@ export function startUnipileInboxPollWorker(): Worker<
   )
 
   // ========================================
-  // Event Handlers
+  // Event Handlers with DB Logging
   // ========================================
 
-  unipileInboxPollWorker.on("completed", (job, result) => {
+  unipileInboxPollWorker.on("completed", async (job, result) => {
+    const jobId = job.id || "unknown"
+    const startTime = jobStartTimes.get(jobId) || Date.now()
+
+    // Health 서버에 완료 기록
+    recordJobCompleted()
+
+    try {
+      await jobLogService.logJobCompleted(job, result, startTime)
+    } catch (logError) {
+      logger.error({ jobId, error: logError }, "[UnipileInboxPoll] Failed to log job completion")
+    } finally {
+      jobStartTimes.delete(jobId)
+    }
+
     logger.info(
       {
         jobId: job.id,
@@ -209,12 +243,35 @@ export function startUnipileInboxPollWorker(): Worker<
     )
   })
 
-  unipileInboxPollWorker.on("failed", (job, err) => {
+  unipileInboxPollWorker.on("failed", async (job, err) => {
+    const jobId = job?.id
+    const startTime = jobId ? jobStartTimes.get(jobId) : undefined
+
+    // Health 서버에 실패 기록
+    recordJobFailed()
+
+    try {
+      await jobLogService.logJobFailed(job, err, startTime)
+    } catch (logError) {
+      logger.error({ jobId, error: logError }, "[UnipileInboxPoll] Failed to log job failure")
+    } finally {
+      if (jobId) jobStartTimes.delete(jobId)
+    }
+
     logger.error({ jobId: job?.id, error: err.message }, "[UnipileInboxPoll] Job failed")
   })
 
+  unipileInboxPollWorker.on("stalled", async (jobId) => {
+    try {
+      await jobLogService.logJobStalled(jobId, QUEUE_NAMES.UNIPILE_INBOX_POLL)
+    } catch (logError) {
+      logger.error({ jobId, error: logError }, "[UnipileInboxPoll] Failed to log job stall")
+    }
+    logger.warn({ jobId }, "[UnipileInboxPoll] Job stalled")
+  })
+
   unipileInboxPollWorker.on("error", (err) => {
-    logger.error({ error: err.message }, "[UnipileInboxPoll] Worker error")
+    logger.error({ error: err.message, stack: err.stack }, "[UnipileInboxPoll] Worker error")
   })
 
   unipileInboxPollWorker.on("ready", () => {
@@ -227,7 +284,7 @@ export function startUnipileInboxPollWorker(): Worker<
 
   logger.info(
     { queueName: QUEUE_NAMES.UNIPILE_INBOX_POLL },
-    "[UnipileInboxPoll] Worker started successfully",
+    "[UnipileInboxPoll] Worker started successfully with DB logging enabled",
   )
 
   return unipileInboxPollWorker

@@ -584,3 +584,258 @@ export function extractJobLogParams(job: Job): JobLogCreateParams {
     },
   }
 }
+
+// ============================================================================
+// Sequence Lifecycle Logging
+// ============================================================================
+
+/**
+ * 시퀀스/캠페인 이벤트 타입
+ */
+export type SequenceEventType =
+  | "sequence_created"
+  | "sequence_started"
+  | "sequence_paused"
+  | "sequence_resumed"
+  | "sequence_completed"
+  | "sequence_deleted"
+  | "enrollment_created"
+  | "enrollment_completed"
+  | "enrollment_paused"
+  | "enrollment_stopped"
+  | "step_scheduled"
+  | "step_sent"
+  | "step_failed"
+  | "step_skipped"
+
+/**
+ * 시퀀스 이벤트 로그 파라미터
+ */
+interface SequenceEventParams {
+  eventType: SequenceEventType
+  sequenceId: string
+  sequenceName?: string
+  workspaceId: string
+  enrollmentId?: string
+  executionId?: string
+  leadId?: string
+  leadCompanyName?: string
+  stepOrder?: number
+  previousStatus?: string
+  newStatus?: string
+  reason?: string
+  metadata?: Record<string, unknown>
+}
+
+const SEQUENCE_LIFECYCLE_QUEUE = "sequence-lifecycle"
+
+/**
+ * 시퀀스 라이프사이클 이벤트 로깅
+ *
+ * 기존 job_logs 테이블을 활용하여 시퀀스/캠페인 이벤트를 기록합니다.
+ * queueName: "sequence-lifecycle"로 구분됩니다.
+ */
+export async function logSequenceEvent(params: SequenceEventParams): Promise<string | null> {
+  const {
+    eventType,
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    enrollmentId,
+    executionId,
+    leadId,
+    leadCompanyName,
+    stepOrder,
+    previousStatus,
+    newStatus,
+    reason,
+    metadata,
+  } = params
+
+  const jobId = `seq-event-${sequenceId}-${eventType}-${Date.now()}`
+  const serverIdentifier = getServerIdentifier()
+
+  try {
+    const [result] = await db
+      .insert(jobLogs)
+      .values({
+        jobId,
+        queueName: SEQUENCE_LIFECYCLE_QUEUE,
+        jobName: eventType,
+        status: "completed", // 이벤트는 즉시 완료 상태
+        attemptsMade: 1,
+        maxAttempts: 1,
+        priority: 0,
+        addedAt: new Date(),
+        processedAt: new Date(),
+        completedAt: new Date(),
+        durationMs: 0,
+        workerName: "sequence-lifecycle-logger",
+        processedBy: serverIdentifier,
+        inputData: {
+          eventType,
+          sequenceId,
+          sequenceName,
+          workspaceId,
+          enrollmentId,
+          executionId,
+          leadId,
+          leadCompanyName,
+          stepOrder,
+          previousStatus,
+          newStatus,
+          reason,
+          ...metadata,
+        },
+        outputData: {
+          success: true,
+          eventType,
+          timestamp: new Date().toISOString(),
+        },
+      } satisfies NewJobLog)
+      .returning({ id: jobLogs.id })
+
+    if (!result) {
+      logger.warn(
+        { eventType, sequenceId },
+        "[JobLogService] Failed to log sequence event: no result",
+      )
+      return null
+    }
+
+    logger.debug(
+      { eventType, sequenceId, workspaceId, logId: result.id },
+      "[JobLogService] Logged sequence event",
+    )
+    return result.id
+  } catch (error) {
+    // 로깅 실패는 주요 작업을 방해하면 안됨
+    logger.warn({ error, eventType, sequenceId }, "[JobLogService] Failed to log sequence event")
+    return null
+  }
+}
+
+/**
+ * 시퀀스 시작 이벤트 로깅
+ */
+export async function logSequenceStarted(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+  enrollmentCount?: number,
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "sequence_started",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    metadata: { enrollmentCount },
+  })
+}
+
+/**
+ * 시퀀스 일시정지 이벤트 로깅
+ */
+export async function logSequencePaused(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+  reason?: string,
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "sequence_paused",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    previousStatus: "active",
+    newStatus: "paused",
+    reason,
+  })
+}
+
+/**
+ * 시퀀스 재시작 이벤트 로깅
+ */
+export async function logSequenceResumed(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "sequence_resumed",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    previousStatus: "paused",
+    newStatus: "active",
+  })
+}
+
+/**
+ * 시퀀스 완료 이벤트 로깅
+ */
+export async function logSequenceCompleted(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+  stats?: { totalEnrollments: number; completedEnrollments: number },
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "sequence_completed",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    previousStatus: "active",
+    newStatus: "completed",
+    metadata: stats,
+  })
+}
+
+/**
+ * Enrollment 생성 이벤트 로깅
+ */
+export async function logEnrollmentCreated(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+  enrollmentId: string,
+  leadId: string,
+  leadCompanyName?: string,
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "enrollment_created",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    enrollmentId,
+    leadId,
+    leadCompanyName,
+    newStatus: "active",
+  })
+}
+
+/**
+ * Enrollment 완료 이벤트 로깅
+ */
+export async function logEnrollmentCompleted(
+  sequenceId: string,
+  sequenceName: string,
+  workspaceId: string,
+  enrollmentId: string,
+  leadId: string,
+  leadCompanyName?: string,
+  stepsCompleted?: number,
+): Promise<string | null> {
+  return logSequenceEvent({
+    eventType: "enrollment_completed",
+    sequenceId,
+    sequenceName,
+    workspaceId,
+    enrollmentId,
+    leadId,
+    leadCompanyName,
+    previousStatus: "active",
+    newStatus: "completed",
+    metadata: { stepsCompleted },
+  })
+}

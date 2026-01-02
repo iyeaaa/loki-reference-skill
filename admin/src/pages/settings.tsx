@@ -327,6 +327,22 @@ export default function SettingsPage() {
         permission: "admin-only",
       },
       // ───────────────────────────────────────────────────────────────────────
+      // 기록 - Admin 전용 (마케팅 팀 모니터링용)
+      // ───────────────────────────────────────────────────────────────────────
+      {
+        id: "header-records",
+        label: "기록",
+        icon: null,
+        type: "header",
+        permission: "admin-only",
+      },
+      {
+        id: "campaign-activity-logs",
+        label: "캠페인 작업 기록",
+        icon: <ScrollText className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      // ───────────────────────────────────────────────────────────────────────
       // 테스트 - Admin 전용 (개발/테스트용 기능)
       // ───────────────────────────────────────────────────────────────────────
       {
@@ -617,6 +633,9 @@ export default function SettingsPage() {
         return <ActivityLogsPage />
       case "license-key":
         return <LicenseKeySettings />
+      // Records Pages
+      case "campaign-activity-logs":
+        return <JobLogsPage />
       // Billing Pages
       case "billing-products":
         return <ProductsPage />

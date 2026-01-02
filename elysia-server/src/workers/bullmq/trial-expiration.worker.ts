@@ -6,6 +6,8 @@
  * - subscription status를 'expired'로 변경
  * - 활성 캠페인 일시 정지
  * - 로그 기록
+ *
+ * Job Logging: 모든 Job 라이프사이클이 job_logs 테이블에 기록됨
  */
 
 import { type Job, Worker } from "bullmq"
@@ -13,8 +15,16 @@ import { and, eq, lt } from "drizzle-orm"
 import { db } from "../../db"
 import { subscriptions } from "../../db/schema/billing"
 import { sequences } from "../../db/schema/sequences"
+import { recordJobCompleted, recordJobFailed } from "../../lib/health"
 import { createRedisConnection } from "../../lib/redis/connection"
+import * as jobLogService from "../../services/job-log.service"
 import logger from "../../utils/logger"
+
+const QUEUE_NAME = "trial-expiration"
+const WORKER_NAME = "trial-expiration-worker"
+
+/** Job별 시작 시간 추적 (duration 계산용) */
+const jobStartTimes = new Map<string, number>()
 
 export interface TrialExpirationJob {
   trigger: "scheduled" | "manual"
@@ -38,11 +48,23 @@ async function processTrialExpiration(
 ): Promise<TrialExpirationResult> {
   const { trigger, checkDate } = job.data
   const now = checkDate ? new Date(checkDate) : new Date()
+  const jobId = job.id || "unknown"
+
+  // 시작 시간 기록
+  const startTime = Date.now()
+  jobStartTimes.set(jobId, startTime)
 
   logger.info(
-    { trigger, checkDate: now.toISOString() },
+    { jobId, trigger, checkDate: now.toISOString() },
     "[TrialExpirationWorker] Starting trial expiration check",
   )
+
+  // DB에 Job 시작 기록
+  try {
+    await jobLogService.logJobStarted(job, WORKER_NAME)
+  } catch (logError) {
+    logger.warn({ jobId, error: logError }, "[TrialExpirationWorker] Failed to log job start")
+  }
 
   const errors: string[] = []
   let expiredCount = 0
@@ -189,7 +211,28 @@ export function startTrialExpirationWorker(): Worker<
       },
     )
 
-    worker.on("completed", (job) => {
+    // ========================================
+    // Event Handlers with DB Logging
+    // ========================================
+
+    worker.on("completed", async (job, result) => {
+      const jobId = job.id || "unknown"
+      const startTime = jobStartTimes.get(jobId) || Date.now()
+
+      // Health 서버에 완료 기록
+      recordJobCompleted()
+
+      try {
+        await jobLogService.logJobCompleted(job, result, startTime)
+      } catch (logError) {
+        logger.error(
+          { jobId, error: logError },
+          "[TrialExpirationWorker] Failed to log job completion",
+        )
+      } finally {
+        jobStartTimes.delete(jobId)
+      }
+
       logger.info(
         {
           jobId: job.id,
@@ -199,7 +242,24 @@ export function startTrialExpirationWorker(): Worker<
       )
     })
 
-    worker.on("failed", (job, err) => {
+    worker.on("failed", async (job, err) => {
+      const jobId = job?.id
+      const startTime = jobId ? jobStartTimes.get(jobId) : undefined
+
+      // Health 서버에 실패 기록
+      recordJobFailed()
+
+      try {
+        await jobLogService.logJobFailed(job, err, startTime)
+      } catch (logError) {
+        logger.error(
+          { jobId, error: logError },
+          "[TrialExpirationWorker] Failed to log job failure",
+        )
+      } finally {
+        if (jobId) jobStartTimes.delete(jobId)
+      }
+
       logger.error(
         {
           jobId: job?.id,
@@ -209,7 +269,23 @@ export function startTrialExpirationWorker(): Worker<
       )
     })
 
-    logger.info("[TrialExpirationWorker] Worker started")
+    worker.on("stalled", async (jobId) => {
+      try {
+        await jobLogService.logJobStalled(jobId, QUEUE_NAME)
+      } catch (logError) {
+        logger.error({ jobId, error: logError }, "[TrialExpirationWorker] Failed to log job stall")
+      }
+      logger.warn({ jobId }, "[TrialExpirationWorker] Job stalled")
+    })
+
+    worker.on("error", (err) => {
+      logger.error({ error: err.message, stack: err.stack }, "[TrialExpirationWorker] Worker error")
+    })
+
+    logger.info(
+      { queueName: QUEUE_NAME },
+      "[TrialExpirationWorker] Worker started with DB logging enabled",
+    )
     return worker
   } catch (error) {
     logger.error({ error }, "[TrialExpirationWorker] Failed to start worker")

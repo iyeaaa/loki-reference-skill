@@ -145,7 +145,7 @@ export function JobLogsPage() {
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">BullMQ Job 로그</CardTitle>
+              <CardTitle className="text-lg">캠페인 작업 기록</CardTitle>
               <div className="flex items-center gap-3">
                 {/* SSE Toggle */}
                 <div className="flex items-center gap-2">

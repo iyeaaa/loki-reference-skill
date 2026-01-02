@@ -14,6 +14,8 @@ import {
 } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
+import { addSequenceEmailJobs } from "../lib/queue/queues"
+import type { SequenceEmailJob } from "../lib/queue/types"
 import { calculateScheduledTime } from "../utils/timezone"
 
 // ====================================
@@ -547,6 +549,7 @@ export async function getSequenceSteps(sequenceId: string) {
       emailBodyHtml: sequenceSteps.emailBodyHtml,
       emailTemplateId: sequenceSteps.emailTemplateId,
       generationSource: sequenceSteps.generationSource,
+      attachments: sequenceSteps.attachments,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
     })
@@ -1502,6 +1505,22 @@ export async function bulkEnrollWithScheduling(data: {
     "🔄 [STEP-BASED] Starting bulk enrollment with scheduling",
   )
 
+  // Get sequence info for BullMQ job creation
+  const [sequenceInfo] = await db
+    .select({
+      name: sequences.name,
+      workspaceId: sequences.workspaceId,
+      createdBy: sequences.createdBy,
+    })
+    .from(sequences)
+    .where(eq(sequences.id, data.sequenceId))
+    .limit(1)
+
+  if (!sequenceInfo) {
+    logger.error({ sequenceId: data.sequenceId }, "❌ [STEP-BASED] Sequence not found")
+    throw new Error("시퀀스를 찾을 수 없습니다.")
+  }
+
   // Get sequence steps to create schedules
   const steps = await getSequenceSteps(data.sequenceId)
 
@@ -1541,6 +1560,7 @@ export async function bulkEnrollWithScheduling(data: {
     .select({
       leadId: leads.id,
       email: leadContacts.contactValue,
+      companyName: leads.companyName,
     })
     .from(leads)
     .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
@@ -1825,8 +1845,33 @@ export async function bulkEnrollWithScheduling(data: {
     "📊 [STEP-BASED] Loaded existing step executions",
   )
 
+  // Create lead lookup map for BullMQ job data
+  const leadInfoMap = new Map<string, { companyName: string | null }>()
+  for (const lead of leadsWithEmails) {
+    leadInfoMap.set(lead.leadId, { companyName: lead.companyName })
+  }
+
+  // Create step lookup map
+  const _stepMap = new Map(steps.map((s) => [s.id, s]))
+
   // Create step executions for each enrollment with KST scheduling
-  const stepExecutionValues = []
+  // Store extra info for BullMQ job creation
+  const stepExecutionValues: Array<{
+    enrollmentId: string
+    stepId: string
+    stepOrder: number
+    status: "pending"
+    scheduledAt: Date
+    generationSource: "manual" | "ai" | "template"
+  }> = []
+
+  // Track extra data for BullMQ job creation (indexed same as stepExecutionValues)
+  const bullmqJobData: Array<{
+    leadId: string
+    leadCompanyName: string | null
+    step: (typeof steps)[0]
+    scheduledAt: Date
+  }> = []
 
   for (const enrollment of enrollments) {
     const existingStepIds = existingStepExecutionsMap.get(enrollment.id) || new Set()
@@ -1909,13 +1954,27 @@ export async function bulkEnrollWithScheduling(data: {
         generationSource: step.generationSource,
       })
 
+      // Track extra data for BullMQ job creation
+      const leadInfo = leadInfoMap.get(enrollment.leadId)
+      bullmqJobData.push({
+        leadId: enrollment.leadId,
+        leadCompanyName: leadInfo?.companyName || null,
+        step,
+        scheduledAt,
+      })
+
       // Use this step's scheduled time as the base for the next step
       baseDate = scheduledAt
     }
   }
 
   if (stepExecutionValues.length > 0) {
-    await db.insert(sequenceStepExecutions).values(stepExecutionValues)
+    // Insert step executions and get IDs for BullMQ job creation
+    const insertedExecutions = await db
+      .insert(sequenceStepExecutions)
+      .values(stepExecutionValues)
+      .returning({ id: sequenceStepExecutions.id })
+
     logger.info(
       {
         sequenceId: data.sequenceId,
@@ -1924,6 +1983,75 @@ export async function bulkEnrollWithScheduling(data: {
       },
       "✅ [STEP-BASED] Created step executions",
     )
+
+    // Create BullMQ jobs for each execution
+    const bullmqJobs: Array<{ data: SequenceEmailJob; opts: { delay: number; jobId: string } }> = []
+    const now = Date.now()
+
+    for (let i = 0; i < insertedExecutions.length; i++) {
+      const execution = insertedExecutions[i]
+      const stepExecValue = stepExecutionValues[i]
+      const extraData = bullmqJobData[i]
+
+      if (!execution || !stepExecValue || !extraData) continue
+
+      const delayMs = Math.max(0, extraData.scheduledAt.getTime() - now)
+
+      bullmqJobs.push({
+        data: {
+          executionId: execution.id,
+          enrollmentId: stepExecValue.enrollmentId,
+          stepId: stepExecValue.stepId,
+          stepOrder: stepExecValue.stepOrder,
+          leadId: extraData.leadId,
+          leadCompanyName: extraData.leadCompanyName,
+          emailAccountId: data.userEmailAccountId,
+          emailSubject: extraData.step.emailSubject || "",
+          emailBodyText: extraData.step.emailBodyText,
+          emailBodyHtml: extraData.step.emailBodyHtml,
+          sequenceName: sequenceInfo.name,
+          sequenceId: data.sequenceId,
+          workspaceId: sequenceInfo.workspaceId,
+          userId: data.enrolledBy || sequenceInfo.createdBy,
+          attachments: extraData.step.attachments as Array<{
+            filename: string
+            type: string
+            content: string
+          }> | null,
+        },
+        opts: {
+          delay: delayMs,
+          jobId: `seq-email-${execution.id}`,
+        },
+      })
+    }
+
+    // Add all jobs to BullMQ queue with compensation logic
+    if (bullmqJobs.length > 0) {
+      try {
+        await addSequenceEmailJobs(bullmqJobs)
+        logger.info(
+          {
+            sequenceId: data.sequenceId,
+            jobsCreated: bullmqJobs.length,
+            firstJobDelay: bullmqJobs[0]?.opts.delay,
+          },
+          "✅ [STEP-BASED] Created BullMQ jobs for step executions",
+        )
+      } catch (bullmqError) {
+        // BullMQ Job 생성 실패 시 보상 로직
+        // DB에 step_executions는 이미 생성됨 - 나중에 마이그레이션으로 복구 가능
+        logger.error(
+          {
+            sequenceId: data.sequenceId,
+            jobsAttempted: bullmqJobs.length,
+            error: bullmqError,
+          },
+          "❌ [STEP-BASED] Failed to create BullMQ jobs - executions saved in DB, use migration to recover",
+        )
+        // 에러를 throw하지 않음 - DB는 정상, 나중에 migratePendingExecutionsToBullMQ()로 복구
+      }
+    }
   }
 
   // Update nextStepScheduledAt for enrollments

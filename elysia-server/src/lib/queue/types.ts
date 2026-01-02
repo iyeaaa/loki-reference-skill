@@ -6,6 +6,7 @@
 export const QUEUE_NAMES = {
   CAMPAIGN_EMAIL: "campaign-email",
   SCHEDULED_EMAIL: "scheduled-email",
+  SEQUENCE_EMAIL: "sequence-email", // BullMQ-based sequence email sending (replaces 60s interval worker)
   WORKFLOW_STEP: "workflow-step",
   METRICS_SYNC: "metrics-sync",
   ONBOARDING_GENERATION: "onboarding-generation",
@@ -29,6 +30,65 @@ export interface CampaignEmailJob {
   leadEmail: string
   scheduledAt: string // ISO date string
   attempt: number
+}
+
+/**
+ * Sequence Email Job - BullMQ-based sequence email sending
+ * Replaces the 60-second interval polling worker with event-driven processing
+ *
+ * Features:
+ * - Immediate processing (no 60s wait)
+ * - Built-in retry with exponential backoff
+ * - Rate limiting for Hunter API (10 req/sec)
+ * - Automatic stall detection and recovery
+ * - Full lifecycle logging to PostgreSQL
+ */
+export interface SequenceEmailJob {
+  /** Unique execution ID from sequence_step_executions table */
+  executionId: string
+  /** Enrollment ID for tracking */
+  enrollmentId: string
+  /** Step ID in the sequence */
+  stepId: string
+  /** Step order (1, 2, 3...) */
+  stepOrder: number
+  /** Lead ID to send email to */
+  leadId: string
+  /** Lead company name for logging */
+  leadCompanyName: string | null
+  /** User email account ID for sending */
+  emailAccountId: string
+  /** Email subject from step template */
+  emailSubject: string
+  /** Email body text */
+  emailBodyText: string | null
+  /** Email body HTML */
+  emailBodyHtml: string | null
+  /** Sequence name for logging */
+  sequenceName: string
+  /** Sequence ID */
+  sequenceId: string
+  /** Workspace ID */
+  workspaceId: string
+  /** User ID who created the sequence */
+  userId: string | null
+  /** Optional attachments */
+  attachments?: Array<{ filename: string; type: string; content: string }> | null
+}
+
+/**
+ * Sequence Email Job Result
+ */
+export interface SequenceEmailResult {
+  success: boolean
+  /** SendGrid/Nylas message ID */
+  messageId?: string
+  /** UUID from emails table */
+  emailRecordId?: string
+  /** Error message if failed */
+  error?: string
+  /** Processing duration in ms */
+  durationMs?: number
 }
 
 /**

@@ -2,6 +2,11 @@ import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import {
+  cancelEnrollmentJobs,
+  cancelSequenceJobs,
+  enqueueExistingPendingExecutions,
+} from "../lib/queue/queues"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
 import { generateAICampaign } from "../services/campaign-generation.service"
 import * as sequenceService from "../services/sequence.service"
@@ -305,6 +310,35 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         }
       }
 
+      // 일시정지 상태로 변경 시 Redis Job 취소 (동기화)
+      if (body.status === "paused" && currentSequence.status !== "paused") {
+        try {
+          const cancelResult = await cancelSequenceJobs(id)
+          logger.info(
+            { sequenceId: id, ...cancelResult },
+            "✅ [Sync] Canceled BullMQ jobs on sequence pause",
+          )
+        } catch (error) {
+          logger.warn(
+            { sequenceId: id, error },
+            "⚠️ [Sync] Failed to cancel BullMQ jobs, but continuing with pause",
+          )
+        }
+      }
+
+      // 일시정지에서 활성화로 변경 시 pending execution을 BullMQ에 재등록
+      if (body.status === "active" && currentSequence.status === "paused") {
+        try {
+          const enqueueResult = await enqueueExistingPendingExecutions(id)
+          logger.info(
+            { sequenceId: id, ...enqueueResult },
+            "✅ [Sync] Re-enqueued pending executions on sequence resume",
+          )
+        } catch (error) {
+          logger.warn({ sequenceId: id, error }, "⚠️ [Sync] Failed to re-enqueue pending executions")
+        }
+      }
+
       const sequence = await sequenceService.updateSequence(id, body)
       if (!sequence) {
         set.status = 404
@@ -324,6 +358,20 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .delete(
     "/:id",
     async ({ params: { id } }) => {
+      // 삭제 전 Redis Job 취소 (orphan job 방지)
+      try {
+        const cancelResult = await cancelSequenceJobs(id)
+        logger.info(
+          { sequenceId: id, ...cancelResult },
+          "✅ [Sync] Canceled BullMQ jobs before sequence deletion",
+        )
+      } catch (error) {
+        logger.warn(
+          { sequenceId: id, error },
+          "⚠️ [Sync] Failed to cancel BullMQ jobs, but continuing with deletion",
+        )
+      }
+
       await sequenceService.deleteSequence(id)
       return { success: true, message: "시퀀스가 삭제되었습니다." }
     },
@@ -1004,6 +1052,22 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .patch(
     "/:id/enrollments/:enrollmentId/status",
     async ({ params: { enrollmentId }, body, set }) => {
+      // 중단/일시정지 상태로 변경 시 Redis Job 취소 (동기화)
+      if (body.status === "stopped" || body.status === "paused" || body.status === "unsubscribed") {
+        try {
+          const cancelResult = await cancelEnrollmentJobs(enrollmentId)
+          logger.info(
+            { enrollmentId, status: body.status, ...cancelResult },
+            "✅ [Sync] Canceled BullMQ jobs on enrollment status change",
+          )
+        } catch (error) {
+          logger.warn(
+            { enrollmentId, status: body.status, error },
+            "⚠️ [Sync] Failed to cancel BullMQ jobs, but continuing with status update",
+          )
+        }
+      }
+
       const enrollment = await sequenceService.updateEnrollmentStatus(enrollmentId, body.status)
       if (!enrollment) {
         set.status = 404

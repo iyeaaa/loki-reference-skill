@@ -9,6 +9,8 @@ import {
   type OnboardingAutoGenerateResult,
   QUEUE_NAMES,
   type ScheduledEmailJob,
+  type SequenceEmailJob,
+  type SequenceEmailResult,
   type TestJob,
   type TestJobResult,
   type TrialExpirationJob,
@@ -55,6 +57,35 @@ export const scheduledEmailQueue = new Queue<ScheduledEmailJob>(QUEUE_NAMES.SCHE
   defaultJobOptions: {
     ...defaultJobOptions,
     attempts: 2,
+  },
+})
+
+/**
+ * Sequence Email Queue
+ * BullMQ-based sequence email sending (replaces 60-second interval worker)
+ *
+ * Features:
+ * - Event-driven processing (no polling)
+ * - Built-in rate limiting for Hunter API (10 req/sec)
+ * - Automatic retry with exponential backoff
+ * - Stall detection and recovery
+ * - Full lifecycle logging to PostgreSQL
+ */
+export const sequenceEmailQueue = new Queue<SequenceEmailJob>(QUEUE_NAMES.SEQUENCE_EMAIL, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 30000, // 30 seconds base delay for email failures
+    },
+    removeOnComplete: {
+      age: 24 * 3600, // Keep completed jobs for 24 hours
+      count: 5000, // Keep max 5000 completed jobs (higher volume)
+    },
+    removeOnFail: {
+      age: 7 * 24 * 3600, // Keep failed jobs for 7 days
+    },
   },
 })
 
@@ -187,6 +218,7 @@ export function getAllQueues() {
   return {
     [QUEUE_NAMES.CAMPAIGN_EMAIL]: campaignEmailQueue,
     [QUEUE_NAMES.SCHEDULED_EMAIL]: scheduledEmailQueue,
+    [QUEUE_NAMES.SEQUENCE_EMAIL]: sequenceEmailQueue,
     [QUEUE_NAMES.WORKFLOW_STEP]: workflowStepQueue,
     [QUEUE_NAMES.METRICS_SYNC]: metricsSyncQueue,
     [QUEUE_NAMES.ONBOARDING_GENERATION]: onboardingGenerationQueue,
@@ -203,6 +235,7 @@ export async function closeAllQueues(): Promise<void> {
   await Promise.all([
     campaignEmailQueue.close(),
     scheduledEmailQueue.close(),
+    sequenceEmailQueue.close(),
     workflowStepQueue.close(),
     metricsSyncQueue.close(),
     onboardingGenerationQueue.close(),
@@ -210,6 +243,811 @@ export async function closeAllQueues(): Promise<void> {
     trialExpirationQueue.close(),
     testQueue.close(),
   ])
+}
+
+// ============================================================================
+// Sequence Email Queue Helper with DB Logging
+// ============================================================================
+
+/**
+ * Sequence Email Job 추가 (DB 로그 자동 생성)
+ *
+ * 시퀀스 스텝 실행 시 호출되어 이메일 발송 Job을 큐에 추가
+ * DB에 Job 로그를 생성하여 모니터링 및 디버깅 지원
+ *
+ * @param data - SequenceEmailJob 데이터
+ * @param opts - Job 옵션 (delay, priority 등)
+ * @returns Job 객체
+ */
+export async function addSequenceEmailJob(
+  data: SequenceEmailJob,
+  opts?: JobsOptions,
+): Promise<Job<SequenceEmailJob, SequenceEmailResult>> {
+  const jobName = `send-step-${data.stepOrder}`
+
+  // 중복 방지: executionId 기반 고유 jobId 생성
+  const deduplicationJobId = `seq-email-${data.executionId}`
+
+  // 기존 Job 확인 (waiting, delayed, active 상태)
+  const existingJob = await sequenceEmailQueue.getJob(deduplicationJobId)
+  if (existingJob) {
+    const state = await existingJob.getState()
+    if (state === "waiting" || state === "delayed" || state === "active") {
+      logger.debug(
+        {
+          jobId: deduplicationJobId,
+          executionId: data.executionId,
+          state,
+        },
+        "[SequenceEmailQueue] Job already exists, returning existing job",
+      )
+      return existingJob
+    }
+    // completed, failed 상태면 새로 생성 (기존 Job 제거 후)
+    await existingJob.remove()
+  }
+
+  // Queue에 Job 추가
+  const job = await sequenceEmailQueue.add(jobName, data, {
+    jobId: deduplicationJobId,
+    ...opts,
+  })
+
+  // DB에 Job 로그 생성
+  if (job.id) {
+    try {
+      const delayMs = opts?.delay ?? 0
+      const hasDelay = delayMs > 0
+      const initialStatus = hasDelay ? "delayed" : "waiting"
+
+      await jobLogService.createJobLog({
+        jobId: job.id,
+        queueName: QUEUE_NAMES.SEQUENCE_EMAIL,
+        jobName,
+        inputData: {
+          executionId: data.executionId,
+          enrollmentId: data.enrollmentId,
+          stepId: data.stepId,
+          stepOrder: data.stepOrder,
+          leadId: data.leadId,
+          leadCompanyName: data.leadCompanyName,
+          sequenceId: data.sequenceId,
+          sequenceName: data.sequenceName,
+          workspaceId: data.workspaceId,
+        } as unknown as Record<string, unknown>,
+        priority: opts?.priority,
+        maxAttempts: opts?.attempts ?? 3,
+        delayedUntil: hasDelay ? new Date(Date.now() + delayMs) : undefined,
+        jobOptions: opts ? ({ ...opts } as unknown as Record<string, unknown>) : undefined,
+        status: initialStatus,
+      })
+
+      logger.debug(
+        {
+          jobId: job.id,
+          executionId: data.executionId,
+          stepOrder: data.stepOrder,
+          leadCompanyName: data.leadCompanyName,
+          status: initialStatus,
+        },
+        "[SequenceEmailQueue] Job added with DB logging",
+      )
+    } catch (logError) {
+      // 로깅 실패해도 Job은 이미 Queue에 추가됨
+      logger.warn(
+        { jobId: job.id, error: logError },
+        "[SequenceEmailQueue] Failed to create job log, but job was added to queue",
+      )
+    }
+  }
+
+  return job
+}
+
+/**
+ * Sequence Email Jobs 대량 추가 (배치 처리용)
+ *
+ * 시퀀스 활성화 시 여러 리드에 대한 이메일 Job을 한번에 추가
+ *
+ * @param jobs - Job 배열 [{data, opts}]
+ * @returns Job 객체 배열
+ */
+export async function addSequenceEmailJobs(
+  jobs: Array<{ data: SequenceEmailJob; opts?: JobsOptions }>,
+): Promise<Job<SequenceEmailJob, SequenceEmailResult>[]> {
+  if (jobs.length === 0) return []
+
+  // BullMQ addBulk 형식으로 변환
+  const bulkJobs = jobs.map(({ data, opts }) => ({
+    name: `send-step-${data.stepOrder}`,
+    data,
+    opts: {
+      jobId: `seq-email-${data.executionId}`,
+      ...opts,
+    },
+  }))
+
+  // Queue에 대량 Job 추가
+  const addedJobs = await sequenceEmailQueue.addBulk(bulkJobs)
+
+  // DB에 Job 로그 대량 생성
+  for (let i = 0; i < addedJobs.length; i++) {
+    const job = addedJobs[i]
+    const jobConfig = jobs[i]
+
+    if (!job || !jobConfig) continue
+
+    try {
+      if (!job.id) continue
+
+      const delayMs = jobConfig.opts?.delay ?? 0
+      const hasDelay = delayMs > 0
+      const initialStatus = hasDelay ? "delayed" : "waiting"
+
+      await jobLogService.createJobLog({
+        jobId: job.id,
+        queueName: QUEUE_NAMES.SEQUENCE_EMAIL,
+        jobName: `send-step-${jobConfig.data.stepOrder}`,
+        inputData: {
+          executionId: jobConfig.data.executionId,
+          enrollmentId: jobConfig.data.enrollmentId,
+          stepId: jobConfig.data.stepId,
+          stepOrder: jobConfig.data.stepOrder,
+          leadId: jobConfig.data.leadId,
+          sequenceId: jobConfig.data.sequenceId,
+        } as unknown as Record<string, unknown>,
+        priority: jobConfig.opts?.priority,
+        maxAttempts: jobConfig.opts?.attempts ?? 3,
+        delayedUntil: hasDelay ? new Date(Date.now() + delayMs) : undefined,
+        status: initialStatus,
+      })
+    } catch (logError) {
+      logger.warn(
+        { jobId: job.id, error: logError },
+        "[SequenceEmailQueue] Failed to create job log for bulk job",
+      )
+    }
+  }
+
+  logger.info(
+    { count: addedJobs.length, queueName: QUEUE_NAMES.SEQUENCE_EMAIL },
+    "[SequenceEmailQueue] Bulk jobs added with DB logging",
+  )
+
+  return addedJobs
+}
+
+/**
+ * Sequence에 대한 모든 대기 중인 Job을 취소
+ *
+ * 시퀀스 일시정지(pause) 시 호출
+ * waiting 및 delayed 상태의 Job만 제거 (active 상태는 완료될 때까지 대기)
+ *
+ * @param sequenceId - 취소할 시퀀스 ID
+ * @returns 취소된 Job 수
+ */
+export async function cancelSequenceJobs(sequenceId: string): Promise<{
+  canceled: number
+  failed: number
+  active: number
+}> {
+  let canceled = 0
+  let failed = 0
+  let active = 0
+
+  try {
+    // Get all waiting jobs
+    const waitingJobs = await sequenceEmailQueue.getJobs(["waiting", "delayed"])
+
+    for (const job of waitingJobs) {
+      if (job.data.sequenceId === sequenceId) {
+        try {
+          const state = await job.getState()
+          if (state === "active") {
+            active++
+            continue // Active jobs cannot be canceled
+          }
+
+          await job.remove()
+          canceled++
+
+          // Update DB log (mark as failed with cancel reason)
+          if (job.id) {
+            await jobLogService.updateJobLog(job.id, QUEUE_NAMES.SEQUENCE_EMAIL, {
+              status: "failed",
+              errorMessage: "Job canceled: Sequence paused",
+              failedAt: new Date(),
+            })
+          }
+        } catch (error) {
+          failed++
+          logger.warn(
+            { jobId: job.id, sequenceId, error },
+            "[SequenceEmailQueue] Failed to cancel job",
+          )
+        }
+      }
+    }
+
+    logger.info(
+      { sequenceId, canceled, failed, active },
+      "[SequenceEmailQueue] Sequence jobs canceled",
+    )
+
+    return { canceled, failed, active }
+  } catch (error) {
+    logger.error({ sequenceId, error }, "[SequenceEmailQueue] Failed to cancel sequence jobs")
+    throw error
+  }
+}
+
+/**
+ * Sequence에 대한 모든 Job 상태 조회
+ *
+ * @param sequenceId - 조회할 시퀀스 ID
+ * @returns Job 상태별 개수
+ */
+export async function getSequenceJobsStatus(sequenceId: string): Promise<{
+  waiting: number
+  delayed: number
+  active: number
+  completed: number
+  failed: number
+  total: number
+}> {
+  try {
+    const allJobs = await sequenceEmailQueue.getJobs([
+      "waiting",
+      "delayed",
+      "active",
+      "completed",
+      "failed",
+    ])
+
+    const stats = {
+      waiting: 0,
+      delayed: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      total: 0,
+    }
+
+    for (const job of allJobs) {
+      if (job.data.sequenceId === sequenceId) {
+        const state = await job.getState()
+        if (state in stats) {
+          stats[state as keyof typeof stats]++
+        }
+        stats.total++
+      }
+    }
+
+    return stats
+  } catch (error) {
+    logger.error({ sequenceId, error }, "[SequenceEmailQueue] Failed to get sequence jobs status")
+    throw error
+  }
+}
+
+/**
+ * Job ID로 Sequence Email Job 조회
+ *
+ * @param jobId - Job ID (예: seq-email-{executionId})
+ * @returns Job 객체 또는 null
+ */
+export async function getSequenceEmailJob(
+  jobId: string,
+): Promise<Job<SequenceEmailJob, SequenceEmailResult> | null> {
+  try {
+    const job = await sequenceEmailQueue.getJob(jobId)
+    return job || null
+  } catch (error) {
+    logger.error({ jobId, error }, "[SequenceEmailQueue] Failed to get job")
+    return null
+  }
+}
+
+/**
+ * Execution ID로 Sequence Email Job 조회
+ *
+ * @param executionId - Step Execution ID
+ * @returns Job 객체 또는 null
+ */
+export async function getSequenceEmailJobByExecutionId(
+  executionId: string,
+): Promise<Job<SequenceEmailJob, SequenceEmailResult> | null> {
+  const jobId = `seq-email-${executionId}`
+  return getSequenceEmailJob(jobId)
+}
+
+/**
+ * 특정 Sequence의 Waiting/Delayed Job들의 delay 시간 업데이트
+ *
+ * 시퀀스 재개(resume) 시 호출하여 지연된 Job들의 실행 시간 재계산
+ *
+ * @param sequenceId - 대상 시퀀스 ID
+ * @param adjustmentMs - 조정할 밀리초 (양수: 지연 추가, 음수: 지연 감소)
+ * @returns 업데이트된 Job 수
+ */
+export async function adjustSequenceJobDelays(
+  sequenceId: string,
+  adjustmentMs: number,
+): Promise<{ updated: number; failed: number }> {
+  let updated = 0
+  let failed = 0
+
+  try {
+    const delayedJobs = await sequenceEmailQueue.getJobs(["delayed"])
+
+    for (const job of delayedJobs) {
+      if (job.data.sequenceId === sequenceId) {
+        try {
+          // Get current delay
+          const currentDelay = job.delay || 0
+          const newDelay = Math.max(0, currentDelay + adjustmentMs)
+
+          // BullMQ doesn't support direct delay modification
+          // We need to remove and re-add the job
+          const jobData = job.data
+          const jobOpts = job.opts
+
+          await job.remove()
+          await addSequenceEmailJob(jobData, {
+            ...jobOpts,
+            delay: newDelay,
+          })
+
+          updated++
+        } catch (error) {
+          failed++
+          logger.warn(
+            { jobId: job.id, sequenceId, error },
+            "[SequenceEmailQueue] Failed to adjust job delay",
+          )
+        }
+      }
+    }
+
+    logger.info(
+      { sequenceId, adjustmentMs, updated, failed },
+      "[SequenceEmailQueue] Sequence job delays adjusted",
+    )
+
+    return { updated, failed }
+  } catch (error) {
+    logger.error({ sequenceId, error }, "[SequenceEmailQueue] Failed to adjust sequence job delays")
+    throw error
+  }
+}
+
+/**
+ * Sequence Email Queue 상태 조회 (전체)
+ *
+ * @returns Queue 전체 상태
+ */
+export async function getSequenceEmailQueueStatus(): Promise<{
+  waiting: number
+  delayed: number
+  active: number
+  completed: number
+  failed: number
+  paused: boolean
+}> {
+  const [waiting, delayed, active, completed, failed] = await Promise.all([
+    sequenceEmailQueue.getWaitingCount(),
+    sequenceEmailQueue.getDelayedCount(),
+    sequenceEmailQueue.getActiveCount(),
+    sequenceEmailQueue.getCompletedCount(),
+    sequenceEmailQueue.getFailedCount(),
+  ])
+
+  return {
+    waiting,
+    delayed,
+    active,
+    completed,
+    failed,
+    paused: await sequenceEmailQueue.isPaused(),
+  }
+}
+
+/**
+ * Sequence Email Queue 일시정지
+ *
+ * 모든 Worker가 새 Job 처리를 중단 (현재 처리 중인 Job은 완료됨)
+ */
+export async function pauseSequenceEmailQueue(): Promise<void> {
+  await sequenceEmailQueue.pause()
+  logger.info("[SequenceEmailQueue] Queue paused")
+}
+
+/**
+ * Sequence Email Queue 재개
+ */
+export async function resumeSequenceEmailQueue(): Promise<void> {
+  await sequenceEmailQueue.resume()
+  logger.info("[SequenceEmailQueue] Queue resumed")
+}
+
+/**
+ * 실패한 Job 재시도
+ *
+ * @param jobId - Job ID
+ * @returns 성공 여부
+ */
+export async function retrySequenceEmailJob(jobId: string): Promise<boolean> {
+  try {
+    const job = await sequenceEmailQueue.getJob(jobId)
+    if (!job) {
+      logger.warn({ jobId }, "[SequenceEmailQueue] Job not found for retry")
+      return false
+    }
+
+    const state = await job.getState()
+    if (state !== "failed") {
+      logger.warn({ jobId, state }, "[SequenceEmailQueue] Job is not in failed state")
+      return false
+    }
+
+    await job.retry()
+    logger.info({ jobId }, "[SequenceEmailQueue] Job retry initiated")
+    return true
+  } catch (error) {
+    logger.error({ jobId, error }, "[SequenceEmailQueue] Failed to retry job")
+    return false
+  }
+}
+
+/**
+ * Sequence의 모든 실패한 Job 재시도
+ *
+ * @param sequenceId - 대상 시퀀스 ID
+ * @returns 재시도된 Job 수
+ */
+export async function retryFailedSequenceJobs(
+  sequenceId: string,
+): Promise<{ retried: number; failed: number }> {
+  let retried = 0
+  let failed = 0
+
+  try {
+    const failedJobs = await sequenceEmailQueue.getJobs(["failed"])
+
+    for (const job of failedJobs) {
+      if (job.data.sequenceId === sequenceId) {
+        try {
+          await job.retry()
+          retried++
+        } catch (error) {
+          failed++
+          logger.warn(
+            { jobId: job.id, sequenceId, error },
+            "[SequenceEmailQueue] Failed to retry job",
+          )
+        }
+      }
+    }
+
+    logger.info({ sequenceId, retried, failed }, "[SequenceEmailQueue] Failed jobs retry completed")
+
+    return { retried, failed }
+  } catch (error) {
+    logger.error({ sequenceId, error }, "[SequenceEmailQueue] Failed to retry failed sequence jobs")
+    throw error
+  }
+}
+
+/**
+ * Enrollment에 대한 모든 대기 중인 Job을 취소
+ *
+ * 등록 중단(stop) 시 호출
+ * waiting 및 delayed 상태의 Job만 제거 (active 상태는 완료될 때까지 대기)
+ *
+ * @param enrollmentId - 취소할 등록 ID
+ * @returns 취소된 Job 수
+ */
+export async function cancelEnrollmentJobs(enrollmentId: string): Promise<{
+  canceled: number
+  failed: number
+  active: number
+}> {
+  let canceled = 0
+  let failed = 0
+  let active = 0
+
+  try {
+    const waitingJobs = await sequenceEmailQueue.getJobs(["waiting", "delayed"])
+
+    for (const job of waitingJobs) {
+      if (job.data.enrollmentId === enrollmentId) {
+        try {
+          const state = await job.getState()
+          if (state === "active") {
+            active++
+            continue
+          }
+
+          await job.remove()
+          canceled++
+
+          if (job.id) {
+            await jobLogService.updateJobLog(job.id, QUEUE_NAMES.SEQUENCE_EMAIL, {
+              status: "failed",
+              errorMessage: "Job canceled: Enrollment stopped",
+              failedAt: new Date(),
+            })
+          }
+        } catch (error) {
+          failed++
+          logger.warn(
+            { jobId: job.id, enrollmentId, error },
+            "[SequenceEmailQueue] Failed to cancel enrollment job",
+          )
+        }
+      }
+    }
+
+    logger.info(
+      { enrollmentId, canceled, failed, active },
+      "[SequenceEmailQueue] Enrollment jobs canceled",
+    )
+
+    return { canceled, failed, active }
+  } catch (error) {
+    logger.error({ enrollmentId, error }, "[SequenceEmailQueue] Failed to cancel enrollment jobs")
+    throw error
+  }
+}
+
+/**
+ * Lead에 대한 모든 대기 중인 Job을 취소
+ *
+ * 리드 구독취소(unsubscribe) 시 호출
+ * waiting 및 delayed 상태의 Job만 제거
+ *
+ * @param leadId - 취소할 리드 ID
+ * @returns 취소된 Job 수
+ */
+export async function cancelLeadJobs(leadId: string): Promise<{
+  canceled: number
+  failed: number
+  active: number
+}> {
+  let canceled = 0
+  let failed = 0
+  let active = 0
+
+  try {
+    const waitingJobs = await sequenceEmailQueue.getJobs(["waiting", "delayed"])
+
+    for (const job of waitingJobs) {
+      if (job.data.leadId === leadId) {
+        try {
+          const state = await job.getState()
+          if (state === "active") {
+            active++
+            continue
+          }
+
+          await job.remove()
+          canceled++
+
+          if (job.id) {
+            await jobLogService.updateJobLog(job.id, QUEUE_NAMES.SEQUENCE_EMAIL, {
+              status: "failed",
+              errorMessage: "Job canceled: Lead unsubscribed",
+              failedAt: new Date(),
+            })
+          }
+        } catch (error) {
+          failed++
+          logger.warn(
+            { jobId: job.id, leadId, error },
+            "[SequenceEmailQueue] Failed to cancel lead job",
+          )
+        }
+      }
+    }
+
+    logger.info({ leadId, canceled, failed, active }, "[SequenceEmailQueue] Lead jobs canceled")
+
+    return { canceled, failed, active }
+  } catch (error) {
+    logger.error({ leadId, error }, "[SequenceEmailQueue] Failed to cancel lead jobs")
+    throw error
+  }
+}
+
+/**
+ * Execution ID로 특정 Job 취소
+ *
+ * @param executionId - Step Execution ID
+ * @returns 취소 성공 여부
+ */
+export async function cancelExecutionJob(executionId: string): Promise<boolean> {
+  try {
+    const jobId = `seq-email-${executionId}`
+    const job = await sequenceEmailQueue.getJob(jobId)
+
+    if (!job) {
+      logger.debug({ executionId }, "[SequenceEmailQueue] Job not found for cancellation")
+      return false
+    }
+
+    const state = await job.getState()
+    if (state === "active") {
+      logger.warn({ executionId, state }, "[SequenceEmailQueue] Cannot cancel active job")
+      return false
+    }
+
+    await job.remove()
+
+    await jobLogService.updateJobLog(jobId, QUEUE_NAMES.SEQUENCE_EMAIL, {
+      status: "failed",
+      errorMessage: "Job canceled manually",
+      failedAt: new Date(),
+    })
+
+    logger.info({ executionId }, "[SequenceEmailQueue] Execution job canceled")
+    return true
+  } catch (error) {
+    logger.error({ executionId, error }, "[SequenceEmailQueue] Failed to cancel execution job")
+    return false
+  }
+}
+
+/**
+ * 기존 pending execution을 BullMQ Job으로 마이그레이션
+ *
+ * 60초 워커에서 BullMQ 워커로 전환 시 일회성 실행
+ * 모든 pending 상태의 step execution에 대해 BullMQ Job 생성
+ *
+ * @param sequenceId - 특정 시퀀스만 마이그레이션 (optional, 없으면 전체)
+ * @returns 마이그레이션 결과
+ */
+export async function migratePendingExecutionsToBullMQ(sequenceId?: string): Promise<{
+  migrated: number
+  skipped: number
+  failed: number
+}> {
+  // Lazy import to avoid circular dependencies
+  const { db } = await import("../../db")
+  const { and, eq, lte } = await import("drizzle-orm")
+  const { sequenceStepExecutions, sequenceSteps, sequenceEnrollments, sequences } = await import(
+    "../../db/schema/sequences"
+  )
+  const { leads } = await import("../../db/schema/leads")
+
+  let migrated = 0
+  let skipped = 0
+  let failed = 0
+
+  try {
+    // Build query conditions
+    const now = new Date()
+    const conditions = [
+      eq(sequenceStepExecutions.status, "pending"),
+      lte(sequenceStepExecutions.scheduledAt, now),
+    ]
+
+    if (sequenceId) {
+      conditions.push(eq(sequences.id, sequenceId))
+    }
+
+    // Get all pending executions with related data
+    const pendingExecutions = await db
+      .select({
+        executionId: sequenceStepExecutions.id,
+        enrollmentId: sequenceStepExecutions.enrollmentId,
+        stepId: sequenceStepExecutions.stepId,
+        stepOrder: sequenceStepExecutions.stepOrder,
+        scheduledAt: sequenceStepExecutions.scheduledAt,
+        emailSubject: sequenceSteps.emailSubject,
+        emailBodyText: sequenceSteps.emailBodyText,
+        emailBodyHtml: sequenceSteps.emailBodyHtml,
+        attachments: sequenceSteps.attachments,
+        leadId: sequenceEnrollments.leadId,
+        emailAccountId: sequenceEnrollments.userEmailAccountId,
+        sequenceId: sequenceEnrollments.sequenceId,
+        sequenceName: sequences.name,
+        workspaceId: sequences.workspaceId,
+        userId: sequences.createdBy,
+        leadCompanyName: leads.companyName,
+      })
+      .from(sequenceStepExecutions)
+      .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+      .innerJoin(
+        sequenceEnrollments,
+        eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id),
+      )
+      .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+      .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .where(and(...conditions))
+
+    logger.info(
+      { count: pendingExecutions.length, sequenceId },
+      "[SequenceEmailQueue] Found pending executions to migrate",
+    )
+
+    // Create BullMQ jobs for each execution
+    for (const exec of pendingExecutions) {
+      try {
+        // Check if job already exists
+        const existingJob = await sequenceEmailQueue.getJob(`seq-email-${exec.executionId}`)
+        if (existingJob) {
+          const state = await existingJob.getState()
+          if (state === "waiting" || state === "delayed" || state === "active") {
+            skipped++
+            continue
+          }
+          // Remove completed/failed job to recreate
+          await existingJob.remove()
+        }
+
+        const delayMs = Math.max(0, exec.scheduledAt.getTime() - Date.now())
+
+        await addSequenceEmailJob(
+          {
+            executionId: exec.executionId,
+            enrollmentId: exec.enrollmentId,
+            stepId: exec.stepId,
+            stepOrder: exec.stepOrder,
+            leadId: exec.leadId,
+            leadCompanyName: exec.leadCompanyName,
+            emailAccountId: exec.emailAccountId,
+            emailSubject: exec.emailSubject || "",
+            emailBodyText: exec.emailBodyText,
+            emailBodyHtml: exec.emailBodyHtml,
+            sequenceName: exec.sequenceName,
+            sequenceId: exec.sequenceId,
+            workspaceId: exec.workspaceId,
+            userId: exec.userId,
+            attachments: exec.attachments as Array<{
+              filename: string
+              type: string
+              content: string
+            }> | null,
+          },
+          { delay: delayMs },
+        )
+
+        migrated++
+      } catch (error) {
+        failed++
+        logger.warn(
+          { executionId: exec.executionId, error },
+          "[SequenceEmailQueue] Failed to migrate execution to BullMQ",
+        )
+      }
+    }
+
+    logger.info(
+      { migrated, skipped, failed, sequenceId },
+      "[SequenceEmailQueue] Migration completed",
+    )
+
+    return { migrated, skipped, failed }
+  } catch (error) {
+    logger.error({ sequenceId, error }, "[SequenceEmailQueue] Migration failed")
+    throw error
+  }
+}
+
+/**
+ * 특정 시퀀스의 pending execution을 BullMQ Job으로 enqueue
+ *
+ * 시퀀스 Resume 시 호출하여 pending execution들을 다시 처리 대상으로 등록
+ *
+ * @param sequenceId - 대상 시퀀스 ID
+ * @returns enqueue된 Job 수
+ */
+export async function enqueueExistingPendingExecutions(sequenceId: string): Promise<{
+  migrated: number
+  skipped: number
+  failed: number
+}> {
+  return migratePendingExecutionsToBullMQ(sequenceId)
 }
 
 // ============================================================================

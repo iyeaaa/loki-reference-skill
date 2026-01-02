@@ -17,19 +17,26 @@
 
 import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
-import { trialExpirationQueue, unipileInboxPollQueue } from "./lib/queue/queues"
+import {
+  migratePendingExecutionsToBullMQ,
+  trialExpirationQueue,
+  unipileInboxPollQueue,
+} from "./lib/queue/queues"
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
 import {
   getOnboardingAutoGenerateWorkerStatus,
+  getSequenceEmailWorkerStatus,
   getTestWorkerStatus,
   getTrialExpirationWorkerStatus,
   getUnipileInboxPollWorkerStatus,
   startOnboardingAutoGenerateWorker,
+  startSequenceEmailWorker,
   startTestWorker,
   startTrialExpirationWorker,
   startUnipileInboxPollWorker,
   stopOnboardingAutoGenerateWorker,
+  stopSequenceEmailWorker,
   stopTestWorker,
   stopTrialExpirationWorker,
   stopUnipileInboxPollWorker,
@@ -90,6 +97,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
     await stopOnboardingAutoGenerateWorker()
     logger.info("[Worker] OnboardingWorker stopped")
 
+    await stopSequenceEmailWorker()
+    logger.info("[Worker] SequenceEmailWorker stopped")
+
     await stopTrialExpirationWorker()
     logger.info("[Worker] TrialExpirationWorker stopped")
 
@@ -134,6 +144,7 @@ function startInternalHealthCheck(): void {
     const redisHealthy = await checkRedisHealth()
     const testWorkerStatus = getTestWorkerStatus()
     const onboardingWorkerStatus = getOnboardingAutoGenerateWorkerStatus()
+    const sequenceEmailWorkerStatus = getSequenceEmailWorkerStatus()
 
     if (!redisHealthy) {
       logger.error("[Worker] Redis health check failed")
@@ -147,6 +158,10 @@ function startInternalHealthCheck(): void {
       logger.error("[Worker] OnboardingWorker is not running")
     }
 
+    if (!sequenceEmailWorkerStatus.running) {
+      logger.error("[Worker] SequenceEmailWorker is not running")
+    }
+
     // Log periodic status (debug level)
     logger.debug(
       {
@@ -155,10 +170,68 @@ function startInternalHealthCheck(): void {
         testWorkerActiveJobs: testWorkerStatus.activeJobs,
         onboardingWorker: onboardingWorkerStatus.running,
         onboardingWorkerActiveJobs: onboardingWorkerStatus.activeJobs,
+        sequenceEmailWorker: sequenceEmailWorkerStatus.running,
+        sequenceEmailWorkerActiveJobs: sequenceEmailWorkerStatus.activeJobs,
       },
       "[Worker] Health check",
     )
   }, HEALTH_CHECK_INTERVAL)
+}
+
+// ============================================================================
+// One-Time Migration
+// ============================================================================
+
+const MIGRATION_KEY = "migration:pending-executions-to-bullmq:v1"
+
+/**
+ * Run one-time migration of pending executions to BullMQ
+ *
+ * This migrates existing pending step executions from DB to BullMQ jobs.
+ * Uses a Redis flag to ensure it only runs once, even across restarts.
+ *
+ * Safe to call multiple times - will skip if already completed.
+ */
+async function runOneTimePendingMigration(): Promise<void> {
+  try {
+    // Check if migration already completed
+    const alreadyMigrated = await redisConnection.get(MIGRATION_KEY)
+    if (alreadyMigrated) {
+      logger.info(
+        { completedAt: alreadyMigrated },
+        "[Worker] Pending executions migration already completed, skipping",
+      )
+      return
+    }
+
+    // Run migration
+    logger.info("[Worker] Starting one-time pending executions migration to BullMQ...")
+    const startTime = Date.now()
+
+    const result = await migratePendingExecutionsToBullMQ()
+
+    const duration = Date.now() - startTime
+    logger.info(
+      {
+        migrated: result.migrated,
+        skipped: result.skipped,
+        failed: result.failed,
+        durationMs: duration,
+      },
+      "[Worker] ✅ Pending executions migration completed",
+    )
+
+    // Mark migration as completed (store completion timestamp)
+    await redisConnection.set(MIGRATION_KEY, new Date().toISOString())
+    logger.info({ key: MIGRATION_KEY }, "[Worker] Migration completion flag saved to Redis")
+  } catch (error) {
+    // Log error but don't fail worker startup
+    // Migration can be retried on next restart (flag not set)
+    logger.error(
+      { error },
+      "[Worker] ❌ Pending executions migration failed - will retry on next restart",
+    )
+  }
 }
 
 // ============================================================================
@@ -173,7 +246,7 @@ async function main(): Promise<void> {
   Environment:   ${config.nodeEnv}
   Redis Host:    ${config.redis.host}:${config.redis.port}
   Health Port:   ${HEALTH_SERVER_PORT}
-  Workers:       TestWorker, OnboardingAutoGenerateWorker, TrialExpirationWorker, UnipileInboxPollWorker
+  Workers:       TestWorker, OnboardingAutoGenerateWorker, SequenceEmailWorker, TrialExpirationWorker, UnipileInboxPollWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 
@@ -228,6 +301,18 @@ async function main(): Promise<void> {
     { running: onboardingStatus.running, concurrency: onboardingStatus.concurrency },
     "[Worker] OnboardingAutoGenerateWorker started",
   )
+
+  // Start Sequence Email Worker (BullMQ-based email sending)
+  startSequenceEmailWorker()
+  const sequenceEmailStatus = getSequenceEmailWorkerStatus()
+  logger.info(
+    { running: sequenceEmailStatus.running, concurrency: sequenceEmailStatus.concurrency },
+    "[Worker] SequenceEmailWorker started",
+  )
+
+  // Run one-time migration of pending executions to BullMQ
+  // This migrates existing DB records to Redis jobs (runs only once via Redis flag)
+  await runOneTimePendingMigration()
 
   // Start Trial Expiration Worker
   const trialWorker = startTrialExpirationWorker()

@@ -1,9 +1,11 @@
 import { Value } from "@sinclair/typebox/value"
 import { Elysia, t } from "elysia"
+import { cancelLeadJobs } from "../lib/queue/queues"
 import * as leadService from "../services/lead.service"
 import type { ColumnFilter } from "../types/lead-filters.types"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import { parseFiltersFromQuery } from "../utils/filter-builder.util"
+import logger from "../utils/logger"
 import { validatePageSize } from "../utils/pagination.util"
 
 // Response schemas for nested objects
@@ -720,6 +722,22 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
   .put(
     "/:id",
     async ({ params: { id }, body, set }) => {
+      // 구독취소 상태로 변경 시 Redis Job 취소 (동기화)
+      if (body.leadStatus === "unsubscribed") {
+        try {
+          const cancelResult = await cancelLeadJobs(id)
+          logger.info(
+            { leadId: id, ...cancelResult },
+            "✅ [Sync] Canceled BullMQ jobs on lead unsubscribe",
+          )
+        } catch (error) {
+          logger.warn(
+            { leadId: id, error },
+            "⚠️ [Sync] Failed to cancel BullMQ jobs, but continuing with status update",
+          )
+        }
+      }
+
       const lead = await leadService.updateLead(id, body)
       if (!lead) {
         set.status = 404
@@ -829,6 +847,26 @@ export const adminLeadRoutes = new Elysia({ prefix: "/api/v1/admin/leads" })
   .put(
     "/bulk/status",
     async ({ body }) => {
+      // 구독취소 상태로 변경 시 Redis Job 취소 (동기화)
+      if (body.leadStatus === "unsubscribed") {
+        try {
+          const cancelResults = await Promise.allSettled(
+            body.leadIds.map((leadId) => cancelLeadJobs(leadId)),
+          )
+          const successCount = cancelResults.filter((r) => r.status === "fulfilled").length
+          const failedCount = cancelResults.filter((r) => r.status === "rejected").length
+          logger.info(
+            { leadCount: body.leadIds.length, successCount, failedCount },
+            "✅ [Sync] Bulk canceled BullMQ jobs on leads unsubscribe",
+          )
+        } catch (error) {
+          logger.warn(
+            { leadCount: body.leadIds.length, error },
+            "⚠️ [Sync] Failed to bulk cancel BullMQ jobs, but continuing with status update",
+          )
+        }
+      }
+
       const updatedCount = await leadService.bulkUpdateStatus(body.leadIds, body.leadStatus)
       return { updatedCount }
     },

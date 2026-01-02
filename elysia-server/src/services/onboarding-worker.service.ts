@@ -1085,7 +1085,7 @@ export async function completeOnboarding(
   sequenceId: string,
   leadIds: string[],
 ): Promise<void> {
-  const { workspaceId, userId } = context
+  const { workspaceId, userId, surveyData } = context
   const jobId = job.id || "unknown"
 
   console.log("[CompletePhase] Updating onboarding progress")
@@ -1149,6 +1149,7 @@ export async function completeOnboarding(
             leadCount: leadIds.length,
             emailCount,
             dashboardUrl: `${config.frontendUrl}/app/sequences/${sequenceId}`,
+            language: surveyData.lang === "en" ? "en" : "ko",
           })
 
           console.log(`[CompletePhase] Sent completion email to ${user.email}`)

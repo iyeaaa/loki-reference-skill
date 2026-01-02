@@ -33,6 +33,7 @@ interface OnboardingCompleteEmailData {
   leadCount: number
   emailCount: number
   dashboardUrl: string
+  language?: "en" | "ko"
 }
 
 // ====================================
@@ -40,6 +41,41 @@ interface OnboardingCompleteEmailData {
 // ====================================
 
 const LOOPS_API_BASE = "https://app.loops.so/api/v1"
+
+// ====================================
+// LOCALIZATION
+// ====================================
+
+const EMAIL_TEXTS = {
+  en: {
+    subject: "[Rinda] Your campaign is ready!",
+    title: "Onboarding Complete!",
+    greeting: (name: string) => `Hi ${name},`,
+    intro: "Rinda AI has prepared your buyer list and email drafts.",
+    leadsFound: "Leads Found",
+    emailsGenerated: "Emails Generated",
+    ctaButton: "View Dashboard →",
+    nextStepsTitle: "NEXT STEPS",
+    nextSteps: ["Review your generated email drafts", "Start your campaign!"],
+    footer: "This email is a notification for completing Rinda AI onboarding.",
+    footerContact: "For inquiries, please contact admin@grinda.ai",
+    defaultName: "there",
+  },
+  ko: {
+    subject: "[Rinda] 당신의 캠페인이 준비되었습니다!",
+    title: "온보딩이 완료되었습니다!",
+    greeting: (name: string) => `안녕하세요 ${name}님,`,
+    intro: "린다(Rinda) AI가 바이어 리스트와 이메일 초안을 준비했습니다.",
+    leadsFound: "발견된 리드",
+    emailsGenerated: "생성된 이메일",
+    ctaButton: "대시보드에서 확인하기 →",
+    nextStepsTitle: "다음 단계",
+    nextSteps: ["생성된 이메일 초안을 검토하세요", "캠페인을 시작하세요!"],
+    footer: "이 이메일은 린다 AI 온보딩 완료 알림입니다.",
+    footerContact: "문의사항이 있으시면 admin@grinda.ai로 연락해주세요.",
+    defaultName: "고객",
+  },
+} as const
 
 // ====================================
 // CORE EMAIL FUNCTION
@@ -122,69 +158,132 @@ export async function sendTransactionalEmail(
 
 /**
  * Create HTML content for onboarding complete email
+ * Uses table-based layout for maximum email client compatibility
  */
 function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): string {
-  const { firstName, leadCount, emailCount, dashboardUrl } = data
-  const name = firstName || "고객"
+  const { firstName, leadCount, emailCount, dashboardUrl, language = "ko" } = data
+  const t = EMAIL_TEXTS[language]
+  const name = firstName || t.defaultName
 
   return `
-<div style="font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
-  <div style="background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-    
-    <!-- Header -->
-    <div style="text-align: center; margin-bottom: 32px;">
-      <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
-      <h1 style="font-size: 24px; font-weight: 700; color: #1e293b; margin: 0;">
-        온보딩이 완료되었습니다!
-      </h1>
-    </div>
-    
-    <!-- Greeting -->
-    <p style="font-size: 16px; color: #475569; line-height: 1.6; margin-bottom: 24px;">
-      안녕하세요 <strong>${name}</strong>님,<br/>
-      린다(Rinda) AI가 바이어 리스트와 이메일 초안을 준비했습니다.
-    </p>
-    
-    <!-- Stats Cards -->
-    <div style="display: flex; gap: 16px; margin-bottom: 32px;">
-      <div style="flex: 1; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 12px; padding: 24px; text-align: center;">
-        <div style="font-size: 32px; font-weight: 700; color: #ffffff;">${leadCount}</div>
-        <div style="font-size: 14px; color: rgba(255,255,255,0.9);">발견된 리드</div>
-      </div>
-      <div style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; text-align: center;">
-        <div style="font-size: 32px; font-weight: 700; color: #ffffff;">${emailCount}</div>
-        <div style="font-size: 14px; color: rgba(255,255,255,0.9);">생성된 이메일</div>
-      </div>
-    </div>
-    
-    <!-- CTA Button -->
-    <div style="text-align: center; margin-bottom: 32px;">
-      <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; font-size: 16px; font-weight: 600; padding: 16px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);">
-        대시보드에서 확인하기 →
-      </a>
-    </div>
-    
-    <!-- Next Steps -->
-    <div style="background-color: #f1f5f9; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-      <h3 style="font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.05em;">
-        다음 단계
-      </h3>
-      <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 2;">
-        <li>생성된 이메일 초안을 검토하세요</li>
-        <li>캠페인을 시작하세요!</li>
-      </ul>
-    </div>
-    
-    <!-- Footer -->
-    <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-      <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-        이 이메일은 린다 AI 온보딩 완료 알림입니다.<br/>
-        문의사항이 있으시면 admin@grinda.ai로 연락해주세요.
-      </p>
-    </div>
-    
-  </div>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t.title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <!-- Outer container -->
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <!-- Inner container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px;">
+          <tr>
+            <td style="padding: 40px;">
+              
+              <!-- Header -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 32px;">
+                    <div style="font-size: 48px; line-height: 1;">🎉</div>
+                    <h1 style="font-size: 24px; font-weight: 700; color: #1e293b; margin: 16px 0 0 0;">
+                      ${t.title}
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Greeting -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="padding-bottom: 24px;">
+                    <p style="font-size: 16px; color: #475569; line-height: 1.6; margin: 0;">
+                      ${t.greeting(name)}<br/>
+                      ${t.intro}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Stats Cards -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+                <tr>
+                  <td width="48%" style="padding-right: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #6366f1; border-radius: 12px;">
+                      <tr>
+                        <td align="center" style="padding: 24px;">
+                          <div style="font-size: 32px; font-weight: 700; color: #ffffff;">${leadCount}</div>
+                          <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 4px;">${t.leadsFound}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="48%" style="padding-left: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #10b981; border-radius: 12px;">
+                      <tr>
+                        <td align="center" style="padding: 24px;">
+                          <div style="font-size: 32px; font-weight: 700; color: #ffffff;">${emailCount}</div>
+                          <div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 4px;">${t.emailsGenerated}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 32px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="background-color: #6366f1; border-radius: 12px;">
+                          <a href="${dashboardUrl}" target="_blank" style="display: inline-block; padding: 16px 32px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none;">
+                            ${t.ctaButton}
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Next Steps -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+                      ${t.nextStepsTitle}
+                    </h3>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      ${t.nextSteps.map((step) => `<tr><td style="color: #475569; font-size: 14px; padding: 4px 0;">• ${step}</td></tr>`).join("")}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Footer -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6;">
+                      ${t.footer}<br/>
+                      ${t.footerContact}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
   `.trim()
 }
 
@@ -201,7 +300,10 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
 export async function sendOnboardingCompleteEmail(
   data: OnboardingCompleteEmailData,
 ): Promise<boolean> {
-  logger.info(`[Loops] Preparing onboarding complete email for ${data.email}`)
+  const language = data.language || "ko"
+  const t = EMAIL_TEXTS[language]
+
+  logger.info(`[Loops] Preparing onboarding complete email for ${data.email} (lang: ${language})`)
 
   try {
     const content = createOnboardingCompleteEmailHTML(data)
@@ -209,7 +311,7 @@ export async function sendOnboardingCompleteEmail(
     const response = await sendTransactionalEmail({
       senderName: "Rinda",
       to: data.email,
-      subject: `[Rinda] 당신의 캠페인이 준비되었습니다!`,
+      subject: t.subject,
       body: JSON.stringify({ content }),
     })
 

@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout SendGrinda Repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Required for git diff HEAD~1 HEAD
 
     - name: Configure AWS EC2 SSH Connection
       uses: webfactory/ssh-agent@v0.9.0
@@ -140,7 +142,8 @@ jobs:
       env:
         WORKER_CHANGED: ${{ steps.changes.outputs.worker_changed }}
       run: |
-        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "WORKER_CHANGED=$WORKER_CHANGED" << 'DEPLOY_EOF'
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} bash -s -- "$WORKER_CHANGED" << 'DEPLOY_EOF'
+          WORKER_CHANGED="$1"
           set -e
           set -o pipefail
 

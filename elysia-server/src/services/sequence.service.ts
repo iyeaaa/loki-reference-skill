@@ -717,10 +717,13 @@ export async function updateSequenceStep(
   }
 
   // 2. 이 스텝의 execution 상태 확인
+  // Note: 'processing' is counted as 'pending' (both mean "not yet sent")
   const executionStats = await db
     .select({
       sent: sql<number>`count(*) filter (where status = 'sent')`.as("sent"),
-      pending: sql<number>`count(*) filter (where status = 'pending')`.as("pending"),
+      pending: sql<number>`count(*) filter (where status in ('pending', 'processing'))`.as(
+        "pending",
+      ),
       failed: sql<number>`count(*) filter (where status = 'failed')`.as("failed"),
     })
     .from(sequenceStepExecutions)
@@ -878,10 +881,13 @@ export async function deleteSequenceStep(id: string) {
   }
 
   // 2. 이 스텝의 execution 상태 확인
+  // Note: 'processing' is counted as 'pending' (both mean "not yet sent")
   const executionStats = await db
     .select({
       sent: sql<number>`count(*) filter (where status = 'sent')`.as("sent"),
-      pending: sql<number>`count(*) filter (where status = 'pending')`.as("pending"),
+      pending: sql<number>`count(*) filter (where status in ('pending', 'processing'))`.as(
+        "pending",
+      ),
     })
     .from(sequenceStepExecutions)
     .where(eq(sequenceStepExecutions.stepId, id))

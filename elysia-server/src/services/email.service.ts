@@ -1,6 +1,51 @@
-import sgMail from "@sendgrid/mail"
+import sgMail, { type ResponseError } from "@sendgrid/mail"
 import { and, eq } from "drizzle-orm"
 import { config } from "../config"
+
+/**
+ * Extract detailed error message from SendGrid ResponseError
+ * SendGrid errors contain nested error details in response.body.errors
+ */
+function extractSendGridError(error: unknown): string {
+  // Check if it's a SendGrid ResponseError
+  if (error && typeof error === "object" && "response" in error) {
+    const responseError = error as ResponseError
+    const body = responseError.response?.body as
+      | { errors?: Array<{ message?: string; field?: string }> }
+      | undefined
+
+    if (body?.errors && Array.isArray(body.errors) && body.errors.length > 0) {
+      // Combine all error messages
+      const errorMessages = body.errors
+        .map((e) => {
+          if (e.field) {
+            return `${e.message} (field: ${e.field})`
+          }
+          return e.message
+        })
+        .filter(Boolean)
+        .join("; ")
+
+      if (errorMessages) {
+        return errorMessages
+      }
+    }
+
+    // Fallback to status code info if available
+    const statusCode = responseError.code
+    if (statusCode) {
+      return `SendGrid API error (status: ${statusCode}): ${responseError.message || "Unknown error"}`
+    }
+  }
+
+  // Standard Error handling
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "Failed to send email"
+}
+
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailSignatures } from "../db/schema/email-signatures"
@@ -420,10 +465,14 @@ This email contains confidential information that is protected by law or under t
         sendgridMessageId, // SendGrid의 내부 ID
       }
     } catch (error: unknown) {
-      logger.error({ err: error }, "Failed to send email")
+      const detailedError = extractSendGridError(error)
+      logger.error(
+        { err: error, detailedError, toEmail: data.toEmail },
+        "Failed to send email via SendGrid",
+      )
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to send email",
+        error: detailedError,
       }
     } finally {
       // API Key 원복 (다른 요청에 영향 없도록)

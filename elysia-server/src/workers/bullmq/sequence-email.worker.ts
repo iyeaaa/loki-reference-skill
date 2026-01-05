@@ -43,6 +43,36 @@ import logger from "../../utils/logger"
  */
 const WORKER_CONCURRENCY = 10
 
+/**
+ * Permanent errors that should NOT be retried
+ * These errors indicate the email cannot be delivered regardless of retry attempts
+ */
+const PERMANENT_ERROR_PATTERNS = [
+  "Bounced Address",
+  "Unsubscribed Address",
+  "Domain is not allowed",
+  "Invalid",
+  "Bad Request",
+  "No Grant found",
+  "Spam Pattern",
+  "unable to get mx info",
+  "Trial preview mode",
+  "Enrollment not active",
+  "Execution not found",
+  "Lead contact not found",
+  "Email account not found",
+  "API Key가 설정되지 않았습니다",
+] as const
+
+/**
+ * Check if an error is permanent (should not retry)
+ */
+function isPermanentError(errorMessage: string): boolean {
+  return PERMANENT_ERROR_PATTERNS.some((pattern) =>
+    errorMessage.toLowerCase().includes(pattern.toLowerCase()),
+  )
+}
+
 // ============================================================================
 // Worker State
 // ============================================================================
@@ -654,6 +684,9 @@ async function processSequenceEmailJob(
   } catch (error) {
     const durationMs = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    const isPermanent = isPermanentError(errorMessage)
+    const maxAttempts = (job.opts.attempts as number) || 3
+    const isLastAttempt = job.attemptsMade + 1 >= maxAttempts
 
     logger.error(
       {
@@ -663,15 +696,47 @@ async function processSequenceEmailJob(
         leadId,
         error: errorMessage,
         durationMs,
+        isPermanentError: isPermanent,
+        attempt: job.attemptsMade + 1,
+        maxAttempts,
+        isLastAttempt,
       },
       "[SequenceEmailWorker] Failed to send email",
     )
 
-    // Update execution status to failed
-    await sequenceService.updateStepExecutionStatus(executionId, "failed", errorMessage)
+    // Permanent errors: Mark as failed immediately, no retry needed
+    if (isPermanent) {
+      logger.info(
+        { jobId, executionId, errorMessage },
+        "[SequenceEmailWorker] Permanent error - marking as failed without retry",
+      )
+      await sequenceService.updateStepExecutionStatus(executionId, "failed", errorMessage)
+      await sequenceService.checkAndCompleteEnrollmentIfLastStep(enrollmentId, stepOrder)
 
-    // Complete enrollment if this was the last step
-    await sequenceService.checkAndCompleteEnrollmentIfLastStep(enrollmentId, stepOrder)
+      // Return failure instead of throwing - prevents retry for permanent errors
+      return {
+        success: false,
+        error: errorMessage,
+        durationMs,
+      }
+    }
+
+    // Transient errors: Only mark as failed on last attempt
+    if (isLastAttempt) {
+      logger.info(
+        { jobId, executionId, attempt: job.attemptsMade + 1 },
+        "[SequenceEmailWorker] Last attempt failed - marking as failed",
+      )
+      await sequenceService.updateStepExecutionStatus(executionId, "failed", errorMessage)
+      await sequenceService.checkAndCompleteEnrollmentIfLastStep(enrollmentId, stepOrder)
+    } else {
+      // Keep status as 'processing' for retry (don't update to failed)
+      logger.info(
+        { jobId, executionId, attempt: job.attemptsMade + 1, maxAttempts },
+        "[SequenceEmailWorker] Transient error - will retry (keeping processing status)",
+      )
+      // Don't update status - it stays as 'processing' which allows retry
+    }
 
     throw error // Re-throw to trigger BullMQ retry
   }

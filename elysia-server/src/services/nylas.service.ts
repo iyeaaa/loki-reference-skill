@@ -5,6 +5,49 @@ import { db } from "../db"
 import { emailEvents, emails } from "../db/schema/emails"
 import logger from "../utils/logger"
 
+/**
+ * Extract detailed error message from Nylas API errors
+ * Nylas errors may contain nested error details
+ */
+function extractNylasError(error: unknown): string {
+  if (error && typeof error === "object") {
+    // Nylas SDK error format
+    const nylasError = error as {
+      message?: string
+      statusCode?: number
+      requestId?: string
+      error?: { message?: string; type?: string }
+    }
+
+    // Try to get the most specific error message
+    if (nylasError.error?.message) {
+      const statusInfo = nylasError.statusCode ? ` (status: ${nylasError.statusCode})` : ""
+      return `${nylasError.error.message}${statusInfo}`
+    }
+
+    if (nylasError.message) {
+      const statusInfo = nylasError.statusCode ? ` (status: ${nylasError.statusCode})` : ""
+      return `${nylasError.message}${statusInfo}`
+    }
+
+    // Try to stringify if it's an object with useful info
+    try {
+      const errorStr = JSON.stringify(error)
+      if (errorStr !== "{}" && errorStr.length < 500) {
+        return `Nylas API error: ${errorStr}`
+      }
+    } catch {
+      // Ignore stringify errors
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "Failed to send email via Nylas"
+}
+
 // Nylas configuration
 const NYLAS_CLIENT_ID = config.nylas.clientId
 const NYLAS_API_URI = config.nylas.apiUri
@@ -334,10 +377,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       threadId: message.data?.threadId || "",
     }
   } catch (error) {
-    logger.error({ err: error, grantId }, "Error sending email via Nylas")
+    const detailedError = extractNylasError(error)
+    logger.error({ err: error, grantId, detailedError }, "Error sending email via Nylas")
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to send email via Nylas",
+      error: detailedError,
     }
   }
 }

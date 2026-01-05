@@ -1,10 +1,10 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
 import { config } from "../src/config"
 import { db } from "../src/db"
+import { sequenceEnrollments, sequenceStepExecutions, sequences } from "../src/db/schema"
 import { emails } from "../src/db/schema/emails"
 import { leadContacts } from "../src/db/schema/lead-details"
 import { leads } from "../src/db/schema/leads"
-import { sequenceEnrollments, sequences, sequenceStepExecutions } from "../src/db/schema"
 import { users } from "../src/db/schema/users"
 import { workspaces } from "../src/db/schema/workspaces"
 import { searchDomainAllEmails } from "../src/services/hunterio-domain-search.service"
@@ -77,7 +77,12 @@ function extractDomain(url: string | null): string | null {
     const parsed = new URL(urlWithProtocol)
     return parsed.hostname.replace(/^www\./, "")
   } catch {
-    return url.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || null
+    return (
+      url
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .split("/")[0] || null
+    )
   }
 }
 
@@ -324,12 +329,7 @@ async function getPendingExecutions(sequenceIds: string[]): Promise<PendingExecu
     .from(sequenceStepExecutions)
     .innerJoin(sequenceEnrollments, eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id))
     .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
-    .where(
-      and(
-        eq(sequenceStepExecutions.status, "pending"),
-        inArray(sequences.id, sequenceIds),
-      ),
-    )
+    .where(and(eq(sequenceStepExecutions.status, "pending"), inArray(sequences.id, sequenceIds)))
 
   return results
 }
@@ -345,9 +345,7 @@ function calculateNewScheduledAt(originalScheduledAt: Date, createdAt: Date): Da
 
   // Calculate the day offset (how many days after creation it was scheduled)
   const msPerDay = 24 * 60 * 60 * 1000
-  const dayOffset = Math.round(
-    (originalScheduledAt.getTime() - createdAt.getTime()) / msPerDay,
-  )
+  const dayOffset = Math.round((originalScheduledAt.getTime() - createdAt.getTime()) / msPerDay)
 
   // Create new date: today + dayOffset, with original time
   const newScheduledAt = new Date(now)
@@ -399,7 +397,11 @@ async function resumeCampaignsAndReschedule(
         console.log(`        ... and ${executions.length - 3} more`)
       }
     })
-    return { campaignsResumed: campaigns.length, executionsRescheduled: pendingExecutions.length, failed: 0 }
+    return {
+      campaignsResumed: campaigns.length,
+      executionsRescheduled: pendingExecutions.length,
+      failed: 0,
+    }
   }
 
   try {
@@ -500,19 +502,22 @@ async function resumeCampaignsAndReschedule(
       duplicatesSkipped.forEach((dup) => {
         console.log(`  - ${dup.email}: skipping ${dup.count} duplicate(s)`)
       })
-      console.log(`  [INFO] Total enrollments skipped: ${duplicatesSkipped.reduce((sum, d) => sum + d.count, 0)}\n`)
+      console.log(
+        `  [INFO] Total enrollments skipped: ${duplicatesSkipped.reduce((sum, d) => sum + d.count, 0)}\n`,
+      )
     }
 
     // Reactivate only unique enrollments
-    const reactivatedEnrollments = enrollmentsToReactivate.length > 0
-      ? await db
-          .update(sequenceEnrollments)
-          .set({
-            status: "active",
-          })
-          .where(inArray(sequenceEnrollments.id, enrollmentsToReactivate))
-          .returning({ id: sequenceEnrollments.id })
-      : []
+    const reactivatedEnrollments =
+      enrollmentsToReactivate.length > 0
+        ? await db
+            .update(sequenceEnrollments)
+            .set({
+              status: "active",
+            })
+            .where(inArray(sequenceEnrollments.id, enrollmentsToReactivate))
+            .returning({ id: sequenceEnrollments.id })
+        : []
 
     if (reactivatedEnrollments.length > 0) {
       console.log(`[OK] Reactivated ${reactivatedEnrollments.length} unique enrollment(s)\n`)
@@ -526,7 +531,11 @@ async function resumeCampaignsAndReschedule(
       console.log(`     |-- ${executions.length} email(s) rescheduled`)
     })
 
-    return { campaignsResumed: campaigns.length, executionsRescheduled: rescheduledCount, failed: 0 }
+    return {
+      campaignsResumed: campaigns.length,
+      executionsRescheduled: rescheduledCount,
+      failed: 0,
+    }
   } catch (error) {
     console.error("[ERROR] Failed to resume campaigns:", error)
     return { campaignsResumed: 0, executionsRescheduled: 0, failed: campaigns.length }

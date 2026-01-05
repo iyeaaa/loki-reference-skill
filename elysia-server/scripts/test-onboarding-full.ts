@@ -770,9 +770,7 @@ async function interactiveMode() {
     target: target as string,
     country: country as string,
     // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
-    myCompanyDescription: myCompanyDescription
-      ? (myCompanyDescription as string)
-      : undefined,
+    myCompanyDescription: myCompanyDescription ? (myCompanyDescription as string) : undefined,
   }
 
   // Run tests

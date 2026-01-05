@@ -46,7 +46,7 @@
  * See: .github/workflows/ci-cd.yml "Detect Changed Components" step
  */
 
-import { config } from "./config"
+import { config, isDevelopment } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
 import {
   migratePendingExecutionsToBullMQ,
@@ -280,6 +280,19 @@ async function main(): Promise<void> {
   Workers:       TestWorker, OnboardingAutoGenerateWorker, SequenceEmailWorker, TrialExpirationWorker, UnipileInboxPollWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
+
+  // ========================================
+  // Development Environment Check
+  // ========================================
+  if (isDevelopment) {
+    logger.warn(
+      "[Worker] Skipping worker initialization in development environment (EC2 handles production jobs)",
+    )
+    logger.warn(
+      "[Worker] To test workers locally, set NODE_ENV=production or use dev:worker script",
+    )
+    process.exit(0)
+  }
 
   // ========================================
   // Signal Handlers

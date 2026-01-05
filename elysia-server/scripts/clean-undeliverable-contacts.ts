@@ -1,19 +1,16 @@
 import { eq, sql } from "drizzle-orm"
 import { config } from "../src/config"
 import { db } from "../src/db"
-import {
-  emails,
-  leadContacts,
-  leads,
-  sequenceEnrollments,
-  sequences,
-} from "../src/db/schema"
+import { emails, leadContacts, leads, sequenceEnrollments, sequences } from "../src/db/schema"
 import {
   type DomainEmailWithRole,
   searchDomainAllEmails,
 } from "../src/services/hunterio-domain-search.service"
 import { verifyEmail } from "../src/services/hunterio-email-verifier.service"
-import { summarizeCompanyInfo, extractWebsiteContent } from "../src/services/lead-enrichment.service"
+import {
+  extractWebsiteContent,
+  summarizeCompanyInfo,
+} from "../src/services/lead-enrichment.service"
 
 /**
  * Script to clean undeliverable email contacts

@@ -5,6 +5,7 @@
  * SSE를 통해 실시간 진행 상황을 보여주고, 완료 시 Step 4로 자동 이동.
  */
 
+import { useAtom } from "jotai"
 import { CheckCircle2, Circle, Loader2, Mail, Search, Users, XCircle, Zap } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -20,7 +21,7 @@ import {
 } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
-import { useSharedFakeProgress } from "@/store/fake-progress"
+import { resetFakeProgressAtom, useSharedFakeProgress } from "@/store/fake-progress"
 
 type ViewState = "loading" | "generating" | "complete" | "error"
 
@@ -98,6 +99,7 @@ export function StepBuyerLoading() {
   const isFromStep4 = searchParams.get("from") === "step4"
   const [leads, setLeads] = useState<LeadProgressItem[]>([])
   const isKorean = i18n.language === "ko"
+  const [, resetFakeProgress] = useAtom(resetFakeProgressAtom)
 
   // Get current user and workspace
   const currentUser = useMemo(() => {
@@ -210,6 +212,16 @@ export function StepBuyerLoading() {
       setViewState("error")
     }
   }, [sseComplete, sseError, viewState, setSearchParams])
+
+  // Cleanup: Reset fake progress state on unmount (페이지 전환 시)
+  useEffect(
+    () => () => {
+      if (workspaceId) {
+        resetFakeProgress(workspaceId)
+      }
+    },
+    [workspaceId, resetFakeProgress],
+  )
 
   // UX: Fake progress for initial loading (공유 상태로 NotificationBell과 동기화)
   const displayProgress = useSharedFakeProgress(

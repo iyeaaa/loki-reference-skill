@@ -4,12 +4,14 @@
  * UX 개선을 위한 Fake Progress 상태 공유
  * - StepBuyerLoading와 NotificationBell 컴포넌트 간 동기화
  * - Popover 닫았다 열어도 상태 유지
+ * - SSE 이벤트로 실제 progress가 오면 즉시 반영
  *
  * Algorithm: Ease-out Cubic with optimized timing
  * - 시작: 5% (즉시 진행 중임을 보여줌)
  * - 0-5초: 5% → 12% (빠른 시작, 체감 속도 ↑)
  * - 5-15초: 12% → 14.5% (점진적 감속)
  * - 15-30초: 14.5% → 15% (거의 멈춤, 실제 데이터 대기)
+ * - 실제 progress > fake progress: 즉시 실제 값 사용
  */
 
 import { atom, useAtom, useAtomValue } from "jotai"
@@ -39,6 +41,20 @@ const DEFAULT_STATE: FakeProgressState = {
  * Fake Progress 상태 atom (메모리 only, localStorage 불필요)
  */
 export const fakeProgressStateAtom = atom<FakeProgressState>(DEFAULT_STATE)
+
+/**
+ * Reset fake progress state for a specific workspace
+ * 페이지 전환 시 호출하여 progress 상태를 초기화
+ */
+export const resetFakeProgressAtom = atom(null, (get, set, workspaceId: string) => {
+  const state = get(fakeProgressStateAtom)
+  const { [workspaceId]: _, ...remainingStartTimes } = state.startTimes
+  const { [workspaceId]: __, ...remainingProgress } = state.progressValues
+  set(fakeProgressStateAtom, {
+    startTimes: remainingStartTimes,
+    progressValues: remainingProgress,
+  })
+})
 
 // ============================================================================
 // Hook
@@ -155,8 +171,14 @@ export function useSharedFakeProgress(
   ])
 
   // 최종 진행률 계산
+  // 실제 progress가 있으면 우선 사용하고, 없으면 fake progress 사용
   const fakeProgress = state.progressValues[workspaceId] || 0
   const effectiveProgress = isActive ? Math.max(fakeProgress, minFakeProgress) : 0
+
+  // 실제 progress가 유의미하게 있으면 (>= 5%) 즉시 사용
+  if (realProgress >= 5) {
+    return realProgress
+  }
 
   return Math.max(realProgress, effectiveProgress)
 }
@@ -177,6 +199,11 @@ export function useSharedFakeProgressReadOnly(
 
   const fakeProgress = state.progressValues[workspaceId] || 0
   const effectiveProgress = isActive ? Math.max(fakeProgress, minFakeProgress) : 0
+
+  // 실제 progress가 유의미하게 있으면 (>= 5%) 즉시 사용
+  if (realProgress >= 5) {
+    return realProgress
+  }
 
   return Math.max(realProgress, effectiveProgress)
 }

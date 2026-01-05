@@ -564,10 +564,10 @@ export async function upsertOnboardingProgressNotification(
     const existingProgress = (existingMetadata?.progressPercent as number) || 0
     const existingPhase = existingMetadata?.phase as string | undefined
 
-    // 의미있는 변화인지 확인 (10% 이상 변화 또는 phase 변경)
+    // 의미있는 변화인지 확인 (5% 이상 변화 또는 phase 변경)
     const progressDiff = Math.abs(event.progressPercent - existingProgress)
     const phaseChanged = existingPhase !== event.phase
-    const shouldUpdate = progressDiff >= 10 || phaseChanged
+    const shouldUpdate = progressDiff >= 5 || phaseChanged
 
     if (!shouldUpdate) {
       // 변화가 미미하면 업데이트 스킵 (SSE 이벤트도 발행하지 않음)

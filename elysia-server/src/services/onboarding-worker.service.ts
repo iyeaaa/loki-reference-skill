@@ -18,6 +18,7 @@ import { leadContacts } from "../db/schema/lead-details"
 import { leads as leadsTable } from "../db/schema/leads"
 import { onboardingProgress } from "../db/schema/onboarding"
 import { sequenceSteps, sequences } from "../db/schema/sequences"
+import { workspaces } from "../db/schema/workspaces"
 import type { OnboardingAutoGenerateJob, OnboardingAutoGenerateResult } from "../lib/queue/types"
 import {
   createCompleteEvent,
@@ -1168,22 +1169,17 @@ export async function completeOnboarding(
             console.warn("[CompletePhase] Failed to get trial days:", e)
           }
 
-          // 2. Get top 3 company names from discovered leads
-          let topCompanies: string[] = []
+          // 2. Get workspace info for personalization
+          let companyName: string | undefined
           try {
-            if (leadIds.length > 0) {
-              const topLeads = await db
-                .select({ companyName: leadsTable.companyName })
-                .from(leadsTable)
-                .where(inArray(leadsTable.id, leadIds.slice(0, 10)))
-                .limit(3)
-
-              topCompanies = topLeads
-                .map((l) => l.companyName)
-                .filter((name): name is string => !!name)
-            }
+            const [workspace] = await db
+              .select({ companyName: workspaces.companyName })
+              .from(workspaces)
+              .where(eq(workspaces.id, workspaceId))
+              .limit(1)
+            companyName = workspace?.companyName || undefined
           } catch (e) {
-            console.warn("[CompletePhase] Failed to get top companies:", e)
+            console.warn("[CompletePhase] Failed to get workspace info:", e)
           }
 
           // 3. Map industry to display label
@@ -1204,13 +1200,13 @@ export async function completeOnboarding(
           await sendOnboardingCompleteEmail({
             email: user.email,
             firstName: user.username || undefined,
+            companyName,
             leadCount: leadIds.length,
             emailCount,
             dashboardUrl: `${config.frontendUrl}/company?step=4`,
             language: lang,
             trialDaysRemaining,
             industry,
-            topCompanies,
           })
 
           console.log(`[CompletePhase] Sent completion email to ${user.email}`)

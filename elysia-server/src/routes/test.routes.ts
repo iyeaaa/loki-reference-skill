@@ -1,8 +1,9 @@
 import Elysia, { t } from "elysia"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
 import { searchAndEnrichLeads } from "../services/lead-search-enrichment.service"
+import { sendOnboardingCompleteEmail } from "../services/loops.service"
 import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH, INDUSTRY_NAMES } from "../services/onboarding.service"
-import { errorResponse, ResponseCode } from "../types/response.types"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 
 // In-memory job storage
 type JobStatus = "processing" | "completed" | "failed"
@@ -325,6 +326,61 @@ export const testRoutes = new Elysia({ prefix: "/api/v1/test" })
     {
       params: t.Object({
         jobId: t.String(),
+      }),
+    },
+  )
+
+  // ====================================
+  // 온보딩 완료 이메일 테스트 (Loops.so)
+  // ====================================
+  .post(
+    "/onboarding-email",
+    async ({ body, set }) => {
+      try {
+        const success = await sendOnboardingCompleteEmail({
+          email: body.email,
+          firstName: body.firstName,
+          companyName: body.companyName,
+          companyDescription: body.companyDescription,
+          leadCount: body.leadCount,
+          emailCount: body.emailCount,
+          dashboardUrl: body.dashboardUrl,
+          language: body.language as "en" | "ko",
+          trialDaysRemaining: body.trialDaysRemaining,
+          industry: body.industry,
+          topCompanies: body.topCompanies,
+        })
+
+        if (!success) {
+          set.status = 500
+          return errorResponse("Failed to send email", ResponseCode.INTERNAL_ERROR)
+        }
+
+        return successResponse({
+          success: true,
+          message: `Email sent to ${body.email}`,
+        })
+      } catch (err) {
+        set.status = 500
+        return errorResponse(
+          err instanceof Error ? err.message : "Unknown error",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "email" }),
+        firstName: t.Optional(t.String()),
+        companyName: t.Optional(t.String()),
+        companyDescription: t.Optional(t.String()),
+        leadCount: t.Number({ minimum: 0 }),
+        emailCount: t.Number({ minimum: 0 }),
+        dashboardUrl: t.String(),
+        language: t.Optional(t.Union([t.Literal("en"), t.Literal("ko")])),
+        trialDaysRemaining: t.Optional(t.Number({ minimum: 0 })),
+        industry: t.Optional(t.String()),
+        topCompanies: t.Optional(t.Array(t.String())),
       }),
     },
   )

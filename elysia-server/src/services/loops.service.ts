@@ -38,6 +38,9 @@ interface OnboardingCompleteEmailData {
   trialDaysRemaining?: number
   industry?: string
   topCompanies?: string[]
+  // Company info for personalization
+  companyName?: string
+  companyDescription?: string
 }
 
 // ====================================
@@ -60,6 +63,20 @@ const LOOPS_API_BASE = "https://app.loops.so/api/v1"
  *
  * @see https://toss.tech/article/8-writing-principles-of-toss
  */
+/**
+ * Helper: 받침 유무에 따른 조사 선택
+ * - 받침 있으면: 을, 이, 은
+ * - 받침 없으면: 를, 가, 는
+ */
+function hasKoreanBatchim(text: string): boolean {
+  if (!text || text.length === 0) return false
+  const lastChar = text.charCodeAt(text.length - 1)
+  // 한글 유니코드 범위: 0xAC00 ~ 0xD7A3
+  if (lastChar < 0xac00 || lastChar > 0xd7a3) return false
+  // 받침 = (charCode - 0xAC00) % 28
+  return (lastChar - 0xac00) % 28 !== 0
+}
+
 const EMAIL_TEXTS = {
   en: {
     // Dynamic subject line (conversational, personalized)
@@ -73,14 +90,18 @@ const EMAIL_TEXTS = {
       industry
         ? `We found ${industry} buyers and wrote your emails.`
         : "We found your buyers and wrote your emails.",
-    leadsFound: "Buyers",
-    emailsGenerated: "Emails",
-    ctaButton: "Check it out",
-    // Trial remaining (casual)
-    trialRemaining: (days: number) => `${days} days left on your trial`,
+    // Natural stats
+    statsIntro: "Here's what we prepared:",
+    buyersFound: (count: number) => `Found <b><u>${count}</u> potential buyers</b>`,
+    emailsReady: (count: number) => `Wrote <b><u>${count}</u> personalized emails</b>`,
+    sequenceInfo: "A 3-step sequence that reaches out naturally over 3 days",
+    trialRemaining: (days: number) => `You have <b><u>${days} days</u></b> left on your trial`,
+    // Company personalization
+    forCompany: (name: string) => `For ${name}`,
     // Top companies
     topCompaniesTitle: "Companies we found",
     topCompaniesMore: (count: number) => `+${count} more`,
+    ctaButton: "Check it out",
     // Tip section (friendly, actionable)
     tip: {
       title: "Tip",
@@ -89,12 +110,13 @@ const EMAIL_TEXTS = {
     // Next steps (suggestive, not commanding)
     nextStepsTitle: "What's next",
     nextSteps: [
-      { text: "See who we found for you", time: null },
-      { text: "Review your email drafts", time: null },
+      { text: "See who we found for you — select or exclude as needed", time: null },
+      { text: "Review your email drafts — edit them anytime", time: null },
       { text: "Launch when you're ready", time: null },
     ],
     footer: "Sent from Rinda",
     footerContact: "Questions? Reach us at admin@grinda.ai",
+    footerBusiness: "© 2025 Rinda AI · TIPS Town, Daejeon, South Korea",
     defaultName: "there",
   },
   ko: {
@@ -103,34 +125,39 @@ const EMAIL_TEXTS = {
       `${firstName}님, 바이어 ${leadCount}명을 찾았어요`,
     subjectFallback: "바이어를 찾았어요",
     title: "준비 끝!",
-    greeting: (name: string) => `${name}님, 반가워요`,
+    greeting: (name: string) => `${name}님, 반가워요!`,
     // 산업별 맞춤 인트로 (능동형, 친근한 어투)
     intro: (industry?: string) =>
       industry
         ? `${industry} 업계 바이어를 찾았고, 이메일도 다 써뒀어요.`
         : "바이어를 찾았고, 이메일도 다 써뒀어요.",
-    leadsFound: "바이어",
-    emailsGenerated: "이메일",
-    ctaButton: "바로 확인하기",
-    // 체험판 잔여 기간 (간결하게)
-    trialRemaining: (days: number) => `체험판 ${days}일 남음`,
+    // 자연스러운 통계
+    statsIntro: "이렇게 준비했어요:",
+    buyersFound: (count: number) => `잠재 바이어 <b><u>${count}명</u></b>을 찾았어요`,
+    emailsReady: (count: number) => `맞춤 이메일 <b><u>${count}개</u></b>를 작성했어요`,
+    sequenceInfo: "3일에 걸쳐 자연스럽게 연락하는 시퀀스예요",
+    trialRemaining: (days: number) => `체험판 <b><u>${days}일</u></b> 남았어요`,
+    // 회사 개인화 (받침에 따라 을/를 선택)
+    forCompany: (name: string) => `${name}${hasKoreanBatchim(name) ? "을" : "를"} 위해`,
     // 상위 기업 (자연스럽게)
     topCompaniesTitle: "이런 기업들을 찾았어요",
     topCompaniesMore: (count: number) => `외 ${count}곳`,
+    ctaButton: "바로 확인하기",
     // Tip 섹션 (친근하게 말 걸듯)
     tip: {
       title: "잠깐",
-      text: "이메일은 AI가 미리 써뒀어요. 한번 훑어보고 바로 보내보세요!",
+      text: "이메일은 린다 AI가 미리 써뒀어요. 한번 훑어보고 바로 보내보세요!",
     },
     // 다음 단계 (제안하듯, 강요하지 않게)
-    nextStepsTitle: "이제 뭘 하면 될까요",
+    nextStepsTitle: "이제 뭘 하면 될까요?",
     nextSteps: [
-      { text: "어떤 바이어를 찾았는지 확인해 보세요", time: null },
-      { text: "이메일 초안이 마음에 드는지 살펴보세요", time: null },
+      { text: "어떤 바이어를 찾았는지 확인해 보세요 — 선택하거나 제외할 수 있어요", time: null },
+      { text: "이메일 초안을 살펴보세요 — 마음대로 수정할 수 있어요", time: null },
       { text: "준비되면 캠페인을 시작해 보세요", time: null },
     ],
     footer: "Rinda가 보낸 이메일이에요",
     footerContact: "궁금한 점이 있으면 admin@grinda.ai로 연락주세요",
+    footerBusiness: "© 2025 Rinda AI · 대전 팁스타운, 대한민국",
     defaultName: "고객",
   },
 }
@@ -212,16 +239,8 @@ export async function sendTransactionalEmail(
 // ====================================
 
 /**
- * Create HTML content for onboarding complete email
- * Uses table-based layout for maximum email client compatibility
- * Professional, modern design with refined aesthetics
- *
- * Design Features:
- * - Clean, minimal header with brand identity
- * - Refined color palette (professional blues/purples)
- * - Generous whitespace and clear hierarchy
- * - Subtle shadows and refined borders
- * - Action-oriented CTA with hover states
+ * Create plain text-based HTML email content
+ * No design elements - maximum compatibility
  */
 function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): string {
   const {
@@ -232,224 +251,49 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
     language = "ko",
     trialDaysRemaining,
     industry,
-    topCompanies,
+    companyName,
   } = data
   const t = EMAIL_TEXTS[language]
   const name = firstName || t.defaultName
 
-  // Build top companies HTML if available
-  const topCompaniesHtml =
-    topCompanies && topCompanies.length > 0
-      ? `
-              <!-- Top Companies Found -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
-                <tr>
-                  <td style="background-color: #FAFAFA; border-radius: 10px; padding: 16px 20px; border: 1px solid #F0F0F0;">
-                    <div style="font-size: 11px; font-weight: 600; color: #6B7280; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
-                      ${t.topCompaniesTitle}
-                    </div>
-                    <div style="font-size: 14px; color: #374151; font-weight: 500; line-height: 1.5;">
-                      ${topCompanies.slice(0, 3).join(" · ")}${leadCount > 3 ? ` ${t.topCompaniesMore(leadCount - 3)}` : ""}
-                    </div>
-                  </td>
-                </tr>
-              </table>
-      `
-      : ""
+  const nextStepsList = t.nextSteps.map((step, i) => `${i + 1}. ${step.text}`).join("\n")
 
-  // Build trial remaining HTML if available (subtle, professional)
-  const trialRemainingHtml =
-    trialDaysRemaining !== undefined
-      ? `
-              <!-- Trial Status -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
-                <tr>
-                  <td align="center">
-                    <span style="display: inline-block; background-color: #FEF3C7; color: #B45309; font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 20px;">
-                      ${t.trialRemaining(trialDaysRemaining)}
-                    </span>
-                  </td>
-                </tr>
-              </table>
-      `
-      : ""
+  // Company personalization line
+  const companyLine = companyName ? `${t.forCompany(companyName)}\n\n` : ""
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${t.title}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #F5F5F7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  return `<div style="text-align:left">
+<b>${t.greeting(name)}</b>
 
-  <!-- Outer container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F5F5F7;">
-    <tr>
-      <td align="center" style="padding: 40px 16px;">
+${companyLine}${t.intro(industry)}
 
-        <!-- Inner container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width: 520px; background-color: #FFFFFF; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-          <!-- Header - Clean & Minimal -->
-          <tr>
-            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #F0F0F0;">
-              <div style="font-size: 28px; font-weight: 700; color: #5B4FD9; letter-spacing: -0.5px;">Rinda</div>
-            </td>
-          </tr>
+📊 ${t.buyersFound(leadCount)}
+📧 ${t.emailsReady(emailCount)}
+🔄 ${t.sequenceInfo}
+${trialDaysRemaining !== undefined ? `⏰ ${t.trialRemaining(trialDaysRemaining)}` : ""}
 
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 32px;">
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-              <!-- Success Badge -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td align="center">
-                    <div style="display: inline-block; background: linear-gradient(135deg, #5B4FD9 0%, #7C3AED 100%); border-radius: 24px; padding: 10px 20px;">
-                      <span style="color: #FFFFFF; font-size: 13px; font-weight: 600; letter-spacing: 0.3px;">✓ ${t.title}</span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+👉 <a href="${dashboardUrl}"><b><u>${t.ctaButton}</u></b></a>
 
-              <!-- Greeting -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
-                <tr>
-                  <td align="center">
-                    <h1 style="font-size: 22px; font-weight: 700; color: #1F2937; margin: 0 0 12px 0; line-height: 1.3;">
-                      ${t.greeting(name)}
-                    </h1>
-                    <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0; max-width: 380px;">
-                      ${t.intro(industry)}
-                    </p>
-                  </td>
-                </tr>
-              </table>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-              ${trialRemainingHtml}
+💡 <b>${t.tip.title}</b>
+${t.tip.text}
 
-              <!-- Stats Cards - Professional -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td width="50%" style="padding-right: 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #5B4FD9 0%, #7C3AED 100%); border-radius: 12px;">
-                      <tr>
-                        <td align="center" style="padding: 24px 16px;">
-                          <div style="font-size: 32px; font-weight: 700; color: #FFFFFF; line-height: 1; letter-spacing: -1px;">${leadCount}</div>
-                          <div style="font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">${t.leadsFound}</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td width="50%" style="padding-left: 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%); border-radius: 12px;">
-                      <tr>
-                        <td align="center" style="padding: 24px 16px;">
-                          <div style="font-size: 32px; font-weight: 700; color: #FFFFFF; line-height: 1; letter-spacing: -1px;">${emailCount}</div>
-                          <div style="font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">${t.emailsGenerated}</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-              ${topCompaniesHtml}
+<b>${t.nextStepsTitle}</b>
+${nextStepsList}
 
-              <!-- CTA Button - Professional -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background: linear-gradient(135deg, #5B4FD9 0%, #7C3AED 100%); border-radius: 10px; box-shadow: 0 4px 14px rgba(91, 79, 217, 0.35);">
-                          <a href="${dashboardUrl}" target="_blank" style="display: inline-block; padding: 16px 40px; font-size: 15px; font-weight: 600; color: #FFFFFF; text-decoration: none; letter-spacing: 0.3px;">
-                            ${t.ctaButton}
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-              <!-- Tip Section - Subtle -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: #F8FAFC; border-radius: 10px; padding: 16px 20px; border-left: 4px solid #5B4FD9;">
-                    <p style="color: #4B5563; font-size: 13px; margin: 0; line-height: 1.5;">
-                      <span style="font-weight: 600; color: #5B4FD9;">💡 ${t.tip.title}</span><br/>
-                      <span style="color: #6B7280;">${t.tip.text}</span>
-                    </p>
-                  </td>
-                </tr>
-              </table>
+${t.footer}
+${t.footerContact}
 
-              <!-- Next Steps - Clean Design -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FAFAFA; border-radius: 12px; border: 1px solid #E5E7EB;">
-                <tr>
-                  <td style="padding: 20px 24px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #9CA3AF; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">
-                      ${t.nextStepsTitle}
-                    </div>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      ${t.nextSteps
-                        .map(
-                          (step, i) => `
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                              <tr>
-                                <td width="28" valign="top">
-                                  <div style="width: 22px; height: 22px; background: linear-gradient(135deg, #5B4FD9 0%, #7C3AED 100%); border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700; color: #FFFFFF;">${i + 1}</div>
-                                </td>
-                                <td style="color: #374151; font-size: 14px; line-height: 1.4; padding-left: 12px;">
-                                  ${step.text}
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                      `,
-                        )
-                        .join("")}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px 32px; border-top: 1px solid #F0F0F0;">
-              <p style="font-size: 12px; color: #9CA3AF; margin: 0; line-height: 1.6; text-align: center;">
-                ${t.footer}<br/>
-                <a href="mailto:admin@grinda.ai" style="color: #5B4FD9; text-decoration: none;">admin@grinda.ai</a>
-              </p>
-            </td>
-          </tr>
-
-        </table>
-
-        <!-- Bottom Branding -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width: 520px;">
-          <tr>
-            <td align="center" style="padding-top: 24px;">
-              <span style="font-size: 11px; color: #9CA3AF;">Powered by <span style="color: #5B4FD9; font-weight: 600;">Rinda</span></span>
-            </td>
-          </tr>
-        </table>
-
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim()
+${t.footerBusiness}
+</div>`
 }
 
 // ====================================

@@ -59,6 +59,7 @@ import { JobLogsPage } from "./settings/job-logs"
 import { LanguageSettings } from "./settings/LanguageSettings"
 import { LicenseKeySettings } from "./settings/LicenseKeySettings"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
+import { OnboardingEmailTest } from "./settings/OnboardingEmailTest"
 import { OnboardingTest } from "./settings/OnboardingTest"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
@@ -400,6 +401,12 @@ export default function SettingsPage() {
         icon: <Rocket className="h-4 w-4" />,
         permission: "admin-only",
       },
+      {
+        id: "onboarding-email-test",
+        label: "온보딩 이메일 테스트",
+        icon: <Mail className="h-4 w-4" />,
+        permission: "admin-only",
+      },
     ],
     [t],
   )
@@ -654,6 +661,8 @@ export default function SettingsPage() {
         return <EmailDraftTest />
       case "onboarding-test":
         return <OnboardingTest />
+      case "onboarding-email-test":
+        return <OnboardingEmailTest />
       default:
         return null
     }

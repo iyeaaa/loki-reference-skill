@@ -50,75 +50,87 @@ const LOOPS_API_BASE = "https://app.loops.so/api/v1"
 // LOCALIZATION
 // ====================================
 
+/**
+ * Email texts following Toss-style UX Writing principles:
+ * - 해요체: Friendly, conversational tone
+ * - 능동형: Active voice ("~했어요" instead of "~됐어요")
+ * - 간결함: Remove unnecessary words (weed cutting)
+ * - 사용자 관점: Speak from user's perspective
+ * - 공감: Empathize with user's emotions
+ *
+ * @see https://toss.tech/article/8-writing-principles-of-toss
+ */
 const EMAIL_TEXTS = {
   en: {
-    // Dynamic subject line (mobile truncation optimized: important info first)
-    subject: (firstName: string, leadCount: number) => `${firstName}, ${leadCount} buyers found`,
-    subjectFallback: "Your buyer list is ready",
-    title: "Everything is ready!",
+    // Dynamic subject line (conversational, personalized)
+    subject: (firstName: string, leadCount: number) =>
+      `${firstName}, we found ${leadCount} buyers for you`,
+    subjectFallback: "Your buyers are waiting",
+    title: "All set!",
     greeting: (name: string) => `Hi ${name},`,
-    // Industry-specific intro
+    // Industry-specific intro (active voice, friendly)
     intro: (industry?: string) =>
       industry
-        ? `Your ${industry} buyer list and email drafts are ready.`
-        : "Rinda AI has prepared your buyer list and email drafts.",
-    leadsFound: "Buyers Found",
-    emailsGenerated: "Emails Ready",
-    ctaButton: "View Campaign →",
-    // Trial remaining
-    trialRemaining: (days: number) => `${days} days left in your trial`,
+        ? `We found ${industry} buyers and wrote your emails.`
+        : "We found your buyers and wrote your emails.",
+    leadsFound: "Buyers",
+    emailsGenerated: "Emails",
+    ctaButton: "Check it out",
+    // Trial remaining (casual)
+    trialRemaining: (days: number) => `${days} days left on your trial`,
     // Top companies
-    topCompaniesTitle: "Top Companies Found",
-    topCompaniesMore: (count: number) => `and ${count} more`,
-    // Tip section (action-oriented)
+    topCompaniesTitle: "Companies we found",
+    topCompaniesMore: (count: number) => `+${count} more`,
+    // Tip section (friendly, actionable)
     tip: {
       title: "Tip",
-      text: "Email drafts are AI-generated. Review and send right away!",
+      text: "We wrote these emails for you. Take a quick look and hit send!",
     },
-    // Next steps (correct flow: already connected email)
-    nextStepsTitle: "NEXT STEPS",
+    // Next steps (suggestive, not commanding)
+    nextStepsTitle: "What's next",
     nextSteps: [
-      { text: "Review your buyer list", time: null },
-      { text: "Check and edit email drafts", time: null },
-      { text: "Start your campaign!", time: null },
+      { text: "See who we found for you", time: null },
+      { text: "Review your email drafts", time: null },
+      { text: "Launch when you're ready", time: null },
     ],
-    footer: "This email is a notification for completing Rinda AI onboarding.",
-    footerContact: "For inquiries, please contact admin@grinda.ai",
+    footer: "Sent from Rinda",
+    footerContact: "Questions? Reach us at admin@grinda.ai",
     defaultName: "there",
   },
   ko: {
-    // 동적 제목줄 (모바일 truncation 최적화: 중요 정보 먼저)
-    subject: (firstName: string, leadCount: number) => `${firstName}님, ${leadCount}명 바이어 발견`,
-    subjectFallback: "바이어 리스트가 준비되었습니다",
-    title: "모든 준비가 완료되었습니다!",
-    greeting: (name: string) => `안녕하세요 ${name}님,`,
-    // 산업별 맞춤 인트로
+    // 동적 제목줄 (토스 스타일: 친근하고 대화하듯)
+    subject: (firstName: string, leadCount: number) =>
+      `${firstName}님, 바이어 ${leadCount}명을 찾았어요`,
+    subjectFallback: "바이어를 찾았어요",
+    title: "준비 끝!",
+    greeting: (name: string) => `${name}님, 반가워요`,
+    // 산업별 맞춤 인트로 (능동형, 친근한 어투)
     intro: (industry?: string) =>
       industry
-        ? `${industry} 업계 바이어 리스트와 이메일 초안이 준비되었습니다.`
-        : "린다(Rinda) AI가 바이어 리스트와 이메일 초안을 준비했습니다.",
-    leadsFound: "발견된 바이어",
-    emailsGenerated: "준비된 이메일",
-    ctaButton: "캠페인 확인하러 가기 →",
-    // 체험판 잔여 기간
-    trialRemaining: (days: number) => `체험판 종료까지 ${days}일 남았습니다`,
-    // 상위 기업
-    topCompaniesTitle: "발견된 주요 기업",
-    topCompaniesMore: (count: number) => `외 ${count}개`,
-    // Tip 섹션 (행동 유도)
+        ? `${industry} 업계 바이어를 찾았고, 이메일도 다 써뒀어요.`
+        : "바이어를 찾았고, 이메일도 다 써뒀어요.",
+    leadsFound: "바이어",
+    emailsGenerated: "이메일",
+    ctaButton: "바로 확인하기",
+    // 체험판 잔여 기간 (간결하게)
+    trialRemaining: (days: number) => `체험판 ${days}일 남음`,
+    // 상위 기업 (자연스럽게)
+    topCompaniesTitle: "이런 기업들을 찾았어요",
+    topCompaniesMore: (count: number) => `외 ${count}곳`,
+    // Tip 섹션 (친근하게 말 걸듯)
     tip: {
-      title: "Tip",
-      text: "이메일 초안은 AI가 작성했어요. 검토 후 바로 발송할 수 있습니다.",
+      title: "잠깐",
+      text: "이메일은 AI가 미리 써뒀어요. 한번 훑어보고 바로 보내보세요!",
     },
-    // 다음 단계 (올바른 플로우: 이미 이메일 연동됨)
-    nextStepsTitle: "다음 단계",
+    // 다음 단계 (제안하듯, 강요하지 않게)
+    nextStepsTitle: "이제 뭘 하면 될까요",
     nextSteps: [
-      { text: "발견된 바이어 리스트 확인하기", time: null },
-      { text: "이메일 초안 검토 및 수정하기", time: null },
-      { text: "캠페인 시작하기!", time: null },
+      { text: "어떤 바이어를 찾았는지 확인해 보세요", time: null },
+      { text: "이메일 초안이 마음에 드는지 살펴보세요", time: null },
+      { text: "준비되면 캠페인을 시작해 보세요", time: null },
     ],
-    footer: "이 이메일은 린다 AI 온보딩 완료 알림입니다.",
-    footerContact: "문의사항이 있으시면 admin@grinda.ai로 연락해주세요.",
+    footer: "Rinda가 보낸 이메일이에요",
+    footerContact: "궁금한 점이 있으면 admin@grinda.ai로 연락주세요",
     defaultName: "고객",
   },
 }

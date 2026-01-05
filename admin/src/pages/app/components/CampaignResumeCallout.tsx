@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2, Rocket, X } from "lucide-react"
+import { AlertCircle, Loader2, Rocket } from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -12,10 +12,8 @@ import {
 type CampaignResumeCalloutProps = {
   sequenceId: string
   onComplete: () => void
-  onDismiss: () => void
+  onDismiss?: () => void
 }
-
-const DISMISS_KEY = "campaign_resume_dismissed"
 
 export function CampaignResumeCallout({
   sequenceId,
@@ -64,11 +62,6 @@ export function CampaignResumeCallout({
           : "Failed to launch campaign. Please try again.",
       )
     }
-  }
-
-  const handleDontShowAgain = () => {
-    localStorage.setItem(DISMISS_KEY, "true")
-    onDismiss()
   }
 
   if (sequenceLoading) {
@@ -150,25 +143,16 @@ export function CampaignResumeCallout({
               )}
             </Button>
 
-            <Button
-              disabled={activateMutation.isPending}
-              onClick={onDismiss}
-              size="sm"
-              variant="outline"
-            >
-              {isKorean ? "나중에" : "Later"}
-            </Button>
-
-            <Button
-              className="text-gray-500"
-              disabled={activateMutation.isPending}
-              onClick={handleDontShowAgain}
-              size="sm"
-              variant="ghost"
-            >
-              <X className="mr-1 h-3 w-3" />
-              {isKorean ? "다시 보지 않기" : "Don't show again"}
-            </Button>
+            {onDismiss && (
+              <Button
+                disabled={activateMutation.isPending}
+                onClick={onDismiss}
+                size="sm"
+                variant="outline"
+              >
+                {isKorean ? "나중에" : "Later"}
+              </Button>
+            )}
           </div>
         </div>
       </div>

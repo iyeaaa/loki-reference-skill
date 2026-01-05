@@ -50,16 +50,8 @@ import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
 import { SequenceEnrollmentsTable } from "@/pages/sequences/SequenceEnrollmentsTable"
 import { SequenceStepsList } from "@/pages/sequences/SequenceStepList"
-import { CampaignResumeCallout } from "./components/CampaignResumeCallout"
 
 const UPGRADE_URL = "https://rinda.ai/contact"
-
-type AppDashboardPageProps = {
-  showCampaignCallout?: boolean
-  calloutSequenceId?: string
-  onCalloutComplete?: () => void
-  onCalloutDismiss?: () => void
-}
 
 const PRESET_RANGES = [
   { key: "7d", label: "최근 7일", days: 7 },
@@ -99,12 +91,7 @@ const formatPercent = (value: number | undefined) => {
   return `${value.toFixed(1)}%`
 }
 
-export default function AppDashboardPage({
-  showCampaignCallout = false,
-  calloutSequenceId,
-  onCalloutComplete,
-  onCalloutDismiss,
-}: AppDashboardPageProps = {}) {
+export default function AppDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date()
@@ -282,15 +269,6 @@ export default function AppDashboardPage({
 
   return (
     <div className="space-y-4">
-      {/* Campaign Resume Callout */}
-      {showCampaignCallout && calloutSequenceId && onCalloutComplete && onCalloutDismiss && (
-        <CampaignResumeCallout
-          onComplete={onCalloutComplete}
-          onDismiss={onCalloutDismiss}
-          sequenceId={calloutSequenceId}
-        />
-      )}
-
       <Tabs className="space-y-4" onValueChange={setActiveTab} value={activeTab}>
         {/* Header */}
         <div className="space-y-3">

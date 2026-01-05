@@ -19,7 +19,10 @@ import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sid
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { useCurrentUser } from "@/lib/api/hooks/auth"
+import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
+import { useSequence } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { CampaignResumeCallout } from "@/pages/app/components/CampaignResumeCallout"
 
 type DashboardContentProps = {
   children?: React.ReactNode
@@ -66,6 +69,36 @@ function DashboardContent({ children }: DashboardContentProps) {
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
   const { data: userWorkspaces } = useUserWorkspaces(!!userId)
+  const workspaceId = userWorkspaces?.[0]?.id || ""
+
+  // 온보딩 진행 상황 가져오기 (캠페인 콜아웃 표시용)
+  const { data: onboardingProgress, refetch: refetchOnboardingProgress } = useOnboardingProgress(
+    workspaceId,
+    !!workspaceId && isTrialUser,
+  )
+  const sequenceId = onboardingProgress?.generatedSequenceId || ""
+  const { data: sequence, refetch: refetchSequence } = useSequence(
+    sequenceId,
+    !!sequenceId && isTrialUser,
+  )
+
+  // 캠페인 콜아웃 표시 조건:
+  // - Trial 사용자만
+  // - 온보딩 완료됨
+  // - 시퀀스가 있고 아직 활성화되지 않음 (draft 또는 ready 상태)
+  const shouldShowCampaignCallout = useMemo(() => {
+    if (!isTrialUser) {
+      return false
+    }
+    if (!onboardingProgress?.completedAt) {
+      return false
+    }
+    if (!sequence?.id) {
+      return false
+    }
+    // 시퀀스가 draft 또는 ready 상태일 때만 표시 (활성화되지 않은 경우)
+    return sequence.status === "draft" || sequence.status === "ready"
+  }, [isTrialUser, onboardingProgress, sequence])
 
   // Workspace를 WorkspaceOption으로 변환
   const workspaces: WorkspaceOption[] =
@@ -197,6 +230,18 @@ function DashboardContent({ children }: DashboardContentProps) {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="h-full p-4">
+            {/* 캠페인 활성화 콜아웃 - 모든 페이지에서 표시 */}
+            {shouldShowCampaignCallout && sequenceId && (
+              <div className="mb-4">
+                <CampaignResumeCallout
+                  onComplete={() => {
+                    refetchSequence()
+                    refetchOnboardingProgress()
+                  }}
+                  sequenceId={sequenceId}
+                />
+              </div>
+            )}
             <Suspense fallback={getSkeletonForRoute(pathname)}>{children || <Outlet />}</Suspense>
           </div>
         </main>

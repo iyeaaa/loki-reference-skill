@@ -989,8 +989,9 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
         // Use OpenAI to generate a concise title
         const llm = new ChatOpenAI({
           modelName: "gpt-5-mini",
-          temperature: 0.3,
-          maxTokens: 50,
+          reasoning: {
+            effort: "none",
+          },
         })
 
         const titlePrompt =

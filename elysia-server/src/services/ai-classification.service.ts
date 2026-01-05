@@ -38,7 +38,7 @@ class AIClassificationService {
    * Classify an email reply with intent and sentiment analysis
    */
   async classifyReply(options: ClassifyEmailOptions): Promise<ClassificationResult> {
-    const { subject, body, model = this.defaultModel, temperature = 0.3 } = options
+    const { subject, body, model = this.defaultModel } = options
 
     try {
       logger.info({
@@ -53,7 +53,12 @@ class AIClassificationService {
       const { text } = await generateText({
         model: this.openai(model),
         prompt,
-        temperature,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "none",
+          },
+        },
+        // temperature,
       })
 
       const result = this.parseClassificationResult(text)

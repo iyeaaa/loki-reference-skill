@@ -55,6 +55,11 @@ export const generateQueryStep = createStep({
           // Note: gpt-5-mini does not support temperature
           const { text } = await generateText({
             model: openai("gpt-5-mini"),
+            providerOptions: {
+              openai: {
+                reasoningEffort: "low",
+              },
+            },
             prompt: `
 You are a search query generator. Your task is to create variations of a base search query to find companies.
 

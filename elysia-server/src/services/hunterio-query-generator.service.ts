@@ -20,16 +20,21 @@ export {
   type ValidHunterioIndustry,
 } from "../constants/hunterio-industries"
 
-// Step 1: GPT-5.1 for initial query generation
+// Step 1: GPT-5.2 for initial query generation
 const generatorLLM = new ChatOpenAI({
-  model: "gpt-5.1",
-  temperature: 0.3,
+  model: "gpt-5.2",
+  reasoning: {
+    effort: "medium",
+  },
 })
 
 // Step 2: gpt-5-mini for structured extraction
 // Note: gpt-5-mini does not support temperature, uses reasoning_effort instead
 const extractorLLM = new ChatOpenAI({
   model: "gpt-5-mini",
+  reasoning: {
+    effort: "minimal",
+  },
 })
 
 /**

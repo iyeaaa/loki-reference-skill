@@ -279,7 +279,12 @@ ${combinedContent.substring(0, 15000)}${customSearchFields}
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,
-      temperature: 0.1,
+      providerOptions: {
+        openai: {
+          reasoningEffort: "minimal",
+        },
+      },
+      // temperature: 0.1,
       abortSignal: controller.signal,
     })
 

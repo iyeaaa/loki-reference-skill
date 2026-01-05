@@ -638,7 +638,12 @@ ${combinedContent.substring(0, 15000)}
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,
-      temperature: 0.1,
+      providerOptions: {
+        openai: {
+          reasoningEffort: "minimal",
+        },
+      },
+      // temperature: 0.1,
       abortSignal: controller.signal,
     })
 
@@ -802,7 +807,12 @@ customSearchResults의 각 검색 조건에 대해서는:
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,
-      temperature: 0.1,
+      providerOptions: {
+        openai: {
+          reasoningEffort: "minimal",
+        },
+      },
+      // temperature: 0.1,
       abortSignal: controller.signal,
     })
 
@@ -926,7 +936,12 @@ ${combinedContent.substring(0, 15000)}
       system:
         "You are a friendly business analyst who explains company information in a clear, conversational way. Write in Korean using natural language, not rigid formats. Be informative but approachable.",
       prompt: prompt,
-      temperature: 0.4,
+      providerOptions: {
+        openai: {
+          reasoningEffort: "low",
+        },
+      },
+      // temperature: 0.4,
       abortSignal: controller.signal,
     })
 

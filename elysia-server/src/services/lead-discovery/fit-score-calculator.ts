@@ -11,6 +11,7 @@ import { leadDiscoveryLogger } from "./logger"
 // Note: gpt-5-mini does not support temperature, uses reasoning_effort instead
 const llm = new ChatOpenAI({
   model: "gpt-5-mini",
+  reasoning: { effort: "low" },
 })
 
 export interface LeadForScoring {

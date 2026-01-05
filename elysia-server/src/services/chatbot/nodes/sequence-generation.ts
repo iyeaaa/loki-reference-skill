@@ -8,9 +8,10 @@ import { getAISequenceStrategyOnlyPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 // LLM for AI-powered sequence strategy generation
-// Note: gpt-5-mini does not support temperature, uses reasoning_effort instead
+// Note: gpt-5 models do not support temperature, uses reasoning_effort instead
 const strategyLLM = new ChatOpenAI({
   model: "gpt-5-mini",
+  reasoning: { effort: "low" },
 })
 
 /**

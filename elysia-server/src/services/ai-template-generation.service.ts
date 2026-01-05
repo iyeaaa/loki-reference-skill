@@ -159,7 +159,11 @@ class AITemplateGenerationService {
       const result = await generateText({
         model: this.openai("gpt-5-nano"),
         prompt: translationPrompt,
-        temperature: 0.3,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "none",
+          },
+        },
       })
 
       const translatedName = result.text.trim()

@@ -990,7 +990,7 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
         const llm = new ChatOpenAI({
           modelName: "gpt-5-mini",
           reasoning: {
-            effort: "none",
+            effort: "minimal",
           },
         })
 

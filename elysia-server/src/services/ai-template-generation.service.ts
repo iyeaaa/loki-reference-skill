@@ -161,7 +161,7 @@ class AITemplateGenerationService {
         prompt: translationPrompt,
         providerOptions: {
           openai: {
-            reasoningEffort: "none",
+            reasoningEffort: "minimal",
           },
         },
       })

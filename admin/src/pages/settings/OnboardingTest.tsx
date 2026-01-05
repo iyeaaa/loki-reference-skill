@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useTestOnboarding } from "@/lib/api/hooks/onboarding"
+import { useCompanyDescriptionAIEnhance, useTestOnboarding } from "@/lib/api/hooks/onboarding"
 
 const INDUSTRY_OPTIONS = {
   beauty: "뷰티/화장품",
@@ -60,6 +60,19 @@ export function OnboardingTest() {
   const [industry, setIndustry] = useState("beauty")
   const [target, setTarget] = useState("b2b")
   const [country, setCountry] = useState("jp")
+
+  // AI description enhancement hook
+  const {
+    suggestions,
+    isLoading: isAnalyzing,
+    isRateLimited,
+    hasAnalyzed,
+  } = useCompanyDescriptionAIEnhance({
+    description: companyDescription,
+    industry,
+    target,
+    enabled: true,
+  })
 
   const canSubmit = companyName.trim().length > 0 && !testOnboarding.isPending
 
@@ -185,6 +198,64 @@ export function OnboardingTest() {
               rows={3}
               value={companyDescription}
             />
+
+            {/* AI Suggestions */}
+            {isAnalyzing && companyDescription.trim().length >= 10 ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="h-3 w-3 animate-spin rounded-full border-gray-400 border-b-2" />
+                <span>AI가 분석 중...</span>
+              </div>
+            ) : null}
+
+            {isRateLimited ? (
+              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <p className="text-orange-700 text-sm">
+                  ⏱️ 잠시 후 다시 시도해주세요 (분당 10회 제한)
+                </p>
+              </div>
+            ) : null}
+
+            {!(isAnalyzing || isRateLimited) && suggestions.length > 0 ? (
+              <div className="space-y-2">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    className="flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
+                    key={`${suggestion.type}-${index}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-amber-600">💡</span>
+                      <p className="text-amber-800 text-sm">{suggestion.messageKo}</p>
+                    </div>
+                    <button
+                      className="shrink-0 rounded bg-amber-600 px-2 py-1 text-white text-xs hover:bg-amber-700"
+                      onClick={() => {
+                        const currentDescription = companyDescription.trim()
+                        const newDescription = currentDescription
+                          ? `${currentDescription}\n${suggestion.suggestionKo}`
+                          : suggestion.suggestionKo
+                        setCompanyDescription(newDescription)
+                      }}
+                      type="button"
+                    >
+                      추가
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {hasAnalyzed &&
+            !isAnalyzing &&
+            !isRateLimited &&
+            suggestions.length === 0 &&
+            companyDescription.trim().length >= 10 ? (
+              <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
+                <span className="text-green-600">✨</span>
+                <p className="text-green-800 text-sm">
+                  완벽합니다! 바이어들에게 전달할 충분한 정보가 담겨있어요
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">

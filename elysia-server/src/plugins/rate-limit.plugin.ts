@@ -62,6 +62,9 @@ class RateLimiter {
 // Create rate limiter instance
 const limiter = new RateLimiter(config.rateLimit.max, config.rateLimit.windowMs)
 
+// Create AI API rate limiter (10 requests per minute to prevent abuse)
+const aiApiLimiter = new RateLimiter(10, 60 * 1000)
+
 /**
  * Rate limiting plugin
  * Limits requests based on IP address or user ID
@@ -129,5 +132,34 @@ export const strictRateLimit = new Elysia({ name: "strict-rate-limit" })
     }
   })
 
+/**
+ * AI API rate limiting for expensive operations
+ * Limits to 10 requests per minute
+ */
+export const aiApiRateLimit = new Elysia({ name: "ai-api-rate-limit" })
+  .derive(({ headers }) => {
+    const identifier =
+      (headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      (headers["x-real-ip"] as string) ||
+      "unknown"
+    return { rateLimitIdentifier: identifier }
+  })
+  .onBeforeHandle(({ rateLimitIdentifier, set }) => {
+    const result = aiApiLimiter.check(rateLimitIdentifier)
+
+    set.headers["x-ratelimit-limit"] = "10"
+    set.headers["x-ratelimit-remaining"] = result.remaining.toString()
+    set.headers["x-ratelimit-reset"] = new Date(result.resetTime).toISOString()
+
+    if (!result.allowed) {
+      set.status = 429
+      return {
+        error: "Too Many Requests",
+        message: "AI API rate limit exceeded. Please try again later.",
+        retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
+      }
+    }
+  })
+
 // Export limiter for testing/monitoring
-export { limiter }
+export { limiter, aiApiLimiter }

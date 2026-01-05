@@ -11,8 +11,10 @@ import {
   createOnboardingSubscriber,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
+import { aiApiRateLimit } from "../plugins/rate-limit.plugin"
+import { getAIDescriptionEnhanceService } from "../services/ai-description-enhance.service"
 import * as onboardingService from "../services/onboarding.service"
-import { errorResponse, ResponseCode } from "../types/response.types"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
 
 export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
@@ -472,6 +474,75 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
           experience: t.String(),
           lang: t.Optional(t.String()),
         }),
+      }),
+    },
+  )
+
+  // ====================================
+  // AI 회사 설명 개선 제안
+  // ====================================
+
+  // 회사 설명 분석 및 개선 제안 (AI) - rate limited to 10/minute
+  .use(aiApiRateLimit)
+  .post(
+    "/enhance-description",
+    async ({ body, set }) => {
+      const { description, industry, target } = body
+
+      // Validate minimum description length
+      if (!description || description.trim().length < 10) {
+        set.status = 400
+        return errorResponse(
+          "Description is too short for analysis (minimum 10 characters)",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+
+      try {
+        logger.info(
+          {
+            descriptionLength: description.length,
+            industry,
+            target,
+          },
+          "[Onboarding] AI description enhancement requested",
+        )
+
+        const aiService = getAIDescriptionEnhanceService()
+        const suggestions = await aiService.analyzeCompanyDescription({
+          description,
+          industry,
+          target,
+        })
+
+        logger.info(
+          {
+            suggestionsCount: suggestions.length,
+          },
+          "[Onboarding] AI description enhancement completed",
+        )
+
+        return successResponse({ suggestions })
+      } catch (error) {
+        logger.error(
+          {
+            error,
+          },
+          "[Onboarding] AI description enhancement failed",
+        )
+
+        set.status = 500
+        return errorResponse(
+          "Failed to analyze description. Please try again.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        description: t.String({ minLength: 10, maxLength: 5000 }),
+        industry: t.Optional(t.String()),
+        target: t.Optional(t.String()),
       }),
     },
   )

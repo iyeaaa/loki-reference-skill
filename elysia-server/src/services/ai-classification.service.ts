@@ -55,7 +55,7 @@ class AIClassificationService {
         prompt,
         providerOptions: {
           openai: {
-            reasoningEffort: "none",
+            reasoningEffort: "minimal",
           },
         },
         // temperature,

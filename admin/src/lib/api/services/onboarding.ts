@@ -224,4 +224,21 @@ export const onboardingApi = {
         hasSequence: boolean
       }
     }>(`/api/v1/onboarding/workspace/${workspaceId}/job-status`).then((res) => res.data),
+
+  /**
+   * AI 회사 설명 개선 제안
+   */
+  enhanceDescription: (description: string, industry?: string, target?: string) =>
+    apiFetch<{
+      suggestions: Array<{
+        type: "product" | "strength" | "certification" | "experience" | "target"
+        messageKo: string
+        messageEn: string
+        suggestionKo: string
+        suggestionEn: string
+      }>
+    }>("/api/v1/onboarding/enhance-description", {
+      method: "POST",
+      body: JSON.stringify({ description, industry, target }),
+    }),
 }

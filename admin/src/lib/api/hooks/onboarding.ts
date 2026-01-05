@@ -744,3 +744,93 @@ export function useTestOnboarding() {
     progress,
   }
 }
+
+// ====================================
+// AI DESCRIPTION ENHANCEMENT
+// ====================================
+
+export type EnhanceSuggestion = {
+  type: "product" | "strength" | "certification" | "experience" | "target"
+  messageKo: string
+  messageEn: string
+  suggestionKo: string
+  suggestionEn: string
+}
+
+/**
+ * AI 회사 설명 개선 제안 훅
+ *
+ * 5초 디바운스 후 AI가 회사 설명을 분석하여 빠진 정보를 제안합니다.
+ *
+ * @example
+ * ```tsx
+ * const { suggestions, isLoading, isRateLimited } = useCompanyDescriptionAIEnhance({
+ *   description: companyDescription,
+ *   industry: "beauty",
+ *   target: "b2b",
+ *   enabled: true,
+ * })
+ * ```
+ */
+export function useCompanyDescriptionAIEnhance(options: {
+  description: string
+  industry?: string
+  target?: string
+  enabled?: boolean
+  debounceMs?: number
+}): {
+  suggestions: EnhanceSuggestion[]
+  isLoading: boolean
+  isRateLimited: boolean
+  hasAnalyzed: boolean
+} {
+  const { description, industry, target, enabled = true, debounceMs = 3000 } = options
+
+  const [debouncedDescription, setDebouncedDescription] = useState(description)
+  const [isRateLimited, setIsRateLimited] = useState(false)
+
+  // Debounce description changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedDescription(description)
+    }, debounceMs)
+
+    return () => clearTimeout(timer)
+  }, [description, debounceMs])
+
+  // Query for AI suggestions
+  const query = useQuery({
+    queryKey: ["onboarding", "enhance-description", debouncedDescription, industry, target],
+    queryFn: async () => {
+      try {
+        setIsRateLimited(false)
+        const result = await onboardingApi.enhanceDescription(
+          debouncedDescription,
+          industry,
+          target,
+        )
+        return result.suggestions
+      } catch (error) {
+        // Check if it's a rate limit error (429)
+        if (error instanceof Error && error.message.includes("429")) {
+          setIsRateLimited(true)
+          return []
+        }
+        throw error
+      }
+    },
+    enabled:
+      enabled &&
+      debouncedDescription.trim().length >= 10 && // Minimum 10 characters
+      debouncedDescription.trim().length <= 5000, // Maximum 5000 characters
+    staleTime: 60 * 1000, // 1 minute
+    retry: false, // Don't retry on error
+  })
+
+  return {
+    suggestions: query.data || [],
+    isLoading: query.isLoading,
+    isRateLimited,
+    hasAnalyzed: query.isFetched, // AI가 한 번이라도 분석을 완료했는지
+  }
+}

@@ -542,7 +542,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           const llm = new ChatOpenAI({
             model: "gpt-5-mini",
             reasoning: {
-              effort: "none",
+              effort: "minimal",
             },
           })
 

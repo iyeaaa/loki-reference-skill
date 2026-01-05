@@ -157,6 +157,7 @@ export const extractWebsiteContent = async (
     try {
       const response = await fetch(`https://r.jina.ai/${normalizedUrl}`, {
         headers: {
+          Authorization: `Bearer ${config.apis.jina.apiKey}`,
           Accept: "text/plain",
           "X-Engine": "browser", // 브라우저 엔진 사용 (JavaScript 렌더링)
           "X-Timeout": "90000", // 90초 대기 (Jina 서버측 타임아웃)

@@ -18,7 +18,7 @@ import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structu
 import { generateTraceId, leadSearchLogger } from "../utils/logger"
 import { isBeautyRelatedIndustry, searchBeautyDatabase } from "./beauty-db-search.service"
 import { searchBigQuery } from "./bigquery-search.service"
-import { searchDomainWithHunter } from "./hunterio-domain-search.service"
+import { searchDomainWithSmartSelection } from "./hunterio-domain-search.service"
 import { searchLeadsWithHunter } from "./hunterio-lead-search.service"
 import { findMatchingIndustries, generateHunterioQuery } from "./hunterio-query-generator.service"
 import {
@@ -1192,14 +1192,14 @@ Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
           continue
         }
 
-        // 4. Get emails via Domain Search API
-        const emailResult = await searchDomainWithHunter({ domain: company.domain })
+        // 4. Get emails via Domain Search API with smart selection (C-level priority)
+        const emailResult = await searchDomainWithSmartSelection(company.domain, 70)
 
-        if (emailResult.genericEmail) {
+        if (emailResult.email) {
           leads.push({
             companyName: company.organization,
             websiteUrl: `https://${company.domain}`,
-            primaryEmail: emailResult.genericEmail,
+            primaryEmail: emailResult.email,
             businessType: emailResult.industry || undefined,
             country: emailResult.country || undefined,
             employeeCount: emailResult.headcount || undefined,
@@ -1208,7 +1208,7 @@ Return format: { "targetIndustries": ["Industry1", "Industry2", "Industry3"] }`,
           existingDomains.add(company.domain.toLowerCase())
 
           console.log(
-            `[LeadSearch] Added lead from Hunter.io: ${company.organization} (${emailResult.genericEmail})`,
+            `[LeadSearch] Added lead from Hunter.io: ${company.organization} (${emailResult.email}, type: ${emailResult.emailType})`,
           )
 
           // Report progress

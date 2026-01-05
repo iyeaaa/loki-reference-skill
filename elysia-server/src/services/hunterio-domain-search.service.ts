@@ -2,6 +2,7 @@ import PQueue from "p-queue"
 import pRetry, { AbortError } from "p-retry"
 import { z } from "zod"
 import { config } from "../config"
+import { shouldFilterGenericEmail } from "../utils/email-provider.util"
 import logger from "../utils/logger"
 import { hashString, RedisCache } from "./redis-cache.service"
 
@@ -147,11 +148,16 @@ export const HunterioDomainSearchResponseSchema = z.object({
 export type HunterioDomainSearchResponse = z.infer<typeof HunterioDomainSearchResponseSchema>
 
 /**
- * Simplified result type - returns single generic email plus rich company data
+ * Simplified result type - returns best available email (personal executive or generic) plus rich company data
  */
 export interface HunterioDomainSearchResult {
   domain: string
   organization: string | null
+  /** Best available email (personal executive or generic company email) */
+  email: string | null
+  /** Type of the email: 'personal' for executives, 'generic' for company emails */
+  emailType: "personal" | "generic" | null
+  /** @deprecated Use 'email' field instead. Kept for backward compatibility. */
   genericEmail: string | null
   pattern: string | null
   description?: string | null
@@ -256,11 +262,20 @@ function isInvalidEmail(email: string | null | undefined): boolean {
 
 /**
  * Fetch domain emails with custom limit and offset
+ *
+ * @param validatedParams - Validated search parameters
+ * @param limit - Maximum number of emails to fetch
+ * @param offset - Offset for pagination
+ * @param options - Optional filters for type and seniority
  */
 async function fetchDomainEmails(
   validatedParams: HunterioDomainSearchParams,
   limit: number,
   offset: number = 0,
+  options?: {
+    type?: "personal" | "generic"
+    seniority?: "junior" | "senior" | "executive"
+  },
 ): Promise<HunterioDomainSearchResponse["data"] | null> {
   const response = await executeWithDualRateLimit(() =>
     pRetry(
@@ -276,16 +291,24 @@ async function fetchDomainEmails(
           url.searchParams.set("company", validatedParams.company)
         }
 
-        // Force type to generic to only get generic emails
-        url.searchParams.set("type", "generic")
+        // Set type parameter (generic, personal, or unspecified)
+        if (options?.type) {
+          url.searchParams.set("type", options.type)
+        } else {
+          // Default to generic for backward compatibility
+          url.searchParams.set("type", "generic")
+        }
+
         url.searchParams.set("limit", limit.toString())
         if (offset > 0) {
           url.searchParams.set("offset", offset.toString())
         }
 
         // Add optional filters
-        if (validatedParams.seniority) {
-          url.searchParams.set("seniority", validatedParams.seniority)
+        // Explicit seniority from options takes precedence over validatedParams
+        const seniority = options?.seniority || validatedParams.seniority
+        if (seniority) {
+          url.searchParams.set("seniority", seniority)
         }
         if (validatedParams.department) {
           url.searchParams.set("department", validatedParams.department)
@@ -375,7 +398,9 @@ export async function searchDomainWithHunter(
   const emptyResult: HunterioDomainSearchResult = {
     domain: params.domain || "",
     organization: null,
-    genericEmail: null,
+    email: null,
+    emailType: null,
+    genericEmail: null, // deprecated, kept for backward compatibility
     pattern: null,
   }
 
@@ -448,7 +473,9 @@ export async function searchDomainWithHunter(
     const result: HunterioDomainSearchResult = {
       domain: data.domain,
       organization: data.organization,
-      genericEmail: validGenericEmail?.value || null,
+      email: validGenericEmail?.value || null,
+      emailType: validGenericEmail ? "generic" : null,
+      genericEmail: validGenericEmail?.value || null, // deprecated, kept for backward compatibility
       pattern: data.pattern,
       description: data.description,
       industry: data.industry,
@@ -473,6 +500,322 @@ export async function searchDomainWithHunter(
     const elapsed = Date.now() - startTime
     console.error(`[Hunter.io Domain] [ERROR] Failed to search domain (${elapsed}ms):`, error)
     logger.error({ error, params: validatedParams }, "Failed to search domain with Hunter.io")
+    return emptyResult
+  }
+}
+
+// ==================== SMART EMAIL SELECTION ====================
+
+/**
+ * Maximum number of attempts to fetch and validate an email before giving up
+ */
+const MAX_EMAIL_FETCH_ATTEMPTS = 5
+
+/**
+ * Helper to iteratively fetch emails one at a time with offset retry
+ * Fetches 1 email, validates it, and retries with next offset if filtered
+ *
+ * @param validatedParams - Validated search parameters
+ * @param options - Search options (type, seniority)
+ * @param validator - Function to validate if email should be accepted
+ * @param maxAttempts - Maximum number of fetch attempts
+ * @returns First valid email data or null
+ */
+async function fetchValidEmailIteratively(
+  validatedParams: HunterioDomainSearchParams,
+  options: {
+    type?: "personal" | "generic"
+    seniority?: "junior" | "senior" | "executive"
+  },
+  validator: (email: HunterioDomainSearchResponse["data"]["emails"][number]) => boolean,
+  maxAttempts: number = MAX_EMAIL_FETCH_ATTEMPTS,
+): Promise<{
+  email: HunterioDomainSearchResponse["data"]["emails"][number]
+  data: HunterioDomainSearchResponse["data"]
+} | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const offset = attempt // Each attempt checks the next email
+    const data = await fetchDomainEmails(validatedParams, 1, offset, options)
+
+    if (!data || data.emails.length === 0) {
+      // No more emails available
+      console.log(
+        `[Hunter.io Smart] No more emails available after ${attempt + 1} attempt(s) (type: ${options.type})`,
+      )
+      return null
+    }
+
+    const email = data.emails[0]
+    if (!email) {
+      // Should never happen since we checked length > 0, but satisfy TypeScript
+      console.log(`[Hunter.io Smart] Unexpected: email at index 0 is undefined`)
+      return null
+    }
+
+    // Validate the email
+    if (validator(email)) {
+      console.log(
+        `[Hunter.io Smart] Found valid email on attempt ${attempt + 1}: ${email.value} ` +
+          `(confidence: ${email.confidence}%)`,
+      )
+      return { email, data }
+    }
+
+    console.log(
+      `[Hunter.io Smart] Email ${email.value} filtered out, trying next (attempt ${attempt + 1}/${maxAttempts})`,
+    )
+  }
+
+  console.log(
+    `[Hunter.io Smart] Exhausted ${maxAttempts} attempts without finding valid email (type: ${options.type})`,
+  )
+  return null
+}
+
+/**
+ * Search for the most relevant email address using smart selection logic
+ *
+ * This function prioritizes C-level personal emails over generic company emails,
+ * with intelligent fallback and filtering logic.
+ *
+ * **Selection Strategy:**
+ * 1. **First choice**: Personal C-level/executive emails (confidence ≥70%)
+ *    - Uses `type=personal&seniority=executive` API filter
+ *    - Fetches 1 email at a time, retries with offset if filtered
+ *    - Returns first high-confidence email from C-level executives
+ *
+ * 2. **Fallback**: Generic company emails (contact@, info@, etc.)
+ *    - Uses `type=generic` API filter
+ *    - Fetches 1 email at a time, retries with offset if filtered
+ *    - Filters out free email providers (Gmail, Yahoo, Hotmail, etc.)
+ *    - Filters out invalid emails (noreply@, postmaster@, etc.)
+ *    - Returns first valid company email
+ *
+ * **Optimization Benefits:**
+ * - Minimal API calls: Fetches 1 email at a time instead of batches
+ * - Smaller responses: Reduces bandwidth usage
+ * - Early termination: Stops as soon as valid email found
+ * - Typically requires only 1-2 API calls total
+ *
+ * @param domain - Domain name to search
+ * @param minPersonalConfidence - Minimum confidence threshold for personal emails (default: 70)
+ * @returns Best available email result, or null fields if no valid email found
+ *
+ * @example
+ * ```typescript
+ * // Returns C-level email if found
+ * const result = await searchDomainWithSmartSelection("stripe.com")
+ * // result.email = "ceo@stripe.com"
+ * // result.emailType = "personal"
+ *
+ * // Falls back to company email if no C-level
+ * const result2 = await searchDomainWithSmartSelection("example.com")
+ * // result2.email = "contact@example.com"
+ * // result2.emailType = "generic"
+ * ```
+ */
+export async function searchDomainWithSmartSelection(
+  domain: string,
+  minPersonalConfidence: number = 70,
+): Promise<HunterioDomainSearchResult> {
+  const emptyResult: HunterioDomainSearchResult = {
+    domain,
+    organization: null,
+    email: null,
+    emailType: null,
+    genericEmail: null, // deprecated, kept for backward compatibility
+    pattern: null,
+  }
+
+  if (!domain) {
+    console.error("[Hunter.io Smart] [ERROR] Domain is required")
+    return emptyResult
+  }
+
+  // Validate confidence range
+  if (minPersonalConfidence < 0 || minPersonalConfidence > 100) {
+    console.warn(`[Hunter.io Smart] Invalid confidence ${minPersonalConfidence}, using default 70`)
+    minPersonalConfidence = 70
+  }
+
+  // Check cache with smart selection specific key
+  const cacheKey = `hunter_domain_smart:${hashString(domain)}:${minPersonalConfidence}`
+  const cached = await cache.get<HunterioDomainSearchResult>(cacheKey)
+  if (cached) {
+    console.log(`[Hunter.io Smart] [CACHE] Cache hit for ${domain}`)
+    return cached
+  }
+
+  console.log(
+    `[Hunter.io Smart] Starting smart email selection for ${domain} (min confidence: ${minPersonalConfidence}%)`,
+  )
+  const startTime = Date.now()
+
+  // Validate domain parameter
+  const validationResult = HunterioDomainSearchParamsSchema.safeParse({ domain })
+  if (!validationResult.success) {
+    console.error("[Hunter.io Smart] [ERROR] Invalid domain:", validationResult.error)
+    return emptyResult
+  }
+  const validatedParams = validationResult.data
+
+  try {
+    // ====================
+    // STEP 1: Try to find C-level personal emails
+    // ====================
+    console.log("[Hunter.io Smart] Step 1: Searching for personal executive emails (iterative)")
+
+    const executiveResult = await fetchValidEmailIteratively(
+      validatedParams,
+      {
+        type: "personal",
+        seniority: "executive",
+      },
+      (email) => {
+        // Accept if personal type and meets confidence threshold
+        return email.type === "personal" && email.confidence >= minPersonalConfidence
+      },
+    )
+
+    if (executiveResult) {
+      const { email: bestExecutive, data: executiveData } = executiveResult
+      const elapsed = Date.now() - startTime
+
+      console.log(
+        `[Hunter.io Smart] ✓ Selected C-level executive email: ${bestExecutive.value} ` +
+          `(confidence: ${bestExecutive.confidence}%, first_name: ${bestExecutive.first_name}, ` +
+          `last_name: ${bestExecutive.last_name}, position: ${bestExecutive.position}) [${elapsed}ms]`,
+      )
+
+      const result: HunterioDomainSearchResult = {
+        domain: executiveData.domain,
+        organization: executiveData.organization,
+        email: bestExecutive.value,
+        emailType: "personal",
+        genericEmail: bestExecutive.value, // deprecated, kept for backward compatibility
+        pattern: executiveData.pattern,
+        description: executiveData.description,
+        industry: executiveData.industry,
+        country: executiveData.country,
+        headcount: executiveData.headcount,
+        companyType: executiveData.company_type,
+      }
+
+      // Cache successful result
+      await cache.set(cacheKey, result)
+
+      return result
+    }
+
+    console.log(
+      `[Hunter.io Smart] No high-confidence executives found (threshold: ${minPersonalConfidence}%)`,
+    )
+
+    // ====================
+    // STEP 2: Fallback to generic company email
+    // ====================
+    console.log("[Hunter.io Smart] Step 2: Searching for generic company emails (iterative)")
+
+    const genericResult = await fetchValidEmailIteratively(
+      validatedParams,
+      {
+        type: "generic",
+      },
+      (email) => {
+        // Accept if generic, not invalid, and not on free provider
+        return (
+          email.type === "generic" &&
+          !isInvalidEmail(email.value) &&
+          !shouldFilterGenericEmail(email.value, "generic")
+        )
+      },
+    )
+
+    if (genericResult) {
+      const { email: bestGeneric, data: genericData } = genericResult
+      const elapsed = Date.now() - startTime
+
+      console.log(
+        `[Hunter.io Smart] ✓ Selected generic email: ${bestGeneric.value} ` +
+          `(confidence: ${bestGeneric.confidence}%) [${elapsed}ms]`,
+      )
+
+      const result: HunterioDomainSearchResult = {
+        domain: genericData.domain,
+        organization: genericData.organization,
+        email: bestGeneric.value,
+        emailType: "generic",
+        genericEmail: bestGeneric.value, // deprecated, kept for backward compatibility
+        pattern: genericData.pattern,
+        description: genericData.description,
+        industry: genericData.industry,
+        country: genericData.country,
+        headcount: genericData.headcount,
+        companyType: genericData.company_type,
+      }
+
+      // Cache successful result
+      await cache.set(cacheKey, result)
+
+      return result
+    }
+
+    // ====================
+    // STEP 3: Last resort - use any generic email even if on free provider
+    // ====================
+    console.log("[Hunter.io Smart] Step 3: Last resort - any generic email (iterative)")
+
+    const lastResortResult = await fetchValidEmailIteratively(
+      validatedParams,
+      {
+        type: "generic",
+      },
+      (email) => {
+        // Accept any generic email that's not invalid (even on free providers)
+        return email.type === "generic" && !isInvalidEmail(email.value)
+      },
+    )
+
+    if (lastResortResult) {
+      const { email: lastResort, data: genericData } = lastResortResult
+      const elapsed = Date.now() - startTime
+
+      console.warn(
+        `[Hunter.io Smart] ⚠ Using generic email on free provider as last resort: ${lastResort.value} ` +
+          `(confidence: ${lastResort.confidence}%) - no better options available [${elapsed}ms]`,
+      )
+
+      const result: HunterioDomainSearchResult = {
+        domain: genericData.domain,
+        organization: genericData.organization,
+        email: lastResort.value,
+        emailType: "generic",
+        genericEmail: lastResort.value, // deprecated, kept for backward compatibility
+        pattern: genericData.pattern,
+        description: genericData.description,
+        industry: genericData.industry,
+        country: genericData.country,
+        headcount: genericData.headcount,
+        companyType: genericData.company_type,
+      }
+
+      // Cache result
+      await cache.set(cacheKey, result)
+
+      return result
+    }
+
+    // No valid emails found at all
+    const elapsed = Date.now() - startTime
+    console.log(`[Hunter.io Smart] No valid emails found after exhaustive search [${elapsed}ms]`)
+    return emptyResult
+  } catch (error) {
+    const elapsed = Date.now() - startTime
+    console.error(
+      `[Hunter.io Smart] [ERROR] Failed smart selection for ${domain} (${elapsed}ms):`,
+      error,
+    )
+    logger.error({ error, domain }, "Failed smart email selection with Hunter.io")
     return emptyResult
   }
 }

@@ -48,7 +48,7 @@ import { useTrialDashboardStats } from "@/lib/api/hooks/dashboard"
 import { useSequencesByWorkspace } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
-import { SequenceEnrollmentsTable } from "@/pages/sequences/SequenceEnrollmentsTable"
+import { SequenceLeadsTable } from "@/pages/sequences/SequenceLeadsTable"
 import { SequenceStepsList } from "@/pages/sequences/SequenceStepList"
 
 const UPGRADE_URL = "https://rinda.ai/contact"
@@ -951,7 +951,7 @@ export default function AppDashboardPage() {
 
         <TabsContent className="space-y-4" value="leads">
           {firstSequenceId ? (
-            <SequenceEnrollmentsTable sequenceId={firstSequenceId} />
+            <SequenceLeadsTable sequenceId={firstSequenceId} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Users className="mb-3 h-10 w-10 text-muted-foreground/30" />

@@ -35,6 +35,8 @@ export const sequenceKeys = {
     },
   ) => [...sequenceKeys.enrollments(sequenceId), page, limit, filters] as const,
   workspace: (workspaceId: string) => [...sequenceKeys.all, "workspace", workspaceId] as const,
+  leads: (sequenceId: string, page?: number, limit?: number) =>
+    [...sequenceKeys.all, "leads", sequenceId, page, limit] as const,
 }
 
 // Queries
@@ -96,6 +98,16 @@ export function useSequencesByWorkspace(workspaceId: string, enabled = true) {
     enabled,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useSequenceLeads(sequenceId: string, page = 1, limit = 10, enabled = true) {
+  return useQuery({
+    queryKey: sequenceKeys.leads(sequenceId, page, limit),
+    queryFn: () => sequencesApi.getLeads(sequenceId, page, limit),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
   })
 }
 

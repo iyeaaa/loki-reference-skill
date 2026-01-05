@@ -990,3 +990,16 @@ editPage.partialEditNotice,진행 중인 캠페인은 일부 항목만 수정할
 step1.hideLeadList,목록 숨기기,Hide List
 step1.leadListHiddenNotice,리드가 많아 목록을 숨겼습니다. '목록 보기'를 클릭하여 확인하세요,The list is hidden due to many leads. Click 'Show List' to view
 step1.showLeadList,목록 보기,Show List
+leads.column.businessType,업종,Business Type
+leads.column.companyName,회사명,Company Name
+leads.column.country,국가,Country
+leads.column.createdAt,등록일,Created At
+leads.column.email,이메일,Email
+leads.column.status,상태,Status
+leads.noLeads,아직 바이어가 없어요,No buyers yet
+leads.noLeadsDescription,캠페인을 시작하면 린다가 바이어를 찾아드릴게요!,Linda will find buyers for you when you start a campaign!
+leads.noSearchResults,검색 결과가 없습니다,No search results
+leads.pagination.page,페이지 {{current}} / {{total}},Page {{current}} / {{total}}
+leads.searchPlaceholder,회사명 이메일 국가로 검색...,Search by company email country...
+leads.title,바이어 목록,Buyer List
+leads.totalCount,총 {{count}}개,Total {{count}}

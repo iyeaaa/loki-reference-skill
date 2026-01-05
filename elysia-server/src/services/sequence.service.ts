@@ -551,6 +551,96 @@ export async function getSequencesByWorkspace(workspaceId: string) {
   return result
 }
 
+// GetSequenceLeads :many - Get leads based on sequence's selectedLeadIds
+export async function getSequenceLeads(
+  sequenceId: string,
+  limit: number,
+  offset: number,
+): Promise<{ leads: unknown[]; total: number }> {
+  // Get sequence's selectedLeadIds
+  const [sequence] = await db
+    .select({
+      selectedLeadIds: sequences.selectedLeadIds,
+    })
+    .from(sequences)
+    .where(eq(sequences.id, sequenceId))
+    .limit(1)
+
+  if (!sequence?.selectedLeadIds) {
+    return { leads: [], total: 0 }
+  }
+
+  let leadIds: string[] = []
+  try {
+    leadIds = JSON.parse(sequence.selectedLeadIds) as string[]
+  } catch {
+    return { leads: [], total: 0 }
+  }
+
+  if (leadIds.length === 0) {
+    return { leads: [], total: 0 }
+  }
+
+  const total = leadIds.length
+
+  // Apply pagination to leadIds
+  const paginatedLeadIds = leadIds.slice(offset, offset + limit)
+
+  if (paginatedLeadIds.length === 0) {
+    return { leads: [], total }
+  }
+
+  // Get lead details with contacts
+  const result = await db
+    .select({
+      id: leads.id,
+      companyName: leads.companyName,
+      foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
+      websiteUrl: leads.websiteUrl,
+      businessType: leads.businessType,
+      country: leads.country,
+      city: leads.city,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
+      createdAt: leads.createdAt,
+    })
+    .from(leads)
+    .where(inArray(leads.id, paginatedLeadIds))
+
+  // Get primary email contacts
+  const contactsData = await db
+    .select({
+      leadId: leadContacts.leadId,
+      contactValue: leadContacts.contactValue,
+    })
+    .from(leadContacts)
+    .where(
+      and(
+        inArray(leadContacts.leadId, paginatedLeadIds),
+        eq(leadContacts.contactType, "email"),
+        eq(leadContacts.isPrimary, true),
+      ),
+    )
+
+  // Create contacts map
+  const emailByLead = contactsData.reduce(
+    (acc, contact) => {
+      acc[contact.leadId] = contact.contactValue
+      return acc
+    },
+    {} as Record<string, string | null>,
+  )
+
+  // Merge leads with their email
+  const leadsWithEmail = result.map((lead) => ({
+    ...lead,
+    email: emailByLead[lead.id] || null,
+  }))
+
+  return { leads: leadsWithEmail, total }
+}
+
 // ====================================
 // SEQUENCE STEPS OPERATIONS
 // ====================================

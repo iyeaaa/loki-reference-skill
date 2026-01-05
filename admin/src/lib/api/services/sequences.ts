@@ -383,6 +383,34 @@ export const sequencesApi = {
   getByWorkspace: (workspaceId: string) =>
     apiFetch<Sequence[]>(`/api/v1/sequences/workspace/${workspaceId}`),
 
+  // Get leads for sequence (based on selectedLeadIds)
+  getLeads: (sequenceId: string, page = 1, limit = 10) => {
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    })
+    return apiFetch<{
+      data: {
+        id: string
+        companyName: string | null
+        foundCompanyName: string | null
+        contactName: string | null
+        websiteUrl: string | null
+        businessType: string | null
+        country: string | null
+        city: string | null
+        leadStatus: string | null
+        leadScore: number | null
+        createdAt: string
+        email: string | null
+      }[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>(`/api/v1/sequences/${sequenceId}/leads?${searchParams.toString()}`)
+  },
+
   // Activate step-based sequence
   activateStepBased: (sequenceId: string) =>
     apiFetch<{ success: boolean; message: string; stepsCount: number }>(

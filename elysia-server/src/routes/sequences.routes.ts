@@ -761,6 +761,33 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     },
   )
 
+  // Get leads for sequence (based on selectedLeadIds)
+  .get(
+    "/:id/leads",
+    async ({ params: { id }, query: { page, limit: queryLimit } }) => {
+      const pageNum = Number(page) || 1
+      const limitNum = Number(queryLimit) || 10
+      const offset = (pageNum - 1) * limitNum
+      const result = await sequenceService.getSequenceLeads(id, limitNum, offset)
+      return {
+        data: result.leads,
+        total: result.total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(result.total / limitNum),
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    },
+  )
+
   // ====================================
   // SEQUENCE STEPS ROUTES
   // ====================================

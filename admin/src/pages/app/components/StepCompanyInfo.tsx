@@ -527,7 +527,9 @@ export function StepCompanyInfo() {
                   <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-2">
                     <span className="text-green-600">✨</span>
                     <p className="text-green-800 text-sm">
-                      {isKorean ? "완벽합니다! 충분한 정보가 담겨있어요" : "Perfect! Enough info"}
+                      {isKorean
+                        ? "충분한 정보가 담겨있어요! 반드시 실제 정보로 수정해주세요 ✏️"
+                        : "Good! If you added AI suggestions, please update them with your actual info ✏️"}
                     </p>
                   </div>
                 ) : null}
@@ -644,7 +646,7 @@ export function StepCompanyInfo() {
               onClick={handleSaveAndNext}
             >
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isKorean ? "바이어 찾아보기" : "Find buyers"}
+              {isKorean ? "다음 단계" : "Next step"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

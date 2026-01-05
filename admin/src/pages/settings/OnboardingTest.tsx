@@ -252,7 +252,7 @@ export function OnboardingTest() {
               <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
                 <span className="text-green-600">✨</span>
                 <p className="text-green-800 text-sm">
-                  완벽합니다! 바이어들에게 전달할 충분한 정보가 담겨있어요
+                  충분한 정보가 담겨있어요! 반드시 실제 정보로 수정해주세요 ✏️
                 </p>
               </div>
             ) : null}

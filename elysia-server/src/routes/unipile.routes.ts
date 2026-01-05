@@ -996,16 +996,20 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
             .where(eq(emails.id, originalEmail.id))
 
           // 3. Create email_reply record linking original and reply
-          await db.insert(emailReplies).values({
-            workspaceId: originalEmail.workspaceId,
-            originalEmailId: originalEmail.id,
-            replyEmailId: inboundEmail.id, // Reference to emails table
-            sentiment: null,
-            isRead: false,
-          })
+          const [emailReply] = await db
+            .insert(emailReplies)
+            .values({
+              workspaceId: originalEmail.workspaceId,
+              originalEmailId: originalEmail.id,
+              replyEmailId: inboundEmail.id, // Reference to emails table
+              sentiment: null,
+              isRead: false,
+            })
+            .returning()
 
           logger.info(
             {
+              emailReplyId: emailReply?.id,
               originalEmailId: originalEmail.id,
               replyEmailId: inboundEmail.id,
               from,
@@ -1013,6 +1017,26 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
             },
             "[Unipile Webhook] Reply saved as inbound email",
           )
+
+          // 4. AI classification (async, non-blocking)
+          const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+          if (emailReply && classificationEnabled) {
+            try {
+              const { reclassifyEmailReply } = await import("../services/email-replies.service")
+              reclassifyEmailReply(emailReply.id).catch((error) => {
+                logger.warn(
+                  { err: error, emailReplyId: emailReply.id },
+                  "⚠️ [Unipile Webhook] AI classification failed",
+                )
+              })
+              logger.debug(
+                { emailReplyId: emailReply.id },
+                "[Unipile Webhook] AI classification triggered",
+              )
+            } catch {
+              // AI classification is optional
+            }
+          }
 
           return successResponse({
             message: "Reply processed successfully",

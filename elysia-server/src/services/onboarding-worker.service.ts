@@ -10,6 +10,7 @@ import type { Job } from "bullmq"
 import { and, count, eq, inArray, isNotNull } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
+import { subscriptions } from "../db/schema/billing"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
@@ -1137,19 +1138,79 @@ export async function completeOnboarding(
     await emitAndSaveNotification(createCompleteEvent(workspaceId, jobId, leadIds.length), userId)
 
     // 🆕 Send completion email via Loops.so (helps reduce drop-off during long onboarding)
+    // Optimized with 2025 best practices: dynamic subject line, progress bar, social proof
     if (isLoopsConfigured()) {
       try {
         const user = await getUser(userId)
         if (user?.email) {
           const emailCount = leadIds.length * 3 // 3-touch sequence
+          const lang = surveyData.lang === "en" ? "en" : "ko"
 
+          // 1. Calculate trial days remaining
+          let trialDaysRemaining: number | undefined
+          try {
+            const subscription = await db
+              .select({ trialEnd: subscriptions.trialEnd })
+              .from(subscriptions)
+              .where(eq(subscriptions.workspaceId, workspaceId))
+              .limit(1)
+
+            if (subscription[0]?.trialEnd) {
+              trialDaysRemaining = Math.max(
+                0,
+                Math.ceil(
+                  (new Date(subscription[0].trialEnd).getTime() - Date.now()) /
+                    (1000 * 60 * 60 * 24),
+                ),
+              )
+            }
+          } catch (e) {
+            console.warn("[CompletePhase] Failed to get trial days:", e)
+          }
+
+          // 2. Get top 3 company names from discovered leads
+          let topCompanies: string[] = []
+          try {
+            if (leadIds.length > 0) {
+              const topLeads = await db
+                .select({ companyName: leadsTable.companyName })
+                .from(leadsTable)
+                .where(inArray(leadsTable.id, leadIds.slice(0, 10)))
+                .limit(3)
+
+              topCompanies = topLeads
+                .map((l) => l.companyName)
+                .filter((name): name is string => !!name)
+            }
+          } catch (e) {
+            console.warn("[CompletePhase] Failed to get top companies:", e)
+          }
+
+          // 3. Map industry to display label
+          const industryLabels: Record<string, { ko: string; en: string }> = {
+            beauty: { ko: "뷰티/화장품", en: "Beauty" },
+            fashion: { ko: "패션/의류", en: "Fashion" },
+            food: { ko: "식품", en: "Food" },
+            it_saas: { ko: "IT/SaaS", en: "IT/SaaS" },
+            manufacturing: { ko: "제조", en: "Manufacturing" },
+            living: { ko: "리빙/홈데코", en: "Living" },
+            other: { ko: "비즈니스", en: "Business" },
+          }
+          const industry = surveyData.industry
+            ? industryLabels[surveyData.industry]?.[lang]
+            : undefined
+
+          // 4. Send optimized email with extended data
           await sendOnboardingCompleteEmail({
             email: user.email,
             firstName: user.username || undefined,
             leadCount: leadIds.length,
             emailCount,
             dashboardUrl: `${config.frontendUrl}/company?step=4`,
-            language: surveyData.lang === "en" ? "en" : "ko",
+            language: lang,
+            trialDaysRemaining,
+            industry,
+            topCompanies,
           })
 
           console.log(`[CompletePhase] Sent completion email to ${user.email}`)

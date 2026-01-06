@@ -48,16 +48,16 @@ import {
 // ====================================
 
 export const SEARCH_CONFIG = {
-  TARGET_LEADS: 150,
+  TARGET_LEADS: 30, // 30 leads for optimized search
   ENRICHMENT_BATCH_SIZE: 30,
-  BIGQUERY_BATCH_SIZE: 100,
+  BIGQUERY_BATCH_SIZE: 30, // Reduced for 30 leads target
   MAX_EMPLOYEE_COUNT: 5000, // Skip companies with >5000 employees (target SMBs)
-  HUNTERIO_MAX_PER_PAGE: 100,
+  HUNTERIO_MAX_PER_PAGE: 30, // Reduced for 30 leads target
   HUNTERIO_MAX_EMAIL_COUNT: 100, // Skip companies with >100 indexed emails (proxy for large companies)
   // Hybrid search strategy config
   BIGQUERY_RICH_COUNTRIES: PERPLEXITY_CONFIG.BIGQUERY_RICH_COUNTRIES,
-  PERPLEXITY_BASE_COUNT: 30, // 기본 Perplexity 검색 수
-  PERPLEXITY_ENHANCED_COUNT: 60, // 비미국 국가용 증가 검색 수
+  PERPLEXITY_BASE_COUNT: 15, // Reduced for 30 leads target (기본 Perplexity 검색 수)
+  PERPLEXITY_ENHANCED_COUNT: 30, // Reduced for 30 leads target (비미국 국가용)
 } as const
 
 // ====================================

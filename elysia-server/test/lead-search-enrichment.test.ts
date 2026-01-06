@@ -6,7 +6,7 @@ describe("Lead Search & Enrichment Service", () => {
 
   describe("Configuration", () => {
     it("should have correct default config", () => {
-      expect(SEARCH_CONFIG.TARGET_LEADS).toBe(150)
+      expect(SEARCH_CONFIG.TARGET_LEADS).toBe(30)
       expect(SEARCH_CONFIG.MAX_EMPLOYEE_COUNT).toBe(5000)
       expect(SEARCH_CONFIG.HUNTERIO_MAX_EMAIL_COUNT).toBe(100)
       expect(SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE).toBe(30)
@@ -300,7 +300,7 @@ describe("Lead Search & Enrichment Service", () => {
 
     it("should limit BigQuery results per query", () => {
       const queryLimit = SEARCH_CONFIG.BIGQUERY_BATCH_SIZE
-      expect(queryLimit).toBe(100)
+      expect(queryLimit).toBe(30)
 
       // Should not fetch more than limit per query
       const mockResults = new Array(queryLimit + 50).fill({})

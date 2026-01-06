@@ -9,6 +9,7 @@ import { Elysia, t } from "elysia"
 import { addOnboardingJob } from "../lib/queue/queues"
 import {
   createOnboardingSubscriber,
+  getCachedOnboardingState,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
 import { aiApiRateLimit } from "../plugins/rate-limit.plugin"
@@ -59,10 +60,14 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   // ====================================
 
   // 워크스페이스의 온보딩 진행 상황 실시간 스트리밍
+  // NEW: 연결 시 캐시된 상태 즉시 전송 (재접속 지원)
   .get(
     "/workspace/:workspaceId/stream",
     async ({ params: { workspaceId } }) => {
       logger.info({ workspaceId }, "[Onboarding SSE] Starting stream")
+
+      // Get cached state before starting stream (for reconnection support)
+      const cachedState = await getCachedOnboardingState(workspaceId)
 
       const stream = new ReadableStream({
         start(controller) {
@@ -81,15 +86,45 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
             }
           }
 
-          // Send initial connection event
+          // Send initial connection event with cached state info
           safeEnqueue(
             `event: connected\ndata: ${JSON.stringify({
               type: "connected",
               message: "SSE connection established",
               workspaceId,
+              hasCachedState: !!cachedState,
               timestamp: new Date().toISOString(),
             })}\n\n`,
           )
+
+          // NEW: Send cached state immediately if available (for reconnection)
+          if (cachedState) {
+            logger.info(
+              { workspaceId, phase: cachedState.phase, percent: cachedState.progressPercent },
+              "[Onboarding SSE] Sending cached state on connect",
+            )
+            safeEnqueue(`event: cached\ndata: ${JSON.stringify(cachedState)}\n\n`)
+
+            // If cached state is complete/error, close stream after sending
+            if (cachedState.phase === "complete" || cachedState.phase === "error") {
+              safeEnqueue(
+                `event: ${cachedState.phase}\ndata: ${JSON.stringify({
+                  ...cachedState,
+                  final: true,
+                  fromCache: true,
+                })}\n\n`,
+              )
+              setTimeout(() => {
+                isDisconnected = true
+                try {
+                  controller.close()
+                } catch (_e) {
+                  // Already closed
+                }
+              }, 500)
+              return
+            }
+          }
 
           // Create Redis subscriber for this workspace
           const subscriber = createOnboardingSubscriber(workspaceId)

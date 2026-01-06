@@ -261,38 +261,31 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
   // Company personalization line
   const companyLine = companyName ? `${t.forCompany(companyName)}\n\n` : ""
 
-  return `<div style="text-align:left">
+  return `<div style="text-align:left; line-height:1.6">
 <b>${t.greeting(name)}</b>
 
 ${companyLine}${t.intro(industry)}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📊 ${t.buyersFound(leadCount)}
 📧 ${t.emailsReady(emailCount)}
 🔄 ${t.sequenceInfo}
 ${trialDaysRemaining !== undefined ? `⏰ ${t.trialRemaining(trialDaysRemaining)}` : ""}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 👉 <a href="${dashboardUrl}"><b><u>${t.ctaButton}</u></b></a>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+───────────────────────
 
-💡 <b>${t.tip.title}</b>
-${t.tip.text}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 <b>${t.tip.title}</b>: ${t.tip.text}
 
 <b>${t.nextStepsTitle}</b>
 ${nextStepsList}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+───────────────────────
 
-${t.footer}
-${t.footerContact}
+<span style="color:#888">${t.footer}
+${t.footerContact}</span>
 
-${t.footerBusiness}
+<span style="color:#aaa; font-size:12px">${t.footerBusiness}</span>
 </div>`
 }
 

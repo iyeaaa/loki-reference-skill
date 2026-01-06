@@ -63,37 +63,48 @@ import * as workspaceServiceImport from "./workspace.service"
 // CONSTANTS
 // ====================================
 
-const TARGET_LEADS = 150 // 150 leads for 3-touch sequence (450 emails total)
+const TARGET_LEADS = 30 // 30 leads for optimized search
 
 // ====================================
 // SSE + DB NOTIFICATION WRAPPER
 // ====================================
 
 /**
- * Emit SSE event and save notification to DB
- * This ensures real-time updates (SSE) and persistence (DB) for notifications
+ * Emit SSE event and optionally save notification to DB
+ *
+ * NEW: 최적화된 알림 전략
+ * - 모든 이벤트: Redis PubSub → SSE (실시간) + Redis 캐시 (재접속)
+ * - 완료/에러 이벤트만: DB 저장 (히스토리/영속성)
+ *
+ * 이유:
+ * - 진행 중 이벤트는 실시간 SSE로 충분 (DB 저장 불필요)
+ * - 완료/에러만 DB에 저장하면 알림 스팸 방지 + DB 부하 감소
+ * - Redis 캐시로 페이지 새로고침 시에도 상태 복원 가능
  */
 async function emitAndSaveNotification(
   event: OnboardingProgressEvent,
   userId: string,
 ): Promise<void> {
   console.log(
-    `[OnboardingWorker] emitAndSaveNotification called - phase: ${event.phase}, userId: ${userId}, workspaceId: ${event.workspaceId}`,
+    `[OnboardingWorker] emitAndSaveNotification - phase: ${event.phase}, percent: ${event.progressPercent}%, workspaceId: ${event.workspaceId}`,
   )
 
-  // Emit SSE event for real-time updates
+  // 1. Always emit SSE event for real-time updates (also caches in Redis)
   await emitOnboardingProgress(event)
 
-  // Save to DB for persistence (async, don't block on this)
-  try {
-    const notification = await upsertOnboardingProgressNotification(userId, event)
-    console.log(
-      `[OnboardingWorker] Notification saved to DB - id: ${notification.id}, type: ${notification.type}, title: ${notification.title}`,
-    )
-  } catch (error) {
-    // Log error details for debugging
-    console.error("[OnboardingWorker] Failed to save notification to DB:", error)
-    console.error("[OnboardingWorker] Event data:", JSON.stringify(event, null, 2))
+  // 2. Only save to DB on complete/error phases (for notification history)
+  const shouldSaveToDb = event.phase === "complete" || event.phase === "error"
+
+  if (shouldSaveToDb) {
+    try {
+      const notification = await upsertOnboardingProgressNotification(userId, event)
+      console.log(
+        `[OnboardingWorker] Notification saved to DB - id: ${notification.id}, type: ${notification.type}, phase: ${event.phase}`,
+      )
+    } catch (error) {
+      console.error("[OnboardingWorker] Failed to save notification to DB:", error)
+      console.error("[OnboardingWorker] Event data:", JSON.stringify(event, null, 2))
+    }
   }
 }
 
@@ -630,11 +641,25 @@ export async function runTemplatesPhase(
               ? workspace.description
               : undefined
 
+        // Build previous emails context for differentiation
+        const previousEmails = templates.map((t) => ({
+          stepNumber: t.stepOrder,
+          subject: t.emailSubject,
+          bodySummary: t.emailBodyText.substring(0, 100),
+        }))
+
         const template = await aiService.generateEmailTemplate({
           workspaceName: workspace.companyName || workspace.name,
           workspaceDescription: effectiveDescription,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,
+          // NEW: Pass sequence context for differentiated emails
+          sequenceContext: {
+            stepNumber: i + 1,
+            totalSteps: templatesNeeded,
+            stepType: emailType.type as "introduction" | "follow_up_1" | "follow_up_2",
+            previousEmails: previousEmails.length > 0 ? previousEmails : undefined,
+          },
         })
 
         templates.push({

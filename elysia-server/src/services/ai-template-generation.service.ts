@@ -12,6 +12,17 @@ interface GenerateTemplateOptions {
   userPrompt: string
   model?: string
   temperature?: number
+  // NEW: Sequence context for differentiated emails
+  sequenceContext?: {
+    stepNumber: number // 1, 2, 3
+    totalSteps: number // e.g., 3
+    stepType: "introduction" | "follow_up_1" | "follow_up_2"
+    previousEmails?: Array<{
+      stepNumber: number
+      subject: string
+      bodySummary: string // First 100 chars of body
+    }>
+  }
 }
 
 interface GeneratedTemplate {
@@ -88,6 +99,117 @@ class AITemplateGenerationService {
 
     const shuffled = [...this.emailExamples].sort(() => 0.5 - Math.random())
     return shuffled.slice(0, Math.min(count, this.emailExamples.length))
+  }
+
+  /**
+   * 시퀀스 컨텍스트 섹션 생성 - 각 스텝별 차별화된 이메일 생성을 위한 지침
+   */
+  private buildSequenceContextSection(
+    context: NonNullable<GenerateTemplateOptions["sequenceContext"]>,
+    isEnglishTarget: boolean,
+  ): string {
+    const { stepNumber, totalSteps, stepType, previousEmails } = context
+
+    // 스텝별 전략 정의
+    const stepStrategies = {
+      introduction: {
+        goal: isEnglishTarget
+          ? "First contact - spark curiosity and establish relevance"
+          : "첫 접촉 - 호기심 유발 및 관련성 확립",
+        subjectStrategy: isEnglishTarget
+          ? 'Question-based: "Quick question about {{company_name}}\'s [specific area]"'
+          : '질문형: "{{company_name}}의 [특정 영역]에 대해 궁금한 점이 있어요"',
+        tone: isEnglishTarget ? "Curious, observational, non-salesy" : "호기심, 관찰적, 비영업적",
+        focus: isEnglishTarget
+          ? "Reference something specific about THEM (not about you)"
+          : "상대방에 대한 구체적인 언급 (우리 회사 이야기 X)",
+        avoidSubjects: isEnglishTarget
+          ? ['"Introduction to..."', '"Partnership opportunity"', '"[Company] + [Their Company]"']
+          : ['"...를 소개합니다"', '"파트너십 제안"', '"[우리회사] + [상대회사]"'],
+      },
+      follow_up_1: {
+        goal: isEnglishTarget
+          ? "Add value - share a success story or insight they didn't have"
+          : "가치 추가 - 성공 사례나 새로운 인사이트 공유",
+        subjectStrategy: isEnglishTarget
+          ? 'Value-add: "Thought this might help {{company_name}}" or "Re: [original subject]"'
+          : '가치 제공형: "{{company_name}}에 도움이 될 것 같아요" 또는 "Re: [이전 제목]"',
+        tone: isEnglishTarget
+          ? "Helpful, specific, credible"
+          : "도움을 주는, 구체적인, 신뢰할 수 있는",
+        focus: isEnglishTarget
+          ? "Share a relevant case study or specific benefit"
+          : "관련 성공 사례나 구체적인 혜택 공유",
+        avoidSubjects: isEnglishTarget
+          ? ['"Following up"', '"Just checking in"', '"Touching base"']
+          : ['"후속 연락드립니다"', '"안부 인사드립니다"', '"다시 연락드려요"'],
+      },
+      follow_up_2: {
+        goal: isEnglishTarget
+          ? "Create urgency - last chance, focus on what they're missing"
+          : "긴급성 창출 - 마지막 기회, 놓치고 있는 것에 집중",
+        subjectStrategy: isEnglishTarget
+          ? 'Urgency-based: "Before I close your file" or "Last thought on [topic]"'
+          : '긴급성형: "마지막으로 여쭤볼게요" 또는 "[주제]에 대한 마지막 생각"',
+        tone: isEnglishTarget
+          ? "Direct, respectful urgency, no pressure"
+          : "직접적, 존중하는 긴급성, 압박 없이",
+        focus: isEnglishTarget
+          ? "1-2 specific values they're currently missing"
+          : "현재 놓치고 있는 1-2가지 구체적인 가치",
+        avoidSubjects: isEnglishTarget
+          ? ['"Final follow-up"', '"Last chance"', '"Urgent"']
+          : ['"마지막 연락"', '"마지막 기회"', '"긴급"'],
+      },
+    }
+
+    const strategy = stepStrategies[stepType]
+
+    // 이전 이메일 정보 섹션
+    let previousEmailsSection = ""
+    if (previousEmails && previousEmails.length > 0) {
+      const prevEmailsList = previousEmails
+        .map(
+          (e) =>
+            `  - Email ${e.stepNumber}: Subject: "${e.subject}" | Preview: "${e.bodySummary}..."`,
+        )
+        .join("\n")
+
+      previousEmailsSection = isEnglishTarget
+        ? `
+⚠️ PREVIOUS EMAILS IN THIS SEQUENCE (DO NOT REPEAT):
+${prevEmailsList}
+
+CRITICAL: Your email MUST be COMPLETELY DIFFERENT from the above.
+- Use a DIFFERENT subject line pattern
+- Use a DIFFERENT opening hook
+- Focus on a DIFFERENT angle/benefit`
+        : `
+⚠️ 이 시퀀스의 이전 이메일 (반복 금지):
+${prevEmailsList}
+
+중요: 위 이메일과 완전히 다르게 작성해야 합니다.
+- 다른 제목 패턴 사용
+- 다른 오프닝 훅 사용
+- 다른 각도/혜택에 집중`
+    }
+
+    return `
+═══════════════════════════════════════════════════════════════
+📧 EMAIL SEQUENCE CONTEXT (CRITICAL - READ CAREFULLY)
+═══════════════════════════════════════════════════════════════
+This is email ${stepNumber} of ${totalSteps} in a multi-touch sequence.
+${isEnglishTarget ? "Each email MUST be distinctly different from others." : "각 이메일은 다른 이메일과 확실히 달라야 합니다."}
+
+🎯 THIS EMAIL'S GOAL: ${strategy.goal}
+
+📝 SUBJECT LINE STRATEGY: ${strategy.subjectStrategy}
+❌ AVOID these subject patterns: ${strategy.avoidSubjects.join(", ")}
+
+🎨 TONE: ${strategy.tone}
+🔍 FOCUS: ${strategy.focus}
+${previousEmailsSection}
+`
   }
 
   /**
@@ -196,12 +318,18 @@ class AITemplateGenerationService {
       userPrompt,
       model = "gpt-5-mini",
       temperature = 0.7,
+      sequenceContext,
     } = options
 
     console.log(`[AITemplate] Starting email template generation`)
     console.log(`[AITemplate]   - workspace: ${workspaceName}`)
     console.log(`[AITemplate]   - country: ${country}`)
     console.log(`[AITemplate]   - model: ${model}`)
+    if (sequenceContext) {
+      console.log(
+        `[AITemplate]   - step: ${sequenceContext.stepNumber}/${sequenceContext.totalSteps} (${sequenceContext.stepType})`,
+      )
+    }
 
     try {
       // 1. 랜덤 예시 5개 선택
@@ -269,6 +397,11 @@ ${ex.content}
 
       const translatedWorkspaceName = await this.translateCompanyName(workspaceName, targetLanguage)
 
+      // Build sequence context section if provided
+      const sequenceSection = sequenceContext
+        ? this.buildSequenceContextSection(sequenceContext, isEnglishTarget)
+        : ""
+
       const systemPrompt = `You are a world-class cold email strategist who has personally written emails that generated $50M+ in pipeline for B2B companies.
 
 Your philosophy: "The best cold email doesn't feel cold. It feels like someone did their homework."
@@ -284,7 +417,7 @@ TARGET AUDIENCE
 ═══════════════════════════════════════════════════════════════
 - Region: ${country}
 - Language: ${isEnglishTarget ? "English" : `Primary language of ${country}`}
-
+${sequenceSection}
 ═══════════════════════════════════════════════════════════════
 THE 13-WORD RULE (Critical for Open Rates)
 ═══════════════════════════════════════════════════════════════

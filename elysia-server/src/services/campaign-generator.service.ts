@@ -451,11 +451,25 @@ export class CampaignGenerator {
         : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
 
       try {
+        // Build previous emails context for differentiation
+        const previousEmails = templates.map((t) => ({
+          stepNumber: t.stepOrder,
+          subject: t.emailSubject,
+          bodySummary: t.emailBodyText.substring(0, 100),
+        }))
+
         const template = await aiService.generateEmailTemplate({
           workspaceName: workspace.companyName || workspace.name,
           workspaceDescription: workspace.companyDescription || undefined,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,
+          // Pass sequence context for differentiated emails
+          sequenceContext: {
+            stepNumber: i + 1,
+            totalSteps: emailSchedule.length,
+            stepType: emailType.type as "introduction" | "follow_up_1" | "follow_up_2",
+            previousEmails: previousEmails.length > 0 ? previousEmails : undefined,
+          },
         })
 
         templates.push({

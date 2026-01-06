@@ -5,6 +5,10 @@
  * - 읽지 않은 알림 개수 배지
  * - 날짜별 그룹화된 알림 목록
  * - 읽음/삭제 기능
+ *
+ * NEW: 통합 Onboarding Progress Store 사용
+ * - StepBuyerLoading과 진행률 공유
+ * - 단일 SSE로 실시간 동기화
  */
 
 import { format, isToday, isYesterday } from "date-fns"
@@ -35,7 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { type Notification, useNotificationsManager } from "@/lib/api/hooks/notifications"
 import { cn } from "@/lib/utils"
-import { useSharedFakeProgressReadOnly } from "@/store/fake-progress"
+import { useOnboardingProgress, useOnboardingProgressReadOnly } from "@/store/onboarding-progress"
 
 // ============================================================================
 // Types
@@ -103,7 +107,7 @@ function getNotificationIcon(type: Notification["type"], metadata?: Notification
 }
 
 /**
- * 온보딩 알림 상세 정보 포맷팅
+ * 온보딩 알림 상세 정보 포맷팅 (토스 UX 라이팅 스타일)
  */
 function formatOnboardingDetails(metadata: Notification["metadata"]): string | null {
   if (!metadata) {
@@ -118,15 +122,24 @@ function formatOnboardingDetails(metadata: Notification["metadata"]): string | n
   }
 
   if (phase === "complete" && leadsFound && previewsGenerated) {
-    return `바이어 ${leadsFound}명 · 이메일 ${previewsGenerated}개`
+    return `바이어 ${leadsFound}명 · 이메일 ${previewsGenerated}개 완료`
   }
 
   if (phase === "discovery" && leadsFound) {
-    return `${leadsFound}명 찾는 중...`
+    return `${leadsFound}명 찾았어요`
   }
 
-  if (phase === "previews" && previewsGenerated && totalPreviews) {
-    return `이메일 ${previewsGenerated}/${totalPreviews}개 작성 중`
+  if (phase === "group") {
+    return "리스트 정리하는 중"
+  }
+
+  if (phase === "templates") {
+    return "이메일 초안 쓰는 중"
+  }
+
+  if (phase === "previews" && previewsGenerated !== undefined && totalPreviews) {
+    const remaining = totalPreviews - previewsGenerated
+    return remaining > 0 ? `${previewsGenerated}개 완료, ${remaining}개 남았어요` : "거의 다 됐어요"
   }
 
   return null
@@ -215,21 +228,23 @@ function NotificationItem({
     workspaceId?: string
   } | null
 
-  const phase = metadata?.phase
-  const rawProgressPercent = metadata?.progressPercent ?? 0
-  const isComplete = phase === "complete" || notification.type === "success"
-  const isError = phase === "error" || notification.type === "error"
+  const metadataPhase = metadata?.phase
+  const isComplete = metadataPhase === "complete" || notification.type === "success"
+  const isError = metadataPhase === "error" || notification.type === "error"
   const isInProgress = notification.type === "onboarding" && !isComplete && !isError
 
   // workspaceId를 metadata에서 가져오거나 부모에서 받은 것 사용
   const workspaceId = metadata?.workspaceId || parentWorkspaceId || ""
 
-  // 공유 Fake progress 적용 (StepBuyerLoading과 동기화)
-  const displayProgress = useSharedFakeProgressReadOnly(
-    workspaceId,
-    rawProgressPercent,
-    isInProgress,
-  )
+  // NEW: 통합 Onboarding Progress Store에서 실시간 진행률 가져오기
+  // StepBuyerLoading과 동일한 상태 공유
+  const progressState = useOnboardingProgressReadOnly(workspaceId)
+
+  // 진행 중인 온보딩이면 통합 Store에서 실시간 진행률 사용
+  // 완료/에러면 DB에 저장된 값 사용
+  const displayProgress = isInProgress
+    ? progressState.displayProgress
+    : (metadata?.progressPercent ?? 0)
 
   // 상세 정보 포맷팅
   const detailsText = formatOnboardingDetails(notification.metadata)
@@ -425,6 +440,31 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
   } = useNotificationsManager(workspaceId, {
     limit: 50,
     enableSSE: true,
+  })
+
+  // NEW: 진행 중인 온보딩이 있는지 확인
+  const hasInProgressOnboarding = useMemo(
+    () =>
+      notifications.some(
+        (n) =>
+          n.type === "onboarding" &&
+          n.metadata?.phase !== "complete" &&
+          n.metadata?.phase !== "error",
+      ),
+    [notifications],
+  )
+
+  // 통합 Progress Store에서 현재 상태 확인 (읽기 전용)
+  const progressState = useOnboardingProgressReadOnly(workspaceId || "")
+
+  // NEW: StepBuyerLoading이 마운트되지 않았고 진행 중인 온보딩이 있으면
+  // 여기서 SSE 연결을 시작하여 실시간 진행률 업데이트
+  // (StepBuyerLoading이 마운트되면 그쪽에서 관리)
+  const shouldConnectSSE = !!workspaceId && hasInProgressOnboarding && !progressState.isConnected
+
+  // SSE 연결 (StepBuyerLoading이 없을 때만 활성화)
+  useOnboardingProgress(workspaceId || "", {
+    enabled: shouldConnectSSE,
   })
 
   const groupedNotifications = useMemo(

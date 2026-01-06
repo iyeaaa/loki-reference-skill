@@ -3,9 +3,13 @@
  *
  * Unipile 연동 완료 후 백그라운드 작업이 아직 진행 중일 때 표시되는 화면.
  * SSE를 통해 실시간 진행 상황을 보여주고, 완료 시 Step 4로 자동 이동.
+ *
+ * NEW: 통합 Onboarding Progress Store 사용
+ * - NotificationBell과 상태 공유
+ * - Phase별 Fake Progress 지원
+ * - 재접속 시 캐시 상태 복원
  */
 
-import { useAtom } from "jotai"
 import { CheckCircle2, Circle, Loader2, Mail, Search, Users, XCircle, Zap } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -14,14 +18,10 @@ import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import {
-  type LeadProgressItem,
-  useOnboardingProgress,
-  useOnboardingSSE,
-} from "@/lib/api/hooks/onboarding"
+import { useOnboardingProgress as useOnboardingProgressAPI } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
-import { resetFakeProgressAtom, useSharedFakeProgress } from "@/store/fake-progress"
+import { useOnboardingProgress, useResetOnboardingProgress } from "@/store/onboarding-progress"
 
 type ViewState = "loading" | "generating" | "complete" | "error"
 
@@ -41,9 +41,14 @@ function getStatusIcon(status: PhaseStatus) {
 
 const phases = [
   { id: "discovery", labelKr: "바이어 찾는 중", labelEn: "Finding buyers", icon: Search },
-  { id: "group", labelKr: "연락처 정리 중", labelEn: "Organizing contacts", icon: Users },
-  { id: "templates", labelKr: "이메일 초안 작성 중", labelEn: "Drafting emails", icon: Zap },
-  { id: "previews", labelKr: "맞춤 이메일 완성 중", labelEn: "Personalizing emails", icon: Mail },
+  { id: "group", labelKr: "리스트 정리하는 중", labelEn: "Organizing list", icon: Users },
+  { id: "templates", labelKr: "이메일 초안 쓰는 중", labelEn: "Writing email drafts", icon: Zap },
+  {
+    id: "previews",
+    labelKr: "맞춤 이메일 쓰는 중",
+    labelEn: "Writing personalized emails",
+    icon: Mail,
+  },
 ]
 
 function PhaseChecklist({
@@ -97,9 +102,8 @@ export function StepBuyerLoading() {
   const [viewState, setViewState] = useState<ViewState>("loading")
   const currentStep = searchParams.get("step")
   const isFromStep4 = searchParams.get("from") === "step4"
-  const [leads, setLeads] = useState<LeadProgressItem[]>([])
   const isKorean = i18n.language === "ko"
-  const [, resetFakeProgress] = useAtom(resetFakeProgressAtom)
+  const resetProgress = useResetOnboardingProgress()
 
   // Get current user and workspace
   const currentUser = useMemo(() => {
@@ -114,41 +118,26 @@ export function StepBuyerLoading() {
   const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
-  // Get onboarding progress from DB
-  const { data: onboardingData, isLoading: onboardingLoading } = useOnboardingProgress(
+  // Get onboarding progress from DB (for initial state check)
+  const { data: onboardingData, isLoading: onboardingLoading } = useOnboardingProgressAPI(
     workspaceId,
     !!workspaceId,
   )
 
-  // SSE for real-time progress updates
-  const shouldEnableSSE =
-    !!workspaceId &&
-    (viewState === "generating" ||
-      onboardingData?.jobStatus === "active" ||
-      onboardingData?.jobStatus === "waiting")
+  // SSE 연결 조건: workspaceId가 있고, 로딩이 끝났으면 바로 연결
+  // (캐시된 상태가 있으면 즉시 수신됨)
+  const shouldEnableSSE = !!workspaceId && !workspacesLoading
 
+  // NEW: 통합 Onboarding Progress Hook 사용
   const {
     phase,
-    progressPercent,
+    displayProgress,
     message,
     isComplete: sseComplete,
     hasError: sseError,
-  } = useOnboardingSSE(workspaceId, {
+    leads,
+  } = useOnboardingProgress(workspaceId, {
     enabled: shouldEnableSSE,
-    onProgress: (event) => {
-      if (event.details?.leads) {
-        setLeads(event.details.leads)
-      } else if (event.details?.currentLead) {
-        const currentLead = event.details.currentLead
-        setLeads((prev) => {
-          const existing = prev.find((l) => l.leadId === currentLead.leadId)
-          if (existing) {
-            return prev.map((l) => (l.leadId === currentLead.leadId ? currentLead : l))
-          }
-          return [...prev, currentLead]
-        })
-      }
-    },
     onComplete: () => {
       // 완료 시 Step 4로 자동 이동
       setSearchParams({ step: "4" })
@@ -157,6 +146,9 @@ export function StepBuyerLoading() {
       setViewState("error")
     },
   })
+
+  // Use progress from unified store (includes fake progress)
+  const progressPercent = displayProgress
 
   // Determine initial view state based on job status
   useEffect(() => {
@@ -213,28 +205,22 @@ export function StepBuyerLoading() {
     }
   }, [sseComplete, sseError, viewState, setSearchParams])
 
-  // Cleanup: Reset fake progress state on unmount (페이지 전환 시)
+  // Cleanup: Reset progress state on unmount (페이지 전환 시)
   useEffect(
     () => () => {
       if (workspaceId) {
-        resetFakeProgress(workspaceId)
+        resetProgress(workspaceId)
       }
     },
-    [workspaceId, resetFakeProgress],
-  )
-
-  // UX: Fake progress for initial loading (공유 상태로 NotificationBell과 동기화)
-  const displayProgress = useSharedFakeProgress(
-    workspaceId,
-    progressPercent,
-    viewState === "generating",
-    { maxFakeProgress: 15 },
+    [workspaceId, resetProgress],
   )
 
   const handleRetry = useCallback(() => {
-    setLeads([])
+    if (workspaceId) {
+      resetProgress(workspaceId)
+    }
     setViewState("generating")
-  }, [])
+  }, [workspaceId, resetProgress])
 
   const handleBack = useCallback(() => {
     setSearchParams({ step: "2" })
@@ -367,9 +353,9 @@ export function StepBuyerLoading() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{isKorean ? "진행 중" : "In progress"}</span>
-              <span className="font-medium text-blue-600">{Math.round(displayProgress)}%</span>
+              <span className="font-medium text-blue-600">{Math.round(progressPercent)}%</span>
             </div>
-            <Progress className="h-3" value={displayProgress} />
+            <Progress className="h-3" value={progressPercent} />
           </div>
 
           {/* Phase Checklist */}

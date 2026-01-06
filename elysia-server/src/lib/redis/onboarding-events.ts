@@ -13,9 +13,15 @@ import { createRedisConnection } from "./connection"
 // ============================================================================
 
 export const ONBOARDING_CHANNEL_PREFIX = "onboarding:progress:"
+export const ONBOARDING_STATE_PREFIX = "onboarding:state:"
+export const ONBOARDING_STATE_TTL = 3600 // 1 hour TTL for cached state
 
 export function getOnboardingChannel(workspaceId: string): string {
   return `${ONBOARDING_CHANNEL_PREFIX}${workspaceId}`
+}
+
+export function getOnboardingStateKey(workspaceId: string): string {
+  return `${ONBOARDING_STATE_PREFIX}${workspaceId}`
 }
 
 // ============================================================================
@@ -103,19 +109,75 @@ function getPublisher(): Redis {
 /**
  * Emit onboarding progress event
  * Called from BullMQ worker to broadcast progress
+ *
+ * NEW: Also caches state in Redis for reconnection support
+ * - Clients can retrieve cached state on SSE connect
+ * - Enables seamless page refresh/reconnection
  */
 export async function emitOnboardingProgress(event: OnboardingProgressEvent): Promise<void> {
   try {
     const channel = getOnboardingChannel(event.workspaceId)
+    const stateKey = getOnboardingStateKey(event.workspaceId)
     const publisher = getPublisher()
-    await publisher.publish(channel, JSON.stringify(event))
+    const eventJson = JSON.stringify(event)
+
+    // Publish to PubSub for real-time listeners
+    await publisher.publish(channel, eventJson)
+
+    // Cache state in Redis for reconnection (with TTL)
+    // Complete/error states have shorter TTL since they're final
+    const ttl = event.phase === "complete" || event.phase === "error" ? 300 : ONBOARDING_STATE_TTL
+    await publisher.setex(stateKey, ttl, eventJson)
+
     logger.debug(
       { workspaceId: event.workspaceId, phase: event.phase, percent: event.progressPercent },
-      "[OnboardingEvents] Progress emitted",
+      "[OnboardingEvents] Progress emitted and cached",
     )
   } catch (error) {
     logger.warn({ error, event }, "[OnboardingEvents] Failed to emit progress")
     // Don't throw - progress emission failure shouldn't stop the job
+  }
+}
+
+/**
+ * Get cached onboarding progress state
+ * Used by SSE endpoint to send initial state on connection
+ */
+export async function getCachedOnboardingState(
+  workspaceId: string,
+): Promise<OnboardingProgressEvent | null> {
+  try {
+    const stateKey = getOnboardingStateKey(workspaceId)
+    const publisher = getPublisher()
+    const cached = await publisher.get(stateKey)
+
+    if (cached) {
+      const event = JSON.parse(cached) as OnboardingProgressEvent
+      logger.debug(
+        { workspaceId, phase: event.phase, percent: event.progressPercent },
+        "[OnboardingEvents] Retrieved cached state",
+      )
+      return event
+    }
+    return null
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to get cached state")
+    return null
+  }
+}
+
+/**
+ * Clear cached onboarding state
+ * Called when job is completed or cancelled
+ */
+export async function clearCachedOnboardingState(workspaceId: string): Promise<void> {
+  try {
+    const stateKey = getOnboardingStateKey(workspaceId)
+    const publisher = getPublisher()
+    await publisher.del(stateKey)
+    logger.debug({ workspaceId }, "[OnboardingEvents] Cleared cached state")
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to clear cached state")
   }
 }
 
@@ -229,8 +291,8 @@ export function createDiscoverySearchingEvent(
     jobId,
     phase: "discovery",
     progressPercent: 10,
-    message: "Searching database...",
-    messageKr: "데이터베이스 검색 중",
+    message: "Loading buyer information...",
+    messageKr: "바이어 정보 불러오는 중",
   })
 }
 
@@ -372,8 +434,8 @@ export function createTemplatesCompleteEvent(
     jobId,
     phase: "templates",
     progressPercent: 65,
-    message: "Email templates ready",
-    messageKr: "템플릿 준비 완료 ✓",
+    message: "Email drafts ready",
+    messageKr: "이메일 초안 완료 ✓",
     details: {
       templatesGenerated: totalTemplates,
       totalTemplates,
@@ -392,7 +454,7 @@ export function createSequenceStartEvent(
     phase: "sequence",
     progressPercent: 70,
     message: "Setting up campaign...",
-    messageKr: "발송 일정 설정 중",
+    messageKr: "발송 순서 정하는 중",
   })
 }
 

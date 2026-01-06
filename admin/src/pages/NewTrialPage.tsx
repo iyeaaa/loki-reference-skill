@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { DashboardPreview } from "@/components/trial/DashboardPreview"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { trackTrialPageVisit } from "@/lib/analytics"
+import { trackLogin, trackTrialPageVisit } from "@/lib/analytics"
 import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } from "@/lib/animations"
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
@@ -64,6 +64,9 @@ export default function NewTrialPage() {
 
       // Update auth context
       login(response.token, authUser, true)
+
+      // 📊 Analytics: Trial 로그인 추적
+      trackLogin("google")
 
       toast.success(`환영합니다, ${response.user.username}님!`)
 

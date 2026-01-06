@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { trackSurveyStep } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import {
   getLastCompletedStep,
@@ -90,6 +91,8 @@ export default function OnboardingPage() {
     const updated = mergeSurveyData({ industry, lang: i18n.language })
     setData((prev) => ({ ...prev, industry }))
     setSurveyData(updated)
+    // 📊 Analytics: Survey Step 1 완료
+    trackSurveyStep(1, { industry })
     navigate("/trial/survey/2")
   }
 
@@ -97,6 +100,8 @@ export default function OnboardingPage() {
     const updated = mergeSurveyData({ target, lang: i18n.language })
     setData((prev) => ({ ...prev, target }))
     setSurveyData(updated)
+    // 📊 Analytics: Survey Step 2 완료
+    trackSurveyStep(2, { target })
     navigate("/trial/survey/3")
   }
 
@@ -104,6 +109,8 @@ export default function OnboardingPage() {
     const updated = mergeSurveyData({ country, lang: i18n.language })
     setData((prev) => ({ ...prev, country }))
     setSurveyData(updated)
+    // 📊 Analytics: Survey Step 3 완료
+    trackSurveyStep(3, { country })
     navigate("/trial/survey/4")
   }
 
@@ -111,6 +118,8 @@ export default function OnboardingPage() {
     const updated = mergeSurveyData({ experience, lang: i18n.language })
     setData((prev) => ({ ...prev, experience }))
     setSurveyData(updated)
+    // 📊 Analytics: Survey Step 4 완료 (마지막)
+    trackSurveyStep(4, { experience })
     navigate("/trial")
   }
 

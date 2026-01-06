@@ -280,8 +280,6 @@ ${trialDaysRemaining !== undefined ? `⏰ ${t.trialRemaining(trialDaysRemaining)
 <b>${t.nextStepsTitle}</b>
 ${nextStepsList}
 
-───────────────────────
-
 <span style="color:#888">${t.footer}
 ${t.footerContact}</span>
 

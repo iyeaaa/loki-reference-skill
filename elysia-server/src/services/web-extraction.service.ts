@@ -634,16 +634,11 @@ ${combinedContent.substring(0, 15000)}
     const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
 
     const { text: responseText } = await generateText({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,
-      providerOptions: {
-        openai: {
-          reasoningEffort: "minimal",
-        },
-      },
-      // temperature: 0.1,
+      temperature: 0.1,
       abortSignal: controller.signal,
     })
 
@@ -803,16 +798,11 @@ customSearchResults의 각 검색 조건에 대해서는:
     const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
 
     const { text: responseText } = await generateText({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       system:
         "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
       prompt: prompt,
-      providerOptions: {
-        openai: {
-          reasoningEffort: "minimal",
-        },
-      },
-      // temperature: 0.1,
+      temperature: 0.1,
       abortSignal: controller.signal,
     })
 
@@ -932,16 +922,11 @@ ${combinedContent.substring(0, 15000)}
     const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
 
     const result = await streamText({
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-4o-mini"),
       system:
         "You are a friendly business analyst who explains company information in a clear, conversational way. Write in Korean using natural language, not rigid formats. Be informative but approachable.",
       prompt: prompt,
-      providerOptions: {
-        openai: {
-          reasoningEffort: "low",
-        },
-      },
-      // temperature: 0.4,
+      temperature: 0.4,
       abortSignal: controller.signal,
     })
 

@@ -21,9 +21,9 @@ import {
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
-// 웹데추 v1.1 Legacy 설정 (안정성 우선)
+// 웹데추 v1.1 Legacy 설정
 const LEGACY_CONFIG = {
-  MAX_BATCH_SIZE: 100, // 최대 100개로 제한
+  MAX_BATCH_SIZE: 10000, // 배치 크기 제한 해제 (실질적으로 무제한)
   MAX_CONCURRENT: 2, // 동시 처리 2개로 제한
 }
 
@@ -864,5 +864,170 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       params: t.Object({
         jobId: t.String(),
       }),
+    },
+  )
+
+  /**
+   * POST /api/v1/admin/web-extraction/enrich-lead
+   * Lead Enrichment용 빠른 이메일/회사정보 추출
+   * 온보딩 및 Lead Discovery에 최적화 (Jina+Gemini 대체)
+   *
+   * 특징:
+   * - 직접 크롤링 (Jina 대신 Cheerio) - 10초 타임아웃
+   * - GPT-4o-mini 사용 (.env OPENAI_API_KEY)
+   * - Hunter.io 폴백 지원
+   */
+  .post(
+    "/enrich-lead",
+    async ({ body, set }) => {
+      const { websiteUrl, hunterApiKey, skipHunter, crawlDepth, timeoutSeconds } = body
+
+      logger.info(
+        {
+          websiteUrl,
+          skipHunter,
+          crawlDepth,
+          timeoutSeconds,
+        },
+        "[Lead Enrichment] Starting fast extraction",
+      )
+
+      // URL 유효성 검사
+      if (!websiteUrl || websiteUrl.trim().length < 3) {
+        set.status = 400
+        return {
+          success: false,
+          error: "유효한 웹사이트 URL을 입력해주세요",
+        }
+      }
+
+      try {
+        // 동적 import로 순환 의존성 방지
+        const { enrichLead } = await import("../services/lead-enrichment.service")
+
+        const startTime = Date.now()
+
+        const result = await enrichLead(websiteUrl.trim(), "", {
+          hunterApiKey,
+          skipHunter: skipHunter ?? !hunterApiKey,
+          crawlDepth: crawlDepth ?? 0,
+          timeoutSeconds: timeoutSeconds ?? 10,
+        })
+
+        const elapsedMs = Date.now() - startTime
+
+        logger.info(
+          {
+            websiteUrl,
+            emailCount: result.emails.length,
+            hasDescription: !!result.companyInfo.description,
+            elapsedMs,
+          },
+          "[Lead Enrichment] Extraction complete",
+        )
+
+        return {
+          success: true,
+          data: {
+            domain: result.domain,
+            emails: result.emails,
+            companyInfo: result.companyInfo,
+            socialLinks: result.socialLinks,
+            elapsedMs,
+          },
+        }
+      } catch (error) {
+        logger.error({ error, websiteUrl }, "[Lead Enrichment] Extraction failed")
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "추출 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        websiteUrl: t.String(),
+        hunterApiKey: t.Optional(t.String()),
+        skipHunter: t.Optional(t.Boolean()),
+        crawlDepth: t.Optional(t.Number()), // 0: 메인만, 1: Contact/About 포함
+        timeoutSeconds: t.Optional(t.Number()),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "Lead Enrichment용 빠른 이메일/회사정보 추출",
+        description:
+          "웹사이트에서 이메일, 회사정보, 소셜링크를 빠르게 추출합니다. Jina+Gemini 대신 직접 크롤링+GPT-4o-mini를 사용하여 속도가 개선되었습니다.",
+      },
+    },
+  )
+
+  /**
+   * POST /api/v1/admin/web-extraction/extract-email-quick
+   * 이메일만 빠르게 추출 (온보딩 Lead Enrichment 최적화)
+   */
+  .post(
+    "/extract-email-quick",
+    async ({ body, set }) => {
+      const { websiteUrl, hunterApiKey, skipHunter } = body
+
+      if (!websiteUrl || websiteUrl.trim().length < 3) {
+        set.status = 400
+        return {
+          success: false,
+          error: "유효한 웹사이트 URL을 입력해주세요",
+        }
+      }
+
+      try {
+        const { extractEmailQuick } = await import("../services/lead-enrichment.service")
+
+        const startTime = Date.now()
+
+        const result = await extractEmailQuick(websiteUrl.trim(), {
+          hunterApiKey,
+          skipHunter: skipHunter ?? !hunterApiKey,
+        })
+
+        const elapsedMs = Date.now() - startTime
+
+        logger.info(
+          {
+            websiteUrl,
+            email: result.email ? "found" : "not found",
+            source: result.source,
+            elapsedMs,
+          },
+          "[Extract Email Quick] Complete",
+        )
+
+        return {
+          success: true,
+          data: {
+            ...result,
+            elapsedMs,
+          },
+        }
+      } catch (error) {
+        logger.error({ error, websiteUrl }, "[Extract Email Quick] Failed")
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "추출 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        websiteUrl: t.String(),
+        hunterApiKey: t.Optional(t.String()),
+        skipHunter: t.Optional(t.Boolean()),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "이메일만 빠르게 추출",
+        description:
+          "웹사이트에서 이메일만 빠르게 추출합니다. 온보딩 Lead Enrichment에 최적화되어 있습니다.",
+      },
     },
   )

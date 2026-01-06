@@ -67,10 +67,11 @@ function initGoogleAnalytics() {
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`
   document.head.appendChild(script)
 
-  // gtag 초기화
+  // gtag 초기화 (Google 표준 패턴)
   window.dataLayer = window.dataLayer || []
-  window.gtag = (...args: unknown[]) => {
-    window.dataLayer.push(args)
+  window.gtag = function (..._args: unknown[]) {
+    // biome-ignore lint/complexity/noArguments: GA4 requires arguments object, not rest params array
+    window.dataLayer.push(arguments)
   }
   window.gtag("js", new Date())
   window.gtag("config", measurementId, {

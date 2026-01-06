@@ -7,6 +7,7 @@ import logger from "../utils/logger"
 
 interface GenerateTemplateOptions {
   workspaceName: string
+  workspaceNameEn?: string
   workspaceDescription?: string
   country: string
   userPrompt: string
@@ -99,6 +100,31 @@ class AITemplateGenerationService {
 
     const shuffled = [...this.emailExamples].sort(() => 0.5 - Math.random())
     return shuffled.slice(0, Math.min(count, this.emailExamples.length))
+  }
+
+  /**
+   * AI를 사용하여 회사명의 언어 감지
+   */
+  private async detectLanguage(text: string): Promise<string> {
+    try {
+      const result = await generateText({
+        model: this.openai("gpt-5-nano"),
+        prompt: `Detect the language of this company name and respond with ONLY one word: English, Korean, Japanese, Chinese, German, French, Spanish, or Other.
+
+Company name: "${text}"`,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "minimal",
+          },
+        },
+      })
+
+      return result.text.trim()
+    } catch (error) {
+      console.error(`[AITemplate] Failed to detect language:`, error)
+      // Fallback: assume English for latin characters, otherwise Other
+      return /^[a-zA-Z0-9\s\-.,&()]+$/.test(text) ? "English" : "Other"
+    }
   }
 
   /**
@@ -215,7 +241,7 @@ ${previousEmailsSection}
   /**
    * 회사명을 타겟 언어로 번역
    */
-  private async translateCompanyName(companyName: string, targetLanguage: string): Promise<string> {
+  async translateCompanyName(companyName: string, targetLanguage: string): Promise<string> {
     try {
       console.log(`[AITemplate] Translating company name: "${companyName}" to ${targetLanguage}`)
 
@@ -313,6 +339,7 @@ ${previousEmailsSection}
   async generateEmailTemplate(options: GenerateTemplateOptions): Promise<GeneratedTemplate> {
     const {
       workspaceName,
+      workspaceNameEn,
       workspaceDescription,
       country,
       userPrompt,
@@ -384,7 +411,7 @@ ${ex.content}
         ? "Write the ENTIRE email in English. Do NOT mix languages."
         : `Write the email in the primary language of "${country}". Keep it consistent - do NOT mix languages.`
 
-      // 3. 회사명 번역 (한글 → 타겟 언어)
+      // 3. 회사명 언어 감지 및 선택 로직
       const targetLanguage = isEnglishTarget
         ? "English"
         : country.toLowerCase().includes("japan") || country.toLowerCase() === "jp"
@@ -395,7 +422,33 @@ ${ex.content}
               ? "Korean"
               : "English" // fallback
 
-      const translatedWorkspaceName = await this.translateCompanyName(workspaceName, targetLanguage)
+      // 3-1. companyName의 언어 감지
+      const companyNameLang = await this.detectLanguage(workspaceName)
+      console.log(`[AITemplate] Detected language for "${workspaceName}": ${companyNameLang}`)
+
+      // 3-2. 타겟 언어와 비교하여 회사명 결정
+      let finalCompanyName: string
+      const needsTranslation = companyNameLang !== targetLanguage
+
+      if (!needsTranslation) {
+        // 언어가 같으면 원본 사용
+        finalCompanyName = workspaceName
+        console.log(
+          `[AITemplate] Language matches target (${targetLanguage}), using original name: "${workspaceName}"`,
+        )
+      } else if (workspaceNameEn) {
+        // 다르고 영어 회사명이 있으면 사용
+        finalCompanyName = workspaceNameEn
+        console.log(`[AITemplate] Using English company name as fallback: "${workspaceNameEn}"`)
+      } else {
+        // 없으면 번역
+        finalCompanyName = await this.translateCompanyName(workspaceName, targetLanguage)
+        console.log(
+          `[AITemplate] Translated company name: "${workspaceName}" → "${finalCompanyName}"`,
+        )
+      }
+
+      const translatedWorkspaceName = finalCompanyName
 
       // Build sequence context section if provided
       const sequenceSection = sequenceContext

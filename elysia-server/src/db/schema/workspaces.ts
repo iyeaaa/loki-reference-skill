@@ -40,6 +40,7 @@ export const workspaces = pgTable(
 
     // Company information
     companyName: varchar("company_name", { length: 255 }),
+    companyNameEn: varchar("company_name_en", { length: 255 }),
     companyWebsite: varchar("company_website", { length: 500 }),
     companyPhone: varchar("company_phone", { length: 50 }),
     industry: varchar("industry", { length: 100 }),

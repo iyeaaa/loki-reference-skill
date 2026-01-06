@@ -1,4 +1,4 @@
-import { Building2 } from "lucide-react"
+import { Building2, Loader2 } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -6,7 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useEnrichWorkspace, useUpdateWorkspace, useWorkspace } from "@/lib/api/hooks/workspaces"
+import {
+  useEnrichWorkspace,
+  useTranslateCompanyName,
+  useUpdateWorkspace,
+  useWorkspace,
+} from "@/lib/api/hooks/workspaces"
 
 type WorkspaceSettingsProps = {
   workspaceId: string
@@ -25,9 +30,11 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
   const updateWorkspaceMutation = useUpdateWorkspace()
   const enrichWorkspace = useEnrichWorkspace()
+  const translateMutation = useTranslateCompanyName()
 
   const [formData, setFormData] = useState({
     companyName: "",
+    companyNameEn: "",
     companyWebsite: "",
     companyPhone: "",
     industry: "",
@@ -41,6 +48,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     if (workspace) {
       setFormData({
         companyName: workspace.companyName || "",
+        companyNameEn: workspace.companyNameEn || "",
         companyWebsite: workspace.companyWebsite || "",
         companyPhone: workspace.companyPhone || "",
         industry: workspace.industry || "",
@@ -50,6 +58,37 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
       })
     }
   }, [workspace])
+
+  // Auto-translate company name with debounce
+  useEffect(() => {
+    if (!formData.companyName || formData.companyName.trim() === "") {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      translateMutation.mutate(
+        {
+          companyName: formData.companyName,
+          targetLanguage: "English",
+        },
+        {
+          onSuccess: (translatedName) => {
+            console.log("[Translation] Success:", translatedName)
+            setFormData((prev) => ({
+              ...prev,
+              companyNameEn: translatedName,
+            }))
+          },
+          onError: (error) => {
+            console.error("[Translation] Failed:", error)
+          },
+        },
+      )
+    }, 2000)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.companyName])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,6 +105,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
         description: workspace.description,
         isActive: workspace.isActive,
         companyName: formData.companyName || undefined,
+        companyNameEn: formData.companyNameEn || undefined,
         companyWebsite: formData.companyWebsite || undefined,
         companyPhone: formData.companyPhone || undefined,
         industry: formData.industry || undefined,
@@ -132,6 +172,28 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>
+                {t("settings.workspace.companyNameEn", "Company Name (English)")}
+                <span className="ml-2 text-gray-500 text-xs">
+                  ({t("settings.workspace.optional", "Optional")})
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  name="companyNameEn"
+                  onChange={handleChange}
+                  placeholder="e.g., Acme Corporation"
+                  value={formData.companyNameEn}
+                />
+                {translateMutation.isPending && (
+                  <Loader2 className="absolute top-3 right-3 h-4 w-4 animate-spin text-blue-500" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={companyWebsiteId}>{t("settings.workspace.companyWebsite")}</Label>
               <Input

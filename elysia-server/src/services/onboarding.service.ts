@@ -1616,6 +1616,7 @@ export async function autoGenerateOnboarding(
 
         const template = await aiService.generateEmailTemplate({
           workspaceName: workspace.companyName || workspace.name,
+          workspaceNameEn: workspace.companyNameEn || undefined,
           workspaceDescription: effectiveDescription,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,
@@ -1899,6 +1900,7 @@ async function regenerateSequenceEmails(
     try {
       const template = await aiService.generateEmailTemplate({
         workspaceName: workspace.companyName || workspace.name,
+        workspaceNameEn: workspace.companyNameEn || undefined,
         workspaceDescription: workspace.companyDescription || undefined,
         country: surveyData.country || "jp",
         userPrompt: `${prompt} ${industryContext}`,

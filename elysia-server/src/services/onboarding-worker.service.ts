@@ -650,6 +650,7 @@ export async function runTemplatesPhase(
 
         const template = await aiService.generateEmailTemplate({
           workspaceName: workspace.companyName || workspace.name,
+          workspaceNameEn: workspace.companyNameEn || undefined,
           workspaceDescription: effectiveDescription,
           country: surveyData.country,
           userPrompt: `${prompt} ${industryContext}`,

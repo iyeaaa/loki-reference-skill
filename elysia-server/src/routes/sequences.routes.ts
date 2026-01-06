@@ -1197,6 +1197,7 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         const aiService = getAITemplateGenerationService()
         const template = await aiService.generateEmailTemplate({
           workspaceName: workspace.companyName || workspace.name,
+          workspaceNameEn: workspace.companyNameEn || undefined,
           workspaceDescription: workspace.companyDescription || undefined,
           country: body.country,
           userPrompt: body.prompt,

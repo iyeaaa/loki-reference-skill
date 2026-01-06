@@ -634,6 +634,7 @@ export function useOnboardingWithSSE(
 
 type TestOnboardingRequest = {
   workspaceName: string
+  workspaceNameEn?: string
   workspaceDescription?: string
   industry: string
   target: string

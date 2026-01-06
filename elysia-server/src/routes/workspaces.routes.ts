@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia"
+import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import { getUserIdFromToken } from "../utils/auth.util"
@@ -10,6 +11,7 @@ const workspaceSchema = t.Object({
   ownerId: t.String({ format: "uuid" }),
   isActive: t.Optional(t.Boolean()),
   companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyNameEn: t.Optional(t.String({ maxLength: 255 })),
   companyWebsite: t.Optional(t.String({ maxLength: 500 })),
   companyPhone: t.Optional(t.String({ maxLength: 50 })),
   industry: t.Optional(t.String({ maxLength: 100 })),
@@ -24,6 +26,7 @@ const updateWorkspaceSchema = t.Object({
   ownerId: t.Optional(t.String({ format: "uuid" })),
   isActive: t.Boolean(),
   companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyNameEn: t.Optional(t.String({ maxLength: 255 })),
   companyWebsite: t.Optional(t.String({ maxLength: 500 })),
   companyPhone: t.Optional(t.String({ maxLength: 50 })),
   industry: t.Optional(t.String({ maxLength: 100 })),
@@ -39,6 +42,7 @@ const partialUpdateWorkspaceSchema = t.Object({
   ownerId: t.Optional(t.String({ format: "uuid" })),
   isActive: t.Optional(t.Boolean()),
   companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyNameEn: t.Optional(t.String({ maxLength: 255 })),
   companyWebsite: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
   companyPhone: t.Optional(t.String({ maxLength: 50 })),
   industry: t.Optional(t.String({ maxLength: 100 })),
@@ -512,6 +516,33 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
     })
     return workspaces
   })
+
+  // Translate company name to target language
+  .post(
+    "/translate-company-name",
+    async ({ body, set }) => {
+      try {
+        const aiService = getAITemplateGenerationService()
+        const translated = await aiService.translateCompanyName(
+          body.companyName,
+          body.targetLanguage || "English",
+        )
+        return successResponse({ translatedName: translated }, "회사명이 번역되었습니다.")
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "회사명 번역에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        companyName: t.String(),
+        targetLanguage: t.Optional(t.String()),
+      }),
+    },
+  )
 
 // Admin bulk update routes
 export const adminWorkspaceRoutes = new Elysia({

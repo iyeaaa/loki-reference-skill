@@ -250,13 +250,17 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     // STEP 3: Get Workspace Info for AI Template Generation
     // ==================================================================================
     const workspaceQuery = sql`
-      SELECT id, name, description FROM workspaces WHERE id = ${workspaceId}
+      SELECT id, name, description, company_name, company_name_en 
+      FROM workspaces 
+      WHERE id = ${workspaceId}
     `
     const workspaceResult = await db.execute(workspaceQuery)
     const workspace = workspaceResult.rows[0] as {
       id: string
       name: string
       description: string | null
+      companyName: string | null
+      companyNameEn: string | null
     }
 
     if (!workspace) {
@@ -403,7 +407,8 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
 
       try {
         const template = await aiService.generateEmailTemplate({
-          workspaceName: workspace.name,
+          workspaceName: workspace.companyName || workspace.name,
+          workspaceNameEn: workspace.companyNameEn || undefined,
           workspaceDescription: workspace.description || undefined,
           country: aiStrategy.dominant_country || dominantCountry,
           userPrompt: stepPrompt,

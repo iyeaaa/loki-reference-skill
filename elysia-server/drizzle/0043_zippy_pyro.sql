@@ -1,0 +1,1 @@
+ALTER TABLE "workspaces" ADD COLUMN "company_name_en" varchar(255);

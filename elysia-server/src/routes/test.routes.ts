@@ -139,6 +139,7 @@ async function discoverLeadsEnhanced(options: {
  */
 async function generateEmails(options: {
   workspaceName: string
+  workspaceNameEn?: string
   workspaceDescription?: string
   industry: string
   target: string
@@ -158,6 +159,7 @@ async function generateEmails(options: {
 
     const template = await aiService.generateEmailTemplate({
       workspaceName: options.workspaceName,
+      workspaceNameEn: options.workspaceNameEn,
       workspaceDescription: options.workspaceDescription,
       country: countryFullName,
       userPrompt: `${prompt} ${industryContext}`,
@@ -181,6 +183,7 @@ async function processOnboardingTest(
   jobId: string,
   params: {
     workspaceName: string
+    workspaceNameEn?: string
     workspaceDescription?: string
     industry: string
     target: string
@@ -217,6 +220,7 @@ async function processOnboardingTest(
     // Run email generation
     const emailTemplates = await generateEmails({
       workspaceName: params.workspaceName,
+      workspaceNameEn: params.workspaceNameEn,
       workspaceDescription: params.workspaceDescription,
       industry: params.industry,
       target: params.target,
@@ -297,6 +301,7 @@ export const testRoutes = new Elysia({ prefix: "/api/v1/test" })
     {
       body: t.Object({
         workspaceName: t.String(),
+        workspaceNameEn: t.Optional(t.String()),
         workspaceDescription: t.Optional(t.String()),
         industry: t.String(),
         target: t.String(),

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import toast from "react-hot-toast"
-import { workspacesApi } from "../services/workspaces"
+import { translateCompanyName, workspacesApi } from "../services/workspaces"
 import type {
   CreateWorkspaceData,
   CreateWorkspaceProductData,
@@ -482,5 +482,18 @@ export function useDeleteWorkspaceProduct() {
     onError: (error: Error) => {
       toast.error(error.message || "제품 삭제에 실패했습니다")
     },
+  })
+}
+
+// Translate company name hook
+export function useTranslateCompanyName() {
+  return useMutation({
+    mutationFn: ({
+      companyName,
+      targetLanguage = "English",
+    }: {
+      companyName: string
+      targetLanguage?: string
+    }) => translateCompanyName(companyName, targetLanguage),
   })
 }

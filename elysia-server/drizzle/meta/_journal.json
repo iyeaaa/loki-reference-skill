@@ -302,6 +302,13 @@
       "when": 1767072622158,
       "tag": "0042_workable_stature",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1767661964111,
+      "tag": "0043_zippy_pyro",
+      "breakpoints": true
     }
   ]
 }

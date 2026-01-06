@@ -1,5 +1,5 @@
-import { FileText, Rocket } from "lucide-react"
-import { useId, useState } from "react"
+import { FileText, Loader2, Rocket } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useCompanyDescriptionAIEnhance, useTestOnboarding } from "@/lib/api/hooks/onboarding"
+import { useTranslateCompanyName } from "@/lib/api/hooks/workspaces"
 
 const INDUSTRY_OPTIONS = {
   beauty: "뷰티/화장품",
@@ -52,8 +53,10 @@ export function OnboardingTest() {
   const countryId = useId()
 
   const testOnboarding = useTestOnboarding()
+  const translateMutation = useTranslateCompanyName()
 
   const [companyName, setCompanyName] = useState("주식회사 거목")
+  const [companyNameEn, setCompanyNameEn] = useState("")
   const [companyDescription, setCompanyDescription] = useState(
     "가공 기계 및 관련 공장 기계 해외 수출",
   )
@@ -74,6 +77,34 @@ export function OnboardingTest() {
     enabled: true,
   })
 
+  // Auto-translate company name with debounce
+  useEffect(() => {
+    if (!companyName || companyName.trim() === "") {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      translateMutation.mutate(
+        {
+          companyName,
+          targetLanguage: "English",
+        },
+        {
+          onSuccess: (translatedName) => {
+            console.log("[Translation] Success:", translatedName)
+            setCompanyNameEn(translatedName)
+          },
+          onError: (error) => {
+            console.error("[Translation] Failed:", error)
+          },
+        },
+      )
+    }, 2000)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyName])
+
   const canSubmit = companyName.trim().length > 0 && !testOnboarding.isPending
 
   const handleTest = async (e: React.FormEvent) => {
@@ -84,6 +115,7 @@ export function OnboardingTest() {
 
     await testOnboarding.mutateAsync({
       workspaceName: companyName.trim(),
+      workspaceNameEn: companyNameEn.trim() || undefined,
       workspaceDescription: companyDescription.trim() || undefined,
       industry,
       target,
@@ -178,15 +210,31 @@ export function OnboardingTest() {
       </CardHeader>
       <CardContent>
         <form className="max-w-2xl space-y-4" onSubmit={handleTest}>
-          <div className="space-y-2">
-            <Label htmlFor={companyNameId}>회사명 (companyName) *</Label>
-            <Input
-              id={companyNameId}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="주식회사 거목"
-              required
-              value={companyName}
-            />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={companyNameId}>회사명 (companyName) *</Label>
+              <Input
+                id={companyNameId}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="주식회사 거목"
+                required
+                value={companyName}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>회사명 영문 (companyNameEn, optional)</Label>
+              <div className="relative">
+                <Input
+                  onChange={(e) => setCompanyNameEn(e.target.value)}
+                  placeholder="예: Geomok Inc."
+                  value={companyNameEn}
+                />
+                {translateMutation.isPending && (
+                  <Loader2 className="absolute top-3 right-3 h-4 w-4 animate-spin text-blue-500" />
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

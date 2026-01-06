@@ -370,3 +370,21 @@ export function streamEnrichAndStrategize(
   // Return cleanup function
   return () => controller.abort()
 }
+
+// Translate company name
+export async function translateCompanyName(
+  companyName: string,
+  targetLanguage = "English",
+): Promise<string> {
+  const response = await apiFetch<{ translatedName: string }>(
+    "/api/v1/workspaces/translate-company-name",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        companyName,
+        targetLanguage,
+      }),
+    },
+  )
+  return response.translatedName
+}

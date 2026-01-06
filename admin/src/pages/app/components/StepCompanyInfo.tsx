@@ -20,10 +20,15 @@ import {
   useCompleteStep1,
   useOnboardingProgress,
 } from "@/lib/api/hooks/onboarding"
-import { usePatchWorkspace, useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import {
+  usePatchWorkspace,
+  useTranslateCompanyName,
+  useUserWorkspaces,
+} from "@/lib/api/hooks/workspaces"
 
 type SalesStrategyData = {
   companyName: string
+  companyNameEn: string
   companyDescription: string
   industry: string
   target: string
@@ -81,6 +86,7 @@ export function StepCompanyInfo() {
   // Form state for editing
   const [editedData, setEditedData] = useState<SalesStrategyData>({
     companyName: "",
+    companyNameEn: "",
     companyDescription: "",
     industry: "",
     target: "",
@@ -127,6 +133,9 @@ export function StepCompanyInfo() {
     enabled: !isLoading && !!workspace?.id, // Only enable after initial data is loaded
   })
 
+  // Company name translation hook
+  const translateMutation = useTranslateCompanyName()
+
   console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
 
   // Fetch sales strategy data and workspace company info
@@ -149,9 +158,9 @@ export function StepCompanyInfo() {
           apiFetch<{ data: SalesStrategyData }>(
             `/api/v1/workspace-sales-strategies/${workspace.id}`,
           ).catch(() => null),
-          apiFetch<{ data: { companyName?: string; companyDescription?: string } }>(
-            `/api/v1/workspaces/${workspace.id}`,
-          ).catch(() => null),
+          apiFetch<{
+            data: { companyName?: string; companyNameEn?: string; companyDescription?: string }
+          }>(`/api/v1/workspaces/${workspace.id}`).catch(() => null),
         ])
 
         const strategyData = strategyResponse?.data
@@ -163,6 +172,7 @@ export function StepCompanyInfo() {
           const mergedData: SalesStrategyData = {
             ...strategyData,
             companyName: workspaceData?.companyName || strategyData.companyName || "",
+            companyNameEn: workspaceData?.companyNameEn || "",
             companyDescription:
               workspaceData?.companyDescription || strategyData.companyDescription || "",
             websiteUrl: strategyData.websiteUrl || "",
@@ -178,6 +188,7 @@ export function StepCompanyInfo() {
           setEditedData((prev) => ({
             ...prev,
             companyName: workspaceData?.companyName || "",
+            companyNameEn: workspaceData?.companyNameEn || "",
             companyDescription: workspaceData?.companyDescription || "",
           }))
         }
@@ -190,6 +201,37 @@ export function StepCompanyInfo() {
 
     fetchSalesStrategy()
   }, [workspace?.id, isKorean])
+
+  // Auto-translate company name with debounce
+  useEffect(() => {
+    if (!editedData.companyName || editedData.companyName.trim() === "") {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      translateMutation.mutate(
+        {
+          companyName: editedData.companyName,
+          targetLanguage: "English",
+        },
+        {
+          onSuccess: (translatedName) => {
+            console.log("[Translation] Success:", translatedName)
+            setEditedData((prev) => ({
+              ...prev,
+              companyNameEn: translatedName,
+            }))
+          },
+          onError: (error) => {
+            console.error("[Translation] Failed:", error)
+          },
+        },
+      )
+    }, 2000)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editedData.companyName])
 
   const handleSaveAndNext = async () => {
     console.log("[StepCompanyInfo] handleSave called")
@@ -241,11 +283,12 @@ export function StepCompanyInfo() {
 
     setIsSaving(true)
     try {
-      // 1. workspace 업데이트 (companyName, companyDescription, companyWebsite) - tanstack-query mutation 사용
+      // 1. workspace 업데이트 (companyName, companyNameEn, companyDescription, companyWebsite) - tanstack-query mutation 사용
       console.log(`[StepCompanyInfo] 📤 Updating workspace at /api/v1/workspaces/${workspace.id}`)
       const workspacePayload = {
         name: editedData.companyName, // 사이드바에 표시되는 워크스페이스 이름도 업데이트
         companyName: editedData.companyName,
+        companyNameEn: editedData.companyNameEn || null,
         companyDescription: editedData.companyDescription,
         companyWebsite: editedData.websiteUrl || null,
       }
@@ -401,32 +444,56 @@ export function StepCompanyInfo() {
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Company Name - Full width */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-semibold text-gray-900">
-              {isKorean ? "회사 이름" : "Company Name"}
-              <span
-                className={`font-normal text-xs ${errors.companyName ? "text-red-500" : "text-blue-500"}`}
-              >
-                {isKorean ? "필수" : "Required"}
-              </span>
-            </Label>
-            <Input
-              className={`h-12 text-base ${errors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-              onChange={(e) => {
-                setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
-                if (errors.companyName) {
-                  setErrors((prev) => ({ ...prev, companyName: false }))
-                }
-              }}
-              placeholder={isKorean ? "예: 린다 코스메틱" : "e.g., Rinda Cosmetics"}
-              value={editedData.companyName}
-            />
-            {errors.companyName && (
-              <p className="text-red-500 text-sm">
-                {isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name"}
-              </p>
-            )}
+          {/* Company Name - Grid layout with English name */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                {isKorean ? "회사 이름" : "Company Name"}
+                <span
+                  className={`font-normal text-xs ${errors.companyName ? "text-red-500" : "text-blue-500"}`}
+                >
+                  {isKorean ? "필수" : "Required"}
+                </span>
+              </Label>
+              <Input
+                className={`h-12 text-base ${errors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                onChange={(e) => {
+                  setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
+                  if (errors.companyName) {
+                    setErrors((prev) => ({ ...prev, companyName: false }))
+                  }
+                }}
+                placeholder={isKorean ? "예: 린다 코스메틱" : "e.g., Rinda Cosmetics"}
+                value={editedData.companyName}
+              />
+              {errors.companyName && (
+                <p className="text-red-500 text-sm">
+                  {isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name"}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 font-semibold text-gray-900">
+                {isKorean ? "회사 이름 (영문)" : "Company Name (English)"}
+                <span className="font-normal text-gray-500 text-xs">
+                  {isKorean ? "선택사항" : "Optional"}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  className="h-12 text-base"
+                  onChange={(e) => {
+                    setEditedData((prev) => ({ ...prev, companyNameEn: e.target.value }))
+                  }}
+                  placeholder={isKorean ? "예: Rinda Cosmetics" : "e.g., Rinda Cosmetics"}
+                  value={editedData.companyNameEn}
+                />
+                {translateMutation.isPending && (
+                  <Loader2 className="absolute top-3 right-3 h-6 w-6 animate-spin text-blue-500" />
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Company Description - Full width with AI feedback */}

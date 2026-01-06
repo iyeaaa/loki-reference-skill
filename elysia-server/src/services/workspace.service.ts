@@ -235,6 +235,7 @@ export async function getWorkspace(id: string) {
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -269,6 +270,7 @@ export async function getWorkspaceOnlyById(id: string) {
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -298,6 +300,7 @@ export async function createWorkspace(data: {
   ownerId: string
   isActive?: boolean
   companyName?: string
+  companyNameEn?: string
   companyWebsite?: string
   companyPhone?: string
   industry?: string
@@ -327,6 +330,7 @@ export async function createWorkspace(data: {
       ownerId: data.ownerId,
       isActive: data.isActive !== undefined ? data.isActive : true,
       companyName: data.companyName || null,
+      companyNameEn: data.companyNameEn || null,
       companyWebsite: data.companyWebsite || null,
       companyPhone: data.companyPhone || null,
       industry: data.industry || null,
@@ -469,6 +473,7 @@ async function copyEnrichmentFromWorkspace(
     name: targetWorkspace.name,
     isActive: targetWorkspace.isActive,
     companyName: sourceWorkspace.companyName ?? undefined,
+    companyNameEn: sourceWorkspace.companyNameEn ?? undefined,
     industry: sourceWorkspace.industry ?? undefined,
     companySize: sourceWorkspace.companySize ?? undefined,
     companyDescription: sourceWorkspace.companyDescription ?? undefined,
@@ -1215,6 +1220,7 @@ export async function updateWorkspace(
     ownerId?: string
     isActive: boolean
     companyName?: string
+    companyNameEn?: string
     companyWebsite?: string
     companyPhone?: string
     industry?: string
@@ -1234,6 +1240,7 @@ export async function updateWorkspace(
     ownerId?: string
     isActive: boolean
     companyName?: string
+    companyNameEn?: string
     companyWebsite?: string
     companyPhone?: string
     industry?: string
@@ -1251,6 +1258,7 @@ export async function updateWorkspace(
     description: data.description,
     isActive: data.isActive,
     companyName: data.companyName,
+    companyNameEn: data.companyNameEn,
     companyWebsite: data.companyWebsite,
     companyPhone: data.companyPhone,
     industry: data.industry,
@@ -1280,6 +1288,7 @@ export async function updateWorkspace(
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1308,6 +1317,7 @@ export async function partialUpdateWorkspace(
     ownerId?: string
     isActive?: boolean
     companyName?: string
+    companyNameEn?: string
     companyWebsite?: string | null
     companyPhone?: string
     industry?: string
@@ -1326,6 +1336,7 @@ export async function partialUpdateWorkspace(
   if (data.ownerId !== undefined) updateData.ownerId = data.ownerId
   if (data.isActive !== undefined) updateData.isActive = data.isActive
   if (data.companyName !== undefined) updateData.companyName = data.companyName
+  if (data.companyNameEn !== undefined) updateData.companyNameEn = data.companyNameEn
   if (data.companyWebsite !== undefined) updateData.companyWebsite = data.companyWebsite
   if (data.companyPhone !== undefined) updateData.companyPhone = data.companyPhone
   if (data.industry !== undefined) updateData.industry = data.industry
@@ -1343,6 +1354,7 @@ export async function partialUpdateWorkspace(
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1566,6 +1578,7 @@ export async function listWorkspaces(limit: number, offset: number) {
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1651,6 +1664,7 @@ export async function listWorkspacesWithFilters(
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1687,6 +1701,7 @@ export async function getWorkspacesByOwner(ownerId: string) {
       description: workspaces.description,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1949,6 +1964,7 @@ export async function getUserWorkspaces(userId: string) {
       name: workspaces.name,
       description: workspaces.description,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -1984,6 +2000,7 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
       isActive: workspaces.isActive,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,
@@ -2011,6 +2028,7 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
       isActive: workspaces.isActive,
       ownerId: workspaces.ownerId,
       companyName: workspaces.companyName,
+      companyNameEn: workspaces.companyNameEn,
       companyWebsite: workspaces.companyWebsite,
       companyPhone: workspaces.companyPhone,
       industry: workspaces.industry,

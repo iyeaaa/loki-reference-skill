@@ -4,6 +4,7 @@ export type Workspace = {
   description: string | null
   ownerId: string
   companyName?: string | undefined
+  companyNameEn?: string | undefined
   companyWebsite?: string | undefined
   companyPhone?: string | undefined
   industry?: string | undefined
@@ -56,6 +57,7 @@ export type CreateWorkspaceData = {
   description?: string | null
   ownerId: string
   companyName?: string | undefined
+  companyNameEn?: string | undefined
   companyWebsite?: string | undefined
   companyPhone?: string | undefined
   industry?: string | undefined
@@ -75,6 +77,7 @@ export type UpdateWorkspaceData = {
   description?: string | null
   ownerId?: string
   companyName?: string | undefined
+  companyNameEn?: string | undefined
   companyWebsite?: string | undefined
   companyPhone?: string | undefined
   industry?: string | undefined

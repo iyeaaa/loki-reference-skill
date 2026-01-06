@@ -54,14 +54,15 @@ const LOOPS_API_BASE = "https://app.loops.so/api/v1"
 // ====================================
 
 /**
- * Email texts following Toss-style UX Writing principles:
- * - 해요체: Friendly, conversational tone
- * - 능동형: Active voice ("~했어요" instead of "~됐어요")
- * - 간결함: Remove unnecessary words (weed cutting)
- * - 사용자 관점: Speak from user's perspective
- * - 공감: Empathize with user's emotions
+ * Email texts optimized for B2B SaaS (2025 best practices):
+ * - Professional yet approachable tone (no excessive exclamation marks)
+ * - Value-focused messaging (80% value, 20% promotion)
+ * - Single clear CTA with specific numbers
+ * - Concise structure for mobile (67% B2B emails opened on mobile)
+ * - Trust-building language
  *
- * @see https://toss.tech/article/8-writing-principles-of-toss
+ * @see https://www.allegrow.co/knowledge-base/b2b-email-marketing-best-practices-strategies
+ * @see https://www.mailgun.com/blog/email/b2b-vs-b2c-email-engagement/
  */
 /**
  * Helper: 받침 유무에 따른 조사 선택
@@ -79,84 +80,60 @@ function hasKoreanBatchim(text: string): boolean {
 
 const EMAIL_TEXTS = {
   en: {
-    // Dynamic subject line (conversational, personalized)
+    // Subject: personalized + specific number (50% higher open rate)
     subject: (firstName: string, leadCount: number) =>
-      `${firstName}, we found ${leadCount} buyers for you`,
-    subjectFallback: "Your buyers are waiting",
-    title: "All set!",
-    greeting: (name: string) => `Hi ${name},`,
-    // Industry-specific intro (active voice, friendly)
+      `${firstName}, ${leadCount} buyers ready for outreach`,
+    subjectFallback: "Your buyer list is ready",
+    greeting: (name: string) => `Hello ${name},`,
+    // Industry-specific intro (professional, value-focused)
     intro: (industry?: string) =>
       industry
-        ? `We found ${industry} buyers and wrote your emails.`
-        : "We found your buyers and wrote your emails.",
-    // Natural stats
-    statsIntro: "Here's what we prepared:",
-    buyersFound: (count: number) => `Found <b><u>${count}</u> potential buyers</b>`,
-    emailsReady: (count: number) => `Wrote <b><u>${count}</u> personalized emails</b>`,
-    sequenceInfo: "A 3-step sequence that reaches out naturally over 3 days",
-    trialRemaining: (days: number) => `You have <b><u>${days} days</u></b> left on your trial`,
+        ? `We've identified ${industry} buyers and prepared personalized emails for your review.`
+        : "We've identified potential buyers and prepared personalized emails for your review.",
+    // Stats (concise, scannable)
+    buyersFound: (count: number) => `<b>${count}</b> potential buyers identified`,
+    emailsReady: (count: number) => `<b>${count}</b> personalized emails drafted`,
+    sequenceInfo: "3-step sequence over 3 days",
+    trialRemaining: (days: number) => `<b>${days} days</b> remaining in trial`,
     // Company personalization
-    forCompany: (name: string) => `For ${name}`,
-    // Top companies
-    topCompaniesTitle: "Companies we found",
-    topCompaniesMore: (count: number) => `+${count} more`,
-    ctaButton: "Check it out",
-    // Tip section (friendly, actionable)
-    tip: {
-      title: "Tip",
-      text: "We wrote these emails for you. Take a quick look and hit send!",
-    },
-    // Next steps (suggestive, not commanding)
-    nextStepsTitle: "What's next",
-    nextSteps: [
-      { text: "See who we found for you — select or exclude as needed", time: null },
-      { text: "Review your email drafts — edit them anytime", time: null },
-      { text: "Launch when you're ready", time: null },
-    ],
-    footer: "Sent from Rinda",
-    footerContact: "Questions? Reach us at admin@grinda.ai",
+    forCompany: (name: string) => `Prepared for ${name}`,
+    // CTA: specific and action-oriented
+    ctaButton: (count: number) => `Review ${count} leads`,
+    ctaButtonFallback: "Review your leads",
+    // Next step: single focused action (not overwhelming)
+    nextStep: "Review leads → Edit emails → Launch campaign",
+    // Footer (professional sign-off)
+    footer: "Best regards,\nThe Rinda Team",
+    footerContact: "Questions? Contact us at admin@grinda.ai",
     footerBusiness: "© 2025 Rinda AI · TIPS Town, Daejeon, South Korea",
     defaultName: "there",
   },
   ko: {
-    // 동적 제목줄 (토스 스타일: 친근하고 대화하듯)
+    // 제목: 개인화 + 구체적 숫자 (오픈율 50% 향상)
     subject: (firstName: string, leadCount: number) =>
-      `${firstName}님, 바이어 ${leadCount}명을 찾았어요`,
-    subjectFallback: "바이어를 찾았어요",
-    title: "준비 끝!",
-    greeting: (name: string) => `${name}님, 반가워요!`,
-    // 산업별 맞춤 인트로 (능동형, 친근한 어투)
+      `${firstName}님, 바이어 ${leadCount}명 발굴 완료`,
+    subjectFallback: "바이어 리스트가 준비되었습니다",
+    greeting: (name: string) => `${name}님, 안녕하세요.`,
+    // 산업별 맞춤 인트로 (전문적, 가치 중심)
     intro: (industry?: string) =>
       industry
-        ? `${industry} 업계 바이어를 찾았고, 이메일도 다 써뒀어요.`
-        : "바이어를 찾았고, 이메일도 다 써뒀어요.",
-    // 자연스러운 통계
-    statsIntro: "이렇게 준비했어요:",
-    buyersFound: (count: number) => `잠재 바이어 <b><u>${count}명</u></b>을 찾았어요`,
-    emailsReady: (count: number) => `맞춤 이메일 <b><u>${count}개</u></b>를 작성했어요`,
-    sequenceInfo: "3일에 걸쳐 자연스럽게 연락하는 시퀀스예요",
-    trialRemaining: (days: number) => `체험판 <b><u>${days}일</u></b> 남았어요`,
+        ? `${industry} 업계 잠재 바이어를 발굴하고, 맞춤 이메일을 작성했습니다.`
+        : "잠재 바이어를 발굴하고, 맞춤 이메일을 작성했습니다.",
+    // 통계 (간결, 스캔 가능)
+    buyersFound: (count: number) => `잠재 바이어 <b>${count}명</b> 발굴`,
+    emailsReady: (count: number) => `맞춤 이메일 <b>${count}개</b> 작성`,
+    sequenceInfo: "3일간 3단계 시퀀스",
+    trialRemaining: (days: number) => `체험 기간 <b>${days}일</b> 남음`,
     // 회사 개인화 (받침에 따라 을/를 선택)
-    forCompany: (name: string) => `${name}${hasKoreanBatchim(name) ? "을" : "를"} 위해`,
-    // 상위 기업 (자연스럽게)
-    topCompaniesTitle: "이런 기업들을 찾았어요",
-    topCompaniesMore: (count: number) => `외 ${count}곳`,
-    ctaButton: "바로 확인하기",
-    // Tip 섹션 (친근하게 말 걸듯)
-    tip: {
-      title: "잠깐",
-      text: "이메일은 린다 AI가 미리 써뒀어요. 한번 훑어보고 바로 보내보세요!",
-    },
-    // 다음 단계 (제안하듯, 강요하지 않게)
-    nextStepsTitle: "이제 뭘 하면 될까요?",
-    nextSteps: [
-      { text: "어떤 바이어를 찾았는지 확인해 보세요 — 선택하거나 제외할 수 있어요", time: null },
-      { text: "이메일 초안을 살펴보세요 — 마음대로 수정할 수 있어요", time: null },
-      { text: "준비되면 캠페인을 시작해 보세요", time: null },
-    ],
-    footer: "Rinda가 보낸 이메일이에요",
-    footerContact: "궁금한 점이 있으면 admin@grinda.ai로 연락주세요",
+    forCompany: (name: string) => `${name}${hasKoreanBatchim(name) ? "을" : "를"} 위해 준비`,
+    // CTA: 구체적이고 행동 지향적
+    ctaButton: (count: number) => `리드 ${count}명 확인하기`,
+    ctaButtonFallback: "리드 확인하기",
+    // 다음 단계: 한 줄로 간결하게 (압도감 없이)
+    nextStep: "리드 확인 → 이메일 수정 → 캠페인 시작",
+    // Footer (전문적 마무리)
+    footer: "감사합니다.\nRinda 팀 드림",
+    footerContact: "문의사항이 있으시면 admin@grinda.ai로 연락주세요",
     footerBusiness: "© 2025 Rinda AI · 대전 팁스타운, 대한민국",
     defaultName: "고객",
   },
@@ -240,7 +217,8 @@ export async function sendTransactionalEmail(
 
 /**
  * Create plain text-based HTML email content
- * No design elements - maximum compatibility
+ * Optimized for B2B: professional, concise, single CTA focus
+ * Mobile-first: 67% of B2B emails opened on mobile
  */
 function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): string {
   const {
@@ -256,33 +234,29 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
   const t = EMAIL_TEXTS[language]
   const name = firstName || t.defaultName
 
-  const nextStepsList = t.nextSteps.map((step, i) => `${i + 1}. ${step.text}`).join("\n")
-
   // Company personalization line
   const companyLine = companyName ? `${t.forCompany(companyName)}\n\n` : ""
 
-  return `<div style="text-align:left; line-height:1.6">
-<b>${t.greeting(name)}</b>
+  // Dynamic CTA with lead count
+  const ctaText = typeof t.ctaButton === "function" ? t.ctaButton(leadCount) : t.ctaButtonFallback
+
+  return `<div style="text-align:left; line-height:1.8">
+${t.greeting(name)}
 
 ${companyLine}${t.intro(industry)}
 
-📊 ${t.buyersFound(leadCount)}
-📧 ${t.emailsReady(emailCount)}
-🔄 ${t.sequenceInfo}
-${trialDaysRemaining !== undefined ? `⏰ ${t.trialRemaining(trialDaysRemaining)}` : ""}
+• ${t.buyersFound(leadCount)}
+• ${t.emailsReady(emailCount)}
+• ${t.sequenceInfo}
+${trialDaysRemaining !== undefined ? `• ${t.trialRemaining(trialDaysRemaining)}` : ""}
 
-👉 <a href="${dashboardUrl}"><b><u>${t.ctaButton}</u></b></a>
+<a href="${dashboardUrl}" style="display:inline-block; background:#2563eb; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:600">${ctaText}</a>
 
-───────────────────────
+<span style="color:#666">${t.nextStep}</span>
 
-💡 <b>${t.tip.title}</b>: ${t.tip.text}
+${t.footer}
 
-<b>${t.nextStepsTitle}</b>
-${nextStepsList}
-
-<span style="color:#888">${t.footer}
-${t.footerContact}</span>
-
+<span style="color:#888">${t.footerContact}</span>
 <span style="color:#aaa; font-size:12px">${t.footerBusiness}</span>
 </div>`
 }

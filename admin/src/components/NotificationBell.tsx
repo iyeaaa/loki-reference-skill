@@ -454,15 +454,14 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     [notifications],
   )
 
-  // 통합 Progress Store에서 현재 상태 확인 (읽기 전용)
-  const progressState = useOnboardingProgressReadOnly(workspaceId || "")
-
   // NEW: StepBuyerLoading이 마운트되지 않았고 진행 중인 온보딩이 있으면
   // 여기서 SSE 연결을 시작하여 실시간 진행률 업데이트
   // (StepBuyerLoading이 마운트되면 그쪽에서 관리)
-  const shouldConnectSSE = !!workspaceId && hasInProgressOnboarding && !progressState.isConnected
+  // NOTE: isConnected 체크 제거 - 연결 상태 변경이 조건을 변경하면 무한 루프 발생
+  const shouldConnectSSE = !!workspaceId && hasInProgressOnboarding
 
-  // SSE 연결 (StepBuyerLoading이 없을 때만 활성화)
+  // SSE 연결 (진행 중인 온보딩이 있을 때만 활성화)
+  // useOnboardingProgress 내부에서 중복 연결 방지 처리
   useOnboardingProgress(workspaceId || "", {
     enabled: shouldConnectSSE,
   })

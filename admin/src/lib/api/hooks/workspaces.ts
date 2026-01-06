@@ -70,7 +70,7 @@ export function useUserWorkspaces(enabled = true) {
     queryKey: workspaceKeys.byUser(),
     queryFn: () => workspacesApi.getUserWorkspaces(),
     enabled,
-    staleTime: 0, // 즉시 반영
+    staleTime: 30 * 1000, // 30초 캐시 - 중복 호출 방지
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -79,7 +79,7 @@ export function useSuspenseUserWorkspaces() {
   return useSuspenseQuery({
     queryKey: workspaceKeys.byUser(),
     queryFn: () => workspacesApi.getUserWorkspaces(),
-    staleTime: 0, // 즉시 반영
+    staleTime: 30 * 1000, // 30초 캐시 - 중복 호출 방지
     gcTime: 10 * 60 * 1000,
   })
 }

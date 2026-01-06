@@ -9,7 +9,7 @@
  */
 
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { API_BASE_URL } from "@/lib/api/client"
 
 // ============================================================================
@@ -128,9 +128,14 @@ const DEFAULT_STATE: OnboardingProgressState = {
 const onboardingProgressMapAtom = atom<Record<string, OnboardingProgressState>>({})
 
 /**
- * 특정 워크스페이스의 진행 상태 가져오기
+ * 파생 atom 타입 정의
  */
-export const getOnboardingProgressAtom = (workspaceId: string) =>
+type OnboardingProgressAtom = ReturnType<typeof createProgressAtom>
+
+/**
+ * 워크스페이스별 진행 상태 atom 생성 함수
+ */
+const createProgressAtom = (workspaceId: string) =>
   atom(
     (get) => get(onboardingProgressMapAtom)[workspaceId] || DEFAULT_STATE,
     (get, set, update: Partial<OnboardingProgressState>) => {
@@ -144,6 +149,27 @@ export const getOnboardingProgressAtom = (workspaceId: string) =>
       })
     },
   )
+
+/**
+ * Atom 캐시 (동일 workspaceId에 대해 같은 atom 반환)
+ * Jotai 원칙: atom은 안정적인 참조를 유지해야 함
+ */
+const atomCache = new Map<string, OnboardingProgressAtom>()
+
+/**
+ * 특정 워크스페이스의 진행 상태 가져오기
+ * 메모이제이션으로 동일 workspaceId에 대해 같은 atom 반환
+ */
+export const getOnboardingProgressAtom = (workspaceId: string): OnboardingProgressAtom => {
+  const cached = atomCache.get(workspaceId)
+  if (cached) {
+    return cached
+  }
+
+  const newAtom = createProgressAtom(workspaceId)
+  atomCache.set(workspaceId, newAtom)
+  return newAtom
+}
 
 /**
  * Phase별 Fake Progress 상태
@@ -179,9 +205,12 @@ export function useOnboardingProgress(
 ) {
   const { enabled = true, onProgress, onComplete, onError } = options
 
-  const progressAtom = getOnboardingProgressAtom(workspaceId)
+  // 빈 workspaceId 처리: 유효한 workspaceId가 있을 때만 atom 구독
+  const safeWorkspaceId = workspaceId || "__empty__"
+  const progressAtom = getOnboardingProgressAtom(safeWorkspaceId)
   const [state, setState] = useAtom(progressAtom)
-  const [fakeProgressMap, setFakeProgressMap] = useAtom(fakeProgressMapAtom)
+  const fakeProgressMap = useAtomValue(fakeProgressMapAtom)
+  const setFakeProgressMap = useSetAtom(fakeProgressMapAtom)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -191,17 +220,33 @@ export function useOnboardingProgress(
   const onCompleteRef = useRef(onComplete)
   const onErrorRef = useRef(onError)
 
+  // State refs to avoid infinite loop in handleEvent
+  const leadsRef = useRef<LeadProgressItem[]>([])
+  const emailsRef = useRef<EmailProgressItem[]>([])
+
+  // fakeProgressMap을 ref로 추적 (의존성에서 제거하기 위함)
+  const fakeProgressMapRef = useRef(fakeProgressMap)
+  useEffect(() => {
+    fakeProgressMapRef.current = fakeProgressMap
+  }, [fakeProgressMap])
+
   useEffect(() => {
     onProgressRef.current = onProgress
     onCompleteRef.current = onComplete
     onErrorRef.current = onError
   }, [onProgress, onComplete, onError])
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    leadsRef.current = state.leads
+    emailsRef.current = state.emails
+  }, [state.leads, state.emails])
+
   // Handle SSE event
   const handleEvent = useCallback(
     (eventType: string, eventData: OnboardingProgressEvent, fromCache = false) => {
-      // Update leads array
-      let newLeads = state.leads
+      // Update leads array using ref to avoid infinite loop
+      let newLeads = leadsRef.current
       if (eventData.details?.leads) {
         newLeads = eventData.details.leads
       } else if (eventData.details?.currentLead) {
@@ -214,8 +259,8 @@ export function useOnboardingProgress(
         }
       }
 
-      // Update emails array
-      let newEmails = state.emails
+      // Update emails array using ref to avoid infinite loop
+      let newEmails = emailsRef.current
       if (eventData.details?.emails) {
         newEmails = eventData.details.emails
       } else if (eventData.details?.recentEmail) {
@@ -244,16 +289,19 @@ export function useOnboardingProgress(
       })
 
       // Update fake progress phase
-      if (eventData.phase && eventData.phase !== fakeProgressMap[workspaceId]?.currentPhase) {
-        setFakeProgressMap((prev) => ({
-          ...prev,
-          [workspaceId]: {
-            startTime: Date.now(),
-            currentPhase: eventData.phase,
-            animatedProgress: eventData.progressPercent,
-          },
-        }))
-      }
+      setFakeProgressMap((prev) => {
+        if (eventData.phase && eventData.phase !== prev[workspaceId]?.currentPhase) {
+          return {
+            ...prev,
+            [workspaceId]: {
+              startTime: Date.now(),
+              currentPhase: eventData.phase,
+              animatedProgress: eventData.progressPercent,
+            },
+          }
+        }
+        return prev
+      })
 
       // Call callbacks
       if (eventType === "progress" || eventType === "cached") {
@@ -264,7 +312,7 @@ export function useOnboardingProgress(
         onErrorRef.current?.(eventData)
       }
     },
-    [state.leads, state.emails, workspaceId, fakeProgressMap, setState, setFakeProgressMap],
+    [workspaceId, setState, setFakeProgressMap],
   )
 
   // Connect to SSE
@@ -380,6 +428,7 @@ export function useOnboardingProgress(
   }, [enabled, workspaceId, connect, disconnect])
 
   // Phase-based fake progress animation
+  // NOTE: fakeProgressMap을 의존성에서 제거하고 ref로 읽기 (무한 루프 방지)
   useEffect(() => {
     if (!(workspaceId && enabled) || state.isComplete || state.hasError) {
       if (animationFrameRef.current) {
@@ -389,7 +438,7 @@ export function useOnboardingProgress(
       return
     }
 
-    const fakeState = fakeProgressMap[workspaceId]
+    const fakeState = fakeProgressMapRef.current[workspaceId]
     if (!fakeState?.currentPhase) {
       return
     }
@@ -400,7 +449,13 @@ export function useOnboardingProgress(
     }
 
     const animate = () => {
-      const elapsed = Date.now() - fakeState.startTime
+      // 최신 fakeState를 ref에서 읽기
+      const currentFakeState = fakeProgressMapRef.current[workspaceId]
+      if (!currentFakeState) {
+        return
+      }
+
+      const elapsed = Date.now() - currentFakeState.startTime
       const duration = 30_000 // 30 seconds per phase
       const t = Math.min(elapsed / duration, 1)
 
@@ -429,14 +484,17 @@ export function useOnboardingProgress(
         animationFrameRef.current = null
       }
     }
-  }, [workspaceId, enabled, state.isComplete, state.hasError, fakeProgressMap, setFakeProgressMap])
+  }, [workspaceId, enabled, state.isComplete, state.hasError, setFakeProgressMap])
 
   // Calculate display progress (real or fake)
-  const fakeState = fakeProgressMap[workspaceId]
-  const displayProgress =
-    state.progressPercent > 0
-      ? state.progressPercent
-      : fakeState?.animatedProgress || PHASE_PROGRESS_RANGES[state.phase || "init"]?.min || 0
+  // useMemo로 안정화 (불필요한 재계산 방지)
+  const displayProgress = useMemo(() => {
+    const fakeState = fakeProgressMap[safeWorkspaceId]
+    if (state.progressPercent > 0) {
+      return state.progressPercent
+    }
+    return fakeState?.animatedProgress || PHASE_PROGRESS_RANGES[state.phase || "init"]?.min || 0
+  }, [state.progressPercent, state.phase, fakeProgressMap, safeWorkspaceId])
 
   return {
     // Connection state
@@ -470,15 +528,20 @@ export function useOnboardingProgress(
  * Subscribes to the same state without managing SSE connection
  */
 export function useOnboardingProgressReadOnly(workspaceId: string) {
-  const progressAtom = getOnboardingProgressAtom(workspaceId)
+  // 빈 workspaceId 처리
+  const safeWorkspaceId = workspaceId || "__empty__"
+  const progressAtom = getOnboardingProgressAtom(safeWorkspaceId)
   const state = useAtomValue(progressAtom)
   const fakeProgressMap = useAtomValue(fakeProgressMapAtom)
 
-  const fakeState = fakeProgressMap[workspaceId]
-  const displayProgress =
-    state.progressPercent > 0
-      ? state.progressPercent
-      : fakeState?.animatedProgress || PHASE_PROGRESS_RANGES[state.phase || "init"]?.min || 0
+  // useMemo로 displayProgress 안정화
+  const displayProgress = useMemo(() => {
+    const fakeState = fakeProgressMap[safeWorkspaceId]
+    if (state.progressPercent > 0) {
+      return state.progressPercent
+    }
+    return fakeState?.animatedProgress || PHASE_PROGRESS_RANGES[state.phase || "init"]?.min || 0
+  }, [state.progressPercent, state.phase, fakeProgressMap, safeWorkspaceId])
 
   return {
     phase: state.phase,

@@ -1,5 +1,5 @@
 import { User } from "lucide-react"
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -28,6 +28,15 @@ type DashboardContentProps = {
   children?: React.ReactNode
 }
 
+// localStorage에서 user 데이터를 한 번만 파싱 (렌더링 외부)
+const getCachedLocalStorageUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}")
+  } catch {
+    return {}
+  }
+}
+
 function DashboardContent({ children }: DashboardContentProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -42,8 +51,11 @@ function DashboardContent({ children }: DashboardContentProps) {
   // Use React Query to get current user (auto-updates when profile changes)
   const { data: currentUserData } = useCurrentUser()
 
-  // 경로별로 적절한 스켈레톤 반환
-  const getSkeletonForRoute = (path: string) => {
+  // localStorage user를 ref로 캐싱 (매 렌더링마다 파싱 방지)
+  const localStorageUserRef = useRef(getCachedLocalStorageUser())
+
+  // 경로별로 적절한 스켈레톤 반환 (useCallback으로 안정화)
+  const getSkeletonForRoute = useCallback((path: string) => {
     // 테이블 형태의 페이지들
     const tablePages = [
       "/leads",
@@ -58,14 +70,18 @@ function DashboardContent({ children }: DashboardContentProps) {
     }
     // 대시보드나 기타 페이지
     return <PageSkeleton />
-  }
+  }, [])
 
-  // 현재 로그인한 유저의 ID 가져오기 (fallback to localStorage)
-  const currentUser = currentUserData || JSON.parse(localStorage.getItem("user") || "{}")
+  // 현재 로그인한 유저의 ID 가져오기 (fallback to cached localStorage)
+  // useMemo로 안정적인 참조 유지
+  const currentUser = useMemo(
+    () => currentUserData || localStorageUserRef.current,
+    [currentUserData],
+  )
   const userId = currentUser?.id || ""
 
   // 유저의 trial 상태 확인
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive
+  const isTrialUser = Boolean(currentUser?.trialStatus?.isTrialActive)
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
   const { data: userWorkspaces } = useUserWorkspaces(!!userId)
@@ -100,13 +116,16 @@ function DashboardContent({ children }: DashboardContentProps) {
     return sequence.status === "draft" || sequence.status === "ready"
   }, [isTrialUser, onboardingProgress, sequence])
 
-  // Workspace를 WorkspaceOption으로 변환
-  const workspaces: WorkspaceOption[] =
-    userWorkspaces?.map((ws) => ({
-      value: ws.id,
-      label: ws.name,
-      sublabel: ws.description || "",
-    })) || []
+  // Workspace를 WorkspaceOption으로 변환 (메모이제이션으로 무한 루프 방지)
+  const workspaces: WorkspaceOption[] = useMemo(
+    () =>
+      userWorkspaces?.map((ws) => ({
+        value: ws.id,
+        label: ws.name,
+        sublabel: ws.description || "",
+      })) || [],
+    [userWorkspaces],
+  )
 
   const isSidebarCollapsed = state === "collapsed"
 

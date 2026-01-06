@@ -31,8 +31,8 @@ export const onboardingKeys = {
 
 /**
  * 온보딩 진행 상태 조회 훅
- * - staleTime: 0 - 항상 최신 데이터
- * - gcTime: 0 - 캐시 사용 안함
+ * - staleTime: 30초 - 캐시 활용으로 중복 호출 방지
+ * - gcTime: 5분 - 적절한 캐시 유지
  * - retry: false - 실패 시 자동 재시도 비활성화
  */
 export function useOnboardingProgress(workspaceId: string, enabled = true) {
@@ -40,8 +40,8 @@ export function useOnboardingProgress(workspaceId: string, enabled = true) {
     queryKey: onboardingKeys.progress(workspaceId),
     queryFn: () => onboardingApi.getProgress(workspaceId),
     enabled: enabled && !!workspaceId,
-    staleTime: 0, // 항상 최신 데이터
-    gcTime: 0, // 캐시 사용 안함
+    staleTime: 30 * 1000, // 30초 캐시 - 중복 호출 방지
+    gcTime: 5 * 60 * 1000, // 5분 캐시 유지
     retry: false, // 실패 시 자동 재시도 비활성화
   })
 }

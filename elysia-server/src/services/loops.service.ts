@@ -80,61 +80,61 @@ function hasKoreanBatchim(text: string): boolean {
 
 const EMAIL_TEXTS = {
   en: {
-    // Subject: personalized + specific number (50% higher open rate)
+    // Subject: conversational, personalized (50% higher open rate)
     subject: (firstName: string, leadCount: number) =>
-      `${firstName}, ${leadCount} buyers ready for outreach`,
-    subjectFallback: "Your buyer list is ready",
-    greeting: (name: string) => `Hello ${name},`,
-    // Industry-specific intro (professional, value-focused)
+      `${firstName}, we found ${leadCount} buyers for you`,
+    subjectFallback: "Good news — your buyers are ready",
+    greeting: (name: string) => `Hi ${name},`,
+    // Industry-specific intro (friendly, value-focused)
     intro: (industry?: string) =>
       industry
-        ? `We've identified ${industry} buyers and prepared personalized emails for your review.`
-        : "We've identified potential buyers and prepared personalized emails for your review.",
-    // Stats (concise, scannable)
-    buyersFound: (count: number) => `<b>${count}</b> potential buyers identified`,
-    emailsReady: (count: number) => `<b>${count}</b> personalized emails drafted`,
-    sequenceInfo: "3-step sequence over 3 days",
-    trialRemaining: (days: number) => `<b>${days} days</b> remaining in trial`,
+        ? `Great news! We found ${industry} buyers and drafted your emails.`
+        : "Great news! We found your buyers and drafted the emails.",
+    // Stats (natural language, not bullet points)
+    buyersFound: (count: number) => `<b>${count}</b> potential buyers`,
+    emailsReady: (count: number) => `<b>${count}</b> personalized emails ready`,
+    sequenceInfo: "3 emails over 3 days",
+    trialRemaining: (days: number) => `<b>${days} days</b> left in your trial`,
     // Company personalization
-    forCompany: (name: string) => `Prepared for ${name}`,
-    // CTA: specific and action-oriented
-    ctaButton: (count: number) => `Review ${count} leads`,
-    ctaButtonFallback: "Review your leads",
-    // Next step: single focused action (not overwhelming)
-    nextStep: "Review leads → Edit emails → Launch campaign",
-    // Footer (professional sign-off)
-    footer: "Best regards,\nThe Rinda Team",
-    footerContact: "Questions? Contact us at admin@grinda.ai",
-    footerBusiness: "© 2025 Rinda AI · TIPS Town, Daejeon, South Korea",
+    forCompany: (name: string) => `For ${name}`,
+    // CTA: specific and inviting
+    ctaButton: (count: number) => `See ${count} leads`,
+    ctaButtonFallback: "See your leads",
+    // Next step: suggestive, not commanding
+    nextStep: "Take a look, tweak if needed, and launch when ready",
+    // Footer (warm sign-off)
+    footer: "Rinda Team",
+    footerContact: "Questions? Just reply to this email",
+    footerBusiness: "© 2025 Rinda AI · Daejeon, South Korea",
     defaultName: "there",
   },
   ko: {
-    // 제목: 개인화 + 구체적 숫자 (오픈율 50% 향상)
+    // 제목: 해요체, 자연스럽게 (토스 스타일)
     subject: (firstName: string, leadCount: number) =>
-      `${firstName}님, 바이어 ${leadCount}명 발굴 완료`,
-    subjectFallback: "바이어 리스트가 준비되었습니다",
-    greeting: (name: string) => `${name}님, 안녕하세요.`,
-    // 산업별 맞춤 인트로 (전문적, 가치 중심)
+      `${firstName}님, 바이어 ${leadCount}명 찾았어요`,
+    subjectFallback: "바이어를 찾았어요",
+    greeting: (name: string) => `${name}님, 좋은 소식이에요!`,
+    // 인트로: 해요체, 능동형, 공감
     intro: (industry?: string) =>
       industry
-        ? `${industry} 업계 잠재 바이어를 발굴하고, 맞춤 이메일을 작성했습니다.`
-        : "잠재 바이어를 발굴하고, 맞춤 이메일을 작성했습니다.",
-    // 통계 (간결, 스캔 가능)
-    buyersFound: (count: number) => `잠재 바이어 <b>${count}명</b> 발굴`,
-    emailsReady: (count: number) => `맞춤 이메일 <b>${count}개</b> 작성`,
-    sequenceInfo: "3일간 3단계 시퀀스",
-    trialRemaining: (days: number) => `체험 기간 <b>${days}일</b> 남음`,
-    // 회사 개인화 (받침에 따라 을/를 선택)
-    forCompany: (name: string) => `${name}${hasKoreanBatchim(name) ? "을" : "를"} 위해 준비`,
-    // CTA: 구체적이고 행동 지향적
-    ctaButton: (count: number) => `리드 ${count}명 확인하기`,
-    ctaButtonFallback: "리드 확인하기",
-    // 다음 단계: 한 줄로 간결하게 (압도감 없이)
-    nextStep: "리드 확인 → 이메일 수정 → 캠페인 시작",
-    // Footer (전문적 마무리)
-    footer: "감사합니다.\nRinda 팀 드림",
-    footerContact: "문의사항이 있으시면 admin@grinda.ai로 연락주세요",
-    footerBusiness: "© 2025 Rinda AI · 대전 팁스타운, 대한민국",
+        ? `${industry} 업계 바이어를 찾았고, 이메일도 다 써뒀어요.`
+        : "바이어를 찾았고, 이메일도 다 써뒀어요.",
+    // 통계: 자연스러운 문장 (명사형 종결 X)
+    buyersFound: (count: number) => `바이어 <b>${count}명</b> 찾았어요`,
+    emailsReady: (count: number) => `이메일 <b>${count}개</b> 써뒀어요`,
+    sequenceInfo: "3일에 걸쳐 3통씩 보내요",
+    trialRemaining: (days: number) => `체험 기간 <b>${days}일</b> 남았어요`,
+    // 회사 개인화
+    forCompany: (name: string) => `${name}${hasKoreanBatchim(name) ? "을" : "를"} 위해 준비했어요`,
+    // CTA: 부드럽게 권유
+    ctaButton: (count: number) => `${count}명 확인하기`,
+    ctaButtonFallback: "확인하기",
+    // 다음 단계: 제안하듯 (Suggest over force)
+    nextStep: "확인하고, 마음에 들면 바로 시작해 보세요",
+    // Footer: 간결하게
+    footer: "Rinda 팀",
+    footerContact: "궁금한 점은 이 메일에 답장해 주세요",
+    footerBusiness: "© 2025 Rinda AI · 대전, 대한민국",
     defaultName: "고객",
   },
 }
@@ -216,9 +216,14 @@ export async function sendTransactionalEmail(
 // ====================================
 
 /**
- * Create plain text-based HTML email content
- * Optimized for B2B: professional, concise, single CTA focus
- * Mobile-first: 67% of B2B emails opened on mobile
+ * Create conversational HTML email content
+ * Follows Toss UX Writing principles:
+ * - Easy to speak (해요체)
+ * - Weed cutting (군더더기 제거)
+ * - Find hidden emotion (공감)
+ * - Suggest over force (제안)
+ *
+ * @see https://toss.tech/article/8-writing-principles-of-toss
  */
 function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): string {
   const {
@@ -234,28 +239,32 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
   const t = EMAIL_TEXTS[language]
   const name = firstName || t.defaultName
 
-  // Company personalization line
-  const companyLine = companyName ? `${t.forCompany(companyName)}\n\n` : ""
-
   // Dynamic CTA with lead count
   const ctaText = typeof t.ctaButton === "function" ? t.ctaButton(leadCount) : t.ctaButtonFallback
+
+  // Company line integrated naturally into intro
+  const introText = companyName
+    ? `${t.forCompany(companyName)}\n${t.intro(industry)}`
+    : t.intro(industry)
+
+  // Trial info only if available
+  const trialLine =
+    trialDaysRemaining !== undefined ? `\n${t.trialRemaining(trialDaysRemaining)}` : ""
 
   return `<div style="text-align:left; line-height:1.8">
 ${t.greeting(name)}
 
-${companyLine}${t.intro(industry)}
+${introText}
 
-• ${t.buyersFound(leadCount)}
-• ${t.emailsReady(emailCount)}
-• ${t.sequenceInfo}
-${trialDaysRemaining !== undefined ? `• ${t.trialRemaining(trialDaysRemaining)}` : ""}
+${t.buyersFound(leadCount)}
+${t.emailsReady(emailCount)}
+${t.sequenceInfo}${trialLine}
 
-<a href="${dashboardUrl}" style="display:inline-block; background:#2563eb; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:600">${ctaText}</a>
+<a href="${dashboardUrl}" style="display:inline-block; background:#2563eb; color:#fff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:600; margin:8px 0">${ctaText}</a>
 
 <span style="color:#666">${t.nextStep}</span>
 
 ${t.footer}
-
 <span style="color:#888">${t.footerContact}</span>
 <span style="color:#aaa; font-size:12px">${t.footerBusiness}</span>
 </div>`

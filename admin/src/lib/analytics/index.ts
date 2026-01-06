@@ -13,14 +13,14 @@ import { env, isProduction } from "@/lib/env"
 // =====================================
 // Clarity Project ID (하드코딩 - 공개되어도 무방)
 // =====================================
-const CLARITY_PROJECT_ID = "uwzk9cbqa7"
+// const CLARITY_PROJECT_ID = "uwzk9cbqa7"
 
 // =====================================
 // 초기화 상태 추적
 // =====================================
 let mixpanelInitialized = false
 let gaInitialized = false
-let clarityInitialized = false
+// const clarityInitialized = false
 
 // =====================================
 // Mixpanel 설정
@@ -83,30 +83,12 @@ function initGoogleAnalytics() {
 }
 
 // =====================================
-// Microsoft Clarity 설정
-// =====================================
-function initClarity() {
-  if (clarityInitialized) {
-    return
-  }
-
-  // Clarity 스크립트 삽입
-  const clarityScript = document.createElement("script")
-  clarityScript.async = true
-  clarityScript.src = `https://www.clarity.ms/tag/${CLARITY_PROJECT_ID}`
-  document.head.appendChild(clarityScript)
-
-  clarityInitialized = true
-  console.log("[Analytics] Clarity initialized")
-}
-
-// =====================================
 // 통합 초기화
 // =====================================
+// Note: Clarity는 index.html에서 공식 스크립트로 초기화됨
 export function initAnalytics() {
   initMixpanel()
   initGoogleAnalytics()
-  initClarity()
 }
 
 // =====================================

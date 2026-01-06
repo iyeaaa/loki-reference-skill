@@ -21,7 +21,7 @@ export default function RootLayout() {
 
   React.useEffect(() => {
     document.documentElement.lang = "ko"
-    document.title = "Rinda AI Email Marketing"
+    document.title = "Rinda AI - 해외 바이어 발굴 및 글로벌 세일즈 자동화"
   }, [])
 
   return (

@@ -37,6 +37,16 @@ const envSchema = z.object({
    * Production mode flag (automatically set by Vite)
    */
   PROD: z.boolean().default(false),
+
+  /**
+   * Mixpanel project token for analytics
+   */
+  VITE_MIXPANEL_TOKEN: z.string().optional(),
+
+  /**
+   * Google Analytics 4 measurement ID (G-XXXXXXXXXX)
+   */
+  VITE_GA_MEASUREMENT_ID: z.string().optional(),
 })
 
 /**
@@ -54,6 +64,8 @@ function parseEnv(): Env {
     MODE: import.meta.env.MODE ?? "development",
     DEV: import.meta.env.DEV ?? false,
     PROD: import.meta.env.PROD ?? false,
+    VITE_MIXPANEL_TOKEN: import.meta.env.VITE_MIXPANEL_TOKEN,
+    VITE_GA_MEASUREMENT_ID: import.meta.env.VITE_GA_MEASUREMENT_ID,
   }
 
   const result = envSchema.safeParse(rawEnv)

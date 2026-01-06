@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
+import { trackOnboardingComplete, trackOnboardingStep4Complete } from "@/lib/analytics"
 import { apiFetch } from "@/lib/api/client"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useCompleteOnboarding, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
@@ -293,6 +294,12 @@ export function StepConfirmation() {
       setExecutionProgress(100)
       setExecutionComplete(true)
 
+      // 📊 Analytics: Step 4 완료 및 캠페인 실행 이벤트 추적
+      trackOnboardingStep4Complete({
+        leadsCount: enrollResult.enrolledCount,
+        emailsScheduled: enrollResult.scheduledExecutions,
+      })
+
       toast.success(
         isKorean
           ? `${enrollResult.enrolledCount}명에게 이메일이 예약됐어요`
@@ -326,6 +333,7 @@ export function StepConfirmation() {
 
   const handleSkipToDashboard = async () => {
     await completeOnboardingAndClearData()
+    trackOnboardingComplete()
     navigate("/dashboard")
   }
 

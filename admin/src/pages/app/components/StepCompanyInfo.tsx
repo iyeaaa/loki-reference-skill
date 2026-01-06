@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { trackOnboardingStep1Complete } from "@/lib/analytics"
 import { apiFetch } from "@/lib/api/client"
 import {
   useCompanyDescriptionAIEnhance,
@@ -231,7 +232,7 @@ export function StepCompanyInfo() {
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editedData.companyName])
+  }, [editedData.companyName, translateMutation.mutate])
 
   const handleSaveAndNext = async () => {
     console.log("[StepCompanyInfo] handleSave called")
@@ -372,6 +373,14 @@ export function StepCompanyInfo() {
           ? "바이어 20명 + 이메일 40개 작성 중"
           : "Finding 20 buyers + writing 40 emails",
         duration: 4000,
+      })
+
+      // 📊 Analytics: Step 1 완료 이벤트 추적
+      trackOnboardingStep1Complete({
+        companyName: editedData.companyName,
+        industry: editedData.industry,
+        target: editedData.target,
+        country: editedData.country,
       })
 
       // 다음 단계로 이동 (jobStarted 파라미터로 job 시작 상태 전달)

@@ -1,6 +1,7 @@
 import React, { Suspense } from "react"
 import { Toaster } from "react-hot-toast"
 import { Outlet } from "react-router-dom"
+import { usePageTracking } from "@/lib/analytics/usePageTracking"
 
 // Loading fallback component
 function PageLoadingFallback() {
@@ -15,6 +16,9 @@ function PageLoadingFallback() {
 }
 
 export default function RootLayout() {
+  // 페이지 변경 시 자동 추적 (Mixpanel, GA4)
+  usePageTracking()
+
   React.useEffect(() => {
     document.documentElement.lang = "ko"
     document.title = "Rinda AI Email Marketing"

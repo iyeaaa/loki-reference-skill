@@ -18,6 +18,7 @@ import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { trackOnboardingStep3Complete } from "@/lib/analytics"
 import { useOnboardingProgress as useOnboardingProgressAPI } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
@@ -139,6 +140,10 @@ export function StepBuyerLoading() {
   } = useOnboardingProgress(workspaceId, {
     enabled: shouldEnableSSE,
     onComplete: () => {
+      // 📊 Analytics: Step 3 완료 이벤트 추적
+      trackOnboardingStep3Complete({
+        leadsFound: leads?.length || 0,
+      })
       // 완료 시 Step 4로 자동 이동
       setSearchParams({ step: "4" })
     },

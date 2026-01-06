@@ -961,6 +961,64 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mixpanel/rrdom@npm:^2.0.0-alpha.18":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrdom@npm:2.0.0-alpha.18.2"
+  dependencies:
+    "@mixpanel/rrweb-snapshot": "npm:^2.0.0-alpha.18"
+  checksum: 10c0/0b608d965d019026417359a7e341be798e664a1ed20cfe7cd278ec355465482bd55faadfc919764e821efde815935320a47ea246efe3da4a8a813c2ac5566f19
+  languageName: node
+  linkType: hard
+
+"@mixpanel/rrweb-plugin-console-record@npm:2.0.0-alpha.18.2":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrweb-plugin-console-record@npm:2.0.0-alpha.18.2"
+  peerDependencies:
+    "@mixpanel/rrweb": ^2.0.0-alpha.18
+    "@mixpanel/rrweb-utils": ^2.0.0-alpha.18
+  checksum: 10c0/9bf8030ebabfa2763133ecdf4653e6e3886995e2e1d8987f2edcc8b4174d0958295738ba6195de3092ef673c15f3cd7efed005f8a047a162f979251de0e9b666
+  languageName: node
+  linkType: hard
+
+"@mixpanel/rrweb-snapshot@npm:^2.0.0-alpha.18":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrweb-snapshot@npm:2.0.0-alpha.18.2"
+  dependencies:
+    postcss: "npm:^8.4.38"
+  checksum: 10c0/8b9c6853aa97817ea2993679c1108a5f02251c4f52542727b47022f1750d58364fe2ee7e3babf337137734969dd37316ca52ff25bfbd0e60dea02fdecd086c02
+  languageName: node
+  linkType: hard
+
+"@mixpanel/rrweb-types@npm:^2.0.0-alpha.18":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrweb-types@npm:2.0.0-alpha.18.2"
+  checksum: 10c0/5d24c27d78219431e3f0303cbaa3d4ea6740a5310ae10acc1bfd8727b18f545a4596ba33cd89b375782636c9cf16d322ea4242b670fcdd86ce4b8f0ad84bb45b
+  languageName: node
+  linkType: hard
+
+"@mixpanel/rrweb-utils@npm:^2.0.0-alpha.18":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrweb-utils@npm:2.0.0-alpha.18.2"
+  checksum: 10c0/8c5af15df6e8e4a04a868cef4b0870e7cab5731ea0078351cffe4646be83129db21fee83d882eee2e583a055e7762340cdc5aa45eefa247be3b0711763e2edf3
+  languageName: node
+  linkType: hard
+
+"@mixpanel/rrweb@npm:2.0.0-alpha.18.2":
+  version: 2.0.0-alpha.18.2
+  resolution: "@mixpanel/rrweb@npm:2.0.0-alpha.18.2"
+  dependencies:
+    "@mixpanel/rrdom": "npm:^2.0.0-alpha.18"
+    "@mixpanel/rrweb-snapshot": "npm:^2.0.0-alpha.18"
+    "@mixpanel/rrweb-types": "npm:^2.0.0-alpha.18"
+    "@mixpanel/rrweb-utils": "npm:^2.0.0-alpha.18"
+    "@types/css-font-loading-module": "npm:0.0.7"
+    "@xstate/fsm": "npm:^1.4.0"
+    base64-arraybuffer: "npm:^1.0.1"
+    mitt: "npm:^3.0.0"
+  checksum: 10c0/0e0279d84ba138bcb58a47238d70abde4e8dab104ef61c1a5e62a656fab89912656ec8a1805f1550d3344c546b3ca7a8ffd72acf8545e1cc20fafe3dd42a8494
+  languageName: node
+  linkType: hard
+
 "@monaco-editor/loader@npm:^1.5.0":
   version: 1.7.0
   resolution: "@monaco-editor/loader@npm:1.7.0"
@@ -3348,6 +3406,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/css-font-loading-module@npm:0.0.7":
+  version: 0.0.7
+  resolution: "@types/css-font-loading-module@npm:0.0.7"
+  checksum: 10c0/a74759a14bcc7d60a1a1d863b53b7638d4aa7f88f1d97347426262cc6fe8f9335d8fa80c7e0608cd67e33ff0067608e9b5475a1227a684e1dfad3cac87df1405
+  languageName: node
+  linkType: hard
+
 "@types/d3-array@npm:*, @types/d3-array@npm:^3.0.3":
   version: 3.2.2
   resolution: "@types/d3-array@npm:3.2.2"
@@ -3762,6 +3827,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/mixpanel-browser@npm:^2.66.0":
+  version: 2.66.0
+  resolution: "@types/mixpanel-browser@npm:2.66.0"
+  dependencies:
+    mixpanel-browser: "npm:*"
+  checksum: 10c0/1f5027318ed38ad6de99dee3fb8a64096b394b499c0cbfdeeb185c08ca661aca13433ae075fffca7e01d3afde5a9b51452c6e7e397fbb25f8b0366460d42b9d9
+  languageName: node
+  linkType: hard
+
 "@types/ms@npm:*":
   version: 2.1.0
   resolution: "@types/ms@npm:2.1.0"
@@ -4074,6 +4148,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@xstate/fsm@npm:^1.4.0":
+  version: 1.6.5
+  resolution: "@xstate/fsm@npm:1.6.5"
+  checksum: 10c0/472fe625b84b9e7102b8774e80c441b8b7dbc9585e700223d9c7a39c583d38ba50636909a5d749d44b361555daa841862f932a29c52b81c8829a74884e715bf4
+  languageName: node
+  linkType: hard
+
 "@xyflow/react@npm:^12.8.6":
   version: 12.10.0
   resolution: "@xyflow/react@npm:12.10.0"
@@ -4248,6 +4329,7 @@ __metadata:
     "@types/encoding-japanese": "npm:^2"
     "@types/express": "npm:^5.0.4"
     "@types/marked": "npm:^6.0.0"
+    "@types/mixpanel-browser": "npm:^2.66.0"
     "@types/node": "npm:^24.5.2"
     "@types/node-cron": "npm:^3.0.11"
     "@types/papaparse": "npm:^5.3.16"
@@ -4286,6 +4368,7 @@ __metadata:
     lint-staged: "npm:^16.2.1"
     lucide-react: "npm:^0.544.0"
     marked: "npm:^16.4.0"
+    mixpanel-browser: "npm:^2.73.0"
     next-themes: "npm:^0.4.6"
     node-cron: "npm:^4.2.1"
     nuqs: "npm:^2.7.3"
@@ -4531,6 +4614,13 @@ __metadata:
     bare-abort-controller:
       optional: true
   checksum: 10c0/53fef240cf2cdcca62f78b6eead90ddb5a59b0929f414b13a63764c2b4f9de98ea8a578d033b04d64bb7b86dfbc402e937984e69950855cc3754c7b63da7db21
+  languageName: node
+  linkType: hard
+
+"base64-arraybuffer@npm:^1.0.1":
+  version: 1.0.2
+  resolution: "base64-arraybuffer@npm:1.0.2"
+  checksum: 10c0/3acac95c70f9406e87a41073558ba85b6be9dbffb013a3d2a710e3f2d534d506c911847d5d9be4de458af6362c676de0a5c4c2d7bdf4def502d00b313368e72f
   languageName: node
   linkType: hard
 
@@ -8854,6 +8944,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mitt@npm:^3.0.0":
+  version: 3.0.1
+  resolution: "mitt@npm:3.0.1"
+  checksum: 10c0/3ab4fdecf3be8c5255536faa07064d05caa3dd332bd318ff02e04621f7b3069ca1de9106cfe8e7ced675abfc2bec2ce4c4ef321c4a1bb1fb29df8ae090741913
+  languageName: node
+  linkType: hard
+
+"mixpanel-browser@npm:*, mixpanel-browser@npm:^2.73.0":
+  version: 2.73.0
+  resolution: "mixpanel-browser@npm:2.73.0"
+  dependencies:
+    "@mixpanel/rrweb": "npm:2.0.0-alpha.18.2"
+    "@mixpanel/rrweb-plugin-console-record": "npm:2.0.0-alpha.18.2"
+  checksum: 10c0/1f1cf6d81f4d4ea7c711a5c8121cd6a625608fa391455ebe16364bc4952017f574af01a41ab0e30f51b90ae6f0ebe945dd50978b59b8816f9de35402a3df4084
+  languageName: node
+  linkType: hard
+
 "mlly@npm:^1.7.4, mlly@npm:^1.8.0":
   version: 1.8.0
   resolution: "mlly@npm:1.8.0"
@@ -9482,7 +9589,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.5.6":
+"postcss@npm:^8.4.38, postcss@npm:^8.5.6":
   version: 8.5.6
   resolution: "postcss@npm:8.5.6"
   dependencies:

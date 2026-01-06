@@ -88,7 +88,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.companyName])
+  }, [formData.companyName, translateMutation.mutate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

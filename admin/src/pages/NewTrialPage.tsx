@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { DashboardPreview } from "@/components/trial/DashboardPreview"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { trackTrialPageVisit } from "@/lib/analytics"
 import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } from "@/lib/animations"
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
@@ -137,6 +138,17 @@ export default function NewTrialPage() {
       handleGoogleCallback(code)
     }
   }, [searchParams, isProcessingCallback, handleGoogleCallback, navigate])
+
+  // 📊 Analytics: Trial 페이지 유입 추적 (rinda.ai → app.rinda.ai/trial)
+  useEffect(() => {
+    // OAuth callback 처리 중이 아닐 때만 추적 (중복 방지)
+    const code = searchParams.get("code")
+    if (!code) {
+      const referrer = document.referrer
+      const source = referrer.includes("rinda.ai") ? "rinda.ai" : undefined
+      trackTrialPageVisit(source)
+    }
+  }, [searchParams])
 
   /**
    * Google 로그인 시작

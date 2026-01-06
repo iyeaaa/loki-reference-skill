@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { trackOnboardingStep2Complete } from "@/lib/analytics"
 import {
   useDeleteEmailAccount,
   useEmailAccountByWorkspaceAndUser,
@@ -101,6 +102,12 @@ export function StepEmailLink() {
     setIsCheckingJobStatus(true)
     try {
       const jobStatus = await onboardingApi.getJobStatus(workspace.id)
+
+      // 📊 Analytics: Step 2 완료 이벤트 추적
+      trackOnboardingStep2Complete({
+        emailProvider: "sendgrid", // SendGrid API 기반
+        hasEmailConnected: !!emailAccount && emailAccount.apiKey !== "TRIAL_PREVIEW",
+      })
 
       if (jobStatus.isComplete) {
         // Job done - skip Step 3, go directly to Step 4

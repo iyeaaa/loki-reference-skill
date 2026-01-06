@@ -103,7 +103,7 @@ export function OnboardingTest() {
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyName])
+  }, [companyName, translateMutation.mutate])
 
   const canSubmit = companyName.trim().length > 0 && !testOnboarding.isPending
 

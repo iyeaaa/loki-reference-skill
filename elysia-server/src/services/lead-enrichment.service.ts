@@ -123,7 +123,58 @@ export const findEmailsWithHunter = async (
   }
 }
 
-// Jina Reader로 웹사이트 콘텐츠 추출 (15초 타임아웃)
+// 웹사이트 접속 가능 여부 빠르게 확인 (HEAD 요청, 5초 타임아웃)
+const checkWebsiteReachable = async (url: string): Promise<boolean> => {
+  const REACHABILITY_TIMEOUT_MS = 5000 // 5초 타임아웃
+
+  try {
+    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REACHABILITY_TIMEOUT_MS)
+
+    try {
+      // HEAD 요청으로 빠르게 접속 확인 (본문 다운로드 없음)
+      const response = await fetch(normalizedUrl, {
+        method: "HEAD",
+        signal: controller.signal,
+        redirect: "follow",
+      })
+      clearTimeout(timeoutId)
+
+      // 2xx, 3xx 응답이면 접속 가능
+      if (response.ok || (response.status >= 300 && response.status < 400)) {
+        return true
+      }
+
+      // 405 Method Not Allowed인 경우 GET으로 재시도 (일부 서버는 HEAD 미지원)
+      if (response.status === 405) {
+        const getController = new AbortController()
+        const getTimeoutId = setTimeout(() => getController.abort(), REACHABILITY_TIMEOUT_MS)
+        try {
+          const getResponse = await fetch(normalizedUrl, {
+            method: "GET",
+            signal: getController.signal,
+            redirect: "follow",
+          })
+          clearTimeout(getTimeoutId)
+          return getResponse.ok
+        } catch {
+          clearTimeout(getTimeoutId)
+          return false
+        }
+      }
+
+      return false
+    } catch {
+      clearTimeout(timeoutId)
+      return false
+    }
+  } catch {
+    return false
+  }
+}
+
+// Jina Reader로 웹사이트 콘텐츠 추출 (접속 확인 후 20초 타임아웃)
 export const extractWebsiteContent = async (
   url: string,
 ): Promise<{
@@ -138,18 +189,29 @@ export const extractWebsiteContent = async (
     return cached
   }
 
-  const TIMEOUT_MS = 60000 // 60초 타임아웃 (느린 사이트 대응)
-
   const call = externalLogger.start({
     service: "jina",
     operation: "extract_content",
     endpoint: url,
   })
 
-  try {
-    // URL 정규화
-    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+  // URL 정규화
+  const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
 
+  // Step 1: 웹사이트 접속 가능 여부 먼저 확인 (5초)
+  const isReachable = await checkWebsiteReachable(normalizedUrl)
+  if (!isReachable) {
+    call.failure("Website unreachable (pre-check failed)", { url, preCheckTimeout: 5000 })
+    console.log(`[jina] ⏭️ Skipped unreachable: ${url}`)
+    // 접속 불가능한 URL은 캐시에 빈 결과 저장 (재시도 방지)
+    await cache.set(`jina:${url}`, { content: "", title: undefined, description: undefined })
+    return { content: "" }
+  }
+
+  // Step 2: Jina Reader로 콘텐츠 추출 (20초 타임아웃으로 단축)
+  const TIMEOUT_MS = 20000 // 60초 → 20초로 단축 (접속 확인 완료됨)
+
+  try {
     // AbortController로 타임아웃 설정
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -160,7 +222,7 @@ export const extractWebsiteContent = async (
           Authorization: `Bearer ${config.apis.jina.apiKey}`,
           Accept: "text/plain",
           "X-Engine": "browser", // 브라우저 엔진 사용 (JavaScript 렌더링)
-          "X-Timeout": "90000", // 90초 대기 (Jina 서버측 타임아웃)
+          "X-Timeout": "30000", // 30초 대기 (Jina 서버측 타임아웃, 단축)
           "X-Wait-For-Selector": "#main, #root, #app, .main-content, main, article", // 주요 콘텐츠 로딩 대기
           "X-With-Iframe": "true", // iframe 콘텐츠 포함
           "X-No-Cache": "true", // 캐시 비활성화 (최신 콘텐츠 가져오기)

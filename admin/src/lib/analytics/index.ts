@@ -38,6 +38,8 @@ function initMixpanel() {
     persistence: "cookie",
     // rinda.ai에서 app.rinda.ai로 유입 추적을 위해 cross_subdomain 활성화
     cross_subdomain_cookie: true,
+
+    record_sessions_percent: 100,
   })
 
   mixpanelInitialized = true

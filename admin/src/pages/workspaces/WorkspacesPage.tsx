@@ -198,7 +198,9 @@ export default function WorkspacesPage() {
       )
       const result = await response.json()
 
-      if (result.canCreate) {
+      // API 응답: { success, data: { canCreate, ... } }
+      const canCreate = result.data?.canCreate ?? result.canCreate
+      if (canCreate) {
         // User can create workspace - show create dialog
         setShowCreateDialog(true)
       } else {

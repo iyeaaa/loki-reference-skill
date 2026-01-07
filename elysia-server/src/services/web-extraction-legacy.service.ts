@@ -168,7 +168,7 @@ export async function fetchWithDepthLegacy(
     // 추가 페이지 크롤링
     for (const link of links) {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 3500)) // 3.5초 지연
+        await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 지연
         const pageResult = await fetchWebsiteContent(link, Math.floor(timeoutSeconds / 2))
         if (pageResult.content) {
           pagesContent.set(link, pageResult.content)
@@ -345,11 +345,6 @@ export async function processCompanyRecordLegacy(
         errorMessage: "웹사이트 URL이 비어있습니다",
       }
     }
-
-    // 랜덤 지연 (봇 탐지 회피)
-    const delay =
-      Math.random() * (config.randomDelayMax - config.randomDelayMin) + config.randomDelayMin
-    await new Promise((resolve) => setTimeout(resolve, delay))
 
     const crawlStartTime = Date.now()
 

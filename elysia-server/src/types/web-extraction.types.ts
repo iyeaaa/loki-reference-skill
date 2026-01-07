@@ -156,7 +156,7 @@ export interface WebExtractionConfig {
 }
 
 export const DEFAULT_EXTRACTION_CONFIG: WebExtractionConfig = {
-  maxConcurrent: 2, // 메모리 최적화: 동시 처리 수 감소 (기존 20 → 2)
+  maxConcurrent: 20, // API 키 개수에 따라 자동 조정됨 (키 개수 * 20)
   timeoutSeconds: 60, // 타임아웃 단축 (기존 120 → 60)
   gptTimeout: 120, // GPT 타임아웃 단축 (기존 180 → 120)
   crawlDepth: 1,

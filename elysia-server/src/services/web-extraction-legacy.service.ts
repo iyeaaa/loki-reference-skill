@@ -20,6 +20,105 @@ import { GPT_COST_PER_REQUEST } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { getNextApiKey } from "./openai-api-key.service"
 
+// Pre-check 타임아웃 (3초)
+const PRE_CHECK_TIMEOUT_MS = 3000
+
+/**
+ * 웹사이트 접속 가능 여부 사전 체크 (3초 타임아웃)
+ * HEAD 요청으로 빠르게 확인, 실패 시 GET 요청으로 재시도
+ */
+export async function preCheckWebsite(
+  url: string,
+): Promise<{ success: boolean; statusCode?: number; error?: string }> {
+  try {
+    // URL 정규화
+    let normalizedUrl = url.trim()
+    if (!normalizedUrl.match(/^https?:\/\//i)) {
+      normalizedUrl = `https://${normalizedUrl}`
+    }
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), PRE_CHECK_TIMEOUT_MS)
+
+    try {
+      // HEAD 요청으로 빠르게 확인
+      const response = await fetch(normalizedUrl, {
+        method: "HEAD",
+        signal: controller.signal,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        redirect: "follow",
+      })
+
+      clearTimeout(timeoutId)
+
+      // 2xx, 3xx는 성공으로 처리
+      if (response.status < 400) {
+        return { success: true, statusCode: response.status }
+      }
+
+      // 4xx, 5xx는 실패
+      return {
+        success: false,
+        statusCode: response.status,
+        error: `HTTP ${response.status}`,
+      }
+    } catch {
+      clearTimeout(timeoutId)
+
+      // HEAD 요청 실패 시 GET 요청으로 재시도 (일부 서버는 HEAD를 지원하지 않음)
+      const controller2 = new AbortController()
+      const timeoutId2 = setTimeout(() => controller2.abort(), PRE_CHECK_TIMEOUT_MS)
+
+      try {
+        const response = await fetch(normalizedUrl, {
+          method: "GET",
+          signal: controller2.signal,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          redirect: "follow",
+        })
+
+        clearTimeout(timeoutId2)
+
+        if (response.status < 400) {
+          return { success: true, statusCode: response.status }
+        }
+
+        return {
+          success: false,
+          statusCode: response.status,
+          error: `HTTP ${response.status}`,
+        }
+      } catch (getError) {
+        clearTimeout(timeoutId2)
+        throw getError // GET도 실패하면 원래 에러 처리로
+      }
+    }
+  } catch (error) {
+    // AbortError = 타임아웃
+    if (error instanceof Error && error.name === "AbortError") {
+      logger.debug({ url }, "[PreCheck] Timeout after 3 seconds")
+      return {
+        success: false,
+        error: "3초 내 접속 불가 (타임아웃)",
+      }
+    }
+
+    // 기타 네트워크 에러
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    logger.debug({ url, error: errorMessage }, "[PreCheck] Connection failed")
+    return {
+      success: false,
+      error: `접속 실패: ${errorMessage}`,
+    }
+  }
+}
+
 /**
  * 웹사이트에서 HTML 콘텐츠 가져오기
  */
@@ -142,26 +241,38 @@ export async function fetchWithDepthLegacy(
       return { pagesContent, httpStatus }
     }
 
-    // Contact, About 관련 링크 찾기
-    const targetKeywords = ["contact", "about", "company", "team"]
+    // 같은 도메인의 모든 링크 수집 (최대 10개, 키워드 필터링 없음)
+    const MAX_PAGES = 10
+    const baseHostname = new URL(normalizedUrl).hostname
     const links: string[] = []
 
-    $("a[href]").each((_, element) => {
-      const href = $(element).attr("href")
-      const text = $(element).text().toLowerCase()
+    // 제외할 확장자/패턴
+    const EXCLUDE_EXTENSIONS =
+      /\.(pdf|jpg|jpeg|png|gif|svg|css|js|xml|json|zip|doc|docx|xls|xlsx)$/i
 
-      if (
-        href &&
-        targetKeywords.some((kw) => href.toLowerCase().includes(kw) || text.includes(kw))
-      ) {
-        try {
-          const absoluteUrl = new URL(href, normalizedUrl).href
-          if (links.length < 3 && !links.includes(absoluteUrl)) {
-            links.push(absoluteUrl)
-          }
-        } catch {
-          // Invalid URL, skip
+    $("a[href]").each((_, element) => {
+      if (links.length >= MAX_PAGES) return
+
+      const href = $(element).attr("href")
+      if (!href) return
+
+      try {
+        const absoluteUrl = new URL(href, normalizedUrl).href
+        const linkHostname = new URL(absoluteUrl).hostname
+        const pathname = new URL(absoluteUrl).pathname
+
+        // 같은 도메인, 중복 아님, 메인 페이지 아님, 파일 확장자 아님
+        if (
+          linkHostname === baseHostname &&
+          !links.includes(absoluteUrl) &&
+          absoluteUrl !== normalizedUrl &&
+          pathname !== "/" &&
+          !EXCLUDE_EXTENSIONS.test(pathname)
+        ) {
+          links.push(absoluteUrl)
         }
+      } catch {
+        // Invalid URL, skip
       }
     })
 
@@ -343,6 +454,17 @@ export async function processCompanyRecordLegacy(
         ...record,
         collectedAt: new Date().toISOString(),
         errorMessage: "웹사이트 URL이 비어있습니다",
+      }
+    }
+
+    // Pre-check: 3초 내 접속 가능 여부 확인
+    const preCheck = await preCheckWebsite(record.websiteUrl)
+    if (!preCheck.success) {
+      return {
+        ...record,
+        httpStatus: preCheck.statusCode,
+        collectedAt: new Date().toISOString(),
+        errorMessage: preCheck.error || "웹사이트 접속 실패",
       }
     }
 

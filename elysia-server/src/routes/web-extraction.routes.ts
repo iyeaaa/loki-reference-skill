@@ -24,7 +24,7 @@ import { createSSEResponse } from "../utils/sse-helper"
 // 웹데추 v1.1 Legacy 설정
 const LEGACY_CONFIG = {
   MAX_BATCH_SIZE: 10000, // 배치 크기 제한 해제 (실질적으로 무제한)
-  MAX_CONCURRENT: 2, // 동시 처리 2개로 제한
+  MAX_CONCURRENT: 20, // 동시 처리 수 (API 키 개수에 따라 자동 조정)
 }
 
 // 추출 결과를 저장하는 Map (다운로드용) - TTL 기반 자동 정리

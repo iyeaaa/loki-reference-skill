@@ -400,7 +400,7 @@ export async function fetchWithDepth(
       ]
 
       // 최대 페이지 수
-      const MAX_PAGES = 10
+      const MAX_PAGES = 4
 
       // 모든 링크 수집 (필터링 전)
       const allLinks: string[] = []
@@ -526,7 +526,7 @@ export async function fetchWithDepth(
           "[fetchWithDepth] Fetching additional page",
         )
         onProgress?.(`${pageName} 페이지를 확인하는 중이에요`)
-        await new Promise((resolve) => setTimeout(resolve, 3500)) // 3.5초 지연
+        await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 지연
         const pageResult = await fetchWebsiteContent(link, Math.floor(timeoutSeconds / 2))
         if (pageResult.content) {
           pagesContent.set(link, pageResult.content)

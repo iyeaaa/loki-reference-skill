@@ -13,6 +13,15 @@ import {
   processBatchLegacy,
   processCompanyRecordLegacy,
 } from "../services/web-extraction-legacy.service"
+// BullMQ 기반 웹데추 서비스 (v2)
+import {
+  cancelExtraction,
+  getExtractionProgress,
+  getExtractionResults,
+  getQueueStats,
+  startWebExtraction,
+  subscribeToProgress,
+} from "../services/web-extraction-queue.service"
 import {
   type CompanyRecord,
   DEFAULT_EXTRACTION_CONFIG,
@@ -449,10 +458,11 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           }
         }
 
-        // API 키 개수에 따른 동시성 설정 (v1.1 Legacy: 최대 2개로 제한)
+        // API 키 개수에 따른 동시성 설정 (API 키 1개당 20개씩 병렬 요청)
         const activeApiKeyCount = await getActiveApiKeyCount(workspaceId)
+        // 최소 20, 최대 MAX_CONCURRENT(20)
         const defaultConcurrency = Math.min(
-          activeApiKeyCount > 0 ? activeApiKeyCount : 2,
+          activeApiKeyCount > 0 ? activeApiKeyCount * 20 : 20,
           LEGACY_CONFIG.MAX_CONCURRENT,
         )
 
@@ -1034,6 +1044,433 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         summary: "이메일만 빠르게 추출",
         description:
           "웹사이트에서 이메일만 빠르게 추출합니다. 온보딩 Lead Enrichment에 최적화되어 있습니다.",
+      },
+    },
+  )
+
+  // ============================================================================
+  // BullMQ 기반 웹 추출 API (v2) - 장애 복구, 확장성 지원
+  // ============================================================================
+
+  /**
+   * POST /api/v1/admin/web-extraction/v2/start
+   * BullMQ 기반 웹 데이터 추출 시작
+   */
+  .post(
+    "/v2/start",
+    async ({ body, set }) => {
+      const { file, workspaceId, searchCriteria, config } = body
+
+      // 파일 확장자 확인
+      const fileName = file.name.toLowerCase()
+      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+        set.status = 400
+        return {
+          success: false,
+          error: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다",
+        }
+      }
+
+      try {
+        // 파일 파싱
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const workbook = XLSX.read(buffer, { type: "buffer" })
+        const sheetName = workbook.SheetNames[0]
+
+        if (!sheetName) {
+          set.status = 400
+          return { success: false, error: "시트를 찾을 수 없습니다" }
+        }
+
+        const worksheet = workbook.Sheets[sheetName]
+        if (!worksheet) {
+          set.status = 400
+          return { success: false, error: "워크시트를 찾을 수 없습니다" }
+        }
+
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet)
+        if (jsonData.length === 0) {
+          set.status = 400
+          return { success: false, error: "파일에 데이터가 없습니다" }
+        }
+
+        // CompanyRecord 배열로 변환
+        const records: CompanyRecord[] = jsonData.map((row) => ({
+          websiteUrl: String(row.website_url || row.websiteUrl || row.website || ""),
+        }))
+
+        // 빈 URL 제거
+        let validRecords = records.filter((r) => r.websiteUrl && r.websiteUrl.trim().length > 0)
+
+        if (validRecords.length === 0) {
+          set.status = 400
+          return {
+            success: false,
+            error: "유효한 website_url이 없습니다. 컬럼명을 확인해주세요.",
+          }
+        }
+
+        // 중복 제거
+        const extractionConfig = { ...DEFAULT_EXTRACTION_CONFIG, ...config }
+        if (extractionConfig.deduplicateByUrl) {
+          const seenUrls = new Set<string>()
+          validRecords = validRecords.filter((r) => {
+            const url = r.websiteUrl.trim().toLowerCase()
+            if (seenUrls.has(url)) return false
+            seenUrls.add(url)
+            return true
+          })
+        }
+
+        // searchCriteria 파싱
+        let parsedSearchCriteria: string[] | undefined
+        if (searchCriteria) {
+          if (typeof searchCriteria === "string") {
+            try {
+              parsedSearchCriteria = JSON.parse(searchCriteria)
+            } catch {
+              parsedSearchCriteria = [searchCriteria]
+            }
+          } else {
+            parsedSearchCriteria = searchCriteria
+          }
+        }
+
+        // BullMQ 기반 추출 시작
+        const result = await startWebExtraction({
+          workspaceId,
+          records: validRecords,
+          config: extractionConfig,
+          searchCriteria: parsedSearchCriteria,
+        })
+
+        if (!result.success) {
+          set.status = 500
+          return result
+        }
+
+        logger.info(
+          {
+            batchJobId: result.batchJobId,
+            totalRecords: result.totalRecords,
+            workspaceId,
+          },
+          "[WebExtraction v2] Batch job started",
+        )
+
+        return result
+      } catch (error) {
+        logger.error({ error }, "[WebExtraction v2] Failed to start extraction")
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "추출 시작 실패",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File({ maxSize: 50 * 1024 * 1024 }),
+        workspaceId: t.String(),
+        searchCriteria: t.Optional(t.Union([t.String(), t.Array(t.String())])),
+        config: t.Optional(
+          t.Object({
+            maxConcurrent: t.Optional(t.Number()),
+            timeoutSeconds: t.Optional(t.Number()),
+            gptTimeout: t.Optional(t.Number()),
+            crawlDepth: t.Optional(t.Number()),
+            deduplicateByUrl: t.Optional(t.Boolean()),
+            expandEmailsToRows: t.Optional(t.Boolean()),
+            randomDelayMin: t.Optional(t.Number()),
+            randomDelayMax: t.Optional(t.Number()),
+          }),
+        ),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] BullMQ 기반 웹 데이터 추출 시작",
+        description:
+          "BullMQ를 사용한 웹 데이터 추출입니다. 장애 복구, 확장성을 지원합니다. 진행상황은 /v2/progress/:batchJobId SSE 엔드포인트로 확인하세요.",
+      },
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/v2/progress/:batchJobId
+   * BullMQ 배치 진행상황 조회 (SSE)
+   */
+  .get(
+    "/v2/progress/:batchJobId",
+    async ({ params }) => {
+      const { batchJobId } = params
+
+      return createSSEResponse(
+        async (session) => {
+          try {
+            const abortController = new AbortController()
+
+            // 클라이언트 연결 종료 시 정리
+            session.closed && abortController.abort()
+
+            for await (const progress of subscribeToProgress(batchJobId, abortController.signal)) {
+              if (session.closed) break
+
+              session.push({
+                event: "progress",
+                data: {
+                  type: progress.status === "completed" ? "complete" : "progress",
+                  timestamp: new Date().toISOString(),
+                  ...progress,
+                },
+              })
+
+              if (progress.status !== "processing") {
+                // 완료/에러/취소 상태면 종료
+                break
+              }
+            }
+          } catch (error) {
+            logger.error({ error, batchJobId }, "[WebExtraction v2] Progress stream error")
+            session.push({
+              event: "error",
+              data: {
+                type: "error",
+                timestamp: new Date().toISOString(),
+                error: error instanceof Error ? error.message : "Progress stream failed",
+              },
+            })
+          }
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 15000,
+          onClose: () => {
+            logger.debug({ batchJobId }, "[WebExtraction v2] Progress stream closed")
+          },
+        },
+      )
+    },
+    {
+      params: t.Object({
+        batchJobId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 배치 진행상황 SSE 스트림",
+        description: "Redis Pub/Sub를 통한 실시간 진행상황 업데이트를 SSE로 전달합니다.",
+      },
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/v2/status/:batchJobId
+   * BullMQ 배치 상태 조회 (일회성)
+   */
+  .get(
+    "/v2/status/:batchJobId",
+    async ({ params, set }) => {
+      const { batchJobId } = params
+
+      const progress = await getExtractionProgress(batchJobId)
+
+      if (!progress) {
+        set.status = 404
+        return {
+          success: false,
+          error: "배치 작업을 찾을 수 없습니다",
+        }
+      }
+
+      return {
+        success: true,
+        data: progress,
+      }
+    },
+    {
+      params: t.Object({
+        batchJobId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 배치 상태 조회",
+        description: "배치 작업의 현재 진행상황을 조회합니다.",
+      },
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/v2/results/:batchJobId
+   * BullMQ 배치 결과 다운로드 (Excel)
+   */
+  .get(
+    "/v2/results/:batchJobId",
+    async ({ params, set }) => {
+      const { batchJobId } = params
+
+      const results = await getExtractionResults(batchJobId)
+
+      if (!results || results.length === 0) {
+        set.status = 404
+        return {
+          success: false,
+          error: "결과를 찾을 수 없습니다",
+        }
+      }
+
+      try {
+        // Excel 생성
+        const worksheet = XLSX.utils.json_to_sheet(
+          results.map((r) => {
+            const baseData: Record<string, unknown> = {
+              website_url: r?.websiteUrl || "",
+              http_status: r?.httpStatus || "",
+              found_company_name: r?.foundCompanyName || "",
+              description: r?.description || "",
+              address: r?.address || "",
+              phone_number: r?.phoneNumber || "",
+              email: r?.email || "",
+              facebook_url: r?.facebookUrl || "",
+              instagram_url: r?.instagramUrl || "",
+              twitter_url: r?.twitterUrl || "",
+              linkedin_url: r?.linkedinUrl || "",
+            }
+
+            // Custom search results
+            if (r?.customSearchResults) {
+              for (const [key, value] of Object.entries(r.customSearchResults)) {
+                if (value && typeof value === "object" && "result" in value) {
+                  baseData[`${key} (결과)`] = value.result || ""
+                  baseData[`${key} (근거)`] =
+                    value.reasons && Array.isArray(value.reasons) ? value.reasons.join(" | ") : ""
+                }
+              }
+            }
+
+            baseData.crawl_time_seconds = r?.crawlTimeSeconds || ""
+            baseData.gpt_time_seconds = r?.gptTimeSeconds || ""
+            baseData.collected_at = r?.collectedAt || ""
+            baseData.error_message = r?.errorMessage || ""
+
+            return baseData
+          }),
+        )
+
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Results")
+
+        const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
+
+        set.headers["Content-Type"] =
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        set.headers["Content-Disposition"] =
+          `attachment; filename="web_extraction_v2_${batchJobId}.xlsx"`
+
+        return new Response(excelBuffer)
+      } catch (error) {
+        logger.error({ error, batchJobId }, "[WebExtraction v2] Failed to generate Excel")
+        set.status = 500
+        return {
+          success: false,
+          error: "Excel 파일 생성 실패",
+        }
+      }
+    },
+    {
+      params: t.Object({
+        batchJobId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 배치 결과 다운로드 (Excel)",
+        description: "완료된 배치의 결과를 Excel 파일로 다운로드합니다.",
+      },
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/v2/results/:batchJobId/json
+   * BullMQ 배치 결과 조회 (JSON)
+   */
+  .get(
+    "/v2/results/:batchJobId/json",
+    async ({ params, set }) => {
+      const { batchJobId } = params
+
+      const results = await getExtractionResults(batchJobId)
+
+      if (!results) {
+        set.status = 404
+        return {
+          success: false,
+          error: "결과를 찾을 수 없습니다",
+        }
+      }
+
+      return {
+        success: true,
+        data: results,
+      }
+    },
+    {
+      params: t.Object({
+        batchJobId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 배치 결과 조회 (JSON)",
+        description: "완료된 배치의 결과를 JSON으로 조회합니다.",
+      },
+    },
+  )
+
+  /**
+   * DELETE /api/v1/admin/web-extraction/v2/cancel/:batchJobId
+   * BullMQ 배치 작업 취소
+   */
+  .delete(
+    "/v2/cancel/:batchJobId",
+    async ({ params }) => {
+      const { batchJobId } = params
+
+      await cancelExtraction(batchJobId)
+
+      return {
+        success: true,
+        message: "배치 작업이 취소되었습니다",
+      }
+    },
+    {
+      params: t.Object({
+        batchJobId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 배치 작업 취소",
+        description: "진행 중인 배치 작업을 취소합니다.",
+      },
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/v2/queue-stats
+   * BullMQ 큐 통계
+   */
+  .get(
+    "/v2/queue-stats",
+    async () => {
+      const stats = await getQueueStats()
+
+      return {
+        success: true,
+        data: stats,
+      }
+    },
+    {
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "[v2] 큐 통계",
+        description: "BullMQ 웹 추출 큐의 현재 상태를 조회합니다.",
       },
     },
   )

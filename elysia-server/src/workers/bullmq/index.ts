@@ -22,3 +22,13 @@ export {
   stopUnipileInboxPollWorker,
   unipileInboxPollWorker,
 } from "./unipile-inbox-poll.worker"
+export {
+  addWebExtractionJobs,
+  cancelBatchJobs,
+  getBatchProgress,
+  getBatchResults,
+  getWebExtractionWorkerStatus,
+  startWebExtractionWorker,
+  stopWebExtractionWorker,
+  webExtractionWorker,
+} from "./web-extraction.worker"

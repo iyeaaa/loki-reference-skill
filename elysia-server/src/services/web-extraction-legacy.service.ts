@@ -276,11 +276,11 @@ export async function fetchWithDepthLegacy(
       }
     })
 
-    // 추가 페이지 크롤링
+    // 추가 페이지 크롤링 (각 요청 3초 타임아웃, 1초 지연)
     for (const link of links) {
       try {
         await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 지연
-        const pageResult = await fetchWebsiteContent(link, Math.floor(timeoutSeconds / 2))
+        const pageResult = await fetchWebsiteContent(link, 3)
         if (pageResult.content) {
           pagesContent.set(link, pageResult.content)
         }
@@ -457,27 +457,30 @@ export async function processCompanyRecordLegacy(
       }
     }
 
-    // Pre-check: 3초 내 접속 가능 여부 확인
-    const preCheck = await preCheckWebsite(record.websiteUrl)
-    if (!preCheck.success) {
-      return {
-        ...record,
-        httpStatus: preCheck.statusCode,
-        collectedAt: new Date().toISOString(),
-        errorMessage: preCheck.error || "웹사이트 접속 실패",
-      }
-    }
-
+    // Pre-check 제거 - fetchWithDepthLegacy에서 한 번에 처리
+    // 타임아웃 3초로 단축 (각 HTTP 요청당)
     const crawlStartTime = Date.now()
+    const crawlTimeout = 3
 
     // 깊이 크롤링 (Legacy 버전)
     const { pagesContent, httpStatus } = await fetchWithDepthLegacy(
       record.websiteUrl,
       config.crawlDepth,
-      config.timeoutSeconds,
+      crawlTimeout,
     )
 
     const crawlElapsed = (Date.now() - crawlStartTime) / 1000
+
+    // HTTP 4xx/5xx 에러 체크 (Pre-check 대체)
+    if (httpStatus >= 400) {
+      return {
+        ...record,
+        httpStatus,
+        crawlTimeSeconds: crawlElapsed,
+        collectedAt: new Date().toISOString(),
+        errorMessage: `HTTP ${httpStatus} 에러`,
+      }
+    }
 
     if (pagesContent.size === 0) {
       return {
@@ -485,7 +488,10 @@ export async function processCompanyRecordLegacy(
         httpStatus,
         crawlTimeSeconds: crawlElapsed,
         collectedAt: new Date().toISOString(),
-        errorMessage: "웹사이트 콘텐츠를 가져오는데 실패했습니다",
+        errorMessage:
+          httpStatus === 0
+            ? "웹사이트 접속 실패 (타임아웃)"
+            : "웹사이트 콘텐츠를 가져오는데 실패했습니다",
       }
     }
 

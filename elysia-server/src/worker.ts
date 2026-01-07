@@ -61,16 +61,19 @@ import {
   getTestWorkerStatus,
   getTrialExpirationWorkerStatus,
   getUnipileInboxPollWorkerStatus,
+  getWebExtractionWorkerStatus,
   startOnboardingAutoGenerateWorker,
   startSequenceEmailWorker,
   startTestWorker,
   startTrialExpirationWorker,
   startUnipileInboxPollWorker,
+  startWebExtractionWorker,
   stopOnboardingAutoGenerateWorker,
   stopSequenceEmailWorker,
   stopTestWorker,
   stopTrialExpirationWorker,
   stopUnipileInboxPollWorker,
+  stopWebExtractionWorker,
 } from "./workers/bullmq"
 
 // ============================================================================
@@ -136,6 +139,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
     await stopUnipileInboxPollWorker()
     logger.info("[Worker] UnipileInboxPollWorker stopped")
+
+    await stopWebExtractionWorker()
+    logger.info("[Worker] WebExtractionWorker stopped")
 
     // Close Redis connection
     await redisConnection.quit()
@@ -352,6 +358,14 @@ async function main(): Promise<void> {
   logger.info(
     { running: sequenceEmailStatus.running, concurrency: sequenceEmailStatus.concurrency },
     "[Worker] SequenceEmailWorker started",
+  )
+
+  // Start Web Extraction Worker (BullMQ-based web data extraction)
+  startWebExtractionWorker()
+  const webExtractionStatus = getWebExtractionWorkerStatus()
+  logger.info(
+    { running: webExtractionStatus.running, concurrency: webExtractionStatus.concurrency },
+    "[Worker] WebExtractionWorker started",
   )
 
   // Run one-time migration of pending executions to BullMQ (non-blocking)

@@ -13,6 +13,7 @@ export const QUEUE_NAMES = {
   UNIPILE_INBOX_POLL: "unipile-inbox-poll", // Unipile inbox polling for replied emails
   TRIAL_EXPIRATION: "trial-expiration", // Trial expiration check
   TEST_QUEUE: "test-queue", // For testing purposes
+  WEB_EXTRACTION: "web-extraction", // Web data extraction with BullMQ
 } as const
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
@@ -234,4 +235,106 @@ export interface JobScheduleOptions {
   }
   removeOnComplete?: boolean | { age: number; count: number }
   removeOnFail?: boolean | { age: number }
+}
+
+// ============================================================================
+// Web Extraction Types
+// ============================================================================
+
+/**
+ * Web Extraction Job - extracts company data from websites
+ *
+ * Features:
+ * - Crawl websites and extract contact information
+ * - GPT-based content analysis
+ * - 3-second timeout per HTTP request
+ * - Automatic retry with exponential backoff
+ * - Redis Pub/Sub for real-time progress updates
+ */
+export interface WebExtractionJob {
+  /** Unique batch job ID */
+  batchJobId: string
+  /** Workspace ID */
+  workspaceId: string
+  /** Record index in batch (0-based) */
+  recordIndex: number
+  /** Total records in batch */
+  totalRecords: number
+  /** Company record to process */
+  record: {
+    websiteUrl: string
+    [key: string]: unknown
+  }
+  /** Extraction configuration */
+  config: {
+    crawlDepth: number
+    crawlTimeout: number // 3 seconds
+    gptTimeout: number
+  }
+  /** Custom search criteria */
+  searchCriteria?: string[]
+}
+
+/**
+ * Web Extraction Job Result
+ */
+export interface WebExtractionResult {
+  success: boolean
+  /** Processed record with extracted data */
+  record?: {
+    websiteUrl: string
+    httpStatus?: number
+    foundCompanyName?: string
+    description?: string
+    email?: string
+    phoneNumber?: string
+    address?: string
+    facebookUrl?: string
+    instagramUrl?: string
+    twitterUrl?: string
+    linkedinUrl?: string
+    crawlTimeSeconds?: number
+    gptTimeSeconds?: number
+    collectedAt?: string
+    errorMessage?: string
+    customSearchResults?: Record<string, { result: string; reasons: string[] }>
+    [key: string]: unknown
+  }
+  /** Error message if failed */
+  error?: string
+  /** Processing duration in ms */
+  durationMs: number
+}
+
+/**
+ * Web Extraction Batch Progress (stored in Redis)
+ */
+export interface WebExtractionBatchProgress {
+  batchJobId: string
+  workspaceId: string
+  status: "processing" | "completed" | "error" | "cancelled"
+  total: number
+  processed: number
+  success: number
+  errors: number
+  emailFound: number
+  phoneFound: number
+  addressFound: number
+  socialFound: number
+  gptRequests: number
+  percentage: number
+  elapsedTime: number
+  estimatedTimeRemaining: number
+  itemsPerSecond: number
+  estimatedCost: number
+  startedAt: string
+  completedAt?: string
+  /** Recent logs (last 50) */
+  logs: Array<{
+    timestamp: number
+    message: string
+    type: "info" | "success" | "warning" | "error"
+  }>
+  /** Latest processed result */
+  latestResult?: WebExtractionResult["record"]
 }

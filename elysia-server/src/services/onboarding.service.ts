@@ -22,6 +22,7 @@ import { createB2BCustomerIndustryAgent, generateB2BCustomerIndustryPrompt } fro
 import { structuredExtractionAgent } from "../shared/mastra/shell/agents/structured-extraction-agent"
 import { createLog } from "./activity-log.service"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
+import { emailService } from "./email.service"
 import { searchBigQuery } from "./bigquery-search.service"
 import { createCustomerGroup } from "./customer-group.service"
 import { verifyEmail } from "./hunterio-email-verifier.service"
@@ -1001,6 +1002,13 @@ export async function generatePreviewEmailsForSequence(
       subject = replaceVariables(subject, lead, targetLanguage, false)
       bodyText = replaceVariables(bodyText, lead, targetLanguage, false)
       bodyHtml = bodyHtml ? replaceVariables(bodyHtml, lead, targetLanguage, true) : null
+
+      // Trial preview emails should NOT include signature - temporarily disabled
+      // const placeholderSignature = emailService.generateTrialPlaceholderSignature()
+      // bodyText = emailService.appendSignatureToEmail(bodyText, placeholderSignature.signatureHtml, placeholderSignature.signatureText, false)
+      // if (bodyHtml) {
+      //   bodyHtml = emailService.appendSignatureToEmail(bodyHtml, placeholderSignature.signatureHtml, placeholderSignature.signatureText, true)
+      // }
 
       // Calculate scheduled time: base + lead offset + delay days
       const scheduledAt = new Date(

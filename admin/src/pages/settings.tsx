@@ -411,6 +411,9 @@ export default function SettingsPage() {
     [t],
   )
 
+  // Trial 사용자 여부 확인
+  const isTrialUser = currentUser?.trialStatus?.isTrialActive === true
+
   /**
    * 권한에 따라 메뉴 필터링
    */
@@ -425,6 +428,12 @@ export default function SettingsPage() {
       // header/separator는 별도 처리 (하위 항목이 있는지로 판단)
       if (item.type === "header" || item.type === "separator") {
         return true // 일단 통과, 나중에 빈 섹션 제거
+      }
+
+      // Trial 사용자에게 이메일 서명 관리 메뉴 숨김
+      if (item.id === "signature" && isTrialUser) {
+        console.debug("[Settings] Hiding signature menu for trial user")
+        return false
       }
 
       // Admin은 모든 메뉴 접근 가능
@@ -482,7 +491,7 @@ export default function SettingsPage() {
     }
 
     return cleanedItems
-  }, [allMenuItems, isSystemAdmin, hasPermission, permissionLoading, isOnboardingComplete, t])
+  }, [allMenuItems, isSystemAdmin, hasPermission, permissionLoading, isOnboardingComplete, isTrialUser, t])
 
   if (isLoading || permissionLoading) {
     return (

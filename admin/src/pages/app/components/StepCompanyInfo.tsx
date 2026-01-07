@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ type SalesStrategyData = {
   country: string
   experience: string
   websiteUrl?: string
+  includeSignature: boolean
 }
 
 // Industry options
@@ -94,6 +96,7 @@ export function StepCompanyInfo() {
     country: "",
     experience: "",
     websiteUrl: "",
+    includeSignature: true,
   })
 
   // Validation error state
@@ -177,6 +180,7 @@ export function StepCompanyInfo() {
             companyDescription:
               workspaceData?.companyDescription || strategyData.companyDescription || "",
             websiteUrl: strategyData.websiteUrl || "",
+            includeSignature: strategyData.includeSignature ?? true,
           }
           setEditedData(mergedData)
         } else {
@@ -310,6 +314,7 @@ export function StepCompanyInfo() {
         target: editedData.target,
         country: editedData.country,
         experience: editedData.experience,
+        includeSignature: editedData.includeSignature,
         lang: i18n.language,
         userId,
       }
@@ -333,6 +338,7 @@ export function StepCompanyInfo() {
           country: editedData.country,
           experience: editedData.experience,
           websiteUrl: editedData.websiteUrl,
+          includeSignature: editedData.includeSignature,
         }),
       })
       console.log("[StepCompanyInfo] ✅ Sales strategy updated:", salesResponse)
@@ -630,6 +636,27 @@ export function StepCompanyInfo() {
               value={editedData.websiteUrl}
             />
           </div>
+
+          {/* Include Signature Toggle - Temporarily hidden
+          <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-4">
+            <div className="space-y-0.5">
+              <Label className="font-medium text-gray-900 text-sm">
+                {isKorean ? "이메일에 서명 포함" : "Include signature in emails"}
+              </Label>
+              <p className="text-gray-500 text-xs">
+                {isKorean
+                  ? "발송되는 이메일에 서명을 자동으로 추가합니다"
+                  : "Automatically add signature to outgoing emails"}
+              </p>
+            </div>
+            <Switch
+              checked={editedData.includeSignature}
+              onCheckedChange={(checked) =>
+                setEditedData((prev) => ({ ...prev, includeSignature: checked }))
+              }
+            />
+          </div>
+          */}
 
           {/* 2-Column Grid for 4 dropdowns */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

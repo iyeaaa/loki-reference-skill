@@ -181,6 +181,36 @@ class EmailService {
     }
   }
 
+  // Generate placeholder signature for Trial/Preview emails
+  // Uses placeholder text instead of real user information
+  generateTrialPlaceholderSignature(): {
+    signatureHtml: string
+    signatureText: string
+  } {
+    // HTML signature with placeholders
+    const signatureHtml = `
+      <div dir="ltr" style="color: #666; font-family: tahoma, sans-serif;">
+        <p style="margin: 20px 0 10px 0;">---</p>
+        <p style="margin: 5px 0;"><strong>[Your Name]</strong></p>
+        <p style="margin: 5px 0;">[Your Title] | [Your Company]</p>
+        <p style="margin: 15px 0 5px 0; font-size: 12px; color: #999;">
+          <em>* This is a preview signature. Your actual signature will appear here when you connect your email account.</em>
+        </p>
+      </div>
+    `.trim()
+
+    // Text signature with placeholders
+    const signatureText = `
+---
+[Your Name]
+[Your Title] | [Your Company]
+
+* This is a preview signature. Your actual signature will appear here when you connect your email account.
+    `.trim()
+
+    return { signatureHtml, signatureText }
+  }
+
   // Generate hardcoded email signature
   generateGrindaSignature(
     name: string,

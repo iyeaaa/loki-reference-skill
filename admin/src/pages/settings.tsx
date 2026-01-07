@@ -491,7 +491,15 @@ export default function SettingsPage() {
     }
 
     return cleanedItems
-  }, [allMenuItems, isSystemAdmin, hasPermission, permissionLoading, isOnboardingComplete, isTrialUser, t])
+  }, [
+    allMenuItems,
+    isSystemAdmin,
+    hasPermission,
+    permissionLoading,
+    isOnboardingComplete,
+    isTrialUser,
+    t,
+  ])
 
   if (isLoading || permissionLoading) {
     return (

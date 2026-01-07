@@ -910,8 +910,6 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         const result = await enrichLead(websiteUrl.trim(), "", {
           hunterApiKey,
           skipHunter: skipHunter ?? !hunterApiKey,
-          crawlDepth: crawlDepth ?? 0,
-          timeoutSeconds: timeoutSeconds ?? 10,
         })
 
         const elapsedMs = Date.now() - startTime
@@ -980,16 +978,24 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       }
 
       try {
-        const { extractEmailQuick } = await import("../services/lead-enrichment.service")
+        const { enrichLead } = await import("../services/lead-enrichment.service")
 
         const startTime = Date.now()
 
-        const result = await extractEmailQuick(websiteUrl.trim(), {
+        const enrichResult = await enrichLead(websiteUrl.trim(), "", {
           hunterApiKey,
           skipHunter: skipHunter ?? !hunterApiKey,
         })
 
         const elapsedMs = Date.now() - startTime
+
+        // Extract first email from enrichment result
+        const firstEmail = enrichResult.emails[0]
+        const result = {
+          email: firstEmail?.value || null,
+          source: firstEmail?.type || null,
+          confidence: firstEmail?.confidence || null,
+        }
 
         logger.info(
           {

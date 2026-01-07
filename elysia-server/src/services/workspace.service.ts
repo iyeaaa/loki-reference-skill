@@ -313,13 +313,18 @@ export async function createWorkspace(data: {
   competitiveAdvantages?: string[]
   rawResearchOutput?: unknown
 }) {
-  // Check trial workspace limit
-  const trialCount = await countTrialWorkspaces(data.ownerId)
+  // Admin users can always create workspaces, skip trial limit check
+  const isAdmin = await isUserAdmin(data.ownerId)
 
-  if (trialCount >= 1) {
-    throw new Error(
-      "TRIAL_WORKSPACE_LIMIT_EXCEEDED: Trial users can only create 1 workspace. Please upgrade your subscription to create more workspaces.",
-    )
+  if (!isAdmin) {
+    // Check trial workspace limit for non-admin users
+    const trialCount = await countTrialWorkspaces(data.ownerId)
+
+    if (trialCount >= 1) {
+      throw new Error(
+        "TRIAL_WORKSPACE_LIMIT_EXCEEDED: Trial users can only create 1 workspace. Please upgrade your subscription to create more workspaces.",
+      )
+    }
   }
 
   const [newWorkspace] = await db

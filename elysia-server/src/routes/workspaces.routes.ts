@@ -139,9 +139,20 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
     },
   )
 
-  // Check if user can create workspace (trial limit validation)
+  // Check if user can create workspace (admin bypass + trial limit validation)
   .get("/can-create/:ownerId", async ({ params: { ownerId }, set }) => {
     try {
+      // Admin users can always create workspaces
+      const isAdmin = await workspaceService.isUserAdmin(ownerId)
+      if (isAdmin) {
+        return {
+          canCreate: true,
+          trialWorkspaceCount: 0,
+          message: "Admin users can create unlimited workspaces",
+        }
+      }
+
+      // Non-admin users: check trial workspace limit
       const trialCount = await workspaceService.countTrialWorkspaces(ownerId)
       const canCreate = trialCount < 1
 

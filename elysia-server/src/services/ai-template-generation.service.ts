@@ -334,6 +334,264 @@ ${previousEmailsSection}
   }
 
   /**
+   * 여러 이메일 템플릿을 배치로 생성 (언어 감지/번역 1회, 병렬 생성)
+   * 순차 생성 대비 3배 빠름
+   */
+  async generateEmailTemplatesBatch(options: {
+    workspaceName: string
+    workspaceNameEn?: string
+    workspaceDescription?: string
+    country: string
+    emailConfigs: Array<{
+      userPrompt: string
+      stepNumber: number
+      totalSteps: number
+      stepType: "introduction" | "follow_up_1" | "follow_up_2"
+    }>
+    model?: string
+    temperature?: number
+  }): Promise<GeneratedTemplate[]> {
+    const {
+      workspaceName,
+      workspaceNameEn,
+      workspaceDescription,
+      country,
+      emailConfigs,
+      model = "gpt-5.2",
+      temperature: _temperature = 0.7,
+    } = options
+
+    console.log(
+      `[AITemplate] Starting batch email template generation (${emailConfigs.length} templates)`,
+    )
+    console.log(`[AITemplate]   - workspace: ${workspaceName}`)
+    console.log(`[AITemplate]   - country: ${country}`)
+    console.log(`[AITemplate]   - model: ${model}`)
+
+    try {
+      // 1. 언어 감지 및 번역 (한 번만 수행)
+      const isMultipleCountries = country.includes(",")
+      const countryLower = country.toLowerCase()
+
+      // 영어권 국가 및 지역 (동남아시아, 동아시아 등 지역명 포함)
+      const englishCountries = [
+        "United States",
+        "United Kingdom",
+        "Singapore",
+        "United Arab Emirates",
+        "Australia",
+        "Canada",
+        "India",
+        "Philippines",
+        "Malaysia",
+        "Vietnam",
+        "Thailand",
+        "Indonesia",
+        "ae",
+        "us",
+        "uk",
+        "sg",
+        "au",
+        "ca",
+        "in",
+        "ph",
+        "my",
+        "vn",
+        "th",
+        "id",
+      ]
+
+      // 지역명 (영어로 처리)
+      const englishRegions = [
+        "southeast asia",
+        "south east asia",
+        "east asia",
+        "south asia",
+        "middle east",
+        "europe",
+        "africa",
+        "latin america",
+        "north america",
+      ]
+
+      const isEnglishRegion = englishRegions.some((region) => countryLower.includes(region))
+      // 정확한 매칭 사용 (부분 문자열 매칭 방지: "china"에 "in"이 포함되는 문제)
+      const isEnglishCountry = englishCountries.some(
+        (c) =>
+          countryLower === c.toLowerCase() ||
+          countryLower.startsWith(`${c.toLowerCase()} `) ||
+          countryLower.endsWith(` ${c.toLowerCase()}`),
+      )
+      const isEnglishTarget = isMultipleCountries || isEnglishRegion || isEnglishCountry
+
+      console.log(`[AITemplate] Language detection for country "${country}":`)
+      console.log(`[AITemplate]   - countryLower: "${countryLower}"`)
+      console.log(`[AITemplate]   - isMultipleCountries: ${isMultipleCountries}`)
+      console.log(`[AITemplate]   - isEnglishRegion: ${isEnglishRegion}`)
+      console.log(`[AITemplate]   - isEnglishCountry: ${isEnglishCountry}`)
+      console.log(`[AITemplate]   - isEnglishTarget: ${isEnglishTarget}`)
+
+      const targetLanguage = isEnglishTarget
+        ? "English"
+        : countryLower.includes("japan") || countryLower === "jp"
+          ? "Japanese"
+          : countryLower.includes("china") || countryLower === "cn"
+            ? "Chinese"
+            : countryLower === "kr" || countryLower === "korea"
+              ? "Korean"
+              : "English" // fallback to English
+
+      console.log(`[AITemplate]   ➜ targetLanguage: ${targetLanguage}`)
+
+      // 회사명 언어 감지 (1회)
+      const companyNameLang = await this.detectLanguage(workspaceName)
+      console.log(`[AITemplate] Detected language for "${workspaceName}": ${companyNameLang}`)
+
+      // 회사명 번역 (1회)
+      let finalCompanyName: string
+      const needsTranslation = companyNameLang !== targetLanguage
+
+      if (!needsTranslation) {
+        finalCompanyName = workspaceName
+        console.log(
+          `[AITemplate] Language matches target (${targetLanguage}), using original name: "${workspaceName}"`,
+        )
+      } else if (workspaceNameEn) {
+        finalCompanyName = workspaceNameEn
+        console.log(`[AITemplate] Using English company name as fallback: "${workspaceNameEn}"`)
+      } else {
+        finalCompanyName = await this.translateCompanyName(workspaceName, targetLanguage)
+        console.log(
+          `[AITemplate] Translated company name: "${workspaceName}" → "${finalCompanyName}"`,
+        )
+      }
+
+      // 2. 랜덤 예시 선택 (공통)
+      const examples = this.getRandomExamples(3)
+      const examplesText =
+        examples.length > 0
+          ? examples
+              .map(
+                (ex, idx) => `
+Example ${idx + 1} (${ex.company}):
+Subject: ${ex.subject}
+Body: ${ex.content}
+`,
+              )
+              .join("\n")
+          : ""
+
+      // 3. 병렬로 모든 템플릿 생성
+      console.log(`[AITemplate] Generating ${emailConfigs.length} templates in parallel...`)
+      const startTime = Date.now()
+
+      const templatePromises = emailConfigs.map(async (config) => {
+        // 각 템플릿에 대한 시퀀스 컨텍스트 생성
+        const sequenceContext = {
+          stepNumber: config.stepNumber,
+          totalSteps: config.totalSteps,
+          stepType: config.stepType,
+          // 이전 이메일은 순차 생성이 아니므로 제공 안 함 (병렬 생성)
+          previousEmails: undefined,
+        }
+
+        const sequenceSection = this.buildSequenceContextSection(sequenceContext, isEnglishTarget)
+
+        const targetLanguageInstruction = isEnglishTarget
+          ? "Write the ENTIRE email in English. Do NOT mix languages."
+          : `Write the email in the primary language of "${country}". Keep it consistent - do NOT mix languages.`
+
+        const systemPrompt = `You are an expert cold email writer. Write concise, personalized B2B emails that get replies.
+
+CONTEXT:
+Company: ${finalCompanyName}
+${workspaceDescription ? `Description (translate to target language): ${workspaceDescription}` : ""}
+Target Region: ${country}
+Language: ${isEnglishTarget ? "English ONLY" : `Primary language of ${country} ONLY`}
+${sequenceSection}
+
+CRITICAL RULES:
+1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
+2. VARIABLES: Use {{company_name}} for recipient company. Start with "Hi there," or "Hello," (no contact name).
+3. STRUCTURE:
+   - Hook (13 words): Personalized opener about THEM
+   - Bridge: Connect their situation to value (NO fabricated stats/numbers)
+   - Ask: One simple question, low-friction CTA
+
+AVOID:
+❌ "I hope this finds you well" / generic openers
+❌ Language mixing (e.g., "Hi 담당자" in English)
+❌ Multiple CTAs, bullet points, feature lists
+❌ Signatures, "We are a leading provider", fabricated numbers
+❌ Translating company description literally without adapting
+
+GOOD EXAMPLE:
+"Hi there,
+
+Noticed {{company_name}} expanding into [specific market].
+
+Many similar companies struggled with [challenge]. We've helped businesses like yours build [outcome] and accelerate [result].
+
+Worth a quick chat?"
+${
+  examplesText
+    ? `
+REFERENCE EXAMPLES (learn tone/structure, don't copy):
+${examplesText}
+`
+    : ""
+}
+
+OUTPUT (JSON only):
+{
+  "language": "en",
+  "subject": "concise subject with {{company_name}}",
+  "body": "Hook here.\\n\\nBridge here.\\n\\nAsk here?"
+}`
+
+        const userMessage = `Write a cold email for prospects in "${country}".
+
+Requirements: ${config.userPrompt}
+
+Key points:
+- Use {{company_name}} variable
+- Start with "Hi there," or "Hello,"
+- No signature
+${workspaceDescription ? `- Naturally incorporate company value proposition (translate first if needed)` : ""}`
+
+        const { text } = await generateText({
+          model: this.openai(model),
+          system: systemPrompt,
+          prompt: userMessage,
+          providerOptions: {
+            openai: {
+              reasoningEffort: "medium",
+            },
+          },
+        })
+
+        return this.parseAIResponse(text)
+      })
+
+      const templates = await Promise.all(templatePromises)
+
+      const elapsed = Date.now() - startTime
+      console.log(
+        `[AITemplate] ✅ Batch generation complete: ${templates.length} templates in ${elapsed}ms`,
+      )
+
+      return templates
+    } catch (error) {
+      console.error(`[AITemplate] ❌ Batch template generation failed:`, error)
+      logger.error(
+        { err: error, country: options.country, workspaceName: options.workspaceName },
+        "AI batch template generation failed",
+      )
+      throw error
+    }
+  }
+
+  /**
    * 국가 정보로부터 언어 감지 및 이메일 템플릿 생성
    */
   async generateEmailTemplate(options: GenerateTemplateOptions): Promise<GeneratedTemplate> {
@@ -344,7 +602,7 @@ ${previousEmailsSection}
       country,
       userPrompt,
       model = "gpt-5-mini",
-      temperature = 0.7,
+      temperature: _temperature = 0.7,
       sequenceContext,
     } = options
 
@@ -359,30 +617,28 @@ ${previousEmailsSection}
     }
 
     try {
-      // 1. 랜덤 예시 5개 선택
-      const examples = this.getRandomExamples(5)
+      // 1. 랜덤 예시 2개만 선택 (최적화: 5개 → 3개)
+      const examples = this.getRandomExamples(3)
       console.log(`[AITemplate] Selected ${examples.length} random email examples`)
       const examplesText =
         examples.length > 0
           ? examples
               .map(
                 (ex, idx) => `
-Example ${idx + 1}:
-Company: ${ex.company}
-Timing: ${ex.day}
+Example ${idx + 1} (${ex.company}):
 Subject: ${ex.subject}
-Body:
-${ex.content}
+Body: ${ex.content}
 `,
               )
-              .join("\n---\n")
+              .join("\n")
           : ""
 
       // 2. 시스템 프롬프트 구성
       // 국가가 여러 개인 경우 (comma로 구분) 영어로 고정
       const isMultipleCountries = country.includes(",")
+      const countryLower = country.toLowerCase()
 
-      // Determine target language based on country
+      // 영어권 국가 및 지역 (동남아시아, 동아시아 등 지역명 포함)
       const englishCountries = [
         "United States",
         "United Kingdom",
@@ -393,6 +649,9 @@ ${ex.content}
         "India",
         "Philippines",
         "Malaysia",
+        "Vietnam",
+        "Thailand",
+        "Indonesia",
         "ae",
         "us",
         "uk",
@@ -402,10 +661,40 @@ ${ex.content}
         "in",
         "ph",
         "my",
+        "vn",
+        "th",
+        "id",
       ]
-      const isEnglishTarget =
-        isMultipleCountries ||
-        englishCountries.some((c) => country.toLowerCase().includes(c.toLowerCase()))
+
+      // 지역명 (영어로 처리)
+      const englishRegions = [
+        "southeast asia",
+        "south east asia",
+        "east asia",
+        "south asia",
+        "middle east",
+        "europe",
+        "africa",
+        "latin america",
+        "north america",
+      ]
+
+      const isEnglishRegion = englishRegions.some((region) => countryLower.includes(region))
+      // 정확한 매칭 사용 (부분 문자열 매칭 방지: "china"에 "in"이 포함되는 문제)
+      const isEnglishCountry = englishCountries.some(
+        (c) =>
+          countryLower === c.toLowerCase() ||
+          countryLower.startsWith(`${c.toLowerCase()} `) ||
+          countryLower.endsWith(` ${c.toLowerCase()}`),
+      )
+      const isEnglishTarget = isMultipleCountries || isEnglishRegion || isEnglishCountry
+
+      console.log(`[AITemplate] Language detection for individual email "${country}":`)
+      console.log(`[AITemplate]   - countryLower: "${countryLower}"`)
+      console.log(`[AITemplate]   - isMultipleCountries: ${isMultipleCountries}`)
+      console.log(`[AITemplate]   - isEnglishRegion: ${isEnglishRegion}`)
+      console.log(`[AITemplate]   - isEnglishCountry: ${isEnglishCountry}`)
+      console.log(`[AITemplate]   - isEnglishTarget: ${isEnglishTarget}`)
 
       const targetLanguageInstruction = isEnglishTarget
         ? "Write the ENTIRE email in English. Do NOT mix languages."
@@ -414,13 +703,15 @@ ${ex.content}
       // 3. 회사명 언어 감지 및 선택 로직
       const targetLanguage = isEnglishTarget
         ? "English"
-        : country.toLowerCase().includes("japan") || country.toLowerCase() === "jp"
+        : countryLower.includes("japan") || countryLower === "jp"
           ? "Japanese"
-          : country.toLowerCase().includes("china") || country.toLowerCase() === "cn"
+          : countryLower.includes("china") || countryLower === "cn"
             ? "Chinese"
-            : country.toLowerCase() === "kr"
+            : countryLower === "kr" || countryLower === "korea"
               ? "Korean"
-              : "English" // fallback
+              : "English" // fallback to English
+
+      console.log(`[AITemplate]   ➜ targetLanguage: ${targetLanguage}`)
 
       // 3-1. companyName의 언어 감지
       const companyNameLang = await this.detectLanguage(workspaceName)
@@ -455,165 +746,63 @@ ${ex.content}
         ? this.buildSequenceContextSection(sequenceContext, isEnglishTarget)
         : ""
 
-      const systemPrompt = `You are a world-class cold email strategist who has personally written emails that generated $50M+ in pipeline for B2B companies.
+      const systemPrompt = `You are an expert cold email writer. Write concise, personalized B2B emails that get replies.
 
-Your philosophy: "The best cold email doesn't feel cold. It feels like someone did their homework."
-
-═══════════════════════════════════════════════════════════════
-WHO IS SENDING THIS EMAIL
-═══════════════════════════════════════════════════════════════
+CONTEXT:
 Company: ${translatedWorkspaceName}
-${workspaceDescription ? `What we do (translate to ${isEnglishTarget ? "English" : `the primary language of ${country}`} if not already): ${workspaceDescription}` : ""}
-
-═══════════════════════════════════════════════════════════════
-TARGET AUDIENCE
-═══════════════════════════════════════════════════════════════
-- Region: ${country}
-- Language: ${isEnglishTarget ? "English" : `Primary language of ${country}`}
+${workspaceDescription ? `Description (translate to target language): ${workspaceDescription}` : ""}
+Target Region: ${country}
+Language: ${isEnglishTarget ? "English ONLY" : `Primary language of ${country} ONLY`}
 ${sequenceSection}
-═══════════════════════════════════════════════════════════════
-THE 13-WORD RULE (Critical for Open Rates)
-═══════════════════════════════════════════════════════════════
-Email preview shows ~13 words. These determine if they open.
 
-WINNING FIRST LINES:
-✅ "Noticed {{company_name}} has been expanding into [specific market]..."
-✅ "Quick question about {{company_name}}'s [specific initiative]..."
-✅ "[Industry trend] is changing fast - wondering how {{company_name}} is adapting..."
+CRITICAL RULES:
+1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
+2. VARIABLES: Use {{company_name}} for recipient company. Start with "Hi there," or "Hello," (no contact name).
+3. STRUCTURE:
+   - Hook (13 words): Personalized opener about THEM
+   - Bridge: Connect their situation to value (NO fabricated stats/numbers)
+   - Ask: One simple question, low-friction CTA
 
-INSTANT DELETE FIRST LINES:
-❌ "I hope this email finds you well..."
-❌ "My name is X and I work at Y..."
-❌ "I'm reaching out because..."
-❌ "We are a leading provider of..."
+AVOID:
+❌ "I hope this finds you well" / generic openers
+❌ Language mixing (e.g., "Hi 담당자" in English)
+❌ Multiple CTAs, bullet points, feature lists
+❌ Signatures, "We are a leading provider", fabricated numbers
+❌ Translating company description literally without adapting
 
-═══════════════════════════════════════════════════════════════
-LANGUAGE RULES (CRITICAL - READ TWICE)
-═══════════════════════════════════════════════════════════════
-${targetLanguageInstruction}
-
-⚠️ NEVER MIX LANGUAGES - This destroys credibility instantly.
-- Writing in English? EVERYTHING in English
-- Writing in Korean? EVERYTHING in Korean
-- Writing in Japanese? EVERYTHING in Japanese
-
-═══════════════════════════════════════════════════════════════
-VARIABLES (Use These)
-═══════════════════════════════════════════════════════════════
-- {{company_name}} - Recipient's company (REQUIRED)
-- {{contact_name}} - Recipient's name (SKIP - we often don't have it)
-
-GREETING:
-- English: "Hi there," or "Hello," (NOT "Hi {{contact_name}}")
-- Korean: "안녕하세요," (NOT "{{담당자명}}님")
-- NEVER: "Hi 담당자" (language mixing = amateur hour)
-
-═══════════════════════════════════════════════════════════════
-THE PERFECT COLD EMAIL STRUCTURE
-═══════════════════════════════════════════════════════════════
-
-LINE 1 - THE HOOK (Pattern Interrupt)
-Show you did homework. Reference something specific about THEM.
-"Noticed {{company_name}} just launched in [market]..."
-"Saw {{company_name}}'s booth at [trade show]..."
-"{{company_name}}'s expansion into [area] caught my eye..."
-
-LINE 2-3 - THE BRIDGE (Relevant Insight)
-Connect their situation to a relevant outcome. Focus on value proposition.
-"Many [similar companies] we work with faced [specific challenge]..."
-"We've helped companies like yours tackle [problem] and improve [outcome]..."
-
-⚠️ CRITICAL: DO NOT fabricate statistics, percentages, or specific numbers (like "35% increase", "4 months", "50+ buyers") unless explicitly provided in the context. Focus on qualitative value and benefits instead.
-
-LINE 4 - THE ASK (Low-Friction CTA)
-One simple question. No commitment.
-"Worth a quick conversation?"
-"Curious if this resonates?"
-"Make sense to chat?"
-NOT: "Would you be available for a 30-minute call next Tuesday at 3pm?"
-
-═══════════════════════════════════════════════════════════════
-WHAT MAKES EMAILS GET REPLIES (Data-Backed)
-═══════════════════════════════════════════════════════════════
-✅ One question: More replies than multiple questions
-✅ Personalized first line: Higher open rates
-✅ Value-focused messaging: More credible than vague claims
-✅ "Quick question" in subject: Higher open rates
-
-═══════════════════════════════════════════════════════════════
-STRICT PROHIBITIONS
-═══════════════════════════════════════════════════════════════
-❌ Language mixing (kills trust instantly)
-❌ Using Korean words in English emails (translate everything!)
-❌ Copying company description in original language without translating
-❌ "담당자", "귀사", "당사" in English emails
-❌ "I hope this finds you well" (screams mass email)
-❌ Signatures or placeholders like [Your Name]
-❌ Multiple CTAs (confused = delete)
-❌ Bullet points (feels like marketing, not conversation)
-❌ Feature lists (nobody cares about features)
-❌ Generic industry pain points (too obvious)
-❌ "We are the leading provider of..." (nobody believes this)
-❌ Fabricated statistics, percentages, or growth numbers (destroys credibility)
-
-═══════════════════════════════════════════════════════════════
-EXAMPLES: BAD vs GOOD
-═══════════════════════════════════════════════════════════════
-
-❌ TERRIBLE (gets deleted):
-"Hi 담당자, I hope this email finds you well. We are a leading provider of 기본 워크스페이스 solutions. Our platform helps streamline daily tasks. Would you like to schedule a call?"
-
-✅ EXCELLENT (gets replies):
+GOOD EXAMPLE:
 "Hi there,
 
-Noticed {{company_name}} has been making waves in the Middle East fragrance market.
+Noticed {{company_name}} expanding into [specific market].
 
-Many beauty distributors we've worked with struggled to find the right buyers when entering new regions. We've helped similar companies build strong networks of qualified buyers and accelerate their market entry.
+Many similar companies struggled with [challenge]. We've helped businesses like yours build [outcome] and accelerate [result].
 
-Worth a quick chat about your expansion plans?"
+Worth a quick chat?"
 ${
   examplesText
     ? `
-═══════════════════════════════════════════════════════════════
-REFERENCE EXAMPLES (Learn from these successful cold emails)
-═══════════════════════════════════════════════════════════════
-Study these real examples for tone, structure, and approach. Do NOT copy them directly.
+REFERENCE EXAMPLES (learn tone/structure, don't copy):
 ${examplesText}
 `
     : ""
 }
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON)
-═══════════════════════════════════════════════════════════════
-Respond ONLY with a valid JSON object. No other text before or after.
-Use \\n for line breaks within the body text.
 
+OUTPUT (JSON only):
 {
   "language": "en",
-  "subject": "your subject line here",
-  "body": "First paragraph here.\\n\\nSecond paragraph here.\\n\\nClosing question?"
-}
-
-Example output:
-{
-  "language": "en",
-  "subject": "quick question about {{company_name}}",
-  "body": "Hi there,\\n\\nNoticed {{company_name}} has been making waves in the market.\\n\\nMany companies we work with faced similar challenges when scaling. We helped 3 similar businesses achieve 50% growth in 90 days.\\n\\nWorth a quick chat?"
+  "subject": "concise subject with {{company_name}}",
+  "body": "Hook here.\\n\\nBridge here.\\n\\nAsk here?"
 }`
 
-      const userMessage = `
-[USER REQUIREMENTS]
-${userPrompt}
+      const userMessage = `Write a cold email for prospects in "${country}".
 
-[TASK]
-Write a cold email for prospects in "${country}".
+Requirements: ${userPrompt}
 
-REMEMBER:
-- Language: ${isEnglishTarget ? "English ONLY - no Korean words" : `Primary language of ${country} ONLY`}
-- Use {{company_name}} for company name (will be replaced with real data)
-- Start with "Hi there," or "Hello," - do NOT use contact name variable
-- End naturally - no signature needed
-${workspaceDescription ? `- Company description to incorporate (TRANSLATE to ${isEnglishTarget ? "English" : `the primary language of ${country}`} first, then naturally weave into the email as a value proposition): "${workspaceDescription}"` : ""}`
+Key points:
+- Use {{company_name}} variable
+- Start with "Hi there," or "Hello,"
+- No signature
+${workspaceDescription ? `- Naturally incorporate company value proposition (translate first if needed)` : ""}`
 
       // 2. AI API 호출
       console.log(`[AITemplate] Calling OpenAI API...`)
@@ -622,7 +811,12 @@ ${workspaceDescription ? `- Company description to incorporate (TRANSLATE to ${i
         model: this.openai(model),
         system: systemPrompt,
         prompt: userMessage,
-        temperature,
+        // temperature,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "minimal",
+          },
+        },
       })
       const elapsed = Date.now() - startTime
       console.log(`[AITemplate] OpenAI API response received (${elapsed}ms)`)

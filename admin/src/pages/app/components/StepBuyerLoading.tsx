@@ -134,6 +134,7 @@ export function StepBuyerLoading() {
     phase,
     displayProgress,
     message,
+    parallelProgress,
     isComplete: sseComplete,
     hasError: sseError,
     leads,
@@ -362,6 +363,43 @@ export function StepBuyerLoading() {
             </div>
             <Progress className="h-3" value={progressPercent} />
           </div>
+
+          {/* Parallel Progress (Discovery + Templates) */}
+          {parallelProgress && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-gray-700">
+                    {isKorean ? "바이어 검색" : "Finding Buyers"}
+                  </span>
+                  <span className="text-gray-600">
+                    {parallelProgress.discovery.done
+                      ? "✓"
+                      : `${parallelProgress.discovery.percent}%`}
+                  </span>
+                </div>
+                {!parallelProgress.discovery.done && (
+                  <Progress className="h-2" value={parallelProgress.discovery.percent} />
+                )}
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-gray-700">
+                    {isKorean ? "이메일 생성" : "Writing Emails"}
+                  </span>
+                  <span className="text-gray-600">
+                    {parallelProgress.templates.done
+                      ? "✓"
+                      : `${parallelProgress.templates.percent}%`}
+                  </span>
+                </div>
+                {!parallelProgress.templates.done && (
+                  <Progress className="h-2" value={parallelProgress.templates.percent} />
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Phase Checklist */}
           <PhaseChecklist getPhaseStatus={getPhaseStatus} isKorean={isKorean} />

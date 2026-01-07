@@ -226,6 +226,10 @@ function NotificationItem({
     actionUrl?: string
     actionLabel?: string
     workspaceId?: string
+    parallelProgress?: {
+      discovery: { percent: number; done: boolean }
+      templates: { percent: number; done: boolean }
+    }
   } | null
 
   const metadataPhase = metadata?.phase
@@ -245,6 +249,11 @@ function NotificationItem({
   const displayProgress = isInProgress
     ? progressState.displayProgress
     : (metadata?.progressPercent ?? 0)
+
+  // 병렬 진행률: 진행 중이면 Store에서, 완료/에러면 metadata에서
+  const parallelProgress = isInProgress
+    ? progressState.parallelProgress
+    : metadata?.parallelProgress
 
   // 상세 정보 포맷팅
   const detailsText = formatOnboardingDetails(notification.metadata)
@@ -313,17 +322,63 @@ function NotificationItem({
 
         {/* Progress bar for in-progress onboarding */}
         {isInProgress && (
-          <div className="mt-2">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={cn(
-                  "h-full transition-all duration-500 ease-out",
-                  displayProgress >= 100 ? "bg-green-500" : "bg-blue-500",
-                )}
-                style={{ width: `${Math.min(displayProgress, 100)}%` }}
-              />
+          <div className="mt-2 space-y-2">
+            {/* 전체 진행률 */}
+            <div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-500 ease-out",
+                    displayProgress >= 100 ? "bg-green-500" : "bg-blue-500",
+                  )}
+                  style={{ width: `${Math.min(displayProgress, 100)}%` }}
+                />
+              </div>
+              <p className="mt-1 text-muted-foreground text-xs">{Math.round(displayProgress)}%</p>
             </div>
-            <p className="mt-1 text-muted-foreground text-xs">{Math.round(displayProgress)}%</p>
+
+            {/* 병렬 진행률 (Discovery + Templates) */}
+            {parallelProgress && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1 rounded border border-gray-200 bg-gray-50 p-2">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-medium text-gray-600">바이어 검색</span>
+                    <span className="text-gray-500">
+                      {parallelProgress.discovery.done
+                        ? "✓"
+                        : `${parallelProgress.discovery.percent}%`}
+                    </span>
+                  </div>
+                  {!parallelProgress.discovery.done && (
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-500"
+                        style={{ width: `${parallelProgress.discovery.percent}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1 rounded border border-gray-200 bg-gray-50 p-2">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-medium text-gray-600">이메일 생성</span>
+                    <span className="text-gray-500">
+                      {parallelProgress.templates.done
+                        ? "✓"
+                        : `${parallelProgress.templates.percent}%`}
+                    </span>
+                  </div>
+                  {!parallelProgress.templates.done && (
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-500"
+                        style={{ width: `${parallelProgress.templates.percent}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

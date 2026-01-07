@@ -1369,8 +1369,8 @@ export async function enrichLeadsForOnboarding(
   const hunterApiKey = config.hunter.apiKey
   const geminiApiKey = config.gemini.apiKey
 
-  const BATCH_SIZE = 10 // Process 10 leads concurrently
-  const DELAY_BETWEEN_BATCHES = 2000 // 2s delay between batches
+  const BATCH_SIZE = 15 // 🚀 10 → 15 증가 (더 많은 병렬 처리)
+  const DELAY_BETWEEN_BATCHES = 500 // 🚀 2000ms → 500ms 감소 (빠른 배치 처리)
 
   const enrichedLeads = []
 

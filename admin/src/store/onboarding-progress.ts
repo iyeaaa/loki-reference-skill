@@ -66,6 +66,11 @@ export type OnboardingProgressEvent = {
   message: string
   messageKr: string
   timestamp: string
+  // NEW: Parallel execution progress (for discovery + templates running simultaneously)
+  parallelProgress?: {
+    discovery: { percent: number; done: boolean }
+    templates: { percent: number; done: boolean }
+  }
 }
 
 export type OnboardingProgressState = {
@@ -79,6 +84,12 @@ export type OnboardingProgressState = {
   progressPercent: number
   message: string
 
+  // Parallel Progress (Discovery + Templates)
+  parallelProgress?: {
+    discovery: { percent: number; done: boolean }
+    templates: { percent: number; done: boolean }
+  }
+
   // Status Flags
   isComplete: boolean
   hasError: boolean
@@ -87,6 +98,36 @@ export type OnboardingProgressState = {
   // Leads/Emails for UI
   leads: LeadProgressItem[]
   emails: EmailProgressItem[]
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Merge parallel progress while preserving completed tasks
+ * - If current progress is done (100%), don't overwrite it
+ * - Otherwise, use incoming progress
+ */
+function mergeParallelProgress(
+  current: OnboardingProgressState["parallelProgress"],
+  incoming: OnboardingProgressEvent["parallelProgress"],
+): OnboardingProgressState["parallelProgress"] {
+  if (!incoming) {
+    return current
+  }
+  if (!current) {
+    return incoming
+  }
+
+  return {
+    discovery: current.discovery?.done
+      ? current.discovery // Keep completed state
+      : incoming.discovery || current.discovery,
+    templates: current.templates?.done
+      ? current.templates // Keep completed state
+      : incoming.templates || current.templates,
+  }
 }
 
 // ============================================================================
@@ -223,6 +264,7 @@ export function useOnboardingProgress(
   // State refs to avoid infinite loop in handleEvent
   const leadsRef = useRef<LeadProgressItem[]>([])
   const emailsRef = useRef<EmailProgressItem[]>([])
+  const parallelProgressRef = useRef<OnboardingProgressState["parallelProgress"]>(undefined)
 
   // fakeProgressMap을 ref로 추적 (의존성에서 제거하기 위함)
   const fakeProgressMapRef = useRef(fakeProgressMap)
@@ -240,7 +282,8 @@ export function useOnboardingProgress(
   useEffect(() => {
     leadsRef.current = state.leads
     emailsRef.current = state.emails
-  }, [state.leads, state.emails])
+    parallelProgressRef.current = state.parallelProgress
+  }, [state.leads, state.emails, state.parallelProgress])
 
   // Handle SSE event
   const handleEvent = useCallback(
@@ -276,11 +319,18 @@ export function useOnboardingProgress(
       const isComplete = eventType === "complete" || eventData.phase === "complete"
       const hasError = eventType === "error" || eventData.phase === "error"
 
+      // Merge parallel progress while preserving completed tasks
+      const mergedParallelProgress = mergeParallelProgress(
+        parallelProgressRef.current,
+        eventData.parallelProgress,
+      )
+
       setState({
         event: eventData,
         phase: eventData.phase,
         progressPercent: eventData.progressPercent,
         message: eventData.messageKr || eventData.message || "",
+        parallelProgress: mergedParallelProgress,
         isComplete,
         hasError,
         isFromCache: fromCache,
@@ -507,6 +557,7 @@ export function useOnboardingProgress(
     progressPercent: state.progressPercent,
     displayProgress: Math.round(displayProgress),
     message: state.message,
+    parallelProgress: state.parallelProgress,
 
     // Status
     isComplete: state.isComplete,
@@ -552,6 +603,7 @@ export function useOnboardingProgressReadOnly(workspaceId: string) {
     hasError: state.hasError,
     isConnected: state.isConnected,
     leads: state.leads,
+    parallelProgress: state.parallelProgress,
   }
 }
 

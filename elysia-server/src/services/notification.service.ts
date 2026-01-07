@@ -498,6 +498,7 @@ export async function createOnboardingNotification(
     totalPreviews: event.details.totalPreviews,
     actionUrl: content.actionUrl,
     actionLabel: content.actionLabel,
+    parallelProgress: event.parallelProgress, // 병렬 진행률 정보 추가
     ...event.details,
   }
 
@@ -582,6 +583,7 @@ export async function upsertOnboardingProgressNotification(
       leadsFound: event.details.leadsFound,
       previewsGenerated: event.details.previewsGenerated,
       totalPreviews: event.details.totalPreviews,
+      parallelProgress: event.parallelProgress, // 병렬 진행률 정보 추가
       ...event.details,
     }
 

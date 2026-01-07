@@ -659,6 +659,7 @@ type TestOnboardingResponse = {
       email?: string
       description?: string
     }>
+    duration?: number // milliseconds
   }
   emailGeneration: {
     templates: Array<{
@@ -669,13 +670,17 @@ type TestOnboardingResponse = {
       bodyText: string
       bodyHtml: string
     }>
+    duration?: number // milliseconds
   }
+  totalDuration?: number // milliseconds
 }
 
 type JobStatusResponse = {
   jobId: string
   status: "processing" | "completed" | "failed"
   progress: number
+  discoveryProgress?: number
+  templatesProgress?: number
   data?: TestOnboardingResponse
   error?: string
 }
@@ -685,6 +690,8 @@ type JobStatusResponse = {
  */
 export function useTestOnboarding() {
   const [progress, setProgress] = useState(0)
+  const [discoveryProgress, setDiscoveryProgress] = useState(0)
+  const [templatesProgress, setTemplatesProgress] = useState(0)
 
   const mutation = useMutation<TestOnboardingResponse, Error, TestOnboardingRequest>({
     mutationFn: async (data) => {
@@ -714,6 +721,8 @@ export function useTestOnboarding() {
         )
 
         setProgress(statusResponse.progress)
+        setDiscoveryProgress(statusResponse.discoveryProgress ?? 0)
+        setTemplatesProgress(statusResponse.templatesProgress ?? 0)
         console.log("[TestOnboarding] Status:", statusResponse.status, statusResponse.progress)
 
         if (statusResponse.status === "completed") {
@@ -732,10 +741,14 @@ export function useTestOnboarding() {
     },
     onSuccess: () => {
       setProgress(0)
+      setDiscoveryProgress(0)
+      setTemplatesProgress(0)
       sonnerToast.success("온보딩 테스트가 완료되었습니다")
     },
     onError: (error) => {
       setProgress(0)
+      setDiscoveryProgress(0)
+      setTemplatesProgress(0)
       sonnerToast.error(`온보딩 테스트 실패: ${error.message}`)
     },
   })
@@ -743,6 +756,8 @@ export function useTestOnboarding() {
   return {
     ...mutation,
     progress,
+    discoveryProgress,
+    templatesProgress,
   }
 }
 

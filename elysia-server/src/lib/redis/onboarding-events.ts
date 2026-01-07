@@ -88,6 +88,11 @@ export interface OnboardingProgressEvent {
   message: string
   messageKr: string
   timestamp: string
+  // NEW: Parallel execution progress (for discovery + templates running simultaneously)
+  parallelProgress?: {
+    discovery: { percent: number; done: boolean }
+    templates: { percent: number; done: boolean }
+  }
 }
 
 // ============================================================================
@@ -252,6 +257,7 @@ interface CreateEventParams {
   message: string
   messageKr: string
   details?: OnboardingProgressEvent["details"]
+  parallelProgress?: OnboardingProgressEvent["parallelProgress"]
 }
 
 export function createProgressEvent(params: CreateEventParams): OnboardingProgressEvent {
@@ -263,6 +269,7 @@ export function createProgressEvent(params: CreateEventParams): OnboardingProgre
     message: params.message,
     messageKr: params.messageKr,
     details: params.details || {},
+    parallelProgress: params.parallelProgress,
     timestamp: new Date().toISOString(),
   }
 }
@@ -397,6 +404,11 @@ export function createTemplatesStartEvent(
       templatesGenerated: 0,
       totalTemplates,
     },
+    // 병렬 실행 정보: Templates 시작, Discovery는 병렬로 실행 중
+    parallelProgress: {
+      discovery: { percent: 50, done: false }, // 병렬 실행 중이므로 50%로 표시
+      templates: { percent: 0, done: false }, // 방금 시작
+    },
   })
 }
 
@@ -439,6 +451,11 @@ export function createTemplatesCompleteEvent(
     details: {
       templatesGenerated: totalTemplates,
       totalTemplates,
+    },
+    // 병렬 실행 정보: Templates 완료, Discovery는 계속 진행 중일 수 있음
+    parallelProgress: {
+      discovery: { percent: 50, done: false }, // Discovery는 아직 진행 중일 수 있음
+      templates: { percent: 100, done: true }, // Templates 완료
     },
   })
 }

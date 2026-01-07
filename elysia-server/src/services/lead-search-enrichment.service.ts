@@ -110,6 +110,7 @@ export interface SearchProgress {
     | "reranking"
     | "complete"
   message: string
+  messageKr?: string
   currentCount: number
   targetCount: number
 }
@@ -1296,38 +1297,75 @@ async function enrichLeads(
     description?: string
   }> = []
 
-  const totalBatches = Math.ceil(rawLeads.length / SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE)
+  const _totalBatches = Math.ceil(rawLeads.length / SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE)
 
+  const batches = []
   for (let i = 0; i < rawLeads.length; i += SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE) {
-    const batch = rawLeads.slice(i, i + SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE)
-    const batchNum = Math.floor(i / SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE) + 1
-
-    console.log(`[LeadSearch] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`)
-
-    const enrichedBatch = await enrichLeadsForOnboarding(batch)
-
-    const withEmails = enrichedBatch.filter((l) => l.primaryEmail)
-    console.log(
-      `[LeadSearch] Batch ${batchNum}: ${withEmails.length}/${enrichedBatch.length} have emails`,
-    )
-
-    // Map to expected format (primaryEmail?: string -> primaryEmail: string | null)
-    const mappedBatch = enrichedBatch.map((lead) => ({
-      ...lead,
-      primaryEmail: lead.primaryEmail || null,
-    }))
-
-    enrichedLeads.push(...mappedBatch)
-
-    if (onProgress) {
-      await onProgress({
-        phase: "enrichment",
-        message: `Enriched ${i + batch.length}/${rawLeads.length} leads`,
-        currentCount: i + batch.length,
-        targetCount: rawLeads.length,
-      })
-    }
+    batches.push(rawLeads.slice(i, i + SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE))
   }
+
+  const results = await Promise.all(
+    batches.map(async (batch, batchIndex) => {
+      const enrichedBatch = await enrichLeadsForOnboarding(batch)
+
+      if (onProgress) {
+        const completed = (batchIndex + 1) * batch.length
+        const progressPercent = Math.floor((completed / rawLeads.length) * 100)
+        let messageKr = "연락처 찾는 중..."
+        if (progressPercent > 80) {
+          messageKr = "거의 다 됐어요!"
+        } else if (completed > 0) {
+          messageKr = `${completed}명 확인 중`
+        }
+
+        await onProgress({
+          phase: "enrichment",
+          message: `Finding contacts for ${completed}/${rawLeads.length} leads...`,
+          messageKr,
+          currentCount: completed,
+          targetCount: rawLeads.length,
+        })
+      }
+
+      return enrichedBatch.map((lead) => ({
+        ...lead,
+        primaryEmail: lead.primaryEmail || null,
+      }))
+    }),
+  )
+
+  enrichedLeads.push(...results.flat())
+
+  // for (let i = 0; i < rawLeads.length; i += SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE) {
+  //   const batch = rawLeads.slice(i, i + SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE)
+  //   const batchNum = Math.floor(i / SEARCH_CONFIG.ENRICHMENT_BATCH_SIZE) + 1
+
+  //   console.log(`[LeadSearch] Enriching batch ${batchNum}/${totalBatches} (${batch.length} leads)`)
+
+  //   const enrichedBatch = await enrichLeadsForOnboarding(batch)
+
+  //   const withEmails = enrichedBatch.filter((l) => l.primaryEmail)
+  //   console.log(
+  //     `[LeadSearch] Batch ${batchNum}: ${withEmails.length}/${enrichedBatch.length} have emails`,
+  //   )
+
+  //   // Map to expected format (primaryEmail?: string -> primaryEmail: string | null)
+  //   const mappedBatch = enrichedBatch.map((lead) => ({
+  //     ...lead,
+  //     primaryEmail: lead.primaryEmail || null,
+  //   }))
+
+  //   enrichedLeads.push(...mappedBatch)
+
+  //   if (onProgress) {
+  //     await onProgress({
+  //       phase: "enrichment",
+  //       message: `Enriched ${i + batch.length}/${rawLeads.length} leads`,
+  //       currentCount: i + batch.length,
+  //       targetCount: rawLeads.length,
+  //     })
+  //   }
+  // }
 
   return enrichedLeads
 }
@@ -1439,7 +1477,8 @@ export async function searchAndEnrichLeads(
   if (onProgress) {
     await onProgress({
       phase: "bigquery",
-      message: "Searching BigQuery for leads",
+      message: "Starting lead search...",
+      messageKr: "바이어 찾는 중...",
       currentCount: 0,
       targetCount: targetLeadCount,
     })
@@ -1489,7 +1528,8 @@ export async function searchAndEnrichLeads(
   if (onProgress) {
     await onProgress({
       phase: "enrichment",
-      message: "Enriching BigQuery leads with contact information",
+      message: "Finding contact information...",
+      messageKr: "연락처 찾는 중...",
       currentCount: 0,
       targetCount: bigQueryResult.leads.length,
     })
@@ -1540,72 +1580,8 @@ export async function searchAndEnrichLeads(
     logCtx,
   )
 
-  // Step 5: Description Enrichment for leads without description
-  const leadsNeedingDescription = bigQueryLeadsWithEmails.filter(
-    (lead) => !lead.description || lead.description.length < 30,
-  )
-
-  if (leadsNeedingDescription.length > 0) {
-    leadSearchLogger.phaseStart("description_enrichment", logCtx, {
-      leadsNeedingDescription: leadsNeedingDescription.length,
-      leadsWithDescription: bigQueryLeadsWithEmails.length - leadsNeedingDescription.length,
-    })
-
-    if (onProgress) {
-      await onProgress({
-        phase: "description_enrichment",
-        message: `Enriching descriptions for ${leadsNeedingDescription.length} leads`,
-        currentCount: 0,
-        targetCount: leadsNeedingDescription.length,
-      })
-    }
-
-    const descriptionEnrichmentInput = leadsNeedingDescription.map((lead) => ({
-      companyName: lead.companyName,
-      websiteUrl: lead.websiteUrl,
-      industry: lead.businessType,
-      country: lead.country,
-      existingDescription: lead.description,
-    }))
-
-    const enrichedDescriptions = await enrichLeadsWithDescriptions(descriptionEnrichmentInput, {
-      concurrency: 5,
-      onProgress: (completed, total) => {
-        if (onProgress && completed % 10 === 0) {
-          onProgress({
-            phase: "description_enrichment",
-            message: `Enriched ${completed}/${total} descriptions`,
-            currentCount: completed,
-            targetCount: total,
-          })
-        }
-      },
-    })
-
-    // Merge enriched descriptions back to leads
-    const descriptionByWebsite = new Map<string, string>()
-    for (const enriched of enrichedDescriptions) {
-      if (enriched.description) {
-        descriptionByWebsite.set(enriched.websiteUrl.toLowerCase(), enriched.description)
-      }
-    }
-
-    for (const lead of bigQueryLeadsWithEmails) {
-      const enrichedDesc = descriptionByWebsite.get(lead.websiteUrl.toLowerCase())
-      if (enrichedDesc) {
-        lead.description = enrichedDesc
-      }
-    }
-
-    leadSearchLogger.phaseComplete(
-      "description_enrichment",
-      logCtx,
-      {
-        descriptionsAdded: descriptionByWebsite.size,
-      },
-      Date.now() - startTime,
-    )
-  }
+  // 🗑️ Step 5 제거: Description Enrichment를 Step 9.5로 통합 (중복 작업 제거)
+  // BigQuery와 Hunter.io 리드를 모두 포함하여 한 번에 처리
 
   // Step 6: Score BigQuery leads if threshold is set
   if (minimumMatchScore > 0) {
@@ -1617,7 +1593,8 @@ export async function searchAndEnrichLeads(
     if (onProgress) {
       await onProgress({
         phase: "scoring",
-        message: `Scoring ${bigQueryLeadsWithEmails.length} BigQuery leads`,
+        message: "Analyzing lead quality...",
+        messageKr: "적합도 분석 중...",
         currentCount: 0,
         targetCount: bigQueryLeadsWithEmails.length,
       })
@@ -1651,11 +1628,18 @@ export async function searchAndEnrichLeads(
         )
       }
 
-      // Progress update every 10 leads
-      if (onProgress && (i + 1) % 10 === 0) {
+      // Progress update every 5 leads (더 반응적으로)
+      if (onProgress && (i + 1) % 5 === 0) {
+        const progressPercent = Math.floor(((i + 1) / bigQueryLeadsWithEmails.length) * 100)
+        let messageKr = "적합도 분석 중..."
+        if (progressPercent > 80) {
+          messageKr = "거의 다 됐어요!"
+        }
+
         await onProgress({
           phase: "scoring",
-          message: `Scored ${i + 1}/${bigQueryLeadsWithEmails.length} BigQuery leads, ${qualifiedLeads.length} qualified`,
+          message: `Analyzing ${i + 1}/${bigQueryLeadsWithEmails.length} leads...`,
+          messageKr,
           currentCount: i + 1,
           targetCount: bigQueryLeadsWithEmails.length,
         })
@@ -1686,9 +1670,11 @@ export async function searchAndEnrichLeads(
     )
 
     if (onProgress) {
+      const foundCount = qualifiedLeads.length
       await onProgress({
         phase: "hunterio",
-        message: "Searching Hunter.io for additional leads",
+        message: `Found ${foundCount} leads, searching for more...`,
+        messageKr: `${foundCount}명 찾았어요, 조금 더 찾는 중...`,
         currentCount: qualifiedLeads.length,
         targetCount: targetLeadCount,
       })
@@ -1732,7 +1718,8 @@ export async function searchAndEnrichLeads(
       if (onProgress) {
         await onProgress({
           phase: "scoring",
-          message: `Scoring ${hunterIOLeadsWithSource.length} Hunter.io leads`,
+          message: "Analyzing additional leads...",
+          messageKr: "추가 바이어 분석 중...",
           currentCount: qualifiedLeads.length,
           targetCount: targetLeadCount,
         })
@@ -1798,53 +1785,98 @@ export async function searchAndEnrichLeads(
   // Step 9: Limit to target count (in case we exceeded)
   let finalLeads = qualifiedLeads.slice(0, targetLeadCount)
 
-  // Step 9.5: Description enrichment for ALL leads (including Hunter.io leads)
-  // Hunter.io leads don't have descriptions by default, so we enrich them before reranking
+  // 🆕 Step 9.5: 통합 Description enrichment (BigQuery + Hunter.io 모두 포함)
+  // 중복 enrichment 제거: 한 번에 모든 리드 처리
   const leadsWithoutDescription = finalLeads.filter(
-    (lead) => !lead.description || lead.description.length < 20,
+    (lead) => !lead.description || lead.description.length < 30, // 🚀 20 → 30으로 변경 (더 나은 품질)
   )
+
   if (leadsWithoutDescription.length > 0) {
+    leadSearchLogger.phaseStart("description_enrichment", logCtx, {
+      leadsNeedingDescription: leadsWithoutDescription.length,
+      leadsWithDescription: finalLeads.length - leadsWithoutDescription.length,
+    })
+
     console.log(
-      `[LeadSearch] Enriching descriptions for ${leadsWithoutDescription.length} leads before reranking`,
+      `[LeadSearch] 🔄 Unified description enrichment: ${leadsWithoutDescription.length} leads`,
     )
 
     if (onProgress) {
       await onProgress({
         phase: "description_enrichment",
-        message: `Enriching descriptions for ${leadsWithoutDescription.length} leads`,
+        message: "Gathering company information...",
+        messageKr: "회사 정보 수집 중...",
         currentCount: 0,
         targetCount: leadsWithoutDescription.length,
       })
     }
 
+    const descriptionStartTime = Date.now()
     const enrichedDescriptions = await enrichLeadsWithDescriptions(
       leadsWithoutDescription.map((lead) => ({
         companyName: lead.companyName,
         websiteUrl: lead.websiteUrl,
         industry: lead.businessType,
-        description: lead.description,
+        country: lead.country,
+        existingDescription: lead.description,
       })),
       {
-        concurrency: 5,
+        concurrency: 15, // 🚀 병렬 처리 최적화
+        onProgress: (completed, total) => {
+          if (onProgress && completed % 5 === 0) {
+            const progressPercent = Math.floor((completed / total) * 100)
+            let messageKr = "바이어 정보 확인 중..."
+            if (progressPercent > 80) {
+              messageKr = "거의 다 됐어요!"
+            } else if (progressPercent > 50) {
+              messageKr = `${completed}개 완료`
+            }
+
+            onProgress({
+              phase: "description_enrichment",
+              message: `Checking ${completed}/${total} leads...`,
+              messageKr,
+              currentCount: completed,
+              targetCount: total,
+            })
+          }
+        },
       },
     )
 
-    // Update leads with enriched descriptions
-    const enrichedMap = new Map(enrichedDescriptions.map((e) => [e.websiteUrl, e.description]))
+    // Update leads with enriched descriptions + source info (for debugging)
+    const enrichedMap = new Map(
+      enrichedDescriptions.map((e) => [e.websiteUrl.toLowerCase(), e.description]),
+    )
     for (const lead of finalLeads) {
-      if (!lead.description || lead.description.length < 20) {
-        const enrichedDesc = enrichedMap.get(lead.websiteUrl)
-        if (enrichedDesc && enrichedDesc.length > 20) {
-          lead.description = enrichedDesc
+      if (!lead.description || lead.description.length < 30) {
+        const enrichedDesc = enrichedMap.get(lead.websiteUrl.toLowerCase())
+        if (enrichedDesc && enrichedDesc.length > 30) {
+          // 🔍 임시: source 정보를 description 끝에 추가 (디버깅용)
+          lead.description = `${enrichedDesc} [Source: ${lead.leadSource}]`
         }
+      } else {
+        // 기존 description에도 source 추가
+        lead.description = `${lead.description} [Source: ${lead.leadSource}]`
       }
     }
 
     const leadsWithDescNow = finalLeads.filter(
-      (l) => l.description && l.description.length > 20,
+      (l) => l.description && l.description.length > 30,
     ).length
+
+    leadSearchLogger.phaseComplete(
+      "description_enrichment",
+      logCtx,
+      {
+        descriptionsAdded: enrichedMap.size,
+        leadsWithDescription: leadsWithDescNow,
+      },
+      Date.now() - descriptionStartTime,
+    )
+
     console.log(
-      `[LeadSearch] Description enrichment complete: ${leadsWithDescNow}/${finalLeads.length} leads now have descriptions`,
+      `[LeadSearch] ✅ Description enrichment complete: ${leadsWithDescNow}/${finalLeads.length} leads (${Date.now() - descriptionStartTime}ms)`,
     )
   }
 
@@ -1858,7 +1890,8 @@ export async function searchAndEnrichLeads(
     if (onProgress) {
       await onProgress({
         phase: "reranking",
-        message: `Reranking ${finalLeads.length} leads by customer fit`,
+        message: "Finding best matches...",
+        messageKr: "최적의 바이어 찾는 중...",
         currentCount: 0,
         targetCount: finalLeads.length,
       })
@@ -1893,7 +1926,7 @@ export async function searchAndEnrichLeads(
       topN: targetLeadCount,
       minScore: 30, // 최소 30점 이상 우선
       minCount: 30, // 🆕 최소 30개 보장 (minScore 미만이어도)
-      concurrency: 10,
+      concurrency: 20, // 🚀 10 → 20 증가 (3라운드 → 2라운드)
       onProgress: (completed, total, phase) => {
         if (onProgress && completed % 5 === 0) {
           onProgress({

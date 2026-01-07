@@ -20,11 +20,11 @@ export {
   type ValidHunterioIndustry,
 } from "../constants/hunterio-industries"
 
-// Step 1: GPT-5.2 for initial query generation
+// Step 1: gpt-5.2 for initial query generation
 const generatorLLM = new ChatOpenAI({
   model: "gpt-5.2",
   reasoning: {
-    effort: "medium",
+    effort: "low",
   },
 })
 
@@ -123,7 +123,7 @@ Describe:
 
 Be specific and actionable. Focus on small to medium businesses.`
 
-    console.log("[HunterioQueryGenerator] Step 1: Generating strategy with GPT-4o")
+    console.log("[HunterioQueryGenerator] Step 1: Generating strategy with gpt-5-mini")
     const strategyResponse = await generatorLLM.invoke(strategyPrompt)
     const strategy = strategyResponse.content as string
 
@@ -169,7 +169,7 @@ Rules:
       headcount: extracted.headcount,
       keywords: {
         include: extracted.keywords,
-        match: "all",
+        match: "any",
       },
       limit: 100,
       offset: 0,

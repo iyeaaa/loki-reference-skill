@@ -147,6 +147,16 @@ export function OnboardingTest() {
     )
   }
 
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    if (minutes > 0) {
+      return `${minutes}분 ${remainingSeconds}초`
+    }
+    return `${seconds}초`
+  }
+
   const handleDownloadMarkdown = () => {
     if (!(testOnboarding.data?.leadDiscovery && testOnboarding.data?.emailGeneration)) {
       return
@@ -164,6 +174,27 @@ export function OnboardingTest() {
     mdContent += `- **산업**: ${INDUSTRY_OPTIONS[industry as keyof typeof INDUSTRY_OPTIONS]}\n`
     mdContent += `- **타겟**: ${TARGET_OPTIONS[target as keyof typeof TARGET_OPTIONS]}\n`
     mdContent += `- **국가**: ${COUNTRY_OPTIONS[country as keyof typeof COUNTRY_OPTIONS]}\n\n`
+
+    // 성능 정보
+    if (testOnboarding.data.totalDuration) {
+      mdContent += "## ⏱️ 성능 정보\n\n"
+      mdContent += `- **전체 소요 시간**: ${formatDuration(testOnboarding.data.totalDuration)}\n`
+      if (
+        testOnboarding.data.leadDiscovery.duration &&
+        testOnboarding.data.emailGeneration.duration
+      ) {
+        mdContent += "- **🚀 병렬 실행**: 바이어 검색 + 이메일 생성\n"
+        mdContent += `  - 바이어 검색: ${formatDuration(testOnboarding.data.leadDiscovery.duration)}\n`
+        mdContent += `  - 이메일 생성: ${formatDuration(testOnboarding.data.emailGeneration.duration)}\n`
+        if (
+          testOnboarding.data.leadDiscovery.duration > testOnboarding.data.emailGeneration.duration
+        ) {
+          const savedTime = testOnboarding.data.emailGeneration.duration
+          mdContent += `  - 💡 절약된 시간: ${formatDuration(savedTime)} (동시 실행)\n`
+        }
+      }
+      mdContent += "\n"
+    }
 
     mdContent += "## 1. 바이어 검색 결과\n\n"
     mdContent += "### 통계\n\n"
@@ -205,7 +236,7 @@ export function OnboardingTest() {
         </div>
         <CardDescription>
           바이어 검색 + AI 이메일 생성을 한번에 테스트합니다. 실제 온보딩 프로세스와 동일하게
-          동작합니다. (소요 시간: 약 2~3분)
+          동작합니다. (🚀 병렬 처리로 소요 시간: 약 2~3분)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -355,15 +386,38 @@ export function OnboardingTest() {
           </div>
 
           <Button className="w-full sm:w-auto" disabled={!canSubmit} type="submit">
-            {testOnboarding.isPending ? "테스트 실행 중... (2~3분 소요)" : "테스트 실행 (약 2~3분)"}
+            {testOnboarding.isPending
+              ? "🚀 테스트 실행 중... (2~3분 소요)"
+              : "🚀 테스트 실행 (약 2~3분)"}
           </Button>
 
           {testOnboarding.isPending && (
-            <div className="space-y-2">
-              <Progress value={testOnboarding.progress} />
-              <p className="text-center text-muted-foreground text-sm">
-                진행 중: {testOnboarding.progress}%
-              </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">전체 진행률</span>
+                  <span className="font-semibold text-blue-600">{testOnboarding.progress}%</span>
+                </div>
+                <Progress value={testOnboarding.progress} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">바이어 검색</span>
+                    <span className="font-medium">{testOnboarding.discoveryProgress ?? 0}%</span>
+                  </div>
+                  <Progress value={testOnboarding.discoveryProgress ?? 0} />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">이메일 생성</span>
+                    <span className="font-medium">{testOnboarding.templatesProgress ?? 0}%</span>
+                  </div>
+                  <Progress value={testOnboarding.templatesProgress ?? 0} />
+                </div>
+              </div>
             </div>
           )}
 
@@ -373,6 +427,44 @@ export function OnboardingTest() {
             testOnboarding.data.emailGeneration && (
               <div className="mt-6 space-y-4 rounded-lg border p-4">
                 <h3 className="font-semibold text-lg">테스트 결과</h3>
+
+                {testOnboarding.data.totalDuration && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">⏱️ 성능 정보</h4>
+                    <div className="space-y-1 text-muted-foreground text-sm">
+                      <p>
+                        • 전체 소요 시간:{" "}
+                        <strong className="text-blue-600">
+                          {formatDuration(testOnboarding.data.totalDuration)}
+                        </strong>
+                      </p>
+                      {testOnboarding.data.leadDiscovery.duration &&
+                        testOnboarding.data.emailGeneration.duration && (
+                          <>
+                            <p className="text-green-600">
+                              &nbsp;&nbsp;🚀 병렬 실행: 바이어 검색 + 이메일 생성
+                            </p>
+                            <p>
+                              &nbsp;&nbsp;&nbsp;&nbsp;- 바이어 검색:{" "}
+                              {formatDuration(testOnboarding.data.leadDiscovery.duration)}
+                            </p>
+                            <p>
+                              &nbsp;&nbsp;&nbsp;&nbsp;- 이메일 생성:{" "}
+                              {formatDuration(testOnboarding.data.emailGeneration.duration)}
+                            </p>
+                            {testOnboarding.data.leadDiscovery.duration >
+                              testOnboarding.data.emailGeneration.duration && (
+                              <p className="text-amber-600 text-xs">
+                                &nbsp;&nbsp;&nbsp;&nbsp;💡 절약된 시간:{" "}
+                                {formatDuration(testOnboarding.data.emailGeneration.duration)} (동시
+                                실행)
+                              </p>
+                            )}
+                          </>
+                        )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <h4 className="font-medium">📊 바이어 검색 결과</h4>

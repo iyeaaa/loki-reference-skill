@@ -143,65 +143,6 @@ async function processOnboardingJob(
     let leadIds: string[] = []
     let customerGroupId = checkpoint.customerGroupId
     let sequenceId = checkpoint.sequenceId
-
-    // Phase 1: Discovery (if not completed)
-    if (checkpoint.phase === "init" || checkpoint.phase === "discovery") {
-      logger.info({ jobId }, "[OnboardingWorker] Starting discovery phase")
-      const discoveryResult = await workerService.runDiscoveryPhase(job, context)
-      leadIds = discoveryResult.leadIds
-      logger.info(
-        { jobId, leadsCount: discoveryResult.count },
-        "[OnboardingWorker] Discovery phase complete",
-      )
-
-      // Checkpoint 저장: discovery 완료
-      await workerService.saveCheckpoint(job, { phase: "discovery" })
-
-      // Report progress
-      await job.updateProgress({
-        phase: "discovery",
-        leadsDiscovered: discoveryResult.count,
-        progressPercent: 30,
-      })
-    } else {
-      // Recovery: Get existing lead IDs with emails from DB
-      const existingLeads = await db
-        .select({ id: leads.id })
-        .from(leads)
-        .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
-        .where(
-          and(
-            eq(leads.workspaceId, workspaceId),
-            eq(leadContacts.contactType, "email"),
-            eq(leadContacts.isPrimary, true),
-            isNotNull(leadContacts.contactValue),
-          ),
-        )
-        .limit(150)
-      leadIds = existingLeads.map((l) => l.id)
-      logger.info(
-        { jobId, leadsCount: leadIds.length },
-        "[OnboardingWorker] Recovered lead IDs with emails from DB",
-      )
-    }
-
-    // Phase 2: Customer Group (if not completed)
-    if (!customerGroupId || checkpoint.phase === "group") {
-      logger.info({ jobId }, "[OnboardingWorker] Starting group phase")
-      customerGroupId = await workerService.runGroupPhase(job, context, leadIds)
-      logger.info({ jobId, customerGroupId }, "[OnboardingWorker] Group phase complete")
-
-      // Checkpoint 저장: group 완료 (customerGroupId 포함)
-      await workerService.saveCheckpoint(job, { phase: "group", customerGroupId })
-
-      await job.updateProgress({
-        phase: "group",
-        customerGroupId,
-        progressPercent: 50,
-      })
-    }
-
-    // Phase 3: Templates (if not completed)
     let templates: Array<{
       stepOrder: number
       delayDays: number
@@ -210,31 +151,142 @@ async function processOnboardingJob(
       emailBodyHtml: string
     }> = []
 
-    // 수정: templates phase 조건 명확화
+    // 🚀 Phase 1 & 3 병렬 실행: Discovery와 Templates는 독립적
+    const shouldRunDiscovery = checkpoint.phase === "init" || checkpoint.phase === "discovery"
     const shouldRunTemplates =
       checkpoint.phase === "templates" ||
       isPhaseBefore(checkpoint.phase, "templates") ||
-      !sequenceId // sequence가 없으면 templates부터 다시
+      !sequenceId
 
-    if (shouldRunTemplates) {
+    if (shouldRunDiscovery || shouldRunTemplates) {
       logger.info(
-        { jobId, currentPhase: checkpoint.phase },
-        "[OnboardingWorker] Starting templates phase",
+        { jobId },
+        `[OnboardingWorker] 🚀 Parallel execution: Discovery=${shouldRunDiscovery}, Templates=${shouldRunTemplates}`,
       )
-      templates = await workerService.runTemplatesPhase(job, context)
+
+      // 병렬 실행 (각 phase가 독립적으로 parallelProgress를 SSE로 전송)
+      const [discoveryResult, templatesResult] = await Promise.allSettled([
+        shouldRunDiscovery
+          ? workerService.runDiscoveryPhase(job, context)
+          : Promise.resolve({ leadIds: [], count: 0 }),
+        shouldRunTemplates ? workerService.runTemplatesPhase(job, context) : Promise.resolve([]),
+      ])
+
+      // Phase 1 결과 처리
+      if (shouldRunDiscovery) {
+        if (discoveryResult.status === "fulfilled") {
+          leadIds = discoveryResult.value.leadIds
+          logger.info(
+            { jobId, leadsCount: discoveryResult.value.count },
+            "[OnboardingWorker] Discovery phase complete (parallel)",
+          )
+
+          await workerService.saveCheckpoint(job, { phase: "discovery" })
+          await job.updateProgress({
+            phase: "discovery",
+            leadsDiscovered: discoveryResult.value.count,
+            progressPercent: 25, // 병렬 실행이므로 낮게 조정
+          })
+        } else {
+          logger.error(
+            { jobId, error: discoveryResult.reason },
+            "[OnboardingWorker] Discovery phase failed",
+          )
+          throw discoveryResult.reason
+        }
+      } else {
+        // Recovery: Get existing lead IDs with emails from DB
+        const existingLeads = await db
+          .select({ id: leads.id })
+          .from(leads)
+          .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
+          .where(
+            and(
+              eq(leads.workspaceId, workspaceId),
+              eq(leadContacts.contactType, "email"),
+              eq(leadContacts.isPrimary, true),
+              isNotNull(leadContacts.contactValue),
+            ),
+          )
+          .limit(150)
+        leadIds = existingLeads.map((l) => l.id)
+        logger.info(
+          { jobId, leadsCount: leadIds.length },
+          "[OnboardingWorker] Recovered lead IDs with emails from DB",
+        )
+      }
+
+      // Phase 3 결과 처리 (병렬 실행)
+      if (shouldRunTemplates) {
+        if (templatesResult.status === "fulfilled") {
+          templates = templatesResult.value
+          logger.info(
+            { jobId, templatesCount: templates.length },
+            "[OnboardingWorker] Templates phase complete (parallel)",
+          )
+
+          await workerService.saveCheckpoint(job, {
+            phase: "templates",
+            generatedTemplates: templates,
+          })
+          await job.updateProgress({
+            phase: "templates",
+            templatesGenerated: templates.length,
+            progressPercent: 40, // 병렬 실행 완료 시점
+          })
+        } else {
+          logger.error(
+            { jobId, error: templatesResult.reason },
+            "[OnboardingWorker] Templates phase failed",
+          )
+          throw templatesResult.reason
+        }
+      }
+    } else {
+      // Recovery: Get existing lead IDs if not running discovery
+      if (!shouldRunDiscovery) {
+        const existingLeads = await db
+          .select({ id: leads.id })
+          .from(leads)
+          .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
+          .where(
+            and(
+              eq(leads.workspaceId, workspaceId),
+              eq(leadContacts.contactType, "email"),
+              eq(leadContacts.isPrimary, true),
+              isNotNull(leadContacts.contactValue),
+            ),
+          )
+          .limit(150)
+        leadIds = existingLeads.map((l) => l.id)
+        logger.info(
+          { jobId, leadsCount: leadIds.length },
+          "[OnboardingWorker] Recovered lead IDs with emails from DB",
+        )
+      }
+    }
+
+    // Phase 2: Customer Group (Discovery 완료 후 실행)
+    if (!customerGroupId || checkpoint.phase === "group") {
+      logger.info({ jobId }, "[OnboardingWorker] Starting group phase")
+      customerGroupId = await workerService.runGroupPhase(job, context, leadIds)
+      logger.info({ jobId, customerGroupId }, "[OnboardingWorker] Group phase complete")
+
+      await workerService.saveCheckpoint(job, { phase: "group", customerGroupId })
+      await job.updateProgress({
+        phase: "group",
+        customerGroupId,
+        progressPercent: 55, // Discovery + Templates 병렬 완료 후
+      })
+    }
+
+    // Recovery: Load templates from checkpoint if not generated in this run
+    if (templates.length === 0 && checkpoint.generatedTemplates) {
+      templates = checkpoint.generatedTemplates
       logger.info(
         { jobId, templatesCount: templates.length },
-        "[OnboardingWorker] Templates phase complete",
+        "[OnboardingWorker] Recovered templates from checkpoint",
       )
-
-      // Checkpoint 저장: templates 완료
-      await workerService.saveCheckpoint(job, { phase: "templates" })
-
-      await job.updateProgress({
-        phase: "templates",
-        templatesGenerated: templates.length,
-        progressPercent: 65,
-      })
     }
 
     // Phase 4: Sequence (if not completed)
@@ -278,7 +330,7 @@ async function processOnboardingJob(
         phase: "sequence",
         sequenceId,
         stepsCreated: steps.length,
-        progressPercent: 80,
+        progressPercent: 70, // 병렬 실행 반영한 진행률
       })
     }
 

@@ -208,8 +208,8 @@ export const extractWebsiteContent = async (
     return { content: "" }
   }
 
-  // Step 2: Jina Reader로 콘텐츠 추출 (20초 타임아웃으로 단축)
-  const TIMEOUT_MS = 20000 // 60초 → 20초로 단축 (접속 확인 완료됨)
+  // Step 2: Jina Reader로 콘텐츠 추출 (5초 타임아웃으로 단축)
+  const TIMEOUT_MS = 5000 // 20초 → 5초로 단축 (성능 최적화)
 
   try {
     // AbortController로 타임아웃 설정

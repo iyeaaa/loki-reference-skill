@@ -22,7 +22,6 @@ import { workspaces } from "../db/schema/workspaces"
 import type { OnboardingAutoGenerateJob, OnboardingAutoGenerateResult } from "../lib/queue/types"
 import {
   createCompleteEvent,
-  createDiscoveryBatchEvent,
   createDiscoveryCompleteEvent,
   createDiscoverySearchingEvent,
   createDiscoveryStartEvent,
@@ -343,42 +342,53 @@ export async function runDiscoveryPhase(
       TARGET_LEADS,
       naturalLanguageQuery,
       0, // minimumMatchScore: 0 = 필터링 없음 (디버깅용, 원래는 60)
-      // Progress callback for SSE updates
+      // Progress callback for SSE updates (더 반응적인 업데이트)
       async (progress) => {
         console.log(`[DiscoveryPhase] Progress: ${progress.phase} - ${progress.message}`)
 
-        // Update job progress
-        let progressPercent = 15
-        if (progress.phase === "bigquery") {
-          progressPercent = 15 + Math.floor((progress.currentCount / progress.targetCount) * 20)
-        } else if (progress.phase === "enrichment") {
-          progressPercent = 35 + Math.floor((progress.currentCount / progress.targetCount) * 15)
-        } else if (progress.phase === "hunterio") {
-          progressPercent = 50 + Math.floor((progress.currentCount / progress.targetCount) * 5)
-        } else if (progress.phase === "scoring") {
-          progressPercent = 55 + Math.floor((progress.currentCount / progress.targetCount) * 5)
+        // Phase별로 범위를 매핑하여 progress가 리셋되지 않도록 함 (실행 순서대로)
+        const phaseRanges: Record<string, { start: number; end: number }> = {
+          bigquery: { start: 0, end: 20 }, // 검색
+          enrichment: { start: 20, end: 50 }, // 이메일 찾기 (가장 오래 걸림)
+          scoring: { start: 50, end: 65 }, // 점수 매기기
+          hunterio: { start: 65, end: 70 }, // 추가 검색 (필요시)
+          description_enrichment: { start: 70, end: 90 }, // 설명 보강
+          reranking: { start: 90, end: 100 }, // 최종 순위
+          complete: { start: 100, end: 100 },
         }
+
+        const range = phaseRanges[progress.phase] || { start: 0, end: 100 }
+        const phaseProgress = Math.floor(
+          (progress.currentCount / progress.targetCount) * (range.end - range.start),
+        )
+        const discoveryPercent = Math.min(100, range.start + phaseProgress)
 
         await job.updateProgress({
           phase: "discovery",
-          progressPercent: Math.min(60, progressPercent),
+          progressPercent: discoveryPercent,
         })
 
-        // Emit SSE batch event (approximating batch number based on progress)
-        if (progress.phase === "enrichment" || progress.phase === "hunterio") {
-          const batchNum = Math.floor(progress.currentCount / 30) || 1
-          await emitAndSaveNotification(
-            createDiscoveryBatchEvent(
-              workspaceId,
-              jobId,
-              batchNum,
-              Math.ceil(TARGET_LEADS / 30),
-              progress.currentCount,
-              progress.currentCount,
-            ),
-            userId,
-          )
-        }
+        // Emit SSE event with user-friendly message (병렬 실행 정보 포함)
+        await emitAndSaveNotification(
+          {
+            workspaceId,
+            jobId,
+            phase: "discovery",
+            progressPercent: discoveryPercent,
+            message: progress.message,
+            messageKr: progress.messageKr || progress.message,
+            details: {
+              leadsFound: progress.currentCount,
+            },
+            // 병렬 실행 정보: Discovery 진행 중, Templates는 병렬로 실행 중
+            parallelProgress: {
+              discovery: { percent: discoveryPercent, done: discoveryPercent >= 100 },
+              templates: { percent: 50, done: false }, // 병렬 실행 중이므로 50%로 표시
+            },
+            timestamp: new Date().toISOString(),
+          },
+          userId,
+        )
       },
       {
         country: countryName,
@@ -606,88 +616,73 @@ export async function runTemplatesPhase(
     console.log(`[TemplatesPhase] Generating ${templatesNeeded} templates (3-touch sequence)`)
 
     const aiService = getAITemplateGenerationService()
-    const templates: Array<{
-      stepOrder: number
-      delayDays: number
-      emailSubject: string
-      emailBodyText: string
-      emailBodyHtml: string
-    }> = []
     const totalTemplates = templatesNeeded
 
-    for (let i = 0; i < templatesNeeded; i++) {
-      const emailType = EMAIL_TYPES_3TOUCH[i]
-      if (!emailType) continue
+    // Use companyName and companyDescription if available, fallback to workspace name/description
+    // Filter out default values like "기본 워크스페이스" that don't provide useful context
+    const effectiveDescription =
+      workspace.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
+        ? workspace.companyDescription
+        : workspace.description && workspace.description !== "기본 워크스페이스"
+          ? workspace.description
+          : undefined
 
-      // Report progress to keep job alive (extends lock)
-      await job.updateProgress({
-        phase: "templates",
-        templatesGenerated: i,
-        progressPercent: 65 + ((i + 1) / templatesNeeded) * 15, // 65-80%
-      })
+    // 🆕 Batch generation: 모든 이메일을 병렬로 생성 (순차 대비 3배 빠름)
+    const industryContext = isKorean
+      ? `${surveyData.industry} 산업의 ${surveyData.target} 고객을 대상으로`
+      : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
 
+    const emailConfigs = EMAIL_TYPES_3TOUCH.map((emailType, i) => {
       const prompt = isKorean ? emailType.promptKr : emailType.promptEn
-      const industryContext = isKorean
-        ? `${surveyData.industry} 산업의 ${surveyData.target} 고객을 대상으로`
-        : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
-
-      try {
-        // Use companyName and companyDescription if available, fallback to workspace name/description
-        // Filter out default values like "기본 워크스페이스" that don't provide useful context
-        const effectiveDescription =
-          workspace.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
-            ? workspace.companyDescription
-            : workspace.description && workspace.description !== "기본 워크스페이스"
-              ? workspace.description
-              : undefined
-
-        // Build previous emails context for differentiation
-        const previousEmails = templates.map((t) => ({
-          stepNumber: t.stepOrder,
-          subject: t.emailSubject,
-          bodySummary: t.emailBodyText.substring(0, 100),
-        }))
-
-        const template = await aiService.generateEmailTemplate({
-          workspaceName: workspace.companyName || workspace.name,
-          workspaceNameEn: workspace.companyNameEn || undefined,
-          workspaceDescription: effectiveDescription,
-          country: surveyData.country,
-          userPrompt: `${prompt} ${industryContext}`,
-          // NEW: Pass sequence context for differentiated emails
-          sequenceContext: {
-            stepNumber: i + 1,
-            totalSteps: templatesNeeded,
-            stepType: emailType.type as "introduction" | "follow_up_1" | "follow_up_2",
-            previousEmails: previousEmails.length > 0 ? previousEmails : undefined,
-          },
-        })
-
-        templates.push({
-          stepOrder: i + 1,
-          delayDays: emailType.delayDays,
-          emailSubject: template.subject,
-          emailBodyText: template.bodyText,
-          emailBodyHtml: template.bodyHtml,
-        })
-
-        console.log(
-          `[TemplatesPhase] Generated template ${i + 1}/${templatesNeeded}: ${emailType.type}`,
-        )
-
-        // Emit SSE + Save to DB: Template progress
-        await emitAndSaveNotification(
-          createTemplateProgressEvent(workspaceId, jobId, i + 1, totalTemplates, emailType.type),
-          userId,
-        )
-
-        // Save checkpoint after each template (incremental save)
-        await saveCheckpoint(job, { generatedTemplates: templates })
-      } catch (error) {
-        console.error(`[TemplatesPhase] Failed to generate template ${i + 1}:`, error)
-        // Continue with remaining templates
+      return {
+        userPrompt: `${prompt} ${industryContext}`,
+        stepNumber: i + 1,
+        totalSteps: templatesNeeded,
+        stepType: emailType.type as "introduction" | "follow_up_1" | "follow_up_2",
       }
-    }
+    })
+
+    // Report progress to keep job alive
+    await job.updateProgress({
+      phase: "templates",
+      templatesGenerated: 0,
+      progressPercent: 65,
+    })
+
+    const generatedTemplates = await aiService.generateEmailTemplatesBatch({
+      workspaceName: workspace.companyName || workspace.name,
+      workspaceNameEn: workspace.companyNameEn || undefined,
+      workspaceDescription: effectiveDescription,
+      country: surveyData.country,
+      emailConfigs,
+    })
+
+    // Map generated templates to expected format and emit progress
+    const templates = generatedTemplates.map((template, i) => {
+      const emailType = EMAIL_TYPES_3TOUCH[i]
+      if (!emailType) throw new Error(`Missing email type at index ${i}`)
+
+      console.log(
+        `[TemplatesPhase] Generated template ${i + 1}/${templatesNeeded}: ${emailType.type}`,
+      )
+
+      // Emit SSE + Save to DB: Template progress (async, don't block)
+      emitAndSaveNotification(
+        createTemplateProgressEvent(workspaceId, jobId, i + 1, totalTemplates, emailType.type),
+        userId,
+      ).catch((err) => console.error(`[TemplatesPhase] Failed to emit progress event:`, err))
+
+      return {
+        stepOrder: i + 1,
+        delayDays: emailType.delayDays,
+        emailSubject: template.subject,
+        emailBodyText: template.bodyText,
+        emailBodyHtml: template.bodyHtml,
+      }
+    })
+
+    // Save checkpoint with all templates
+    await saveCheckpoint(job, { generatedTemplates: templates })
 
     if (templates.length === 0) {
       throw new Error("No templates generated")

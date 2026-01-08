@@ -373,35 +373,19 @@ function createWelcomeEmailHTML(data: WelcomeEmailData): string {
   const t = WELCOME_EMAIL_TEXTS[language]
   const name = firstName || (language === "ko" ? "고객" : "there")
 
-  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #333; max-width: 600px;">
-${t.greeting(name)}
-<br/><br/>
-${t.intro}
-<br/><br/>
-${t.managerIntro(managerName)}
-${t.experience}
-<br/><br/>
-${t.empathy}
-<br/><br/>
-${t.reassure}
-<br/><br/>
-${t.cta}
-<br/><br/>
-<div style="margin: 20px 0; padding: 16px; background: #f8f9fa; border-radius: 8px;">
-<strong>${t.kakaoLabel}</strong> <a href="${kakaoLink}" style="color: #2563eb;">${kakaoLink || "링크 준비중"}</a> ${t.kakaoNote}
-<br/>
-<strong>${t.phoneLabel}</strong> ${phoneNumber || "번호 준비중"} ${t.phoneNote}
-</div>
-
-${t.emailNote}
-<br/><br/>
-${t.closing}
-
-<div style="margin-top: 24px; color: #666;">
-${managerName}
-<br/>
-${t.signature}
-</div>
+  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 600px;">
+${t.greeting(name)}<br/><br/>
+${t.intro}<br/><br/>
+${t.managerIntro(managerName)} ${t.experience}<br/><br/>
+${t.empathy}<br/><br/>
+${t.reassure}<br/><br/>
+${t.cta}<br/><br/>
+<b>${t.kakaoLabel}</b> <a href="${kakaoLink}" style="color: #2563eb;">${kakaoLink || "링크 준비중"}</a> ${t.kakaoNote}<br/>
+<b>${t.phoneLabel}</b> ${phoneNumber || "번호 준비중"} ${t.phoneNote}<br/><br/>
+${t.emailNote}<br/><br/>
+${t.closing}<br/><br/>
+${managerName}<br/>
+<span style="color: #666;">${t.signature}</span>
 </div>`
 }
 

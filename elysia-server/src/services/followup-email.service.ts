@@ -381,73 +381,50 @@ const FOLLOWUP_TEMPLATES: Record<
   signup_only: {
     ko: {
       getSubject: ({ name }) => `${name} 대표님, 귀사를 찾는 150곳의 바이어를 아직 못 보셨나요?`,
-      getContent: ({ name, manager, kakao, phone }) => `
-${name} 대표님, 안녕하세요.
+      getContent: ({ name, manager, kakao, phone }) =>
+        `${name} 대표님, 안녕하세요.
 
-어제 RINDA에 가입해주셨는데
-아직 시작을 안 하신 것 같아서요.
+어제 RINDA에 가입해주셨는데 아직 시작을 안 하신 것 같아서요.
 
 혹시 이런 생각이 드셨나요?
+"나중에 해야지" / "일단 가입만 해두자" / "뭔가 복잡할 것 같아서..."
 
-"나중에 해야지"
-"일단 가입만 해두자"
-"뭔가 복잡할 것 같아서..."
+완전 이해해요. 저도 새로운 서비스 가입하면 그래요.
 
-완전 이해해요.
-저도 새로운 서비스 가입하면 그래요.
+근데 대표님, <b>딱 3분만 투자하시면</b> 해외 바이어 리스트가 눈앞에 펼쳐져요.
+진짜 3분이에요. 회사 정보 몇 가지만 입력하시면 AI가 알아서 바이어 찾아드려요.
 
-근데 대표님,
-딱 3분만 투자하시면
-해외 바이어 리스트가 눈앞에 펼쳐져요.
-
-진짜 3분이에요.
-회사 정보 몇 가지만 입력하시면
-AI가 알아서 바이어 찾아드려요.
-
-지금 바로 해보시겠어요?
+<b>지금 바로 해보시겠어요?</b>
 → https://app.rinda.ai
 
 막히시면 바로 연락주세요!
 
 ${manager}
-${phone}
-카톡: ${kakao}
-`,
+<b>전화:</b> ${phone} / <b>카톡:</b> ${kakao}`,
     },
     en: {
       getSubject: ({ name }) =>
         `${name}, 150 buyers are looking for your company - have you seen them yet?`,
-      getContent: ({ name, manager, kakao, phone }) => `
-Hi ${name},
+      getContent: ({ name, manager, kakao, phone }) =>
+        `Hi ${name},
 
-I noticed you signed up for RINDA yesterday
-but haven't started yet.
+I noticed you signed up for RINDA yesterday but haven't started yet.
 
 Maybe you thought:
-"I'll do it later"
-"Just signing up for now"
-"Looks complicated..."
+"I'll do it later" / "Just signing up for now" / "Looks complicated..."
 
-I totally get it.
-I'm the same way with new tools.
+I totally get it. I'm the same way with new tools.
 
-But here's the thing:
-Just 3 minutes, and you'll have
-a list of overseas buyers right in front of you.
+But here's the thing: <b>Just 3 minutes</b>, and you'll have a list of overseas buyers right in front of you.
+Enter a few company details, and our AI finds buyers for you.
 
-Really, just 3 minutes.
-Enter a few company details,
-and our AI finds buyers for you.
-
-Ready to give it a try?
+<b>Ready to give it a try?</b>
 → https://app.rinda.ai
 
 Let me know if you get stuck!
 
 ${manager}
-${phone}
-KakaoTalk: ${kakao}
-`,
+<b>Phone:</b> ${phone} / <b>KakaoTalk:</b> ${kakao}`,
     },
   },
   before_connect: {
@@ -456,69 +433,52 @@ KakaoTalk: ${kakao}
         companyName
           ? `${name} 대표님, ${companyName} 맞춤 바이어 리스트가 준비됐어요!`
           : `${name} 대표님, 맞춤 바이어 리스트가 준비됐어요!`,
-      getContent: ({ name, manager, kakao, phone, companyName }) => `
-${name} 대표님,
+      getContent: ({ name, manager, kakao, phone, companyName }) =>
+        `${name} 대표님,
 
-${companyName ? `${companyName}에 딱 맞는` : "귀사에 딱 맞는"} 바이어 리스트가 준비됐어요.
-이메일 초안도 다 만들어놨고요.
+${companyName ? `<b>${companyName}에 딱 맞는</b>` : "<b>귀사에 딱 맞는</b>"} 바이어 리스트가 준비됐어요. 이메일 초안도 다 만들어놨고요.
 
-이제 딱 한 가지만 하시면 돼요.
-이메일 계정 연동.
-
-연동하시면 바로 발송할 수 있어요.
-한 번의 클릭으로 Gmail과 연동되어서 해당 메일로 보낼 수 있고 받을 수 있어요.
+이제 <b>딱 한 가지만</b> 하시면 돼요. 이메일 계정 연동.
+연동하시면 바로 발송할 수 있어요. 한 번의 클릭으로 Gmail과 연동됩니다.
 
 혹시 이런 걱정 되시나요?
+"내 이메일 계정 연동해도 안전할까?" / "스팸으로 안 가나?"
 
-"내 이메일 계정 연동해도 안전할까?"
-"스팸으로 안 가나?"
+걱정 마세요. 저희가 안전하게 발송되도록 세팅해드려요.
 
-걱정 마세요.
-저희가 안전하게 발송되도록 세팅해드려요.
-
-지금 바로 연동해보세요!
+<b>지금 바로 연동해보세요!</b>
 → https://app.rinda.ai
 
 궁금한 거 있으시면 바로 연락주세요.
 
 ${manager}
-${phone}
-카톡: ${kakao}
-`,
+<b>전화:</b> ${phone} / <b>카톡:</b> ${kakao}`,
     },
     en: {
       getSubject: ({ name, companyName }) =>
         companyName
           ? `${name}, your custom buyer list for ${companyName} is ready!`
           : `${name}, your custom buyer list is ready!`,
-      getContent: ({ name, manager, kakao, phone, companyName }) => `
-Hi ${name},
+      getContent: ({ name, manager, kakao, phone, companyName }) =>
+        `Hi ${name},
 
-${companyName ? `A buyer list perfectly matched for ${companyName}` : "A custom buyer list"} is ready for you.
-We've also drafted all the emails.
+${companyName ? `<b>A buyer list perfectly matched for ${companyName}</b>` : "<b>A custom buyer list</b>"} is ready for you. We've also drafted all the emails.
 
-Now you just need to do one thing:
-Connect your email account.
-
-Once connected, you can send right away.
-One click to link Gmail, and you're all set to send and receive.
+Now you just need to do <b>one thing</b>: Connect your email account.
+Once connected, you can send right away. One click to link Gmail, and you're all set.
 
 Worried about:
-"Is it safe to connect my email?"
-"Will emails go to spam?"
+"Is it safe to connect my email?" / "Will emails go to spam?"
 
-Don't worry.
-We'll help you set everything up for safe delivery.
+Don't worry. We'll help you set everything up for safe delivery.
 
-Connect now!
+<b>Connect now!</b>
 → https://app.rinda.ai
 
 Let me know if you have any questions.
 
 ${manager}
-${phone}
-KakaoTalk: ${kakao}
-`,
+<b>Phone:</b> ${phone} / <b>KakaoTalk:</b> ${kakao}`,
     },
   },
   no_campaign: {
@@ -527,137 +487,94 @@ KakaoTalk: ${kakao}
         companyName
           ? `${name} 대표님, ${companyName}의 해외진출이 딱 한 번의 클릭 앞에 있어요.`
           : `${name} 대표님, 해외진출이 딱 한 번의 클릭 앞에 있어요.`,
-      getContent: ({ name, manager, kakao, phone, companyName }) => `
-${name} 대표님,
+      getContent: ({ name, manager, kakao, phone, companyName }) =>
+        `${name} 대표님,
 
-이메일 계정 연동까지 완료하셨는데
-아직 캠페인을 시작 안 하신 것 같아요.
-
+이메일 계정 연동까지 완료하셨는데 아직 캠페인을 시작 안 하신 것 같아요.
 혹시 뭔가 막히는 부분이 있으신가요?
 
-첫 발송이 불안하시다면,
-제가 같이 봐드릴게요.
+첫 발송이 불안하시다면, 제가 같이 봐드릴게요.
 
-지금 바로 시작해보시면 어떨까요?
-${companyName ? `${companyName}의` : "귀사의"} 첫 답장이 오는 순간의 짜릿함을
-빨리 경험하셨으면 해요!
+<b>지금 바로 시작해보시면 어떨까요?</b>
+${companyName ? `<b>${companyName}의</b>` : "<b>귀사의</b>"} 첫 답장이 오는 순간의 짜릿함을 빨리 경험하셨으면 해요!
 
 ${manager}
-${phone}
-카톡: ${kakao}
-`,
+<b>전화:</b> ${phone} / <b>카톡:</b> ${kakao}`,
     },
     en: {
       getSubject: ({ name, companyName }) =>
         companyName
           ? `${name}, ${companyName}'s global expansion is just one click away.`
           : `${name}, your global expansion is just one click away.`,
-      getContent: ({ name, manager, kakao, phone, companyName }) => `
-Hi ${name},
+      getContent: ({ name, manager, kakao, phone, companyName }) =>
+        `Hi ${name},
 
-You've connected your email account,
-but haven't launched a campaign yet.
-
+You've connected your email account, but haven't launched a campaign yet.
 Is something holding you back?
 
-If you're nervous about the first send,
-I can walk you through it together.
+If you're nervous about the first send, I can walk you through it together.
 
-Why not start now?
-${companyName ? `I want ${companyName} to experience the thrill` : "I want you to experience the thrill"}
-of getting your first reply!
+<b>Why not start now?</b>
+${companyName ? `I want <b>${companyName}</b> to experience the thrill` : "I want you to experience the thrill"} of getting your first reply!
 
 ${manager}
-${phone}
-KakaoTalk: ${kakao}
-`,
+<b>Phone:</b> ${phone} / <b>KakaoTalk:</b> ${kakao}`,
     },
   },
   inactive_7days: {
     ko: {
       getSubject: ({ name }) => `${name} 대표님, 제가 뭘 잘못한 걸까요?`,
-      getContent: ({ name, manager, phone }) => `
-${name} 대표님,
+      getContent: ({ name, manager, phone }) =>
+        `${name} 대표님,
 
-가입하신 지 일주일이 지났는데
-연락이 없으셔서 걱정됩니다.
-
-솔직히 말씀드리면,
-제가 대표님께 도움이 안 됐나 싶어서
-마음이 좀 무거워요.
+가입하신 지 일주일이 지났는데 연락이 없으셔서 걱정됩니다.
+솔직히 말씀드리면, 제가 대표님께 도움이 안 됐나 싶어서 마음이 좀 무거워요.
 
 혹시 이런 이유였나요?
+"너무 복잡해서 포기했어요" / "시간이 없어서 못 했어요" / "효과 없을 것 같아서 관뒀어요"
 
-"너무 복잡해서 포기했어요"
-"시간이 없어서 못 했어요"
-"효과 없을 것 같아서 관뒀어요"
-
-뭐가 됐든,
-대표님 입장에서 뭔가 부족했던 거잖아요.
-
-그게 뭔지 알고 싶어요.
-
-전화 한 통만 주시면,
-5분만 시간 내주시면
-대표님 얘기 듣고 싶습니다.
+뭐가 됐든, 대표님 입장에서 뭔가 부족했던 거잖아요. 그게 뭔지 알고 싶어요.
+<b>전화 한 통만 주시면</b>, 5분만 시간 내주시면 대표님 얘기 듣고 싶습니다.
 
 혹시 관심 있으시면 이것도 드릴게요:
-
 • 대표님 제품 맞는 바이어 리스트 (50개사)
 • 해외영업 이메일 템플릿 (제가 직접 쓴 거)
 • 체험판 2주 추가 연장
 
-대가는 없어요.
-그냥 대표님 피드백만 듣고 싶습니다.
+대가는 없어요. 그냥 대표님 피드백만 듣고 싶습니다.
 
-괜찮으시면 전화 한 통만 주세요.
-${phone}
+괜찮으시면 전화 한 통만 주세요. <b>${phone}</b>
 
 ${manager}
 
-p.s. 혹시 정말 바쁘시거나 관심 없으시면
-답장 안 하셔도 괜찮습니다. 이해합니다.
-`,
+<span style="color:#666">p.s. 혹시 정말 바쁘시거나 관심 없으시면 답장 안 하셔도 괜찮습니다. 이해합니다.</span>`,
     },
     en: {
       getSubject: ({ name }) => `${name}, did I do something wrong?`,
-      getContent: ({ name, manager, phone }) => `
-Hi ${name},
+      getContent: ({ name, manager, phone }) =>
+        `Hi ${name},
 
-It's been a week since you signed up,
-and I'm a bit worried I haven't heard from you.
-
-Honestly, I'm wondering if I failed
-to help you properly.
+It's been a week since you signed up, and I'm a bit worried I haven't heard from you.
+Honestly, I'm wondering if I failed to help you properly.
 
 Was it because:
-"It was too complicated"
-"I didn't have time"
-"I wasn't sure it would work"
+"It was too complicated" / "I didn't have time" / "I wasn't sure it would work"
 
-Whatever the reason,
-something wasn't right from your perspective.
-
-I'd love to know what it was.
-
-Just 5 minutes of your time on a call
-would mean a lot to me.
+Whatever the reason, something wasn't right from your perspective. I'd love to know what it was.
+<b>Just 5 minutes</b> of your time on a call would mean a lot to me.
 
 If you're interested, I'll also give you:
 • 50 buyer leads matched to your product
 • Email templates I personally wrote
 • 2 extra weeks of trial
 
-No strings attached.
-I just want your honest feedback.
+No strings attached. I just want your honest feedback.
 
-Call me anytime: ${phone}
+Call me anytime: <b>${phone}</b>
 
 ${manager}
 
-p.s. If you're too busy or not interested,
-that's totally fine. I understand.
-`,
+<span style="color:#666">p.s. If you're too busy or not interested, that's totally fine. I understand.</span>`,
     },
   },
 }
@@ -721,12 +638,15 @@ export async function sendFollowupEmail(candidate: FollowupCandidate): Promise<b
   const content = template.getContent(templateContext)
 
   try {
+    // Convert line breaks to <br/> for HTML email
+    const htmlContent = content.replace(/\n/g, "<br/>")
+
     const response = await sendTransactionalEmail({
       senderName: config.cs.managerName,
       to: email,
       subject,
       body: JSON.stringify({
-        content: `<pre style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap; line-height: 1.6;">${content}</pre>`,
+        content: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #333; max-width: 600px;">${htmlContent}</div>`,
       }),
     })
 

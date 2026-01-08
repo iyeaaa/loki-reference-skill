@@ -104,7 +104,7 @@ const EMAIL_TEXTS = {
     nextStep: "Take a look, tweak if needed, and launch when ready",
     // Footer (warm sign-off)
     footer: "Rinda Team",
-    footerContact: "Questions? Just reply to this email",
+    footerContact: "Questions? Contact us at admin@grinda.ai",
     footerBusiness: "© 2025 Rinda AI · Daejeon, South Korea",
     defaultName: "there",
   },
@@ -133,7 +133,7 @@ const EMAIL_TEXTS = {
     nextStep: "확인하고, 마음에 들면 바로 시작해 보세요",
     // Footer: 간결하게
     footer: "Rinda 팀",
-    footerContact: "궁금한 점은 이 메일에 답장해 주세요",
+    footerContact: "궁금한 점은 admin@grinda.ai로 문의해 주세요",
     footerBusiness: "© 2025 Rinda AI · 대전, 대한민국",
     defaultName: "고객",
   },
@@ -316,7 +316,8 @@ function createOnboardingCompleteEmailHTML(data: OnboardingCompleteEmailData): s
 
   <p style="margin: 0; font-size: 13px; color: #888;">
     ${t.footer}<br>
-    <span style="font-size: 12px;">${t.footerContact}</span>
+    <span style="font-size: 12px;">${t.footerContact}</span><br>
+    <span style="font-size: 11px; color: #aaa;">${t.footerBusiness}</span>
   </p>
 </div>`
 }

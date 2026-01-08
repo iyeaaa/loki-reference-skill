@@ -1,249 +1,235 @@
 /**
- * Buyer Search - Common Type Definitions
- *
- * 바이어 서치 시스템의 공통 타입 정의
- * - 회사 정보, 담당자 정보, 검색 결과
- * - Progress 추적 타입
- * - 에러 처리 타입
+ * Buyer Search Types
+ * 기획서 v2 기반 타입 정의
  */
 
-// ==================== COMPANY TYPES ====================
+// ============================================================================
+// Input/Output Types (공개 API)
+// ============================================================================
 
 /**
- * 회사 기본 정보 (Discover API 결과)
+ * 산업군 타입
  */
-export interface Company {
-  domain: string
-  name: string
-  emailsCount?: {
-    personal: number
-    generic: number
-    total: number
-  }
+export type Industry =
+  | "manufacturing_parts" // 제조 부품
+  | "it_software" // IT 소프트웨어
+  | "beauty_cosmetics" // 뷰티 화장품
+  | "food_supplements" // 식품 건기식
+  | "fashion_apparel" // 패션 의류
+  | "electronics" // 전자제품
+  | "healthcare" // 헬스케어
+  | "other" // 기타
+
+/**
+ * 타겟 고객 타입
+ */
+export type TargetCustomer = "b2b" | "b2c" | "both"
+
+/**
+ * 회사 규모 타입
+ */
+export type CompanySize =
+  | "startup" // 스타트업/신생기업 (직원 1-10명)
+  | "small" // 소기업 (직원 10-50명)
+  | "medium" // 중기업 (직원 50-250명)
+  | "large" // 대기업 (직원 250-1000명)
+  | "enterprise" // 글로벌 대기업 (직원 1000명+)
+
+/**
+ * 국가 타입
+ */
+export type Country =
+  | "japan" // 일본
+  | "usa" // 미국
+  | "china" // 중국
+  | "southeast_asia" // 동남아
+  | "europe" // 유럽
+  | "middle_east" // 중동
+
+/**
+ * 바이어 검색 입력
+ */
+export interface BuyerSearchInput {
+  companyName: string // 회사명
+  companyDescription: string // 회사 설명 (주요 제품 포함)
+  industry: Industry // 산업군
+  target: TargetCustomer // 타겟 고객
+  country: Country[] // 희망 진출 국가 (복수 선택)
+  locale: "en" | "ko" // 언어
+  companySize: CompanySize // 회사 규모
 }
 
 /**
- * 회사 상세 정보 (Domain Search API 결과)
+ * 바이어 정보
  */
-export interface CompanyDetails extends Company {
-  description?: string | null
-  industry?: string | null
-  country?: string | null
-  headcount?: string | null
-  companyType?: string | null
-  pattern?: string | null
-}
-
-// ==================== CONTACT TYPES ====================
-
-/**
- * 담당자 정보
- */
-export interface Contact {
-  email: string
-  type: "personal" | "generic"
-  confidence: number
-  firstName?: string | null
-  lastName?: string | null
-  position?: string | null
-  seniority?: string | null
-  department?: string | null
-  linkedin?: string | null
-  phone?: string | null
+export interface Buyer {
+  companyName: string // "ABC Trading Co."
+  website: string // "https://abc-trading.com"
+  email: string // "buyer@abc-trading.com"
+  industry: string // "Industrial Equipment Distributor"
+  country: string // "Japan"
+  description: string // "일본 산업용 장비 전문 유통사..."
+  size?: CompanySize // 회사 규모 (선택적)
 }
 
 /**
- * 최적 담당자 선택 기준
+ * 검색 메타데이터
  */
-export interface ContactSelectionCriteria {
-  /** 최소 신뢰도 (0-100) */
-  minConfidence: number
-  /** 선호하는 담당자 유형 순서 */
-  preferredTypes: ("personal" | "generic")[]
-  /** 선호하는 직급 순서 */
-  preferredSeniorities: ("executive" | "senior" | "junior")[]
-  /** 선호하는 부서 */
-  preferredDepartments?: string[]
+export interface SearchMetadata {
+  totalSearched: number // 전체 검색된 회사 수
+  totalWithEmail: number // 이메일 확보한 회사 수
+  searchTimeSeconds: number // 검색 소요 시간 (초)
+  sources: string[] // 사용된 데이터 소스 목록
 }
 
-// ==================== SEARCH RESULT TYPES ====================
-
 /**
- * 바이어 검색 결과 (회사 + 담당자)
+ * 바이어 검색 결과
  */
 export interface BuyerSearchResult {
-  company: CompanyDetails
-  contact: Contact | null
-  /** 검색 소스 */
-  source: "hunter" | "apollo"
-  /** 검색 시간 (ms) */
-  searchTimeMs: number
-  /** 캐시 히트 여부 */
-  fromCache: boolean
-  /** Reranking 점수 (0-100, 높을수록 좋음) */
-  rankScore: number
+  buyers: Buyer[]
+  metadata: SearchMetadata
 }
 
 /**
- * 바이어 검색 옵션
- */
-export interface BuyerSearchOptions {
-  /** 목표 결과 수 */
-  targetCount: number
-  /** 최대 재시도 횟수 */
-  maxRetries: number
-  /** 최소 담당자 신뢰도 */
-  minContactConfidence: number
-  /** 병렬 처리 수 */
-  concurrency: number
-  /** 타임아웃 (ms) */
-  timeoutMs: number
-}
-
-// ==================== PROGRESS TYPES ====================
-
-/**
- * 검색 Phase
- */
-export type SearchPhase =
-  | "init"
-  | "discovery" // 회사 찾기
-  | "enrichment" // 담당자 정보 수집
-  | "fill" // 부족분 채우기
-  | "complete"
-  | "error"
-
-/**
- * Progress 이벤트 타입
+ * SSE 진행률 이벤트
  */
 export interface ProgressEvent {
-  phase: SearchPhase
-  /** 전체 진행률 (0-100) */
-  progress: number
-  /** 현재 Phase 내 진행률 (0-100) */
-  phaseProgress: number
-  /** 상태 메시지 */
-  message: string
-  /** 현재까지 찾은 결과 수 */
-  resultsFound: number
-  /** 목표 결과 수 */
-  targetCount: number
-  /** 현재 처리 중인 회사명 */
-  currentCompany?: string
-  /** Phase별 세부 진행 상황 */
-  details?: {
-    discovery?: { found: number; target: number }
-    enrichment?: { completed: number; total: number }
-    fill?: { attempts: number; maxAttempts: number }
+  phase: string // 현재 단계 (intelligence, search_perplexity, ...)
+  progress: number // 진행률 0-100
+  message: string // 사용자에게 표시할 메시지
+  detail?: unknown // 추가 상세 정보
+}
+
+// ============================================================================
+// Internal Types (내부 파이프라인용)
+// ============================================================================
+
+/**
+ * 바이어 페르소나
+ */
+export interface BuyerPersona {
+  type: string // 바이어 유형명 (영문)
+  typeKo: string // 바이어 유형명 (한글)
+  description: string // 왜 이 유형이 적합한지
+  decisionMakers: string[] // 의사결정자 직책
+  targetCompanySize: CompanySize[] // 타겟 회사 규모 (우선순위)
+  searchKeywords: {
+    en: string[] // 영문 키워드
+    local: Record<string, string[]> // 국가별 현지어 키워드
   }
 }
 
 /**
- * Progress 콜백 함수 타입
+ * 바이어 인텔리전스 (Phase 1 출력)
  */
-export type ProgressCallback = (event: ProgressEvent) => void
-
-// ==================== ERROR TYPES ====================
-
-/**
- * 에러 유형
- */
-export type SearchErrorType =
-  | "rate_limit"
-  | "timeout"
-  | "network"
-  | "validation"
-  | "not_found"
-  | "api_error"
-  | "unknown"
-
-/**
- * 검색 에러
- */
-export interface SearchError {
-  type: SearchErrorType
-  message: string
-  retryable: boolean
-  details?: Record<string, unknown>
+export interface BuyerIntelligence {
+  productSummary: string // 제품/서비스 요약
+  buyerPersonas: BuyerPersona[] // 바이어 페르소나 (3-5개)
+  industryFilters: {
+    keywords: string[] // 산업 필터 키워드
+    excludeKeywords: string[] // 제외할 키워드 (경쟁사 등)
+  }
+  searchStrategy: {
+    priorityPersonas: string[] // 우선순위 페르소나
+    notes: string // 검색 전략 메모
+  }
 }
 
-// ==================== DISCOVER PARAMS ====================
-
 /**
- * 회사 검색 파라미터 (Hunter.io Discover API 기반)
- * 확장성을 위해 공통 인터페이스로 정의
+ * 원시 회사 데이터 (Phase 2 검색 결과)
  */
-export interface CompanySearchParams {
-  /** 자연어 검색 쿼리 */
-  query?: string
-  /** 지역 필터 */
-  location?: {
-    country?: string
-    continent?: string
-    businessRegion?: "AMER" | "EMEA" | "APAC" | "LATAM"
-  }
-  /** 산업 필터 */
-  industry?: {
-    include?: string[]
-    exclude?: string[]
-  }
-  /** 회사 규모 (직원 수) */
-  headcount?: string[]
-  /** 키워드 필터 */
-  keywords?: {
-    include?: string[]
-    exclude?: string[]
-    match?: "any" | "all"
-  }
-  /** 결과 개수 제한 */
-  limit: number
-  /** 오프셋 (페이지네이션) */
-  offset?: number
-
-  // ==================== ICP 기반 검색 ====================
-
-  /**
-   * 🆕 본인 회사 설명 (ICP 기반 고객사 검색에 사용)
-   *
-   * 예: "커피 찌꺼기를 활용한 고양이 모래 전문 기업"
-   * → 잠재 고객: 펫샵, 유통업체, 대형마트 등
-   */
-  myCompanyDescription?: string
-
-  /**
-   * 🆕 타겟 고객 유형
-   * 예: "B2B", "B2C", "기업 대상"
-   */
-  targetType?: string
+export interface RawCompany {
+  companyName: string
+  website?: string
+  domain?: string
+  industry?: string
+  country?: string
+  description?: string
+  size?: CompanySize // 회사 규모
+  contacts?: RawContact[]
+  source: "perplexity" | "apollo" | "serper" | "places" // 데이터 소스
 }
 
-// ==================== ORCHESTRATOR RESULT ====================
+/**
+ * 원시 연락처 정보
+ */
+export interface RawContact {
+  email?: string
+  name?: string
+  title?: string
+  phone?: string
+}
 
 /**
- * 오케스트레이터 최종 결과
+ * 정규화된 고유 회사 (Phase 2E 중복 제거 후)
  */
-export interface OrchestratorResult {
-  /** 검색 성공 여부 */
-  success: boolean
-  /** 검색 결과 목록 */
-  results: BuyerSearchResult[]
-  /** 총 검색 시간 (ms) */
-  totalTimeMs: number
-  /** 통계 정보 */
-  stats: {
-    /** 시도한 회사 수 */
-    companiesAttempted: number
-    /** 성공한 회사 수 */
-    companiesSucceeded: number
-    /** 캐시 히트 수 */
-    cacheHits: number
-    /** 재시도 횟수 */
-    retries: number
-    /** Fill 시도 횟수 */
-    fillAttempts: number
-    /** Provider별 통계 */
-    providerStats?: Record<string, { found: number; enriched: number }>
+export interface UniqueCompany {
+  id: string // normalized domain or generated ID
+  companyName: string
+  domain: string | null
+  website: string | null
+  industry: string | null
+  country: string
+  description: string | null
+  size: CompanySize | null // 회사 규모
+  contacts: RawContact[]
+  sources: string[] // 데이터 소스 목록
+}
+
+/**
+ * 이메일 정보
+ */
+export interface EmailInfo {
+  email: string
+  source: "apollo" | "hunter" | "snov"
+  verified: boolean
+  confidence: number // 0-100
+  contactName?: string
+  title?: string
+}
+
+/**
+ * 이메일 Enrichment된 회사 (Phase 3 출력)
+ */
+export interface EnrichedCompany extends UniqueCompany {
+  primaryEmail: EmailInfo // 최적 이메일
+}
+
+/**
+ * LLM 평가 결과
+ */
+export interface LLMEvaluation {
+  score: number // 0-10
+  matchedPersona: string // 매칭된 페르소나
+  reason: string // 적합한 이유
+}
+
+/**
+ * 스코어링된 회사 (Phase 4 출력)
+ */
+export interface ScoredCompany extends EnrichedCompany {
+  llmEvaluation: LLMEvaluation
+  finalScore: number // 0-1 (가중치 적용된 최종 스코어)
+  scoreBreakdown: {
+    llmRelevance: number // 0-1
+    companySizeMatch: number // 0-1 (판매자-바이어 규모 적합성)
+    emailQuality: number // 0-1
+    dataCompleteness: number // 0-1
+    sourceReliability: number // 0-1
   }
-  /** 에러 (실패 시) */
-  error?: SearchError
+}
+
+/**
+ * 최종 바이어 (Phase 5 출력)
+ */
+export interface FinalBuyer {
+  companyName: string
+  website: string
+  email: string
+  industry: string
+  country: string
+  description: string // LLM 생성 설명
+  size?: CompanySize // 회사 규모
+  matchedPersona?: string
+  score?: number
 }

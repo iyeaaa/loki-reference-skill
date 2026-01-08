@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { writeFileSync } from "fs"
+import { writeFileSync } from "node:fs"
 import { searchAndEnrichLeads } from "../src/services/lead-search-enrichment.service"
 
 /**
@@ -33,17 +33,17 @@ async function main() {
     const filepath = `./output/${filename}`
 
     // Create output directory if it doesn't exist
-    const { mkdirSync } = await import("fs")
+    const { mkdirSync } = await import("node:fs")
     try {
       mkdirSync("./output", { recursive: true })
-    } catch (err) {
+    } catch (_err) {
       // Directory might already exist
     }
 
     // Save the full result
     writeFileSync(filepath, JSON.stringify(result, null, 2))
 
-    console.log("\n" + "=".repeat(60))
+    console.log(`\n${"=".repeat(60)}`)
     console.log("Search completed!")
     console.log(`Results saved to: ${filepath}`)
     console.log("\nSummary:")

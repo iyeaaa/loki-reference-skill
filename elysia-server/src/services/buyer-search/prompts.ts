@@ -1,132 +1,207 @@
 /**
- * Buyer Search AI Prompts
- *
- * Hunter.io Discover API를 활용한 잠재 고객 검색을 위한 AI 프롬프트
- * GPT-5.2 및 GPT-5-mini 사용
+ * Buyer Search Prompts
+ * LLM 프롬프트 모음
  */
 
-import { VALID_HUNTERIO_INDUSTRIES } from "../../constants/hunterio-industries"
+import { COMPANY_SIZE_LABELS, COUNTRY_NAMES, INDUSTRY_HINTS } from "./constants"
+import type {
+  BuyerIntelligence,
+  BuyerSearchInput,
+  CompanySize,
+  EnrichedCompany,
+  ScoredCompany,
+} from "./types"
 
-// ==================== BUYER QUERY GENERATION ====================
+// ============================================================================
+// Phase 1: Intelligence Generation
+// ============================================================================
 
 /**
- * 바이어 검색 쿼리 생성 프롬프트
- *
- * 핵심: 내 회사 설명을 기반으로 **잠재 고객**의 키워드와 industry를 생성
- * - keywords: Hunter.io Discover API 검색 키워드
- * - hunterIndustries: 잠재 고객이 속할 Hunter.io 유효 industry (1-3개)
+ * 바이어 인텔리전스 생성 프롬프트
  */
-export function buildBuyerQueryPrompt(params: {
-  description: string
-  targetType?: string
-  myIndustry?: string
-  countryISO?: string
-}): string {
-  const { description, targetType, myIndustry, countryISO } = params
+export function buildIntelligencePrompt(input: BuyerSearchInput): string {
+  const industryHint = INDUSTRY_HINTS[input.industry]
+  const countries = input.country.map((c) => COUNTRY_NAMES[c]).join(", ")
+  const companySizeLabel = COMPANY_SIZE_LABELS[input.companySize]
 
-  return `You are an expert B2B sales strategist specializing in lead generation.
+  return `You are a B2B/B2C export buyer matching expert.
 
-## Your Company (Seller)
-- **Description:** ${description}
-- **My Industry:** ${myIndustry || "Not specified"}
-- **Target Type:** ${targetType || "B2B"}
-- **Target Country:** ${countryISO || "Not specified"}
+[Seller Info]
+- Company Name: ${input.companyName}
+- Company Description: ${input.companyDescription}
+- Industry: ${input.industry} (${industryHint})
+- Company Size: ${companySizeLabel}
+- Target Customer: ${
+    input.target === "b2b"
+      ? "B2B (Business to Business)"
+      : input.target === "b2c"
+        ? "B2C (Business to Consumer)"
+        : "B2B + B2C (Both)"
+  }
+- Target Countries: ${countries}
 
-## Your Task
-Analyze the seller's business and identify **IDEAL BUYER PROFILES** - companies that would be interested in purchasing their products/services.
+Analyze the types of buyers most likely to purchase or distribute the products/services of the company above.
 
-### Step 1: Understand the Seller
-- What products/services does this company sell?
-- Who would BUY these products? (retailers, distributors, wholesalers, importers, etc.)
+Respond in the following JSON format:
 
-### Step 2: Generate Search Keywords
-Create 5-8 specific English keywords that would appear on **BUYER** company websites.
-- Focus on buyer-side terms (not seller-side)
-- Be specific - generic terms like "company" are useless
-
-### Step 3: Identify BUYER Industries (CRITICAL)
-Select 1-3 industries from the Hunter.io valid list where **BUYERS** would be found.
-
-**IMPORTANT:** The seller's industry (${myIndustry || "Manufacturing"}) is NOT necessarily the buyer's industry!
-- Example: If seller is a "cat litter manufacturer" (Manufacturing)
-  → Buyers would be in "Pet Services", "Retail Recyclable Materials & Used Merchandise", "Wholesale" etc.
-- Example: If seller is a "software company" (Technology)
-  → Buyers could be in "Retail", "Manufacturing", "Financial Services" etc.
-
-### Valid Hunter.io Industries (choose from this list ONLY):
-${VALID_HUNTERIO_INDUSTRIES.join("\n")}
-
-## Output Format (JSON only, no markdown):
 {
-  "keywords": ["pet store", "pet supplies distributor", "cat litter retailer", "eco-friendly pet products", "pet wholesale"],
-  "hunterIndustries": ["Pet Services", "Retail Recyclable Materials & Used Merchandise", "Wholesale"],
-  "buyerTypes": ["pet retailers", "pet supply distributors", "eco-friendly stores"],
-  "excludeKeywords": ["veterinary clinic", "pet insurance"],
-  "industryHint": "Pet retail and distribution"
+  "productSummary": "Summary of analyzed key product/service (1-2 sentences in Korean)",
+  
+  "buyerPersonas": [
+    {
+      "type": "Buyer type name (English, e.g. Industrial Equipment Distributor)",
+      "typeKo": "Buyer type name (Korean, e.g. 산업용 장비 유통사)",
+      "description": "Why this type is a suitable buyer (2-3 sentences in Korean)",
+      "decisionMakers": ["Purchasing Manager", "CEO", "Director of Operations"],
+      "targetCompanySize": ["startup", "small"],
+      "searchKeywords": {
+        "en": ["keyword1", "keyword2", "keyword3"],
+        "local": {
+          "Japan": ["キーワード1", "キーワード2"],
+          "China": ["关键词1", "关键词2"]
+        }
+      }
+    }
+  ],
+  
+  "industryFilters": {
+    "keywords": ["industry keyword1", "keyword2"],
+    "excludeKeywords": ["competitor keyword", "unrelated keyword"]
+  },
+  
+  "searchStrategy": {
+    "priorityPersonas": ["Highest priority persona types"],
+    "notes": "Notes on country-specific details or search strategy (in Korean)"
+  }
 }
 
-## Critical Rules
-1. Keywords must be in ENGLISH
-2. Keywords should describe BUYER companies, not the seller
-3. hunterIndustries must be EXACTLY from the valid list (case-sensitive)
-4. Think: "Who would BUY from this company?" not "What industry is the seller in?"
-5. Be specific and targeted for B2B lead generation`
+Requirements:
+- Generate EXACTLY 5 personas with company size targeting strategy:
+  
+  **Persona 1**: Similar-sized companies + Very specific/niche
+    - targetCompanySize: [seller's size, one adjacent size]
+    - Type: Very specific niche relevant to seller's product (High relevance, lower volume)
+    - Example for "startup" seller: ["startup", "small"] + "Organic Vegan Lip Balm Distributor"
+    
+  **Persona 2**: Similar-sized companies + Specific
+    - targetCompanySize: [seller's size, two adjacent sizes]
+    - Type: Specific but slightly broader (High relevance, medium volume)
+    - Example for "startup" seller: ["startup", "small", "medium"] + "Natural Cosmetics Distributor"
+    
+  **Persona 3**: Flexible size + Medium scope
+    - targetCompanySize: [all sizes except extremely large if seller is small]
+    - Type: Medium scope, good relevance (Good relevance, medium volume)
+    - Example for "startup" seller: ["startup", "small", "medium", "large"] + "Cosmetics Wholesaler"
+    
+  **Persona 4**: All sizes + Broader scope
+    - targetCompanySize: ["startup", "small", "medium", "large", "enterprise"]
+    - Type: Broader industry category (Moderate relevance, high volume)
+    - Example: "Beauty Products Distributor"
+    
+  **Persona 5**: All sizes + Very broad
+    - targetCompanySize: ["startup", "small", "medium", "large", "enterprise"]
+    - Type: Very broad, catch-all (Lower relevance, highest volume)
+    - Example: "General Consumer Goods Importer"
+
+- If target is B2B, focus on distributors/wholesalers/manufacturers. If B2C, focus on retailers/e-commerce.
+- In 'searchKeywords.local', include only local language keywords for the target countries.
+  (Japan: Japanese, China: Chinese, Southeast Asia: English, Europe: English, Middle East: English, USA: English)
+- Output only JSON, no other text.`
 }
 
-// ==================== COUNTRY ISO CONVERSION ====================
+// ============================================================================
+// Phase 4: Scoring
+// ============================================================================
 
 /**
- * 국가명 → ISO 3166-1 alpha-2 코드 변환 프롬프트
- * GPT-5-mini (reasoning_effort: minimal) 사용
+ * LLM 관련성 평가 프롬프트 (배치)
  */
-export function buildCountryISOPrompt(country: string): string {
-  return `Convert the following country name to its ISO 3166-1 alpha-2 code.
-If it's already an ISO code or cannot be converted, return the original input.
+export function buildBatchEvaluationPrompt(
+  intelligence: BuyerIntelligence,
+  companies: EnrichedCompany[],
+  sellerSize: CompanySize,
+): string {
+  const personaTypes = intelligence.buyerPersonas.map((p) => p.typeKo).join(", ")
+  const sellerSizeLabel = COMPANY_SIZE_LABELS[sellerSize]
 
-Examples:
-"United States" -> "US"
-"미국" -> "US"
-"Japan" -> "JP"
-"일본" -> "JP"
-"jp" -> "JP"
-"South Korea" -> "KR"
-"한국" -> "KR"
-"Germany" -> "DE"
-"unknown country" -> "unknown country"
+  const companyDescriptions = companies
+    .map(
+      (c, idx) => `---
+[${idx}] ${c.companyName}
+- Website: ${c.website || "N/A"}
+- Industry: ${c.industry || "N/A"}
+- Country: ${c.country}
+- Company Size: ${c.size ? COMPANY_SIZE_LABELS[c.size] : "Unknown"}
+- Description: ${c.description || "N/A"}
+---`,
+    )
+    .join("\n")
 
-Input: "${country}"
-Output:`
+  return `You are a B2B/B2C export buyer matching expert.
+
+[Seller Info]
+- Product/Service: ${intelligence.productSummary}
+- Seller Company Size: ${sellerSizeLabel}
+- Target Buyer Types: ${personaTypes}
+
+Evaluate how suitable the following companies are as buyers for the seller above.
+
+**Consider company size compatibility:**
+- Small sellers (${sellerSizeLabel}) typically struggle with very large buyers due to MOQ, supply capacity, payment terms
+- Similar-sized or slightly larger buyers are more realistic and accessible
+- Much larger buyers should receive lower scores unless there's exceptional product fit
+
+${companyDescriptions}
+
+Respond with a JSON array for each company:
+[
+  {
+    "index": 0,
+    "score": 8,
+    "matchedPersona": "Matched persona type (Korean)",
+    "reason": "Reason for suitability (briefly 1-2 sentences in Korean)"
+  },
+  ...
+]
+
+Scoring Criteria:
+- 9-10: Excellent fit (Exact match with target persona + appropriate size)
+- 7-8: Good fit (Related industry, high purchasing probability, reasonable size gap)
+- 5-6: Moderate (Indirect relevance or challenging size mismatch)
+- 3-4: Low (Weak relevance or very large size gap)
+- 1-2: Unsuitable (Competitor, irrelevant, or impossible size gap)
+
+Output only JSON.`
 }
 
-// ==================== HUNTER INDUSTRY CONVERSION ====================
+// ============================================================================
+// Phase 5: Finalizing
+// ============================================================================
 
 /**
- * 사용자 입력 industry → Hunter.io 유효 industry 변환 프롬프트
- * GPT-5-mini (reasoning_effort: minimal) 사용
- *
- * 참고: 이 프롬프트는 legacy 호환성을 위해 유지
- * 새로운 흐름에서는 buyerQueryPrompt에서 직접 hunterIndustries를 생성
+ * 설명 생성 프롬프트
  */
-export function buildHunterIndustryPrompt(industry: string): string {
-  return `Given the following industry name, find the BEST matching industry from the provided list of valid Hunter.io industries.
-If no good match is found, return "NONE".
+export function buildDescriptionPrompt(
+  input: BuyerSearchInput,
+  intelligence: BuyerIntelligence,
+  buyer: ScoredCompany,
+): string {
+  return `You are a B2B export sales expert.
 
-Valid Hunter.io Industries:
-${VALID_HUNTERIO_INDUSTRIES.join("\n")}
+[Seller]
+${input.companyName} - ${intelligence.productSummary}
 
-Input Industry: "${industry}"
-Output (BEST MATCH or NONE):`
-}
+[Buyer Candidate]
+Company Name: ${buyer.companyName}
+Website: ${buyer.website}
+Industry: ${buyer.industry || "N/A"}
+Country: ${buyer.country}
+Collected Info: ${buyer.description || "N/A"}
+Suitability Reason: ${buyer.llmEvaluation.reason}
 
-// ==================== TYPES ====================
+Explain why this buyer is a good candidate in 1-2 sentences in Korean.
+Write concisely so that sales representatives can use it immediately.
+Focus on the company's characteristics and potential for transaction.
 
-/**
- * AI가 생성한 바이어 검색 쿼리
- */
-export interface AIGeneratedBuyerQuery {
-  keywords: string[] // Hunter.io keywords (핵심!)
-  hunterIndustries: string[] // 🆕 잠재 고객의 Hunter.io industry (1-3개)
-  buyerTypes: string[] // 타겟 바이어 유형
-  excludeKeywords: string[] // 제외할 키워드
-  industryHint: string // 산업 힌트 (로깅용)
+Output only the explanation (no other text).`
 }

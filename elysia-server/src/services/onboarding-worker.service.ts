@@ -40,18 +40,18 @@ import {
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
+import { type ProgressEvent as BuyerSearchProgress, searchBuyers } from "./buyer-search"
+import { PHASE_PROGRESS_RANGES } from "./buyer-search/constants"
+import { buyersToLeadDataArray, toBuyerSearchInput } from "./buyer-search/utils/onboarding-adapter"
 import { createCustomerGroup } from "./customer-group.service"
 import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
-import { searchAndEnrichLeads } from "./lead-search-enrichment.service"
 import { isLoopsConfigured, sendOnboardingCompleteEmail } from "./loops.service"
 import { upsertOnboardingProgressNotification } from "./notification.service"
 import {
-  COUNTRY_NAMES,
   completeStep1CompanyInfo,
   completeStep2LeadSearch,
   EMAIL_TYPES_3TOUCH,
   generatePreviewEmailsForSequence,
-  INDUSTRY_NAMES,
   KST_OFFSET_MS,
 } from "./onboarding.service"
 import { createSequence, createSequenceStep } from "./sequence.service"
@@ -240,8 +240,8 @@ export async function addCheckpointError(
 
 /**
  * Phase 1: Discovery + Enrichment (combined)
- * Discovers leads via BigQuery, enriches them, and saves to DB
- * Now uses the unified searchAndEnrichLeads service
+ * Discovers leads using the new buyer-search service
+ * Uses AI-powered multi-source search (Perplexity, Apollo, Serper, etc.)
  */
 export async function runDiscoveryPhase(
   job: Job<OnboardingAutoGenerateJob, OnboardingAutoGenerateResult>,
@@ -297,22 +297,19 @@ export async function runDiscoveryPhase(
       }
     }
 
-    // Map codes to actual Apollo BigQuery values
-    const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
-    const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
-    const experience = surveyData.experience
-    const target = surveyData.target
-    const lang = surveyData.lang
-
     // 🆕 Fetch workspace to get companyDescription for targeted search
     const workspace = await workspaceServiceImport.getWorkspace(workspaceId)
+    const companyName = workspace?.companyName || workspace?.name || "My Company"
+    const companyNameEn = workspace?.companyNameEn || undefined
     const companyDescription =
       workspace?.companyDescription && workspace.companyDescription !== "기본 워크스페이스"
         ? workspace.companyDescription
-        : undefined
+        : workspace?.description && workspace.description !== "기본 워크스페이스"
+          ? workspace.description
+          : undefined
 
     console.log(
-      `[DiscoveryPhase] Company description for search: "${companyDescription?.slice(0, 50) || "N/A"}..."`,
+      `[DiscoveryPhase] Company: "${companyName}", Description: "${companyDescription?.slice(0, 50) || "N/A"}..."`,
     )
 
     // Update checkpoint in BullMQ job data
@@ -323,63 +320,64 @@ export async function runDiscoveryPhase(
     // Report progress to keep job alive (extends lock)
     await job.updateProgress({
       phase: "discovery",
-      progressPercent: 15, // 15%
+      progressPercent: PHASE_PROGRESS_RANGES.intelligence.start,
     })
 
     // Emit SSE: Database searching
     await emitAndSaveNotification(createDiscoverySearchingEvent(workspaceId, jobId), userId)
 
-    // Build natural language query for the lead search service
-    // 🆕 Include companyDescription in query if available
-    const naturalLanguageQuery = companyDescription
-      ? `${companyDescription} ${industryName} companies in ${countryName}`
-      : `${industryName} companies in ${countryName}`
-    console.log(`[DiscoveryPhase] Natural language query: "${naturalLanguageQuery}"`)
+    // 🆕 Convert survey data to buyer-search input format
+    const buyerSearchInput = toBuyerSearchInput(surveyData, {
+      companyName,
+      companyNameEn,
+      companyDescription,
+    })
 
-    // Use the unified lead search and enrichment service
-    // TODO: minimumMatchScore를 0으로 임시 변경 (디버깅용) - 원래는 60
-    const searchResult = await searchAndEnrichLeads(
-      TARGET_LEADS,
-      naturalLanguageQuery,
-      0, // minimumMatchScore: 0 = 필터링 없음 (디버깅용, 원래는 60)
-      // Progress callback for SSE updates (더 반응적인 업데이트)
-      async (progress) => {
+    console.log(`[DiscoveryPhase] BuyerSearch input:`, JSON.stringify(buyerSearchInput, null, 2))
+
+    // 🆕 Use the new buyer-search service with progress callback
+    const searchResult = await searchBuyers(
+      buyerSearchInput,
+      async (progress: BuyerSearchProgress) => {
         console.log(`[DiscoveryPhase] Progress: ${progress.phase} - ${progress.message}`)
 
-        // Phase별로 범위를 매핑하여 progress가 리셋되지 않도록 함 (실행 순서대로)
-        const phaseRanges: Record<string, { start: number; end: number }> = {
-          bigquery: { start: 0, end: 20 }, // 검색
-          enrichment: { start: 20, end: 50 }, // 이메일 찾기 (가장 오래 걸림)
-          scoring: { start: 50, end: 65 }, // 점수 매기기
-          hunterio: { start: 65, end: 70 }, // 추가 검색 (필요시)
-          description_enrichment: { start: 70, end: 90 }, // 설명 보강
-          reranking: { start: 90, end: 100 }, // 최종 순위
-          complete: { start: 100, end: 100 },
-        }
-
-        const range = phaseRanges[progress.phase] || { start: 0, end: 100 }
-        const phaseProgress = Math.floor(
-          (progress.currentCount / progress.targetCount) * (range.end - range.start),
-        )
-        const discoveryPercent = Math.min(100, range.start + phaseProgress)
+        // Map buyer-search progress to discovery percent
+        const discoveryPercent = progress.progress
 
         await job.updateProgress({
           phase: "discovery",
           progressPercent: discoveryPercent,
         })
 
-        // Emit SSE event with user-friendly message (병렬 실행 정보 포함)
+        // Determine user-friendly message based on phase
+        const phaseMessages: Record<string, { en: string; ko: string }> = {
+          intelligence: { en: "Analyzing buyer personas...", ko: "바이어 페르소나 분석 중..." },
+          search_perplexity: { en: "Searching web sources...", ko: "웹 검색 중..." },
+          search_apollo: { en: "Searching B2B databases...", ko: "B2B 데이터베이스 검색 중..." },
+          search_serper: { en: "Additional web search...", ko: "추가 웹 검색 중..." },
+          search_places: { en: "Finding local businesses...", ko: "로컬 비즈니스 검색 중..." },
+          dedup: { en: "Removing duplicates...", ko: "중복 제거 중..." },
+          enrichment: { en: "Finding contact emails...", ko: "이메일 찾는 중..." },
+          scoring: { en: "Scoring and ranking...", ko: "점수 평가 중..." },
+          finalizing: { en: "Finalizing results...", ko: "결과 정리 중..." },
+        }
+
+        const messageInfo = phaseMessages[progress.phase] || {
+          en: progress.message,
+          ko: progress.message,
+        }
+        const isKorean = surveyData.lang === "ko"
+
+        // Emit SSE event with user-friendly message
         await emitAndSaveNotification(
           {
             workspaceId,
             jobId,
             phase: "discovery",
             progressPercent: discoveryPercent,
-            message: progress.message,
-            messageKr: progress.messageKr || progress.message,
-            details: {
-              leadsFound: progress.currentCount,
-            },
+            message: isKorean ? messageInfo.ko : messageInfo.en,
+            messageKr: messageInfo.ko,
+            details: {},
             // 병렬 실행 정보: Discovery 진행 중, Templates는 병렬로 실행 중
             parallelProgress: {
               discovery: { percent: discoveryPercent, done: discoveryPercent >= 100 },
@@ -390,40 +388,16 @@ export async function runDiscoveryPhase(
           userId,
         )
       },
-      {
-        country: countryName,
-        industry: industryName,
-        target,
-        experience,
-        lang,
-        // 🆕 본인 회사 설명 → ICP 기반 고객사 검색에 사용
-        myCompanyDescription: companyDescription,
-      },
     )
 
-    console.log(`[DiscoveryPhase] Search complete. Found ${searchResult.stats.totalFound} leads`)
-    console.log(`[DiscoveryPhase]   - From BigQuery: ${searchResult.stats.fromBigQuery}`)
-    console.log(`[DiscoveryPhase]   - From Hunter.io: ${searchResult.stats.fromHunterIO}`)
-    console.log(`[DiscoveryPhase]   - With emails: ${searchResult.stats.withEmails}`)
-    console.log(`[DiscoveryPhase]   - Skipped duplicates: ${searchResult.stats.skippedDuplicates}`)
-    console.log(`[DiscoveryPhase]   - Skipped low scoring: ${searchResult.stats.skippedLowScoring}`)
-    console.log(
-      `[DiscoveryPhase]   - Skipped large companies: ${searchResult.stats.skippedLargeCompanies}`,
-    )
+    console.log(`[DiscoveryPhase] Search complete. Found ${searchResult.buyers.length} buyers`)
+    console.log(`[DiscoveryPhase]   - Total searched: ${searchResult.metadata.totalSearched}`)
+    console.log(`[DiscoveryPhase]   - With emails: ${searchResult.metadata.totalWithEmail}`)
+    console.log(`[DiscoveryPhase]   - Sources: ${searchResult.metadata.sources.join(", ")}`)
+    console.log(`[DiscoveryPhase]   - Search time: ${searchResult.metadata.searchTimeSeconds}s`)
 
-    // Save all found leads to database
-    const leadsToCreate = searchResult.leads.map((lead) => ({
-      companyName: lead.companyName,
-      foundCompanyName: lead.companyName,
-      websiteUrl: lead.websiteUrl || undefined,
-      businessType: lead.businessType || undefined,
-      country: lead.country || undefined,
-      employeeCount: lead.employeeCount || undefined,
-      description: lead.description || undefined,
-      primaryEmail: lead.primaryEmail || undefined,
-      leadSource: lead.leadSource,
-      leadStatus: "new" as const,
-    }))
+    // 🆕 Convert buyers to lead format using adapter
+    const leadsToCreate = buyersToLeadDataArray(searchResult.buyers)
 
     console.log(`[DiscoveryPhase] Saving ${leadsToCreate.length} leads to database`)
 

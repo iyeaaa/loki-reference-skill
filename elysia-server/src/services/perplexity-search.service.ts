@@ -659,7 +659,21 @@ function getCustomerSearchUserPrompt(
   count: number,
   country: string,
   excludeTypes: string[],
+  targetCompanySize?: string[],
 ): string {
+  const sizeGuidance =
+    targetCompanySize && targetCompanySize.length > 0
+      ? `\n**TARGET COMPANY SIZE PREFERENCE:**
+Prioritize companies with these sizes: ${targetCompanySize.join(", ")}
+- startup: Small startups or new businesses (1-10 employees)
+- small: Small businesses (10-50 employees)
+- medium: Medium-sized companies (50-250 employees)
+- large: Large enterprises (250-1000 employees)
+- enterprise: Global enterprises (1000+ employees)
+
+If a company's size cannot be determined, still include it but note in estimatedSize field.`
+      : ""
+
   return `I need to find exactly ${count} B2B CUSTOMERS (buyers) for this company:
 
 **SELLER COMPANY (the company that wants to sell):**
@@ -670,6 +684,7 @@ ${country}
 
 **IDEAL CUSTOMER TYPES (who would BUY from this seller):**
 ${idealCustomerTypes.map((type, i) => `${i + 1}. ${type}`).join("\n")}
+${sizeGuidance}
 
 **DO NOT INCLUDE these types (competitors/wrong fit):**
 ${excludeTypes.map((type) => `- ${type}`).join("\n")}
@@ -683,7 +698,7 @@ If the seller makes "hair loss shampoo":
 - ❌ Wrong: Other hair loss shampoo manufacturers
 - ✅ Correct: Drugstore chains, cosmetics distributors, beauty product importers, dermatology clinics, online beauty retailers
 
-Find ${count} companies in ${country} that match the ideal customer types above.
+Find ${count} companies in ${country} that match the ideal customer types above${targetCompanySize && targetCompanySize.length > 0 ? `, preferring companies of size: ${targetCompanySize.join(", ")}` : ""}.
 
 Return as JSON array with buyerReason field explaining why each company would be a good customer.`
 }
@@ -712,6 +727,7 @@ export async function searchCustomersWithPerplexity(options: {
   country: string
   excludeTypes?: string[]
   count?: number
+  targetCompanySize?: string[]
 }): Promise<PerplexitySearchResult> {
   const {
     sellerDescription,
@@ -719,6 +735,7 @@ export async function searchCustomersWithPerplexity(options: {
     country,
     excludeTypes = [],
     count = DEFAULT_SEARCH_COUNT,
+    targetCompanySize,
   } = options
 
   const apiKey = config.perplexity.apiKey
@@ -732,6 +749,9 @@ export async function searchCustomersWithPerplexity(options: {
     `[Perplexity] 🆕 Customer search: "${sellerDescription.slice(0, 50)}..." in ${country}`,
   )
   logger.info(`[Perplexity] Ideal customers: ${idealCustomerTypes.slice(0, 3).join(", ")}...`)
+  if (targetCompanySize && targetCompanySize.length > 0) {
+    logger.info(`[Perplexity] Target size: ${targetCompanySize.join(", ")}`)
+  }
 
   try {
     const systemPrompt = getCustomerSearchSystemPrompt()
@@ -741,6 +761,7 @@ export async function searchCustomersWithPerplexity(options: {
       count,
       country,
       excludeTypes,
+      targetCompanySize,
     )
 
     // max_tokens를 count에 비례해서 조정 (리드당 약 200 토큰 - buyerReason 포함)

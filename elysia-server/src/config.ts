@@ -230,6 +230,21 @@ export const config = {
     apiKey: getEnvOrDefault("PERPLEXITY_API_KEY", ""),
   },
 
+  // Apollo.io (B2B Database)
+  apollo: {
+    apiKey: getEnvOrDefault("APOLLO_API_KEY", ""),
+  },
+
+  // Serper (Google Search API)
+  serper: {
+    apiKey: getEnvOrDefault("SERPER_API_KEY", ""),
+  },
+
+  // Google Places API
+  googlePlaces: {
+    apiKey: getEnvOrDefault("GOOGLE_PLACES_API_KEY", ""),
+  },
+
   // Loops.so (Transactional Emails)
   loops: {
     apiKey: getEnvOrDefault("LOOPS_API_KEY", ""),

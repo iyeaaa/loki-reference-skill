@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
-import { searchBuyers } from "../services/buyer-search"
+import { searchAndEnrichLeads } from "../services/lead-search-enrichment.service"
 import { sendOnboardingCompleteEmail } from "../services/loops.service"
 import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH, INDUSTRY_NAMES } from "../services/onboarding.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
@@ -69,6 +69,93 @@ interface LeadData {
     employeeCount: string
     description?: string
     primaryEmail?: string
+  }
+}
+
+/**
+ * 🆕 Discover leads using ICP-based customer search
+ *
+ * workspaceDescription이 있으면 ICP 기반 고객사 검색 사용
+ * 없으면 기존 하이브리드 검색 사용
+ */
+async function discoverLeadsEnhanced(
+  options: {
+    industry: string
+    target: string
+    country: string
+    /** 🆕 본인 회사 설명 - ICP 기반 고객사 검색에 사용 */
+    myCompanyDescription?: string
+  },
+  onProgress?: (progress: {
+    currentCount: number
+    targetCount: number
+    message: string
+    phase?: string
+  }) => void,
+) {
+  const countryName = COUNTRY_NAMES[options.country] || options.country
+  const industryName = INDUSTRY_NAMES[options.industry] || options.industry
+
+  console.log(
+    `[TestOnboarding] 🆕 Enhanced lead discovery: ICP search = ${!!options.myCompanyDescription}`,
+  )
+  if (options.myCompanyDescription) {
+    console.log(`[TestOnboarding] My company: "${options.myCompanyDescription.slice(0, 50)}..."`)
+  }
+
+  const query = `${industryName} companies in ${countryName}`
+
+  const result = await searchAndEnrichLeads(
+    30, // TARGET_LEADS
+    query,
+    0, // minimumMatchScore
+    // Progress callback for real-time updates
+    onProgress
+      ? async (progress) => {
+          onProgress({
+            currentCount: progress.currentCount,
+            targetCount: progress.targetCount,
+            message: progress.messageKr || progress.message,
+            phase: progress.phase, // phase 정보 전달
+          })
+        }
+      : undefined,
+    {
+      industry: industryName,
+      country: countryName,
+      target: options.target,
+      // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
+      myCompanyDescription: options.myCompanyDescription,
+    },
+  )
+
+  // Transform to expected format
+  const leads: LeadData[] = result.leads.map((lead) => ({
+    company: lead.companyName,
+    website: lead.websiteUrl,
+    industry: lead.businessType || "",
+    employees: lead.employeeCount || "",
+    country: lead.country || countryName,
+    enriched: {
+      companyName: lead.companyName,
+      websiteUrl: lead.websiteUrl,
+      businessType: lead.businessType || "",
+      country: lead.country || countryName,
+      employeeCount: lead.employeeCount || "",
+      description: lead.description,
+      primaryEmail: lead.primaryEmail || undefined,
+    },
+  }))
+
+  return {
+    leads,
+    stats: {
+      totalFound: result.stats.totalFound,
+      totalEnriched: result.stats.totalFound,
+      totalWithEmail: result.stats.withEmails,
+      duplicatesSkipped: result.stats.skippedDuplicates,
+      iterations: 1,
+    },
   }
 }
 
@@ -152,92 +239,56 @@ async function processOnboardingTest(
     console.log("[TestOnboarding] 🚀 Starting parallel execution: Discovery + Templates")
 
     const [leadResult, emailResult] = await Promise.allSettled([
-      // Task 1: Lead discovery (🆕 새로운 buyer-search 오케스트레이터 사용)
+      // Task 1: Lead discovery
       (async () => {
         const leadStartTime = Date.now()
-        const countryName = COUNTRY_NAMES[params.country] || params.country
-        const industryName = INDUSTRY_NAMES[params.industry] || params.industry
 
-        // 🆕 새로운 buyer-search 오케스트레이터 사용
-        // 회사 설명이 있으면 ICP 기반 검색, 없으면 기본 검색
-        const buyerResult = await searchBuyers(
+        const result = await discoverLeadsEnhanced(
           {
-            query: `${industryName} companies in ${countryName}`,
-            location: { country: params.country },
-            industry: { include: [industryName] },
-            limit: 30,
-            // 🆕 ICP 기반 검색을 위한 회사 설명
+            industry: params.industry,
+            target: params.target,
+            country: params.country,
             myCompanyDescription: params.workspaceDescription,
-            targetType: params.target,
           },
-          {
-            locale: "ko",
-            targetCount: 30,
-            // Progress callback: Phase별로 범위 매핑
-            onProgress: (event) => {
-              const phaseRanges: Record<string, { start: number; end: number }> = {
-                init: { start: 0, end: 5 },
-                discovery: { start: 5, end: 40 },
-                enrichment: { start: 40, end: 80 },
-                fill: { start: 80, end: 95 },
-                complete: { start: 100, end: 100 },
-              }
+          // Progress callback: 0% ~ 100% for discovery
+          // Phase별로 범위를 매핑하여 progress가 리셋되지 않도록 함
+          (progress) => {
+            // 각 phase를 전체 discovery의 일부 비율로 매핑 (실행 순서대로)
+            const phaseRanges: Record<string, { start: number; end: number }> = {
+              bigquery: { start: 0, end: 20 }, // 검색
+              enrichment: { start: 20, end: 50 }, // 이메일 찾기 (가장 오래 걸림)
+              scoring: { start: 50, end: 65 }, // 점수 매기기
+              hunterio: { start: 65, end: 70 }, // 추가 검색 (필요시)
+              description_enrichment: { start: 70, end: 90 }, // 설명 보강
+              reranking: { start: 90, end: 100 }, // 최종 순위
+              complete: { start: 100, end: 100 },
+            }
 
-              const range = phaseRanges[event.phase] || { start: 0, end: 100 }
-              const phaseWidth = range.end - range.start
-              const discoveryPercent = Math.min(
-                100,
-                range.start + (phaseWidth * event.phaseProgress) / 100,
-              )
+            const range = progress.phase
+              ? phaseRanges[progress.phase] || { start: 0, end: 100 }
+              : { start: 0, end: 100 }
+            const phaseProgress = Math.floor(
+              (progress.currentCount / progress.targetCount) * (range.end - range.start),
+            )
+            const discoveryPercent = Math.min(100, range.start + phaseProgress)
 
-              job.discoveryProgress = Math.round(discoveryPercent)
-              // Overall progress: discovery 80% + templates 20%
-              const overall = Math.floor(
-                (job.discoveryProgress || 0) * 0.8 + (job.templatesProgress || 0) * 0.2,
-              )
-              job.progress = Math.min(100, overall)
-              jobs.set(jobId, job)
-            },
+            job.discoveryProgress = discoveryPercent
+            // Overall progress: discovery 80% + templates 20%
+            const overall = Math.floor(
+              (job.discoveryProgress || 0) * 0.8 + (job.templatesProgress || 0) * 0.2,
+            )
+            job.progress = Math.min(100, overall)
+            jobs.set(jobId, job)
           },
         )
 
         job.discoveryProgress = 100
         jobs.set(jobId, job)
 
-        // 🆕 결과 변환: BuyerSearchResult → 기존 LeadData 형식
-        const leads: LeadData[] = buyerResult.results.map((r) => ({
-          company: r.company.name,
-          website: r.company.domain,
-          industry: r.company.industry || "",
-          employees: r.company.headcount || "",
-          country: r.company.country || countryName,
-          enriched: {
-            companyName: r.company.name,
-            websiteUrl: r.company.domain,
-            businessType: r.company.industry || "",
-            country: r.company.country || countryName,
-            employeeCount: r.company.headcount || "",
-            description: r.company.description || undefined,
-            primaryEmail: r.contact?.email || undefined,
-          },
-        }))
-
-        const result = {
-          leads,
-          stats: {
-            totalFound: buyerResult.stats.companiesAttempted,
-            totalEnriched: buyerResult.stats.companiesSucceeded,
-            totalWithEmail: leads.filter((l) => l.enriched?.primaryEmail).length,
-            duplicatesSkipped: 0,
-            iterations: buyerResult.stats.fillAttempts + 1,
-          },
-        }
-
         const leadDuration = Date.now() - leadStartTime
         console.log(
-          `[TestOnboarding] 🆕 Buyer search complete: ${result.leads.length} leads (${leadDuration}ms)`,
+          `[TestOnboarding] Lead discovery complete: ${result.leads.length} leads (${leadDuration}ms)`,
         )
-        console.log(`[TestOnboarding] Stats:`, buyerResult.stats)
         return { result, duration: leadDuration }
       })(),
 
@@ -461,208 +512,6 @@ export const testRoutes = new Elysia({ prefix: "/api/v1/test" })
         trialDaysRemaining: t.Optional(t.Number({ minimum: 0 })),
         industry: t.Optional(t.String()),
         topCompanies: t.Optional(t.Array(t.String())),
-      }),
-    },
-  )
-
-  // ====================================
-  // 🆕 Buyer Search 테스트 (새로운 오케스트레이터)
-  // ====================================
-  .post(
-    "/buyer-search",
-    async ({ body, set }) => {
-      try {
-        console.log("[TestBuyerSearch] Starting search with params:", body)
-
-        const startTime = Date.now()
-
-        // 검색 실행
-        const result = await searchBuyers(
-          {
-            query: body.query,
-            location: body.country ? { country: body.country } : undefined,
-            industry: body.industry ? { include: [body.industry] } : undefined,
-            headcount: body.headcount,
-            limit: body.targetCount || 30,
-          },
-          {
-            locale: (body.locale as "ko" | "en") || "ko",
-            targetCount: body.targetCount || 30,
-            onProgress: (event) => {
-              console.log(
-                `[TestBuyerSearch] Progress: [${event.phase}] ${Math.round(event.progress)}% - ` +
-                  `${event.message} (${event.resultsFound}/${event.targetCount})`,
-              )
-            },
-          },
-        )
-
-        const elapsed = Date.now() - startTime
-
-        console.log(
-          `[TestBuyerSearch] Complete: ${result.results.length} buyers found in ${elapsed}ms`,
-        )
-        console.log(`[TestBuyerSearch] Stats:`, result.stats)
-
-        return successResponse({
-          success: result.success,
-          results: result.results.map((r) => ({
-            company: {
-              domain: r.company.domain,
-              name: r.company.name,
-              description: r.company.description,
-              industry: r.company.industry,
-              country: r.company.country,
-              headcount: r.company.headcount,
-            },
-            contact: r.contact
-              ? {
-                  email: r.contact.email,
-                  type: r.contact.type,
-                  confidence: r.contact.confidence,
-                  firstName: r.contact.firstName,
-                  lastName: r.contact.lastName,
-                  position: r.contact.position,
-                }
-              : null,
-            source: r.source,
-            fromCache: r.fromCache,
-          })),
-          stats: {
-            ...result.stats,
-            totalTimeMs: result.totalTimeMs,
-          },
-          error: result.error,
-        })
-      } catch (err) {
-        console.error("[TestBuyerSearch] Error:", err)
-        set.status = 500
-        return errorResponse(
-          err instanceof Error ? err.message : "Unknown error",
-          ResponseCode.INTERNAL_ERROR,
-        )
-      }
-    },
-    {
-      body: t.Object({
-        /** 자연어 검색 쿼리 (예: "AI startups in San Francisco") */
-        query: t.Optional(t.String()),
-        /** 국가 코드 (ISO 3166-1 alpha-2) */
-        country: t.Optional(t.String()),
-        /** 산업 */
-        industry: t.Optional(t.String()),
-        /** 회사 규모 (예: ["51-200", "201-500"]) */
-        headcount: t.Optional(t.Array(t.String())),
-        /** 목표 결과 수 (기본: 30) */
-        targetCount: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
-        /** 언어 (ko/en) */
-        locale: t.Optional(t.String()),
-      }),
-    },
-  )
-
-  // SSE 스트리밍 버전 (실시간 Progress)
-  .get(
-    "/buyer-search/stream",
-    async function* ({ query }) {
-      const params = {
-        query: query.query,
-        country: query.country,
-        industry: query.industry,
-        headcount: query.headcount?.split(","),
-        targetCount: Number(query.targetCount) || 30,
-        locale: query.locale || "ko",
-      }
-
-      console.log("[TestBuyerSearch/Stream] Starting SSE stream with params:", params)
-
-      // SSE 스트리밍을 위한 Generator
-      let lastProgressEvent: unknown = null
-
-      const searchPromise = searchBuyers(
-        {
-          query: params.query,
-          location: params.country ? { country: params.country } : undefined,
-          industry: params.industry ? { include: [params.industry] } : undefined,
-          headcount: params.headcount,
-          limit: params.targetCount,
-        },
-        {
-          locale: params.locale as "ko" | "en",
-          targetCount: params.targetCount,
-          onProgress: (event) => {
-            lastProgressEvent = {
-              type: "progress",
-              data: event,
-            }
-          },
-        },
-      )
-
-      // Progress 이벤트 전송
-      const progressInterval = setInterval(() => {
-        if (lastProgressEvent) {
-          // Yield는 generator 내에서만 가능하므로 여기서는 로깅만
-          console.log("[TestBuyerSearch/Stream] Progress:", lastProgressEvent)
-        }
-      }, 500)
-
-      try {
-        // Progress 이벤트 스트리밍
-        yield `data: ${JSON.stringify({ type: "start", message: "Search started" })}\n\n`
-
-        const result = await searchPromise
-        clearInterval(progressInterval)
-
-        // 최종 결과 전송
-        yield `data: ${JSON.stringify({
-          type: "complete",
-          success: result.success,
-          resultsCount: result.results.length,
-          stats: result.stats,
-          totalTimeMs: result.totalTimeMs,
-        })}\n\n`
-
-        // 결과 데이터 전송 (청크로 분할)
-        const chunkSize = 5
-        for (let i = 0; i < result.results.length; i += chunkSize) {
-          const chunk = result.results.slice(i, i + chunkSize).map((r) => ({
-            company: {
-              domain: r.company.domain,
-              name: r.company.name,
-              description: r.company.description,
-              industry: r.company.industry,
-            },
-            contact: r.contact
-              ? {
-                  email: r.contact.email,
-                  type: r.contact.type,
-                  confidence: r.contact.confidence,
-                }
-              : null,
-            source: r.source,
-          }))
-
-          yield `data: ${JSON.stringify({ type: "results", data: chunk })}\n\n`
-        }
-
-        yield `data: ${JSON.stringify({ type: "done" })}\n\n`
-      } catch (err) {
-        clearInterval(progressInterval)
-        yield `data: ${JSON.stringify({
-          type: "error",
-          message: err instanceof Error ? err.message : "Unknown error",
-        })}\n\n`
-      }
-    },
-    {
-      query: t.Object({
-        query: t.Optional(t.String()),
-        country: t.Optional(t.String()),
-        industry: t.Optional(t.String()),
-        headcount: t.Optional(t.String()), // comma-separated
-        targetCount: t.Optional(t.String()),
-        locale: t.Optional(t.String()),
       }),
     },
   )

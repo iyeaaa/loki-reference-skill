@@ -477,7 +477,7 @@ async function resumeCampaignsAndReschedule(
     const enrollmentsToReactivate: string[] = []
     const duplicatesSkipped: Array<{ email: string; count: number }> = []
 
-    for (const [key, group] of emailGroups.entries()) {
+    for (const [_key, group] of emailGroups.entries()) {
       // Sort by enrolledAt (oldest first)
       group.sort((a, b) => a.enrolledAt.getTime() - b.enrolledAt.getTime())
 

@@ -19,10 +19,6 @@ import { join } from "node:path"
 import * as p from "@clack/prompts"
 import { config } from "../src/config"
 import { searchBigQuery } from "../src/services/bigquery-search.service"
-import {
-  enrichLeadsWithDescriptions,
-  type LeadForDescriptionEnrichment,
-} from "../src/services/lead-description-enrichment.service"
 import { APOLLO_LEADS_DATA_DICTIONARY } from "../src/services/lead-discovery/nodes/bigquery-executor"
 import { enrichLead } from "../src/services/lead-enrichment.service"
 import { SEARCH_CONFIG, searchAndEnrichLeads } from "../src/services/lead-search-enrichment.service"

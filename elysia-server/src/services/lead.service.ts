@@ -543,6 +543,9 @@ export async function getLeadsByIds(leadIds: string[]) {
       businessType: leads.businessType,
       country: leads.country,
       city: leads.city,
+      // 🆕 Added for buyer-search integration
+      description: leads.description,
+      employeeCount: leads.employeeCount,
       leadStatus: leads.leadStatus,
       leadScore: leads.leadScore,
       createdBy: leads.createdBy,

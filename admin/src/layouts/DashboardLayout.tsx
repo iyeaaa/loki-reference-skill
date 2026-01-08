@@ -1,7 +1,7 @@
 import { User } from "lucide-react"
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation, useParams, useSearchParams } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { NotificationBell } from "@/components/NotificationBell"
 import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
@@ -47,6 +47,8 @@ function DashboardContent({ children }: DashboardContentProps) {
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
   const { state } = useSidebar()
+  const params = useParams()
+  const [searchParams] = useSearchParams()
 
   // Use React Query to get current user (auto-updates when profile changes)
   const { data: currentUserData } = useCurrentUser()
@@ -249,18 +251,21 @@ function DashboardContent({ children }: DashboardContentProps) {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="h-full p-4">
-            {/* 캠페인 활성화 콜아웃 - 모든 페이지에서 표시 */}
-            {shouldShowCampaignCallout && sequenceId && (
-              <div className="mb-4">
-                <CampaignResumeCallout
-                  onComplete={() => {
-                    refetchSequence()
-                    refetchOnboardingProgress()
-                  }}
-                  sequenceId={sequenceId}
-                />
-              </div>
-            )}
+            {/* 캠페인 활성화 콜아웃 - 모든 페이지에서 표시 (온보딩 중 제외) */}
+            {shouldShowCampaignCallout &&
+              sequenceId &&
+              !params.step &&
+              !searchParams.get("step") && (
+                <div className="mb-4">
+                  <CampaignResumeCallout
+                    onComplete={() => {
+                      refetchSequence()
+                      refetchOnboardingProgress()
+                    }}
+                    sequenceId={sequenceId}
+                  />
+                </div>
+              )}
             <Suspense fallback={getSkeletonForRoute(pathname)}>{children || <Outlet />}</Suspense>
           </div>
         </main>

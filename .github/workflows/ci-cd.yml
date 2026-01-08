@@ -56,6 +56,7 @@ jobs:
           "elysia-server/src/services/lead-enrichment.service.ts"
           "elysia-server/src/services/lead.service.ts"
           "elysia-server/src/services/onboarding-worker.service.ts"
+          "elysia-server/src/services/loops.service.ts"
           "elysia-server/src/services/sequence.service.ts"
           "elysia-server/src/services/unipile.service.ts"
           "elysia-server/src/services/workflow-email.service.ts"

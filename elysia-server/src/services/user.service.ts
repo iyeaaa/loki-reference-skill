@@ -1064,6 +1064,31 @@ export async function updateLastLogin(id: string) {
  * @returns true if updated, false if already updated today
  */
 export async function updateLastLoginIfNeeded(id: string): Promise<boolean> {
+  // First, get current lastLoginAt for debugging
+  const currentUser = await db
+    .select({ lastLoginAt: users.lastLoginAt })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1)
+
+  const currentLastLogin = currentUser[0]?.lastLoginAt
+  const nowUtc = new Date()
+  const todayUtc = nowUtc.toISOString().split("T")[0] as string
+  const lastLoginDate = currentLastLogin
+    ? (new Date(currentLastLogin).toISOString().split("T")[0] as string)
+    : null
+
+  logger.info(
+    {
+      userId: id,
+      currentLastLoginAt: currentLastLogin,
+      lastLoginDate,
+      todayUtc,
+      shouldUpdate: !lastLoginDate || lastLoginDate < todayUtc,
+    },
+    "[updateLastLoginIfNeeded] Before update",
+  )
+
   const result = await db
     .update(users)
     .set({
@@ -1078,6 +1103,11 @@ export async function updateLastLoginIfNeeded(id: string): Promise<boolean> {
       ),
     )
     .returning({ id: users.id })
+
+  logger.info(
+    { userId: id, updated: result.length > 0, resultCount: result.length },
+    "[updateLastLoginIfNeeded] After update",
+  )
 
   return result.length > 0
 }

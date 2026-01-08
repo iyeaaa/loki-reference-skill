@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem("authToken")
     const userData = localStorage.getItem("user")
 
+    console.log("[AuthProvider] Mount - token:", !!token, "userData:", !!userData)
+
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData)
@@ -42,20 +44,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Send heartbeat once per day (on app mount only)
         const today = new Date().toISOString().split("T")[0]
-        if (localStorage.getItem(HEARTBEAT_DATE_KEY) !== today) {
+        const lastHeartbeat = localStorage.getItem(HEARTBEAT_DATE_KEY)
+
+        console.log(
+          "[AuthProvider] Heartbeat check - today:",
+          today,
+          "lastHeartbeat:",
+          lastHeartbeat,
+        )
+
+        if (lastHeartbeat !== today) {
+          console.log("[AuthProvider] Sending heartbeat...")
           authApi
             .heartbeat()
-            .then(() => {
+            .then((response) => {
+              console.log("[AuthProvider] Heartbeat success:", response)
               localStorage.setItem(HEARTBEAT_DATE_KEY, today)
             })
-            .catch(() => {
-              // Silently fail - non-critical
+            .catch((error) => {
+              console.error("[AuthProvider] Heartbeat failed:", error)
             })
+        } else {
+          console.log("[AuthProvider] Heartbeat skipped - already sent today")
         }
-      } catch {
+      } catch (error) {
+        console.error("[AuthProvider] Parse error:", error)
         localStorage.removeItem("authToken")
         localStorage.removeItem("user")
       }
+    } else {
+      console.log("[AuthProvider] No token or userData - skipping heartbeat")
     }
     setIsLoading(false)
   }, [])

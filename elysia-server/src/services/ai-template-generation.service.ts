@@ -1020,6 +1020,95 @@ ${workspaceDescription ? `- Naturally incorporate company value proposition (tra
   }
 
   /**
+   * AI를 사용하여 기존 이메일을 사용자 프롬프트에 따라 편집
+   */
+  async editEmailWithAI(options: {
+    subject: string
+    bodyText: string
+    editPrompt: string
+    targetLanguage?: string // e.g., "Korean", "English", "Japanese"
+    model?: string
+    temperature?: number
+  }): Promise<GeneratedTemplate> {
+    const {
+      subject,
+      bodyText,
+      editPrompt,
+      targetLanguage = "English",
+      model = "gpt-5-mini",
+      // temperature = 0.7,
+    } = options
+
+    console.log(`[AITemplate] Editing email with AI prompt: "${editPrompt.substring(0, 50)}..."`)
+
+    try {
+      const systemPrompt = `You are an expert email editor. Modify the given email according to the user's instructions.
+
+CRITICAL RULES:
+1. Keep the original structure and format unless asked to change it
+2. Maintain the same language (${targetLanguage}) throughout
+3. Preserve placeholders like {{company_name}}, {{contact_name}}, {{country}} exactly as they are
+4. Keep the email professional and concise
+5. Do NOT add signatures unless asked
+6. Do NOT change the core message unless specifically requested
+
+OUTPUT FORMAT (CRITICAL - MUST BE VALID JSON):
+Respond ONLY with a valid JSON object. No other text.
+Use \\n for line breaks within the body.
+
+{
+  "subject": "modified subject here",
+  "body": "Modified body here.\\n\\nWith paragraphs."
+}`
+
+      const userMessage = `Edit this email according to the following instruction:
+
+EDIT INSTRUCTION: ${editPrompt}
+
+ORIGINAL EMAIL:
+Subject: ${subject}
+Body:
+${bodyText}
+
+Apply the edit instruction and return the modified email in JSON format.`
+
+      const startTime = Date.now()
+      const { text } = await generateText({
+        model: this.openai(model),
+        system: systemPrompt,
+        prompt: userMessage,
+        // temperature,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "minimal",
+          },
+        },
+      })
+      const elapsed = Date.now() - startTime
+      console.log(`[AITemplate] Email edit completed (${elapsed}ms)`)
+
+      // Parse JSON response
+      const jsonResult = this.tryParseJson(text)
+      if (jsonResult) {
+        console.log(`[AITemplate] ✅ Email edited successfully`)
+        return jsonResult
+      }
+
+      // Fallback to text parsing
+      console.warn(`[AITemplate] ⚠️ JSON parsing failed, using original email`)
+      return {
+        subject,
+        bodyText,
+        bodyHtml: this.convertTextToHtml(bodyText),
+        detectedLanguage: targetLanguage.toLowerCase().substring(0, 2),
+      }
+    } catch (error) {
+      console.error(`[AITemplate] ❌ Email edit failed:`, error)
+      throw error
+    }
+  }
+
+  /**
    * 이메일 템플릿을 특정 언어로 번역
    * 리드의 국가에 맞게 이메일을 번역할 때 사용
    */
@@ -1031,14 +1120,7 @@ ${workspaceDescription ? `- Naturally incorporate company value proposition (tra
     model?: string
     temperature?: number
   }): Promise<GeneratedTemplate> {
-    const {
-      subject,
-      bodyText,
-      bodyHtml: _bodyHtml,
-      targetLanguage,
-      model = "gpt-4.1-mini",
-      temperature = 0.3, // Lower temperature for more consistent translations
-    } = options
+    const { subject, bodyText, bodyHtml: _bodyHtml, targetLanguage, model = "gpt-5-mini" } = options
 
     console.log(`[AITemplate] Translating email to ${targetLanguage}`)
 
@@ -1093,7 +1175,12 @@ ${bodyText}`
         model: this.openai(model),
         system: systemPrompt,
         prompt: userMessage,
-        temperature,
+        // temperature,
+        providerOptions: {
+          openai: {
+            reasoningEffort: "minimal",
+          },
+        },
       })
       const elapsed = Date.now() - startTime
       console.log(`[AITemplate] Translation completed (${elapsed}ms)`)

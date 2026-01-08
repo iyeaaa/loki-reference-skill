@@ -55,6 +55,35 @@ export type GenerateSummaryResponse = {
   summary: string
 }
 
+// Types for Email Translation
+export type TranslateEmailRequest = {
+  subject: string
+  bodyText: string
+  targetLanguage: string
+}
+
+export type TranslateEmailResponse = {
+  subject: string
+  bodyText: string
+  bodyHtml: string
+  detectedLanguage: string
+}
+
+// Types for AI Email Editing
+export type EditEmailRequest = {
+  subject: string
+  bodyText: string
+  editPrompt: string
+  targetLanguage?: string
+}
+
+export type EditEmailResponse = {
+  subject: string
+  bodyText: string
+  bodyHtml: string
+  detectedLanguage: string
+}
+
 export const aiEmailApi = {
   /**
    * Generate AI email reply draft
@@ -92,6 +121,26 @@ export const aiEmailApi = {
    */
   generateSummary: (data: GenerateSummaryRequest) =>
     apiFetch<GenerateSummaryResponse>("/api/ai/generate-summary", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * Translate email to target language
+   * POST /api/ai/translate-email
+   */
+  translateEmail: (data: TranslateEmailRequest) =>
+    apiFetch<TranslateEmailResponse>("/api/ai/translate-email", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * Edit email with AI based on user prompt
+   * POST /api/ai/edit-email
+   */
+  editEmail: (data: EditEmailRequest) =>
+    apiFetch<EditEmailResponse>("/api/ai/edit-email", {
       method: "POST",
       body: JSON.stringify(data),
     }),

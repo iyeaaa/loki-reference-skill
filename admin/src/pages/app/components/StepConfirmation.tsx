@@ -1,58 +1,22 @@
-import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Edit3,
-  ExternalLink,
-  LayoutGrid,
-  LayoutList,
-  Loader2,
-  Mail,
-  Search,
-  Send,
-  X,
-  Zap,
-} from "lucide-react"
+import { CheckCircle2, Loader2, Send, Zap } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { CompanyAvatar } from "@/components/CompanyAvatar"
-import { CountryFlag } from "@/components/CountryFlag"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { trackOnboardingComplete, trackOnboardingStep4Complete } from "@/lib/analytics"
 import { apiFetch } from "@/lib/api/client"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useCompleteOnboarding, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useSequenceSteps, useUpdateSequenceStep } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { EmailEditModal } from "./EmailEditModal"
+import { EmailsSection } from "./EmailsSection"
+import { ExecuteSection } from "./ExecuteSection"
+import { LeadDetailModal } from "./LeadDetailModal"
+import { LeadsSection } from "./LeadsSection"
 
 type Lead = {
   id: string
@@ -92,16 +56,8 @@ export function StepConfirmation() {
   const [executionStatus, setExecutionStatus] = useState("")
 
   // UI states
-  const [leadSearchQuery, setLeadSearchQuery] = useState("")
   const [editingStep, setEditingStep] = useState<EmailStep | null>(null)
-  const [editSubject, setEditSubject] = useState("")
-  const [editBody, setEditBody] = useState("")
-  const [viewMode, setViewMode] = useState<"table" | "card">("table")
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const LEADS_PER_PAGE = 10
 
   // User & workspace
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
@@ -168,33 +124,6 @@ export function StepConfirmation() {
     fetchLeads()
   }, [allLeadIds, selectedLeadIds.length, isKorean])
 
-  // Filtered leads by search
-  const filteredLeads = useMemo(() => {
-    if (!leadSearchQuery.trim()) {
-      return leads
-    }
-    const query = leadSearchQuery.toLowerCase()
-    return leads.filter(
-      (lead) =>
-        lead.companyName?.toLowerCase().includes(query) ||
-        lead.email?.toLowerCase().includes(query) ||
-        lead.country?.toLowerCase().includes(query),
-    )
-  }, [leads, leadSearchQuery])
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE)
-  const paginatedLeads = useMemo(() => {
-    const startIndex = (currentPage - 1) * LEADS_PER_PAGE
-    return filteredLeads.slice(startIndex, startIndex + LEADS_PER_PAGE)
-  }, [filteredLeads, currentPage])
-
-  // Reset to page 1 when search changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on search change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [leadSearchQuery])
-
   // Toggle lead selection
   const toggleLead = (leadId: string) => {
     setSelectedLeadIds((prev) =>
@@ -211,18 +140,8 @@ export function StepConfirmation() {
     }
   }
 
-  // Leads without email
-  const leadsWithoutEmail = useMemo(() => leads.filter((l) => !l.email), [leads])
-
-  // Open edit modal
-  const openEditModal = (step: EmailStep) => {
-    setEditingStep(step)
-    setEditSubject(step.emailSubject || "")
-    setEditBody(step.emailBodyText || "")
-  }
-
   // Save edited step
-  const handleSaveStep = async () => {
+  const handleSaveStep = async (subject: string, body: string) => {
     if (!(editingStep && sequenceId)) {
       return
     }
@@ -236,8 +155,8 @@ export function StepConfirmation() {
           delayDays: editingStep.delayDays,
           scheduledHour: editingStep.scheduledHour ?? 9,
           scheduledMinute: editingStep.scheduledMinute ?? 0,
-          emailSubject: editSubject,
-          emailBodyText: editBody,
+          emailSubject: subject,
+          emailBodyText: body,
         },
       })
       toast.success(isKorean ? "이메일이 수정되었습니다" : "Email updated")
@@ -349,38 +268,6 @@ export function StepConfirmation() {
     await completeOnboardingAndClearData()
     trackOnboardingComplete()
     navigate("/dashboard")
-  }
-
-  // Get delay text
-  const getDelayText = (delayDays: number, stepOrder: number) => {
-    if (stepOrder === 1) {
-      return isKorean ? "2분 뒤" : "In 2 min"
-    }
-    if (delayDays === 1) {
-      return isKorean ? "1일 후" : "Day 1"
-    }
-    return isKorean ? `${delayDays}일 후` : `Day ${delayDays}`
-  }
-
-  // Get size label
-  const getSizeLabel = (employeeCount?: string) => {
-    if (!employeeCount) {
-      return null
-    }
-    const count = employeeCount.toLowerCase()
-    if (count.includes("1000") || count === "enterprise") {
-      return isKorean ? "대기업" : "Enterprise"
-    }
-    if (count.includes("250") || count === "large") {
-      return isKorean ? "대기업" : "Large"
-    }
-    if (count.includes("50") || count === "medium") {
-      return isKorean ? "중기업" : "Medium"
-    }
-    if (count.includes("10") || count === "small") {
-      return isKorean ? "소기업" : "Small"
-    }
-    return employeeCount
   }
 
   // Counts
@@ -547,641 +434,57 @@ export function StepConfirmation() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* ========== LEADS SECTION (2 columns) ========== */}
         <div className="lg:col-span-2">
-          <Card className="h-full border-0 bg-white shadow-gray-200/50 shadow-lg">
-            <CardContent className="p-6">
-              {/* Header with view toggle */}
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    {isKorean ? "발송 대상" : "Recipients"}
-                  </h3>
-                  <p className="text-gray-500 text-sm">
-                    {isKorean
-                      ? `${selectedCount}명 선택됨 / 전체 ${leads.length}명`
-                      : `${selectedCount} selected / ${leads.length} total`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ToggleGroup
-                    onValueChange={(value) => {
-                      if (value) {
-                        setViewMode(value as "table" | "card")
-                      }
-                    }}
-                    type="single"
-                    value={viewMode}
-                  >
-                    <ToggleGroupItem aria-label="테이블 뷰" size="sm" value="table">
-                      <LayoutList className="h-4 w-4" />
-                    </ToggleGroupItem>
-                    <ToggleGroupItem aria-label="카드 뷰" size="sm" value="card">
-                      <LayoutGrid className="h-4 w-4" />
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-              </div>
-
-              {/* Search & Actions */}
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative flex-1 sm:max-w-xs">
-                  <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    className="pl-9"
-                    onChange={(e) => setLeadSearchQuery(e.target.value)}
-                    placeholder={isKorean ? "회사명, 이메일 검색..." : "Search company, email..."}
-                    value={leadSearchQuery}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={toggleAllLeads} size="sm" variant="outline">
-                    {selectedLeadIds.length === leads.length
-                      ? isKorean
-                        ? "전체 해제"
-                        : "Deselect all"
-                      : isKorean
-                        ? "전체 선택"
-                        : "Select all"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Leads without email warning */}
-              {leadsWithoutEmail.length > 0 && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-amber-800 text-sm">
-                    {isKorean
-                      ? `${leadsWithoutEmail.length}명은 이메일이 없어 발송에서 제외됩니다`
-                      : `${leadsWithoutEmail.length} leads without email will be excluded`}
-                  </p>
-                </div>
-              )}
-
-              {/* TABLE VIEW */}
-              {viewMode === "table" && (
-                <div className="rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50/80">
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={selectedLeadIds.length === leads.length && leads.length > 0}
-                            onCheckedChange={toggleAllLeads}
-                          />
-                        </TableHead>
-                        <TableHead className="w-[200px]">
-                          {isKorean ? "회사명" : "Company"}
-                        </TableHead>
-                        <TableHead className="w-[250px]">
-                          {isKorean ? "설명" : "Description"}
-                        </TableHead>
-                        <TableHead className="w-[180px]">{isKorean ? "이메일" : "Email"}</TableHead>
-                        <TableHead className="w-[100px]">{isKorean ? "국가" : "Country"}</TableHead>
-                        <TableHead className="w-[120px]">
-                          {isKorean ? "업종" : "Industry"}
-                        </TableHead>
-                        {/* <TableHead className="w-[100px]">{isKorean ? "규모" : "Size"}</TableHead> */}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedLeads.map((lead) => {
-                        const isSelected = selectedLeadIds.includes(lead.id)
-                        const hasEmail = !!lead.email
-
-                        return (
-                          <TableRow
-                            className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/50" : ""} ${hasEmail ? "hover:bg-gray-50" : "opacity-50"}`}
-                            key={lead.id}
-                            onClick={() => hasEmail && setSelectedLead(lead)}
-                          >
-                            <TableCell>
-                              <Checkbox
-                                checked={isSelected}
-                                disabled={!hasEmail}
-                                onCheckedChange={() => hasEmail && toggleLead(lead.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <CompanyAvatar
-                                  companyName={lead.companyName}
-                                  size="sm"
-                                  websiteUrl={lead.websiteUrl}
-                                />
-                                <span className="truncate">{lead.companyName}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[250px]">
-                              <p className="truncate text-gray-600 text-sm">
-                                {lead.description || (
-                                  <span className="text-gray-400 italic">-</span>
-                                )}
-                              </p>
-                            </TableCell>
-                            <TableCell className="max-w-[180px]">
-                              <span className="truncate text-gray-600 text-sm">
-                                {lead.email || (
-                                  <span className="text-gray-400 italic">
-                                    {isKorean ? "없음" : "N/A"}
-                                  </span>
-                                )}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <CountryFlag countryName={lead.country} size="lg" />
-                            </TableCell>
-                            <TableCell className="max-w-[120px]">
-                              <span className="truncate text-gray-600 text-sm">
-                                {lead.businessType || lead.industry || "-"}
-                              </span>
-                            </TableCell>
-                            {/* <TableCell>
-                              {getSizeLabel(lead.employeeCount) ? (
-                                <Badge variant="secondary">{getSizeLabel(lead.employeeCount)}</Badge>
-                              ) : (
-                                <span className="text-gray-400 text-sm">-</span>
-                              )}
-                            </TableCell> */}
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              {/* CARD VIEW */}
-              {viewMode === "card" && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {paginatedLeads.map((lead) => {
-                    const isSelected = selectedLeadIds.includes(lead.id)
-                    const hasEmail = !!lead.email
-
-                    return (
-                      <button
-                        className={`group relative flex min-h-[140px] flex-col rounded-xl border-2 p-4 text-left transition-all duration-200 ${
-                          isSelected
-                            ? "border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-blue-100 shadow-md"
-                            : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md"
-                        } ${hasEmail ? "cursor-pointer" : "opacity-50"}`}
-                        disabled={!hasEmail}
-                        key={lead.id}
-                        onClick={() => {
-                          if (hasEmail) {
-                            setSelectedLead(lead)
-                          }
-                        }}
-                        type="button"
-                      >
-                        {/* Selection checkbox */}
-                        <button
-                          aria-label={isSelected ? "선택 해제" : "선택"}
-                          className="absolute top-3 left-3"
-                          disabled={!hasEmail}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (hasEmail) {
-                              toggleLead(lead.id)
-                            }
-                          }}
-                          type="button"
-                        >
-                          <Checkbox checked={isSelected} disabled={!hasEmail} />
-                        </button>
-
-                        {/* Company Name with Avatar */}
-                        <div className="mb-1 flex items-center gap-2 pr-2 pl-7">
-                          <CompanyAvatar
-                            companyName={lead.companyName}
-                            size="sm"
-                            websiteUrl={lead.websiteUrl}
-                          />
-                          <h4 className="truncate font-semibold text-gray-900 text-sm">
-                            {lead.companyName}
-                          </h4>
-                        </div>
-
-                        {/* Business Type */}
-                        {(lead.businessType || lead.industry) && (
-                          <p className="mb-2 truncate pl-7 text-gray-500 text-xs">
-                            {lead.businessType || lead.industry}
-                          </p>
-                        )}
-
-                        <div className="flex-1" />
-
-                        {/* Info */}
-                        <div className="space-y-1 pl-7">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 shrink-0 text-gray-400" />
-                            <span className="truncate text-gray-600 text-xs">
-                              {lead.email || (isKorean ? "이메일 없음" : "No email")}
-                            </span>
-                          </div>
-                          {lead.country && (
-                            <div className="flex items-center gap-1.5">
-                              <CountryFlag countryName={lead.country} size="sm" />
-                              <span className="text-gray-500 text-xs">{lead.country}</span>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between border-t pt-4">
-                  <p className="text-gray-500 text-sm">
-                    {isKorean
-                      ? `${filteredLeads.length}개 바이어 중 ${(currentPage - 1) * LEADS_PER_PAGE + 1}-${Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} 표시`
-                      : `Showing ${(currentPage - 1) * LEADS_PER_PAGE + 1}-${Math.min(currentPage * LEADS_PER_PAGE, filteredLeads.length)} of ${filteredLeads.length} buyers`}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="px-2 text-gray-600 text-sm">
-                      {currentPage} / {totalPages}
-                    </span>
-                    <Button
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <LeadsSection
+            isKorean={isKorean}
+            leads={leads}
+            onLeadClick={(lead) => setSelectedLead(lead)}
+            selectedLeadIds={selectedLeadIds}
+            toggleAllLeads={toggleAllLeads}
+            toggleLead={toggleLead}
+          />
         </div>
 
         {/* ========== RIGHT COLUMN: EMAILS + EXECUTE ========== */}
         <div className="space-y-4">
-          {/* EMAILS SECTION */}
-          <Card className="border-0 bg-white shadow-gray-200/50 shadow-lg">
-            <CardContent className="p-4">
-              <div className="mb-3">
-                <h3 className="font-semibold text-gray-900 text-sm">
-                  {isKorean ? "이메일 시퀀스" : "Email Sequence"}
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  {isKorean
-                    ? `${steps.length}개 스텝으로 순차 발송`
-                    : `${steps.length} steps, sent sequentially`}
-                </p>
-              </div>
+          <EmailsSection
+            isKorean={isKorean}
+            onEditStep={(step) => setEditingStep(step)}
+            steps={steps}
+          />
 
-              {/* Email Steps - Vertical (Compact) */}
-              <div className="space-y-2">
-                {steps.map((step) => (
-                  <div
-                    className="group relative rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-2.5 transition-all hover:border-blue-200 hover:shadow-sm"
-                    key={step.id}
-                  >
-                    {/* Step header */}
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 font-semibold text-white text-xs">
-                          {step.stepOrder}
-                        </div>
-                        <Badge className="h-5 px-1.5 text-xs" variant="secondary">
-                          <Clock className="mr-0.5 h-2.5 w-2.5" />
-                          {getDelayText(step.delayDays, step.stepOrder)}
-                        </Badge>
-                      </div>
-                      <Button
-                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={() => openEditModal(step)}
-                        size="icon"
-                        variant="ghost"
-                      >
-                        <Edit3 className="h-2.5 w-2.5" />
-                      </Button>
-                    </div>
-
-                    {/* Subject only (no body preview) */}
-                    <p className="line-clamp-1 font-medium text-gray-900 text-xs">
-                      {step.emailSubject || (isKorean ? "(제목 없음)" : "(No subject)")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Schedule info */}
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-gray-500 text-xs">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {isKorean ? "오늘 시작 → 매일 자동 발송" : "Starts today → Auto-sends daily"}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* EXECUTE SECTION */}
-          <Card className="border-0 bg-white shadow-gray-200/50 shadow-lg">
-            <CardContent className="p-4">
-              {/* Summary stats */}
-              <div className="mb-2.5 flex items-center justify-center gap-1.5 text-gray-600 text-xl">
-                <span className="font-semibold text-gray-900">{selectedCount}</span>
-                <span>{isKorean ? "명" : "buyers"}</span>
-                <span className="text-gray-400">×</span>
-                <span className="font-semibold text-gray-900">{steps.length}</span>
-                <span>{isKorean ? "스텝" : "steps"}</span>
-                <span className="text-gray-400">=</span>
-                <span className="font-bold text-blue-600">{totalEmails}</span>
-                <span>{isKorean ? "통" : "emails"}</span>
-              </div>
-
-              {/* Checklist */}
-              <div className="mb-2.5 space-y-1">
-                <div className="flex items-center gap-1.5 text-gray-600 text-xs">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>
-                    {isKorean
-                      ? `${selectedCount}명의 리드가 선택됨`
-                      : `${selectedCount} leads selected`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-600 text-xs">
-                  <Check className="h-3 w-3 text-green-500" />
-                  <span>
-                    {isKorean
-                      ? `${steps.length}개의 이메일 스텝 준비됨`
-                      : `${steps.length} email steps ready`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-600 text-xs">
-                  {emailAccount ? (
-                    <>
-                      <Check className="h-3 w-3 text-green-500" />
-                      <span className="truncate">
-                        {isKorean ? "발송: " : "From: "}
-                        {emailAccount.emailAddress}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <X className="h-3 w-3 text-red-500" />
-                      <span>{isKorean ? "이메일 계정 필요" : "Email account required"}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Auto-stop info */}
-              <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-2 text-gray-600 text-xs leading-tight">
-                <p className="mb-0.5">
-                  {isKorean
-                    ? "• 바이어가 답장하면 자동으로 중지"
-                    : "• Auto-stops when buyer replies"}
-                </p>
-                <p>
-                  {isKorean
-                    ? "• 10회 이상 오픈 시 세일즈팀 상담"
-                    : "• Sales consultation at 10+ opens"}
-                </p>
-              </div>
-
-              {/* Action buttons */}
-              <div className="space-y-2">
-                <Button
-                  className="h-14 w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 font-semibold text-white shadow-blue-500/30 shadow-lg transition-all hover:from-blue-600 hover:to-indigo-700 hover:shadow-blue-500/40"
-                  disabled={isExecuting || !emailAccount || selectedCount === 0}
-                  onClick={handleExecute}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  {isKorean ? "캠페인 시작" : "Launch Campaign"}
-                </Button>
-
-                <div className="flex gap-2">
-                  <Button
-                    className="h-14 flex-1 rounded-lg text-sm"
-                    onClick={handleBack}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <ArrowLeft className="mr-1 h-3.5 w-3.5" />
-                    {isKorean ? "이전" : "Back"}
-                  </Button>
-                  <button
-                    className="flex-1 py-2 text-center text-gray-400 text-sm transition-colors hover:text-gray-600"
-                    onClick={handleSkipToDashboard}
-                    type="button"
-                  >
-                    {isKorean ? "나중에" : "Later"}
-                  </button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ExecuteSection
+            emailAccount={emailAccount}
+            isExecuting={isExecuting}
+            isKorean={isKorean}
+            onBack={handleBack}
+            onExecute={handleExecute}
+            onSkip={handleSkipToDashboard}
+            selectedCount={selectedCount}
+            stepsCount={steps.length}
+            totalEmails={totalEmails}
+          />
         </div>
       </div>
 
       {/* ========== LEAD DETAIL MODAL ========== */}
-      <Dialog onOpenChange={() => setSelectedLead(null)} open={!!selectedLead}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {selectedLead && (
-                <CompanyAvatar
-                  companyName={selectedLead.companyName}
-                  size="md"
-                  websiteUrl={selectedLead.websiteUrl}
-                />
-              )}
-              <span>{selectedLead?.companyName}</span>
-              {selectedLead && getSizeLabel(selectedLead.employeeCount) && (
-                <Badge variant="secondary">{getSizeLabel(selectedLead.employeeCount)}</Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedLead && (
-            <div className="space-y-4 py-4">
-              {/* Description */}
-              {selectedLead.description && (
-                <div>
-                  <Label className="text-gray-500 text-xs">
-                    {isKorean ? "설명" : "Description"}
-                  </Label>
-                  <p className="mt-1 text-gray-700 text-sm leading-relaxed">
-                    {selectedLead.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-500 text-xs">{isKorean ? "이메일" : "Email"}</Label>
-                  <p className="mt-1 text-gray-900 text-sm">
-                    {selectedLead.email || (
-                      <span className="text-gray-400 italic">
-                        {isKorean ? "없음" : "Not available"}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-gray-500 text-xs">{isKorean ? "국가" : "Country"}</Label>
-                  <p className="mt-1 text-gray-900 text-sm">
-                    {selectedLead.country ? (
-                      <span className="flex items-center gap-1.5">
-                        <CountryFlag countryName={selectedLead.country} size="md" />
-                        <span>{selectedLead.country}</span>
-                      </span>
-                    ) : (
-                      "-"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-gray-500 text-xs">{isKorean ? "업종" : "Industry"}</Label>
-                  <p className="mt-1 text-gray-900 text-sm">
-                    {selectedLead.businessType || selectedLead.industry || "-"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-gray-500 text-xs">
-                    {isKorean ? "직원 수" : "Employees"}
-                  </Label>
-                  <p className="mt-1 text-gray-900 text-sm">{selectedLead.employeeCount || "-"}</p>
-                </div>
-                {selectedLead.contactName && (
-                  <div>
-                    <Label className="text-gray-500 text-xs">
-                      {isKorean ? "담당자" : "Contact"}
-                    </Label>
-                    <p className="mt-1 text-gray-900 text-sm">{selectedLead.contactName}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Website */}
-              {selectedLead.websiteUrl && (
-                <div>
-                  <Label className="text-gray-500 text-xs">
-                    {isKorean ? "웹사이트" : "Website"}
-                  </Label>
-                  <a
-                    className="mt-1 flex items-center gap-1 text-blue-600 text-sm hover:underline"
-                    href={selectedLead.websiteUrl}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {selectedLead.websiteUrl}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button onClick={() => setSelectedLead(null)} variant="outline">
-              {isKorean ? "닫기" : "Close"}
-            </Button>
-            {selectedLead?.email && (
-              <Button
-                onClick={() => {
-                  if (selectedLead) {
-                    const isSelected = selectedLeadIds.includes(selectedLead.id)
-                    toggleLead(selectedLead.id)
-                    toast.success(
-                      isSelected
-                        ? isKorean
-                          ? "선택 해제됨"
-                          : "Deselected"
-                        : isKorean
-                          ? "선택됨"
-                          : "Selected",
-                    )
-                  }
-                }}
-                variant={selectedLeadIds.includes(selectedLead.id) ? "secondary" : "default"}
-              >
-                {selectedLeadIds.includes(selectedLead.id)
-                  ? isKorean
-                    ? "선택 해제"
-                    : "Deselect"
-                  : isKorean
-                    ? "선택"
-                    : "Select"}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LeadDetailModal
+        isKorean={isKorean}
+        isOpen={!!selectedLead}
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        selectedLeadIds={selectedLeadIds}
+        toggleLead={toggleLead}
+      />
 
       {/* ========== EMAIL EDIT MODAL ========== */}
-      <Dialog onOpenChange={() => setEditingStep(null)} open={!!editingStep}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {isKorean
-                ? `스텝 ${editingStep?.stepOrder} 이메일 수정`
-                : `Edit Step ${editingStep?.stepOrder} Email`}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{isKorean ? "제목" : "Subject"}</Label>
-              <Input
-                onChange={(e) => setEditSubject(e.target.value)}
-                placeholder={isKorean ? "이메일 제목..." : "Email subject..."}
-                value={editSubject}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{isKorean ? "본문" : "Body"}</Label>
-              <Textarea
-                className="min-h-[200px]"
-                onChange={(e) => setEditBody(e.target.value)}
-                placeholder={isKorean ? "이메일 본문..." : "Email body..."}
-                value={editBody}
-              />
-            </div>
-
-            <div className="rounded-lg bg-gray-50 p-3">
-              <p className="mb-2 font-medium text-gray-700 text-xs">
-                {isKorean ? "사용 가능한 변수" : "Available variables"}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {["{{company_name}}", "{{contact_name}}", "{{country}}"].map((v) => (
-                  <Badge className="cursor-pointer text-xs" key={v} variant="secondary">
-                    {v}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={() => setEditingStep(null)} variant="outline">
-              {isKorean ? "취소" : "Cancel"}
-            </Button>
-            <Button disabled={updateStepMutation.isPending} onClick={handleSaveStep}>
-              {updateStepMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {isKorean ? "저장" : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EmailEditModal
+        isKorean={isKorean}
+        isOpen={!!editingStep}
+        isSaving={updateStepMutation.isPending}
+        onClose={() => setEditingStep(null)}
+        onSave={handleSaveStep}
+        step={editingStep}
+      />
     </div>
   )
 }

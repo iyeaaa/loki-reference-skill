@@ -366,3 +366,124 @@ ${selectedLanguage.instruction}`,
       }),
     },
   )
+  .post(
+    "/translate-email",
+    async ({ body, set }) => {
+      try {
+        const { subject, bodyText, targetLanguage } = body
+
+        logger.info({
+          msg: "Translating email",
+          targetLanguage,
+          subjectLength: subject.length,
+          bodyLength: bodyText.length,
+        })
+
+        const { getAITemplateGenerationService } = await import(
+          "../services/ai-template-generation.service"
+        )
+        const aiService = getAITemplateGenerationService()
+
+        const result = await aiService.translateEmailTemplate({
+          subject,
+          bodyText,
+          bodyHtml: null,
+          targetLanguage,
+        })
+
+        logger.info({
+          msg: "Email translated successfully",
+          targetLanguage,
+          resultSubjectLength: result.subject.length,
+        })
+
+        return successResponse(
+          {
+            subject: result.subject,
+            bodyText: result.bodyText,
+            bodyHtml: result.bodyHtml,
+            detectedLanguage: result.detectedLanguage,
+          },
+          "Email translated successfully",
+        )
+      } catch (error) {
+        logger.error({
+          msg: "Failed to translate email",
+          error: error instanceof Error ? error.message : String(error),
+        })
+
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "Failed to translate email",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        subject: t.String({ minLength: 1 }),
+        bodyText: t.String({ minLength: 1 }),
+        targetLanguage: t.String({ minLength: 2 }),
+      }),
+    },
+  )
+  .post(
+    "/edit-email",
+    async ({ body, set }) => {
+      try {
+        const { subject, bodyText, editPrompt, targetLanguage } = body
+
+        logger.info({
+          msg: "Editing email with AI",
+          promptPreview: editPrompt.substring(0, 50),
+          targetLanguage,
+        })
+
+        const { getAITemplateGenerationService } = await import(
+          "../services/ai-template-generation.service"
+        )
+        const aiService = getAITemplateGenerationService()
+
+        const result = await aiService.editEmailWithAI({
+          subject,
+          bodyText,
+          editPrompt,
+          targetLanguage,
+        })
+
+        logger.info({
+          msg: "Email edited successfully",
+          resultSubjectLength: result.subject.length,
+        })
+
+        return successResponse(
+          {
+            subject: result.subject,
+            bodyText: result.bodyText,
+            bodyHtml: result.bodyHtml,
+            detectedLanguage: result.detectedLanguage,
+          },
+          "Email edited successfully",
+        )
+      } catch (error) {
+        logger.error({
+          msg: "Failed to edit email",
+          error: error instanceof Error ? error.message : String(error),
+        })
+
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "Failed to edit email",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        subject: t.String({ minLength: 1 }),
+        bodyText: t.String({ minLength: 1 }),
+        editPrompt: t.String({ minLength: 5 }),
+        targetLanguage: t.Optional(t.String()),
+      }),
+    },
+  )

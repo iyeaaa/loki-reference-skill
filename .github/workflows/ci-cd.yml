@@ -49,6 +49,7 @@ jobs:
           "elysia-server/package.json"
           "elysia-server/bun.lockb"
           # Services directly imported by Worker (run: grep -rh "from.*services" src/workers/ | ... | uniq)
+          "elysia-server/src/services/followup-email.service.ts"
           "elysia-server/src/services/email.service.ts"
           "elysia-server/src/services/hunterio-domain-search.service.ts"
           "elysia-server/src/services/hunterio-email-verifier.service.ts"

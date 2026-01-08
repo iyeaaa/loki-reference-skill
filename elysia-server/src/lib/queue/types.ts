@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   ONBOARDING_GENERATION: "onboarding-generation",
   UNIPILE_INBOX_POLL: "unipile-inbox-poll", // Unipile inbox polling for replied emails
   TRIAL_EXPIRATION: "trial-expiration", // Trial expiration check
+  FOLLOWUP_EMAIL: "followup-email", // Followup email check (welcome, step reminders, etc.)
   TEST_QUEUE: "test-queue", // For testing purposes
   WEB_EXTRACTION: "web-extraction", // Web data extraction with BullMQ
 } as const
@@ -221,6 +222,24 @@ export interface TrialExpirationResult {
   success: boolean
   expiredCount: number
   pausedSequencesCount: number
+  errors: string[]
+}
+
+/**
+ * Followup Email Job - sends followup emails to users who stopped onboarding
+ */
+export interface FollowupEmailJob {
+  /** Trigger type: 'scheduled' for hourly check, 'manual' for on-demand */
+  trigger: "scheduled" | "manual"
+  /** Optional: specific date to check against (for testing) */
+  checkDate?: string
+}
+
+export interface FollowupEmailResult {
+  success: boolean
+  total: number
+  sent: number
+  failed: number
   errors: string[]
 }
 

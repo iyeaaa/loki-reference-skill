@@ -256,6 +256,13 @@ export const config = {
       ),
     },
   },
+
+  // CS (Customer Success) 설정
+  cs: {
+    managerName: getEnvOrDefault("CS_MANAGER_NAME", "Rinda Team"),
+    kakaoLink: getEnvOrDefault("CS_KAKAO_LINK", ""),
+    phoneNumber: getEnvOrDefault("CS_PHONE_NUMBER", ""),
+  },
 } as const
 
 // Log configuration on startup (only in development)

@@ -313,3 +313,132 @@ export async function sendOnboardingCompleteEmail(
 export function isLoopsConfigured(): boolean {
   return !!config.loops.apiKey && !!config.loops.transactionalIds.onboardingComplete
 }
+
+// ====================================
+// WELCOME EMAIL
+// ====================================
+
+interface WelcomeEmailData {
+  email: string
+  firstName?: string
+  managerName: string
+  kakaoLink: string
+  phoneNumber: string
+  language?: "en" | "ko"
+}
+
+const WELCOME_EMAIL_TEXTS = {
+  ko: {
+    subject: (firstName: string) => `${firstName} 대표님, RINDA에 오신 걸 환영합니다!`,
+    greeting: (name: string) => `${name} 대표님, 안녕하세요.`,
+    intro: "RINDA에 가입해주셔서 정말 감사합니다.",
+    managerIntro: (managerName: string) => `저는 대표님의 해외수출을 함께 할 ${managerName}입니다.`,
+    experience:
+      "15년간 중소기업 해외영업 현장에서 일했고, 지금은 RINDA에서 대표님 같은 분들을 돕고 있습니다.",
+    empathy:
+      '솔직히 말씀드리면, 처음 RINDA 쓰시는 분들 중에 "이거 어디서부터 시작하지?" 하시는 분이 많으세요.',
+    reassure: "괜찮습니다. 저도 처음엔 그랬거든요.",
+    cta: "혹시 지금 막히는 부분 있으시면 편하신 방법으로 언제든 연락주세요.",
+    kakaoLabel: "제 카톡:",
+    kakaoNote: "(보통 여기가 제일 빨라요)",
+    phoneLabel: "제 번호:",
+    phoneNote: "(통화 편하시면 바로 전화주세요)",
+    emailNote: "아니면 이메일 답장하셔도 됩니다. 보통 1시간 안에 답드려요.",
+    closing: "대표님 제품이 해외에서 잘되시도록 제가 최선을 다해 돕겠습니다.",
+    signature: "RINDA 고객성공팀",
+  },
+  en: {
+    subject: (firstName: string) => `Welcome to RINDA, ${firstName}`,
+    greeting: (name: string) => `Hi ${name},`,
+    intro: "Thank you so much for signing up for RINDA.",
+    managerIntro: (managerName: string) =>
+      `I'm ${managerName}, and I'll be helping you with your export journey.`,
+    experience:
+      "I've spent 15 years in B2B export sales, and now I'm here at RINDA to help people like you.",
+    empathy: 'Honestly, many first-time RINDA users wonder "Where do I even start?"',
+    reassure: "That's okay. I felt the same way at first.",
+    cta: "If you're stuck on anything right now, feel free to reach out however works best for you.",
+    kakaoLabel: "KakaoTalk:",
+    kakaoNote: "(Usually the fastest)",
+    phoneLabel: "Phone:",
+    phoneNote: "(Call me anytime)",
+    emailNote: "Or just reply to this email. I usually respond within an hour.",
+    closing: "I'll do my best to help your products succeed overseas.",
+    signature: "RINDA Customer Success Team",
+  },
+}
+
+function createWelcomeEmailHTML(data: WelcomeEmailData): string {
+  const { firstName, managerName, kakaoLink, phoneNumber, language = "ko" } = data
+  const t = WELCOME_EMAIL_TEXTS[language]
+  const name = firstName || (language === "ko" ? "고객" : "there")
+
+  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; color: #333; max-width: 600px;">
+${t.greeting(name)}
+<br/><br/>
+${t.intro}
+<br/><br/>
+${t.managerIntro(managerName)}
+${t.experience}
+<br/><br/>
+${t.empathy}
+<br/><br/>
+${t.reassure}
+<br/><br/>
+${t.cta}
+<br/><br/>
+<div style="margin: 20px 0; padding: 16px; background: #f8f9fa; border-radius: 8px;">
+<strong>${t.kakaoLabel}</strong> <a href="${kakaoLink}" style="color: #2563eb;">${kakaoLink || "링크 준비중"}</a> ${t.kakaoNote}
+<br/>
+<strong>${t.phoneLabel}</strong> ${phoneNumber || "번호 준비중"} ${t.phoneNote}
+</div>
+
+${t.emailNote}
+<br/><br/>
+${t.closing}
+
+<div style="margin-top: 24px; color: #666;">
+${managerName}
+<br/>
+${t.signature}
+</div>
+</div>`
+}
+
+/**
+ * Send welcome email to new users
+ * Called when a new user signs up via Google OAuth
+ */
+export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<boolean> {
+  if (!isLoopsConfigured()) {
+    logger.warn("[Loops] Not configured, skipping welcome email")
+    return false
+  }
+
+  const language = data.language || "ko"
+  const t = WELCOME_EMAIL_TEXTS[language]
+  const name = data.firstName || (language === "ko" ? "고객" : "there")
+  const subject = t.subject(name)
+
+  logger.info(`[Loops] Preparing welcome email for ${data.email}`)
+
+  try {
+    const content = createWelcomeEmailHTML(data)
+
+    const response = await sendTransactionalEmail({
+      senderName: data.managerName,
+      to: data.email,
+      subject,
+      body: JSON.stringify({ content }),
+    })
+
+    if (response.success) {
+      logger.info(`[Loops] Welcome email sent successfully to ${data.email}`)
+    }
+
+    return response.success
+  } catch (error) {
+    logger.error(`[Loops] Failed to send welcome email: ${error}`)
+    return false
+  }
+}

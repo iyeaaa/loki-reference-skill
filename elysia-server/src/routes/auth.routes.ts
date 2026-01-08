@@ -1,6 +1,9 @@
 import { Elysia, t } from "elysia"
+import { config } from "../config"
 import * as authService from "../services/auth.service"
 import * as emailAccountService from "../services/email-account.service"
+import * as followupEmailService from "../services/followup-email.service"
+import * as loopsService from "../services/loops.service"
 import * as nylasService from "../services/nylas.service"
 import * as oauthService from "../services/oauth.service"
 import * as onboardingService from "../services/onboarding.service"
@@ -330,6 +333,26 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(newUser.id)
 
+        // Send welcome email for new users (non-blocking)
+        loopsService
+          .sendWelcomeEmail({
+            email: newUser.email,
+            firstName: newUser.username,
+            managerName: config.cs.managerName,
+            kakaoLink: config.cs.kakaoLink,
+            phoneNumber: config.cs.phoneNumber,
+            language: (lang as "en" | "ko") || "ko",
+          })
+          .then((success) => {
+            if (success) {
+              followupEmailService.recordWelcomeEmail(newUser.id, workspace?.id || null)
+              console.log("[Auth] ✅ Welcome email sent")
+            }
+          })
+          .catch((err) => {
+            console.error("[Auth] ❌ Failed to send welcome email:", err)
+          })
+
         console.log("[Auth] ✅ Registration complete")
         console.log("[Auth] ========================================")
 
@@ -566,6 +589,34 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
               // Don't throw - user can still proceed
             }
           }
+
+          // Send welcome email for new users (non-blocking)
+          if (user) {
+            const userId = user.id
+            const workspaces = await workspaceService.getWorkspacesByOwner(userId)
+            const workspaceId = workspaces?.[0]?.id || null
+
+            // Fire and forget - don't block auth flow
+            loopsService
+              .sendWelcomeEmail({
+                email: user.email,
+                firstName: user.username,
+                managerName: config.cs.managerName,
+                kakaoLink: config.cs.kakaoLink,
+                phoneNumber: config.cs.phoneNumber,
+                language: (lang as "en" | "ko") || "ko",
+              })
+              .then((success) => {
+                if (success) {
+                  // Record welcome email sent
+                  followupEmailService.recordWelcomeEmail(userId, workspaceId)
+                  console.log("[Auth/Google] ✅ Welcome email sent")
+                }
+              })
+              .catch((err) => {
+                console.error("[Auth/Google] ❌ Failed to send welcome email:", err)
+              })
+          }
         }
 
         if (!user) {
@@ -745,6 +796,32 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             } catch (onboardingError) {
               console.error("[Auth/Nylas] ❌ Failed to setup onboarding:", onboardingError)
             }
+          }
+
+          // Send welcome email for new users (non-blocking)
+          if (user) {
+            const userId = user.id
+            const workspaces = await workspaceService.getWorkspacesByOwner(userId)
+            const workspaceId = workspaces?.[0]?.id || null
+
+            loopsService
+              .sendWelcomeEmail({
+                email: user.email,
+                firstName: user.username,
+                managerName: config.cs.managerName,
+                kakaoLink: config.cs.kakaoLink,
+                phoneNumber: config.cs.phoneNumber,
+                language: (onboardingParams.lang as "en" | "ko") || "ko",
+              })
+              .then((success) => {
+                if (success) {
+                  followupEmailService.recordWelcomeEmail(userId, workspaceId)
+                  console.log("[Auth/Nylas] ✅ Welcome email sent")
+                }
+              })
+              .catch((err) => {
+                console.error("[Auth/Nylas] ❌ Failed to send welcome email:", err)
+              })
           }
         }
 

@@ -1,4 +1,9 @@
 export {
+  getFollowupEmailWorkerStatus,
+  startFollowupEmailWorker,
+  stopFollowupEmailWorker,
+} from "./followup-email.worker"
+export {
   getOnboardingAutoGenerateWorkerStatus,
   onboardingWorker,
   startOnboardingAutoGenerateWorker,

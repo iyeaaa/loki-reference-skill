@@ -4,6 +4,7 @@ import logger from "../../utils/logger"
 import { redisConnection } from "../redis/connection"
 import {
   type CampaignEmailJob,
+  type FollowupEmailJob,
   type MetricsSyncJob,
   type OnboardingAutoGenerateJob,
   type OnboardingAutoGenerateResult,
@@ -189,6 +190,29 @@ export const trialExpirationQueue = new Queue<TrialExpirationJob>(QUEUE_NAMES.TR
 })
 
 /**
+ * Followup Email Queue
+ * Checks for users who stopped at various onboarding steps
+ * Sends personalized followup emails to re-engage them
+ */
+export const followupEmailQueue = new Queue<FollowupEmailJob>(QUEUE_NAMES.FOLLOWUP_EMAIL, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2, // Retry once on failure
+    backoff: {
+      type: "fixed",
+      delay: 60000, // 1 minute between retries
+    },
+    removeOnComplete: {
+      age: 7 * 24 * 3600, // Keep completed jobs for 7 days
+      count: 168, // Keep max 168 completed jobs (1 week if hourly)
+    },
+    removeOnFail: {
+      age: 30 * 24 * 3600, // Keep failed jobs for 30 days
+    },
+  },
+})
+
+/**
  * Test Queue
  * For testing BullMQ functionality
  * DB에 로그가 저장되므로 Redis 보존 기간은 짧게 유지
@@ -224,6 +248,7 @@ export function getAllQueues() {
     [QUEUE_NAMES.ONBOARDING_GENERATION]: onboardingGenerationQueue,
     [QUEUE_NAMES.UNIPILE_INBOX_POLL]: unipileInboxPollQueue,
     [QUEUE_NAMES.TRIAL_EXPIRATION]: trialExpirationQueue,
+    [QUEUE_NAMES.FOLLOWUP_EMAIL]: followupEmailQueue,
     [QUEUE_NAMES.TEST_QUEUE]: testQueue,
   }
 }
@@ -241,6 +266,7 @@ export async function closeAllQueues(): Promise<void> {
     onboardingGenerationQueue.close(),
     unipileInboxPollQueue.close(),
     trialExpirationQueue.close(),
+    followupEmailQueue.close(),
     testQueue.close(),
   ])
 }

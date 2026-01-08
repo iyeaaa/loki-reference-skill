@@ -49,6 +49,7 @@
 import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
 import {
+  followupEmailQueue,
   migratePendingExecutionsToBullMQ,
   trialExpirationQueue,
   unipileInboxPollQueue,
@@ -56,18 +57,21 @@ import {
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
 import {
+  getFollowupEmailWorkerStatus,
   getOnboardingAutoGenerateWorkerStatus,
   getSequenceEmailWorkerStatus,
   getTestWorkerStatus,
   getTrialExpirationWorkerStatus,
   getUnipileInboxPollWorkerStatus,
   getWebExtractionWorkerStatus,
+  startFollowupEmailWorker,
   startOnboardingAutoGenerateWorker,
   startSequenceEmailWorker,
   startTestWorker,
   startTrialExpirationWorker,
   startUnipileInboxPollWorker,
   startWebExtractionWorker,
+  stopFollowupEmailWorker,
   stopOnboardingAutoGenerateWorker,
   stopSequenceEmailWorker,
   stopTestWorker,
@@ -142,6 +146,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
     await stopWebExtractionWorker()
     logger.info("[Worker] WebExtractionWorker stopped")
+
+    await stopFollowupEmailWorker()
+    logger.info("[Worker] FollowupEmailWorker stopped")
 
     // Close Redis connection
     await redisConnection.quit()
@@ -283,7 +290,8 @@ async function main(): Promise<void> {
   Environment:   ${config.nodeEnv}
   Redis Host:    ${config.redis.host}:${config.redis.port}
   Health Port:   ${HEALTH_SERVER_PORT}
-  Workers:       TestWorker, OnboardingAutoGenerateWorker, SequenceEmailWorker, TrialExpirationWorker, UnipileInboxPollWorker
+  Workers:       TestWorker, OnboardingAutoGenerateWorker, SequenceEmailWorker,
+                 TrialExpirationWorker, UnipileInboxPollWorker, FollowupEmailWorker
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 
@@ -450,6 +458,32 @@ async function main(): Promise<void> {
     logger.info(
       { enabled: unipileStatus.enabled },
       "[Worker] UnipileInboxPollWorker not started (disabled)",
+    )
+  }
+
+  // Start Followup Email Worker
+  const followupWorker = startFollowupEmailWorker()
+  const followupStatus = getFollowupEmailWorkerStatus()
+  if (followupWorker) {
+    logger.info({ running: followupStatus.running }, "[Worker] FollowupEmailWorker started")
+
+    // Schedule hourly followup email check
+    // Cron: "30 * * * *" = Every hour at minute 30 (offset from trial expiration at minute 0)
+    await followupEmailQueue.add(
+      "hourly-check",
+      { trigger: "scheduled" },
+      {
+        repeat: {
+          pattern: "30 * * * *", // Every hour at minute 30
+        },
+        jobId: "followup-email-hourly", // Prevent duplicates
+      },
+    )
+    logger.info("[Worker] Followup email check scheduled (hourly at minute 30)")
+  } else {
+    logger.error(
+      { running: followupStatus.running },
+      "[Worker] FollowupEmailWorker failed to start",
     )
   }
 

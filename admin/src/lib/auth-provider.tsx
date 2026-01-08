@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
+import { authApi } from "./api/services/auth"
 
 type User = {
   id: string
@@ -24,12 +25,13 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const HEARTBEAT_DATE_KEY = "lastHeartbeatDate"
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing auth token on mount
     const token = localStorage.getItem("authToken")
     const userData = localStorage.getItem("user")
 
@@ -37,6 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsedUser = JSON.parse(userData)
         setUser(parsedUser)
+
+        // Send heartbeat once per day (on app mount only)
+        const today = new Date().toISOString().split("T")[0]
+        if (localStorage.getItem(HEARTBEAT_DATE_KEY) !== today) {
+          authApi
+            .heartbeat()
+            .then(() => {
+              localStorage.setItem(HEARTBEAT_DATE_KEY, today)
+            })
+            .catch(() => {
+              // Silently fail - non-critical
+            })
+        }
       } catch {
         localStorage.removeItem("authToken")
         localStorage.removeItem("user")

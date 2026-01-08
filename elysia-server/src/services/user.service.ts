@@ -1058,6 +1058,30 @@ export async function updateLastLogin(id: string) {
     .where(eq(users.id, id))
 }
 
+/**
+ * Update lastLoginAt only if it hasn't been updated today
+ * Used for activity tracking without excessive DB writes
+ * @returns true if updated, false if already updated today
+ */
+export async function updateLastLoginIfNeeded(id: string): Promise<boolean> {
+  const result = await db
+    .update(users)
+    .set({
+      lastLoginAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(users.id, id),
+        // Only update if lastLoginAt is NULL or before today (UTC)
+        sql`(${users.lastLoginAt} IS NULL OR DATE(${users.lastLoginAt} AT TIME ZONE 'UTC') < DATE(NOW() AT TIME ZONE 'UTC'))`,
+      ),
+    )
+    .returning({ id: users.id })
+
+  return result.length > 0
+}
+
 // ====================================
 // BULK UPDATE OPERATIONS
 // ====================================

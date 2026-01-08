@@ -98,4 +98,10 @@ export const authApi = {
     }>("/api/v1/auth/account", {
       method: "DELETE",
     }),
+
+  // Heartbeat - updates lastLoginAt once per day for activity tracking
+  heartbeat: () =>
+    apiFetch<{ success: boolean; updated: boolean }>("/api/v1/auth/heartbeat", {
+      method: "POST",
+    }),
 }

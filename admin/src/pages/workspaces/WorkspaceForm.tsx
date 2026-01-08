@@ -181,9 +181,7 @@ export function WorkspaceForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={descriptionId}>
-              {t("settings.workspaces.form.description")} <span className="text-red-500">*</span>
-            </Label>
+            <Label htmlFor={descriptionId}>{t("settings.workspaces.form.description")}</Label>
             <Textarea
               className="min-h-[72px] resize-none overflow-hidden"
               id={descriptionId}
@@ -201,7 +199,6 @@ export function WorkspaceForm({
                   el.style.height = `${Math.max(72, el.scrollHeight)}px`
                 }
               }}
-              required
               rows={3}
               style={{ height: "auto" }}
               value={formData.description}

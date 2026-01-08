@@ -1115,6 +1115,29 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     },
   )
 
+  // Heartbeat endpoint - updates lastLoginAt once per day for activity tracking
+  // Used by frontend to track user activity for followup email targeting
+  .post("/heartbeat", async ({ headers, set }) => {
+    const token = headers.authorization?.replace("Bearer ", "")
+    if (!token) {
+      set.status = 401
+      return errorResponse("인증 토큰이 없습니다.", ResponseCode.UNAUTHORIZED)
+    }
+
+    try {
+      const payload = await authService.verifyToken(token)
+      const updated = await userService.updateLastLoginIfNeeded(payload.userId)
+
+      return {
+        success: true,
+        updated, // true if lastLoginAt was updated, false if already updated today
+      }
+    } catch {
+      set.status = 401
+      return errorResponse("유효하지 않은 토큰입니다.", ResponseCode.UNAUTHORIZED)
+    }
+  })
+
   // アカウント削除エンドポイント
   .delete("/account", async ({ headers, set }) => {
     const token = headers.authorization?.replace("Bearer ", "")

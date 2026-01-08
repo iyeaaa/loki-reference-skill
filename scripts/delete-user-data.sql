@@ -74,6 +74,7 @@ DELETE FROM workspace_members WHERE workspace_id = 'a5262c65-5ae5-4ca1-a0a8-a972
 DELETE FROM billing_customers WHERE user_id = '7a763b52-990e-41ed-9263-4514fff9bc8a';
 DELETE FROM user_signature_preferences WHERE user_id = '7a763b52-990e-41ed-9263-4514fff9bc8a';
 DELETE FROM activity_logs WHERE user_id = '7a763b52-990e-41ed-9263-4514fff9bc8a';
+DELETE FROM followup_emails WHERE user_id = '7a763b52-990e-41ed-9263-4514fff9bc8a';
 
 -- 11. workspaces 삭제
 DELETE FROM workspaces WHERE owner_id = '7a763b52-990e-41ed-9263-4514fff9bc8a';

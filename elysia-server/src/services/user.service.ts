@@ -3,6 +3,7 @@ import { db } from "../db/index"
 import { billingPlans, billingProducts, subscriptions } from "../db/schema/billing"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
+import { followupEmails } from "../db/schema/followup-emails"
 import { iamMemberRoles } from "../db/schema/iam"
 import { sequenceEnrollments } from "../db/schema/sequences"
 import { departments, users } from "../db/schema/users"
@@ -567,6 +568,16 @@ export async function softDeleteUser(id: string) {
     // ============================================================================
     // Phase 5: 사용자 완전 삭제
     // ============================================================================
+
+    // 5-1. followup_emails 삭제 (users.id FK 참조)
+    const deletedFollowupEmails = await tx
+      .delete(followupEmails)
+      .where(eq(followupEmails.userId, id))
+      .returning({ id: followupEmails.id })
+    logger.info(
+      { userId: id, deletedFollowupEmailsCount: deletedFollowupEmails.length },
+      "Deleted followup emails",
+    )
 
     // CASCADE로 자동 삭제되는 항목:
     // - billing_customers (users CASCADE)

@@ -617,6 +617,14 @@ export async function sendFollowupEmail(candidate: FollowupCandidate): Promise<b
     return false
   }
 
+  // 중복 발송 방지: 발송 전에 이미 발송되었는지 확인
+  // (같은 userId가 여러 워크스페이스에 속해있으면 쿼리 결과가 중복될 수 있음)
+  const alreadySent = await hasAlreadySent(userId, emailType)
+  if (alreadySent) {
+    logger.info({ userId, emailType }, "[FollowupEmail] Already sent, skipping duplicate")
+    return false
+  }
+
   const lang = language === "en" ? "en" : "ko"
   const template = FOLLOWUP_TEMPLATES[emailType]?.[lang]
 

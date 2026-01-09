@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 type EmailDraftNodeData = {
   subject?: string
@@ -63,8 +64,9 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const [aiPrompt, setAiPrompt] = useState(data.aiPrompt || "")
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
 
-  // 현재 워크스페이스의 템플릿 조회
-  const currentWorkspace = localStorage.getItem("selectedWorkspace") || "all"
+  // 현재 워크스페이스의 템플릿 조회 - useWorkspace 훅으로 변경 감지
+  const { selectedWorkspace } = useWorkspace()
+  const currentWorkspace = selectedWorkspace?.id || "all"
   const { data: templatesData } = useEmailTemplates({
     limit: 100,
     workspaceIds: currentWorkspace !== "all" ? [currentWorkspace] : undefined,

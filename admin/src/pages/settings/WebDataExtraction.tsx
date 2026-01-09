@@ -42,6 +42,7 @@ import {
 import { useCleanupResults, useWebExtraction } from "@/lib/api/hooks/web-extraction"
 import type { ApiKey } from "@/lib/api/types/openai-api-keys"
 import type { ExtractionResult } from "@/lib/api/types/web-extraction"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { formatFileSize, validateAndCountUrls } from "@/utils/web-extraction.utils"
 
 export function WebDataExtraction() {
@@ -67,7 +68,9 @@ export function WebDataExtraction() {
   const resizeRef = useRef<HTMLDivElement>(null)
   const isInitialMountRef = useRef(true)
 
-  const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  // useWorkspace 훅 사용 - localStorage 변경 시 자동 리렌더링
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
   const isAllWorkspaces = workspaceId === "all" || !workspaceId
 
   const [apiKeyFormData, setApiKeyFormData] = useState({

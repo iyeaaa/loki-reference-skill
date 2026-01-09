@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { API_BASE_URL } from "@/lib/env"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
 // Enrichment 결과 타입
@@ -499,7 +500,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  // useWorkspace 훅 사용 - 워크스페이스 변경 시 자동 리렌더링
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
 
   // 스크롤 자동 이동
   const scrollToBottom = useCallback(() => {

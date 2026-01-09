@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/hooks/email-signatures"
 import type { CreateEmailSignatureRequest, EmailSignature } from "@/lib/api/types/email-signature"
 import { useAuth } from "@/lib/auth-provider"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { generateSignatureHtml, htmlToMarkdown } from "@/lib/utils/email-signature"
 
 export function EmailSignatureManagement() {
@@ -32,11 +33,12 @@ export function EmailSignatureManagement() {
   const [editingSignature, setEditingSignature] = useState<EmailSignature | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<EmailSignature | null>(null)
 
-  // Get workspaceId from localStorage (필수)
-  const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  // useWorkspace 훅 사용 - localStorage 변경 시 자동 리렌더링
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
 
   // workspaceId 유효성 검사 ("all"은 유효하지 않음)
-  const isValidWorkspace = workspaceId && workspaceId !== "all"
+  const isValidWorkspace = !!(workspaceId && workspaceId !== "all")
 
   // 기본 서명 템플릿 생성 (HTML 형식)
   const getDefaultSignature = () => {

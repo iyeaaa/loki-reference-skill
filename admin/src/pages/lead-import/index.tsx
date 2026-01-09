@@ -40,14 +40,24 @@ import {
 import { useFetchSheetNames, useUploadLeads } from "@/lib/api/hooks/lead-import"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { ImportProgress, ImportResult } from "@/lib/api/services/lead-import"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 export default function LeadImportPage() {
-  // localStorage에서 사이드바의 현재 워크스페이스 가져오기
+  // useWorkspace 훅으로 사이드바 워크스페이스 변경 감지
+  const { selectedWorkspace: sidebarWorkspace } = useWorkspace()
+
+  // 페이지 내 워크스페이스 선택 상태 (사이드바 값으로 초기화, 사용자가 변경 가능)
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>(() => {
     const savedWorkspace = localStorage.getItem("selectedWorkspace") || ""
-    // "all"이 선택된 경우 빈 문자열로 처리 (선택 안함)
     return savedWorkspace === "all" ? "" : savedWorkspace
   })
+
+  // 사이드바에서 워크스페이스 변경 시 동기화
+  useEffect(() => {
+    if (sidebarWorkspace?.id && sidebarWorkspace.id !== "all") {
+      setSelectedWorkspace(sidebarWorkspace.id)
+    }
+  }, [sidebarWorkspace?.id])
   const [selectedCustomerGroup, setSelectedCustomerGroup] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedSheet, setSelectedSheet] = useState("")

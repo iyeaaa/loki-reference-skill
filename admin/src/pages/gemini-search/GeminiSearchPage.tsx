@@ -29,6 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { API_BASE_URL } from "@/lib/env"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 type LeadResult = {
   // 기존 필드 (레거시)
@@ -99,7 +100,9 @@ export default function GeminiSearchPage() {
   const driveMetaVerticalId = useId()
   const driveMetaSourceId = useId()
 
-  const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  // useWorkspace 훅 사용 - 워크스페이스 변경 시 자동 리렌더링
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
 
   // 고객 그룹 목록 가져오기
   const fetchCustomerGroups = useCallback(async () => {

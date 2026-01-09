@@ -21,6 +21,7 @@ import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useSequence } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { dispatchWorkspaceChange } from "@/lib/hooks/useWorkspace"
 import { CampaignResumeCallout } from "@/pages/app/components/CampaignResumeCallout"
 
 type DashboardContentProps = {
@@ -163,6 +164,9 @@ function DashboardContent({ children }: DashboardContentProps) {
         localStorage.setItem("selectedWorkspaceName", workspace.label)
       }
     }
+
+    // 같은 탭의 다른 컴포넌트에 워크스페이스 변경 알림
+    dispatchWorkspaceChange()
   }, [selectedWorkspace, workspaces, t])
 
   // 워크스페이스 목록이 로드되었을 때, 선택된 워크스페이스가 유효한지 확인

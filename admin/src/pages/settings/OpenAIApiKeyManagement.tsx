@@ -21,6 +21,7 @@ import {
   useUpdateApiKey,
 } from "@/lib/api/hooks/openai-api-keys"
 import type { ApiKey } from "@/lib/api/types/openai-api-keys"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 export function OpenAIApiKeyManagement() {
   const { t } = useTranslation("settings")
@@ -30,7 +31,9 @@ export function OpenAIApiKeyManagement() {
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApiKey | null>(null)
 
-  const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+  // useWorkspace 훅 사용 - localStorage 변경 시 자동 리렌더링
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
   const isAllWorkspaces = workspaceId === "all" || !workspaceId
 
   const [formData, setFormData] = useState({

@@ -5,6 +5,14 @@ export type SelectedWorkspace = {
   name: string
 }
 
+// Custom event name for workspace changes (same tab)
+export const WORKSPACE_CHANGE_EVENT = "workspaceChange"
+
+// Helper to dispatch workspace change event (call this when changing workspace)
+export function dispatchWorkspaceChange() {
+  window.dispatchEvent(new CustomEvent(WORKSPACE_CHANGE_EVENT))
+}
+
 // Workspace selection hook that reads from localStorage
 export function useWorkspace() {
   const [selectedWorkspace, setSelectedWorkspace] = useState<SelectedWorkspace | null>(() => {
@@ -36,22 +44,17 @@ export function useWorkspace() {
       }
     }
 
-    // storage 이벤트 리스너 추가 (다른 탭에서 변경 감지)
+    // storage 이벤트 리스너 (다른 탭에서 변경 감지)
     window.addEventListener("storage", handleStorageChange)
 
-    // 같은 탭에서의 변경 감지를 위한 interval
-    const intervalId = setInterval(() => {
-      const currentId = localStorage.getItem("selectedWorkspace")
-      if (currentId !== selectedWorkspace?.id) {
-        handleStorageChange()
-      }
-    }, 500)
+    // custom 이벤트 리스너 (같은 탭에서 변경 감지 - 폴링 대체)
+    window.addEventListener(WORKSPACE_CHANGE_EVENT, handleStorageChange)
 
     return () => {
       window.removeEventListener("storage", handleStorageChange)
-      clearInterval(intervalId)
+      window.removeEventListener(WORKSPACE_CHANGE_EVENT, handleStorageChange)
     }
-  }, [selectedWorkspace?.id])
+  }, [])
 
   return {
     selectedWorkspace,

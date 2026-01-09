@@ -84,6 +84,20 @@ export type EditEmailResponse = {
   detectedLanguage: string
 }
 
+// Types for AI Overall Summary Generation
+export type GenerateOverallSummaryRequest = {
+  workspaceId?: string
+  language?: string
+  intent?: string
+  limit?: number
+}
+
+export type GenerateOverallSummaryResponse = {
+  emailCount: number
+  intentDistribution: Record<string, number>
+  summary: string
+}
+
 export const aiEmailApi = {
   /**
    * Generate AI email reply draft
@@ -141,6 +155,16 @@ export const aiEmailApi = {
    */
   editEmail: (data: EditEmailRequest) =>
     apiFetch<EditEmailResponse>("/api/ai/edit-email", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * Generate AI overall summary for replied emails
+   * POST /api/ai/generate-overall-summary
+   */
+  generateOverallSummary: (data: GenerateOverallSummaryRequest) =>
+    apiFetch<GenerateOverallSummaryResponse>("/api/ai/generate-overall-summary", {
       method: "POST",
       body: JSON.stringify(data),
     }),

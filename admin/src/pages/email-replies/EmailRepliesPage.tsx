@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Minus,
   Send,
+  Sparkles,
   Star,
   ThumbsDown,
   ThumbsUp,
@@ -27,6 +28,7 @@ import { emailRepliesApi } from "@/lib/api/services/email-replies"
 import type { RepliedEmail } from "@/lib/api/types/email"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
+import { OverallSummaryModal } from "./OverallSummaryModal"
 import { RepliedEmailsList } from "./RepliedEmailsList"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
@@ -57,6 +59,7 @@ export default function EmailRepliesPage() {
   const [isResizing, setIsResizing] = useState(false)
   const [selectedThreads, setSelectedThreads] = useState<string[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showOverallSummary, setShowOverallSummary] = useState(false)
 
   // Filter state from FilterPanel
   const [filters, setFilters] = useState<FilterConfig>({
@@ -376,11 +379,22 @@ export default function EmailRepliesPage() {
             <Card className="flex h-full flex-col overflow-hidden">
               <CardContent className="flex flex-1 flex-col overflow-hidden pt-4">
                 {/* Filter Panel */}
-                <div className="mb-3 flex-shrink-0">
-                  <FilterPanel
-                    onFilterChange={setFilters}
-                    placeholder={t("email-replies.search.placeholder")}
-                  />
+                <div className="mb-3 flex flex-shrink-0 items-center gap-2">
+                  <div className="flex-1">
+                    <FilterPanel
+                      onFilterChange={setFilters}
+                      placeholder={t("email-replies.search.placeholder")}
+                    />
+                  </div>
+                  <Button
+                    className="shrink-0"
+                    onClick={() => setShowOverallSummary(true)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Sparkles className="mr-1 h-4 w-4 text-blue-500" />
+                    {t("email-replies.overallSummary.button.open")}
+                  </Button>
                 </div>
 
                 {/* Bulk Actions */}
@@ -473,6 +487,14 @@ export default function EmailRepliesPage() {
           onConfirm={confirmBulkDelete}
           title={t("email-replies.confirm.delete.title")}
           variant="destructive"
+        />
+
+        {/* Overall Summary Modal */}
+        <OverallSummaryModal
+          intent={selectedIntent}
+          isOpen={showOverallSummary}
+          onClose={() => setShowOverallSummary(false)}
+          workspaceId={selectedWorkspace?.id}
         />
       </div>
     </div>

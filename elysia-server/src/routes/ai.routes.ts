@@ -1,8 +1,9 @@
-import { and, asc, eq, inArray, or } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import OpenAI from "openai"
 import { db } from "../db/index"
 import { emailReplies, emails } from "../db/schema/emails"
+import { leads } from "../db/schema/leads"
 import { getAIEmailService } from "../lib/ai-email-service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
@@ -424,6 +425,215 @@ ${selectedLanguage.instruction}`,
         subject: t.String({ minLength: 1 }),
         bodyText: t.String({ minLength: 1 }),
         targetLanguage: t.String({ minLength: 2 }),
+      }),
+    },
+  )
+  .post(
+    "/generate-overall-summary",
+    async ({ body }) => {
+      try {
+        const { workspaceId, language = "ko", intent, limit = 50 } = body
+
+        logger.info({
+          msg: "Generating AI overall summary for replied emails",
+          workspaceId,
+          language,
+          intent,
+          limit,
+        })
+
+        // Build query conditions for emails
+        const conditions: ReturnType<typeof eq>[] = [
+          eq(emails.direction, "inbound"), // Only inbound emails (replies from customers)
+        ]
+        if (workspaceId && workspaceId !== "all") {
+          conditions.push(eq(emails.workspaceId, workspaceId))
+        }
+
+        // Intent filtering needs to join emailReplies
+        const intentConditions: ReturnType<typeof eq | typeof isNull>[] = []
+        if (intent && intent !== "all") {
+          if (intent === "unclassified") {
+            intentConditions.push(isNull(emailReplies.intent))
+          } else {
+            intentConditions.push(eq(emailReplies.intent, intent))
+          }
+        }
+
+        // Get recent inbound emails (replies) with their content
+        // Join with emailReplies to get intent/sentiment and leads for company info
+        const repliedEmailsData = await db
+          .select({
+            id: emails.id,
+            threadId: emails.threadId,
+            subject: emails.subject,
+            intent: emailReplies.intent,
+            sentiment: emailReplies.sentiment,
+            bodyText: emails.bodyText,
+            leadName: emails.leadName,
+            companyName: leads.companyName,
+            createdAt: emails.createdAt,
+          })
+          .from(emails)
+          .leftJoin(emailReplies, eq(emailReplies.replyEmailId, emails.id))
+          .leftJoin(leads, eq(leads.id, emails.leadId))
+          .where(and(...conditions, ...(intentConditions.length > 0 ? intentConditions : [])))
+          .orderBy(desc(emails.createdAt))
+          .limit(limit)
+
+        if (repliedEmailsData.length === 0) {
+          return errorResponse("No replied emails found", ResponseCode.NOT_FOUND)
+        }
+
+        // Prepare conversation context for AI
+        const emailSummaries = repliedEmailsData
+          .map((email, index) => {
+            const intentLabel = email.intent ? ` [Intent: ${email.intent}]` : ""
+            const sentimentLabel = email.sentiment ? ` [Sentiment: ${email.sentiment}]` : ""
+            const company = email.companyName || email.leadName || "Unknown"
+            const preview = email.bodyText ? email.bodyText.substring(0, 200) : "(No content)"
+            return `${index + 1}. ${company}${intentLabel}${sentimentLabel}\nSubject: ${email.subject || "(No subject)"}\nPreview: ${preview}\n`
+          })
+          .join("\n")
+
+        // Determine language settings
+        const languageMap: Record<string, { name: string; instruction: string }> = {
+          ko: {
+            name: "Korean (한국어)",
+            instruction:
+              "Please create an overall summary of these email conversations in Korean. Focus on key trends, common concerns, and actionable insights.",
+          },
+          en: {
+            name: "English",
+            instruction:
+              "Please create an overall summary of these email conversations in English. Focus on key trends, common concerns, and actionable insights.",
+          },
+          vi: {
+            name: "Vietnamese (Tiếng Việt)",
+            instruction:
+              "Please create an overall summary of these email conversations in Vietnamese. Focus on key trends, common concerns, and actionable insights.",
+          },
+          ja: {
+            name: "Japanese (日本語)",
+            instruction:
+              "Please create an overall summary of these email conversations in Japanese. Focus on key trends, common concerns, and actionable insights.",
+          },
+          zh: {
+            name: "Chinese (中文)",
+            instruction:
+              "Please create an overall summary of these email conversations in Chinese. Focus on key trends, common concerns, and actionable insights.",
+          },
+        }
+
+        const defaultLanguage = {
+          name: "Korean (한국어)",
+          instruction:
+            "Please create an overall summary of these email conversations in Korean. Focus on key trends, common concerns, and actionable insights.",
+        }
+        const selectedLanguage = languageMap[language] ?? defaultLanguage
+
+        // Calculate intent distribution
+        const intentCounts = repliedEmailsData.reduce(
+          (acc, email) => {
+            const key = email.intent || "unclassified"
+            acc[key] = (acc[key] || 0) + 1
+            return acc
+          },
+          {} as Record<string, number>,
+        )
+
+        // Call OpenAI API for overall summary
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI assistant that analyzes multiple email conversations and provides business insights.
+Your task is to analyze the provided email summaries and create a comprehensive overview.
+
+IMPORTANT: You MUST format your response using proper Markdown syntax:
+- Use ## for section headers
+- Use **bold** for emphasis on key terms
+- Use bullet points (- or *) for lists
+- Use > for important quotes or highlights
+
+Your summary should:
+- Be written in ${selectedLanguage.name}
+- Include overall trends and patterns
+- Highlight key concerns or interests from leads/customers
+- Provide actionable insights for the sales/support team
+
+Structure your response EXACTLY like this:
+
+## 📊 개요
+Brief overview of the email conversations (2-3 sentences)
+
+## 💡 주요 인사이트
+- **인사이트 1**: 설명
+- **인사이트 2**: 설명
+- **인사이트 3**: 설명
+
+## ✅ 권장 조치
+- **조치 1**: 구체적인 행동 제안
+- **조치 2**: 구체적인 행동 제안
+
+## 📈 주요 트렌드
+- 트렌드 1
+- 트렌드 2`,
+            },
+            {
+              role: "user",
+              content: `Analyze the following ${repliedEmailsData.length} email conversations and provide insights in Markdown format:
+
+**Intent Distribution:**
+${Object.entries(intentCounts)
+  .map(([intent, count]) => `- ${intent}: ${count}`)
+  .join("\n")}
+
+**Email Summaries:**
+${emailSummaries}
+
+${selectedLanguage.instruction}`,
+            },
+          ],
+          reasoning_effort: "medium",
+        })
+
+        const aiSummary = completion.choices[0]?.message?.content || ""
+
+        logger.info({
+          msg: "AI overall summary generated",
+          workspaceId,
+          emailCount: repliedEmailsData.length,
+          summaryLength: aiSummary.length,
+        })
+
+        return successResponse(
+          {
+            emailCount: repliedEmailsData.length,
+            intentDistribution: intentCounts,
+            summary: aiSummary,
+          },
+          "Overall summary generated successfully",
+        )
+      } catch (error) {
+        logger.error({
+          msg: "Failed to generate AI overall summary",
+          error: error instanceof Error ? error.message : String(error),
+        })
+
+        return errorResponse(
+          error instanceof Error ? error.message : "Failed to generate overall summary",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        workspaceId: t.Optional(t.String()),
+        language: t.Optional(t.String()),
+        intent: t.Optional(t.String()),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
       }),
     },
   )

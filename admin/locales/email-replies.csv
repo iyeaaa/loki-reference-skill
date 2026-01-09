@@ -135,3 +135,13 @@ intentSelector.change,변경,Change
 intentSelector.addTag,태그 추가,Add Tag
 intentSelector.selectIntent,Intent 선택,Select Intent
 intentSelector.removeTag,태그 제거,Remove Tag
+overallSummary.button.generate,[NO TRANSLATION] email-replies.overallSummary.button.generate,[NO TRANSLATION] email-replies.overallSummary.button.generate
+overallSummary.button.regenerate,[NO TRANSLATION] email-replies.overallSummary.button.regenerate,[NO TRANSLATION] email-replies.overallSummary.button.regenerate
+overallSummary.button.tryAgain,[NO TRANSLATION] email-replies.overallSummary.button.tryAgain,[NO TRANSLATION] email-replies.overallSummary.button.tryAgain
+overallSummary.description,[NO TRANSLATION] email-replies.overallSummary.description,[NO TRANSLATION] email-replies.overallSummary.description
+overallSummary.error.message,[NO TRANSLATION] email-replies.overallSummary.error.message,[NO TRANSLATION] email-replies.overallSummary.error.message
+overallSummary.loading,[NO TRANSLATION] email-replies.overallSummary.loading,[NO TRANSLATION] email-replies.overallSummary.loading
+overallSummary.prompt,[NO TRANSLATION] email-replies.overallSummary.prompt,[NO TRANSLATION] email-replies.overallSummary.prompt
+overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount
+overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title
+overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open

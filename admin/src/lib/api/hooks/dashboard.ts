@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { dashboardApi, type UnifiedDashboardParams } from "../services/dashboard"
 
 export type DateRangeParams = {
@@ -116,5 +116,7 @@ export function useUnifiedDashboardStats(params: UnifiedDashboardParams, enabled
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
     refetchIntervalInBackground: false,
+    // 워크스페이스 전환 시 이전 데이터 유지 → 깜빡임 없는 부드러운 전환
+    placeholderData: keepPreviousData,
   })
 }

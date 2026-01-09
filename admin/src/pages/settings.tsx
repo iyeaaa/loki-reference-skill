@@ -40,7 +40,6 @@ import {
   useUpdateProfileMutation,
 } from "@/lib/api/hooks/auth"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
-import { useUploadProfileImage } from "@/lib/api/hooks/upload"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import {
   IAM_ACTIONS,
@@ -48,7 +47,6 @@ import {
   type IamAction,
   type IamResource,
 } from "@/lib/constants/iam-resources"
-import { DEFAULT_PROFILE_IMAGE } from "@/lib/constants/images"
 import { usePermissions } from "@/lib/permission"
 import ActivityLogsPage from "./activity-logs"
 import CompanyInformation from "./app/CompanyInformation"
@@ -94,14 +92,12 @@ export default function SettingsPage() {
 
   const { data: currentUser, isLoading } = useCurrentUser()
   const updateProfileMutation = useUpdateProfileMutation()
-  const uploadProfileImageMutation = useUploadProfileImage()
   const { data: deletionCheck } = useAccountDeletionCheck()
   const deleteAccountMutation = useDeleteAccountMutation()
   const [activeTab, setActiveTab] = useQueryState("tab", parseAsString.withDefault("profile"))
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSettingsSidebarCollapsed, setIsSettingsSidebarCollapsed] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   const [formData, setFormData] = useState({
     username: "",
@@ -121,7 +117,7 @@ export default function SettingsPage() {
     }
   }, [currentUser])
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) {
       return
@@ -137,25 +133,14 @@ export default function SettingsPage() {
       return
     }
 
-    // 미리보기 설정 (로컬)
-    const localPreviewUrl = URL.createObjectURL(file)
-    setPreviewImage(localPreviewUrl)
-    setIsUploadingImage(true)
-
-    try {
-      // S3에 업로드
-      const imageUrl = await uploadProfileImageMutation.mutateAsync(file)
-      setFormData((prev) => ({ ...prev, profilePicture: imageUrl }))
-      setPreviewImage(imageUrl)
-    } catch (error) {
-      // 업로드 실패 시 이전 이미지로 복원
-      setPreviewImage(currentUser?.profilePicture || null)
-      console.error("Failed to upload image:", error)
-    } finally {
-      setIsUploadingImage(false)
-      // 로컬 URL 해제
-      URL.revokeObjectURL(localPreviewUrl)
+    // Convert to base64
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setPreviewImage(base64)
+      setFormData((prev) => ({ ...prev, profilePicture: base64 }))
     }
+    reader.readAsDataURL(file)
   }
 
   const handleRemoveImage = () => {
@@ -535,7 +520,7 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-6">
                     <div className="group relative">
                       <Avatar className="h-24 w-24 border-2 border-muted">
-                        <AvatarImage alt="Profile" src={previewImage || DEFAULT_PROFILE_IMAGE} />
+                        <AvatarImage alt="Profile" src={previewImage || undefined} />
                         <AvatarFallback className="bg-muted text-2xl">
                           {formData.username?.charAt(0)?.toUpperCase() || "U"}
                         </AvatarFallback>
@@ -557,16 +542,15 @@ export default function SettingsPage() {
                         type="file"
                       />
                       <Button
-                        disabled={isUploadingImage}
                         onClick={() => fileInputRef.current?.click()}
                         size="sm"
                         type="button"
                         variant="outline"
                       >
                         <Upload className="mr-2 h-4 w-4" />
-                        {isUploadingImage ? "업로드 중..." : t("settings.profile.uploadPhoto")}
+                        {t("settings.profile.uploadPhoto")}
                       </Button>
-                      {previewImage && !isUploadingImage && (
+                      {previewImage && (
                         <Button
                           className="text-destructive hover:text-destructive"
                           onClick={handleRemoveImage}

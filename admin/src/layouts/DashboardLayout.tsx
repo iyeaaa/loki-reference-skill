@@ -1,3 +1,4 @@
+import { User } from "lucide-react"
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Outlet, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
@@ -20,7 +21,6 @@ import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useSequence } from "@/lib/api/hooks/sequences"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import { DEFAULT_PROFILE_IMAGE } from "@/lib/constants/images"
 import { dispatchWorkspaceChange } from "@/lib/hooks/useWorkspace"
 import { CampaignResumeCallout } from "@/pages/app/components/CampaignResumeCallout"
 
@@ -239,15 +239,16 @@ function DashboardContent({ children }: DashboardContentProps) {
               onClick={() => navigate("/settings")}
               type="button"
             >
-              <Avatar className="h-full w-full">
-                <AvatarImage
-                  alt="Profile"
-                  src={currentUser?.profilePicture || DEFAULT_PROFILE_IMAGE}
-                />
-                <AvatarFallback className="bg-gray-200 text-gray-600 text-sm">
-                  {currentUser?.username?.charAt(0)?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+              {currentUser?.profilePicture ? (
+                <Avatar className="h-full w-full">
+                  <AvatarImage alt="Profile" src={currentUser.profilePicture} />
+                  <AvatarFallback className="bg-gray-200 text-gray-600 text-sm">
+                    {currentUser?.username?.charAt(0)?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <User className="h-4 w-4 text-gray-600" />
+              )}
             </button>
           </div>
         </header>

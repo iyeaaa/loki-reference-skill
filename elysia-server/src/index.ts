@@ -55,7 +55,6 @@ import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { testRoutes } from "./routes/test.routes"
 import { unipileRoutes } from "./routes/unipile.routes"
-import { uploadRoutes } from "./routes/upload.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
@@ -191,7 +190,6 @@ const app = new Elysia()
   .use(aiRoutes)
   .use(chatbotRoutes)
   .use(authRoutes)
-  .use(uploadRoutes)
   .use(departmentsRoutes)
   .use(userRoutes)
   .use(adminUserRoutes)

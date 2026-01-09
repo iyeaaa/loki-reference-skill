@@ -121,7 +121,7 @@ export default function SettingsPage() {
     }
   }, [currentUser])
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) {
       return
@@ -137,25 +137,27 @@ export default function SettingsPage() {
       return
     }
 
-    // 미리보기 설정 (로컬)
-    const localPreviewUrl = URL.createObjectURL(file)
-    setPreviewImage(localPreviewUrl)
-    setIsUploadingImage(true)
+    // FileReader로 data URL 생성 (CSP blob: 제한 우회)
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string
+      setPreviewImage(dataUrl)
+      setIsUploadingImage(true)
 
-    try {
-      // S3에 업로드
-      const imageUrl = await uploadProfileImageMutation.mutateAsync(file)
-      setFormData((prev) => ({ ...prev, profilePicture: imageUrl }))
-      setPreviewImage(imageUrl)
-    } catch (error) {
-      // 업로드 실패 시 이전 이미지로 복원
-      setPreviewImage(currentUser?.profilePicture || null)
-      console.error("Failed to upload image:", error)
-    } finally {
-      setIsUploadingImage(false)
-      // 로컬 URL 해제
-      URL.revokeObjectURL(localPreviewUrl)
+      try {
+        // S3에 업로드
+        const imageUrl = await uploadProfileImageMutation.mutateAsync(file)
+        setFormData((prev) => ({ ...prev, profilePicture: imageUrl }))
+        setPreviewImage(imageUrl)
+      } catch (error) {
+        // 업로드 실패 시 이전 이미지로 복원
+        setPreviewImage(currentUser?.profilePicture || null)
+        console.error("Failed to upload image:", error)
+      } finally {
+        setIsUploadingImage(false)
+      }
     }
+    reader.readAsDataURL(file)
   }
 
   const handleRemoveImage = () => {

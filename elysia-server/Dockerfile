@@ -7,7 +7,7 @@ RUN apk add --no-cache postgresql-client
 
 # Copy package files
 COPY package.json ./
-COPY bun.lockb* ./
+COPY bun.lock* ./
 
 # Install dependencies using bun
 RUN bun install --frozen-lockfile || bun install

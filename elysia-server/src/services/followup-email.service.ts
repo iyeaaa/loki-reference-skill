@@ -11,7 +11,7 @@
  * - inactive_7days: 7일간 접속 없음
  */
 
-import { and, eq, isNull, lt, notExists, sql } from "drizzle-orm"
+import { and, eq, isNull, notExists, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
 import {
@@ -141,8 +141,8 @@ async function findStuckAtSignup(): Promise<FollowupCandidate[]> {
       .where(
         and(
           eq(workspaceMembers.status, "active"),
-          // 가입 후 24시간 경과
-          lt(users.createdAt, sql`NOW() - INTERVAL '24 hours'`),
+          // 가입 후 24시간 ~ 48시간 사이 (1일 전 가입자만)
+          sql`${users.createdAt} BETWEEN NOW() - INTERVAL '48 hours' AND NOW() - INTERVAL '24 hours'`,
           // Step 1 미완료
           isNull(onboardingProgress.companyInfoCompleted),
           // 이미 발송 안 함
@@ -200,8 +200,8 @@ async function findStuckBeforeConnect(): Promise<FollowupCandidate[]> {
           eq(workspaceMembers.status, "active"),
           // 자동생성 완료됨 (generatedSequenceId 존재)
           sql`${onboardingProgress.generatedSequenceId} IS NOT NULL`,
-          // 48시간 경과 (leadSearchCompleted 기준 - 자동생성 시점)
-          lt(onboardingProgress.leadSearchCompleted, sql`NOW() - INTERVAL '48 hours'`),
+          // 48시간 ~ 72시간 사이 (leadSearchCompleted 기준 - 자동생성 시점)
+          sql`${onboardingProgress.leadSearchCompleted} BETWEEN NOW() - INTERVAL '72 hours' AND NOW() - INTERVAL '48 hours'`,
           // Unipile 이메일 연동 미완료
           isNull(onboardingProgress.emailLinkCompleted),
           // 이미 발송 안 함
@@ -260,8 +260,8 @@ async function findStuckNoCampaign(): Promise<FollowupCandidate[]> {
           eq(workspaceMembers.status, "active"),
           // 이메일 연동 완료
           sql`${onboardingProgress.emailLinkCompleted} IS NOT NULL`,
-          // 48시간 경과
-          lt(onboardingProgress.emailLinkCompleted, sql`NOW() - INTERVAL '48 hours'`),
+          // 48시간 ~ 72시간 사이
+          sql`${onboardingProgress.emailLinkCompleted} BETWEEN NOW() - INTERVAL '72 hours' AND NOW() - INTERVAL '48 hours'`,
           // 활성 캠페인 없음
           notExists(
             db
@@ -322,8 +322,8 @@ async function findInactive7Days(): Promise<FollowupCandidate[]> {
       )
       .where(
         and(
-          // 마지막 접속 7일 이상 경과 (lastLoginAt 또는 createdAt 기준)
-          sql`COALESCE(${users.lastLoginAt}, ${users.createdAt}) < NOW() - INTERVAL '7 days'`,
+          // 마지막 접속 7일 ~ 8일 사이 (일주일 된 사람만)
+          sql`COALESCE(${users.lastLoginAt}, ${users.createdAt}) BETWEEN NOW() - INTERVAL '8 days' AND NOW() - INTERVAL '7 days'`,
           // 온보딩 미완료
           sql`${onboardingProgress.completedAt} IS NULL`,
           // 미발송

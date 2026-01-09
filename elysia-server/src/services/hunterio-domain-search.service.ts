@@ -661,9 +661,11 @@ export async function searchDomainWithSmartSelection(
 
   try {
     // ====================
-    // STEP 1: Try to find C-level personal emails
+    // STEP 1: Try to find C-level personal emails (excluding HR)
     // ====================
-    console.log("[Hunter.io Smart] Step 1: Searching for personal executive emails (iterative)")
+    console.log(
+      "[Hunter.io Smart] Step 1: Searching for personal executive emails (excluding HR, iterative)",
+    )
 
     const executiveResult = await fetchValidEmailIteratively(
       validatedParams,
@@ -672,8 +674,12 @@ export async function searchDomainWithSmartSelection(
         seniority: "executive",
       },
       (email) => {
-        // Accept if personal type and meets confidence threshold
-        return email.type === "personal" && email.confidence >= minPersonalConfidence
+        // Accept if personal type, meets confidence threshold, AND not from HR department
+        return (
+          email.type === "personal" &&
+          email.confidence >= minPersonalConfidence &&
+          email.department !== "hr"
+        )
       },
     )
 
@@ -684,7 +690,8 @@ export async function searchDomainWithSmartSelection(
       console.log(
         `[Hunter.io Smart] ✓ Selected C-level executive email: ${bestExecutive.value} ` +
           `(confidence: ${bestExecutive.confidence}%, first_name: ${bestExecutive.first_name}, ` +
-          `last_name: ${bestExecutive.last_name}, position: ${bestExecutive.position}) [${elapsed}ms]`,
+          `last_name: ${bestExecutive.last_name}, position: ${bestExecutive.position}, ` +
+          `department: ${bestExecutive.department}) [${elapsed}ms]`,
       )
 
       const result: HunterioDomainSearchResult = {
@@ -708,8 +715,61 @@ export async function searchDomainWithSmartSelection(
     }
 
     console.log(
-      `[Hunter.io Smart] No high-confidence executives found (threshold: ${minPersonalConfidence}%)`,
+      `[Hunter.io Smart] No high-confidence non-HR executives found (threshold: ${minPersonalConfidence}%)`,
     )
+
+    // ====================
+    // STEP 1.5: Fallback to HR executive if no other executives available
+    // ====================
+    console.log("[Hunter.io Smart] Step 1.5: Searching for HR executive emails as fallback")
+
+    const hrExecutiveResult = await fetchValidEmailIteratively(
+      validatedParams,
+      {
+        type: "personal",
+        seniority: "executive",
+      },
+      (email) => {
+        // Accept HR executives as last resort for personal emails
+        return (
+          email.type === "personal" &&
+          email.confidence >= minPersonalConfidence &&
+          email.department === "hr"
+        )
+      },
+    )
+
+    if (hrExecutiveResult) {
+      const { email: bestHRExecutive, data: hrExecutiveData } = hrExecutiveResult
+      const elapsed = Date.now() - startTime
+
+      console.warn(
+        `[Hunter.io Smart] ⚠ Selected HR executive email as fallback: ${bestHRExecutive.value} ` +
+          `(confidence: ${bestHRExecutive.confidence}%, first_name: ${bestHRExecutive.first_name}, ` +
+          `last_name: ${bestHRExecutive.last_name}, position: ${bestHRExecutive.position}) [${elapsed}ms]`,
+      )
+
+      const result: HunterioDomainSearchResult = {
+        domain: hrExecutiveData.domain,
+        organization: hrExecutiveData.organization,
+        email: bestHRExecutive.value,
+        emailType: "personal",
+        genericEmail: bestHRExecutive.value, // deprecated, kept for backward compatibility
+        pattern: hrExecutiveData.pattern,
+        description: hrExecutiveData.description,
+        industry: hrExecutiveData.industry,
+        country: hrExecutiveData.country,
+        headcount: hrExecutiveData.headcount,
+        companyType: hrExecutiveData.company_type,
+      }
+
+      // Cache successful result
+      await cache.set(cacheKey, result)
+
+      return result
+    }
+
+    console.log(`[Hunter.io Smart] No high-confidence executives found at all`)
 
     // ====================
     // STEP 2: Fallback to generic company email

@@ -151,13 +151,14 @@ export function ManualModeContent({
   const [variableInsertTarget, setVariableInsertTarget] = useState<"subject" | "body">("body")
   const subjectInputRef = useRef<HTMLInputElement>(null)
 
-  // Get all signatures (userId를 전달하여 기본 서명 표시 포함)
+  // Get all signatures for workspace (워크스페이스별 서명 조회)
+  const isValidWorkspace = !!(workspaceId && workspaceId !== "all")
   const { data: signatures } = useEmailSignatures(
     {
+      workspaceId,
       includeInactive: false,
-      userId: _userId,
     },
-    true,
+    isValidWorkspace,
   )
 
   // Get email templates for the current workspace

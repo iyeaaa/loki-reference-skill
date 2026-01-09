@@ -8,16 +8,20 @@ import type {
 const BASE_PATH = "/api/v1/email-signatures"
 
 export const emailSignaturesApi = {
-  // Get all signatures (workspaceId 무관, 모든 서명 조회)
-  // userId is extracted from JWT token on the server
-  list: async (params: { includeInactive?: boolean } = {}): Promise<EmailSignature[]> => {
+  // Get all signatures for a workspace (워크스페이스별 서명 조회)
+  // workspaceId is required
+  list: async (params: {
+    workspaceId: string
+    includeInactive?: boolean
+  }): Promise<EmailSignature[]> => {
     const searchParams = new URLSearchParams()
+    searchParams.append("workspaceId", params.workspaceId)
     if (params.includeInactive !== undefined) {
       searchParams.append("includeInactive", params.includeInactive.toString())
     }
 
     const response = await apiFetch<{ code: number; data: EmailSignature[] }>(
-      `${BASE_PATH}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+      `${BASE_PATH}?${searchParams.toString()}`,
     )
     return response.data
   },
@@ -28,11 +32,15 @@ export const emailSignaturesApi = {
     return response.data
   },
 
-  // Get default signature (JWT에서 userId 자동 추출)
-  getDefault: async (): Promise<EmailSignature | null> => {
+  // Get default signature for user in a workspace (JWT에서 userId 자동 추출)
+  // workspaceId is required
+  getDefault: async (workspaceId: string): Promise<EmailSignature | null> => {
     try {
+      const searchParams = new URLSearchParams()
+      searchParams.append("workspaceId", workspaceId)
+
       const response = await apiFetch<{ code: number; data: EmailSignature | null }>(
-        `${BASE_PATH}/default`,
+        `${BASE_PATH}/default?${searchParams.toString()}`,
       )
       return response.data ?? null
     } catch (error) {
@@ -51,23 +59,22 @@ export const emailSignaturesApi = {
     }
   },
 
-  // Create a new signature (workspaceId 선택적)
+  // Create a new signature (workspaceId 필수)
   // userId is extracted from JWT token on the server
   create: async (
     body: CreateEmailSignatureRequest,
-    params?: { workspaceId?: string },
+    workspaceId: string,
   ): Promise<EmailSignature> => {
     const searchParams = new URLSearchParams()
-    if (params?.workspaceId) {
-      searchParams.append("workspaceId", params.workspaceId)
-    }
+    searchParams.append("workspaceId", workspaceId)
 
-    const url = params?.workspaceId ? `${BASE_PATH}?${searchParams.toString()}` : BASE_PATH
-
-    const response = await apiFetch<{ code: number; data: EmailSignature }>(url, {
-      method: "POST",
-      body: JSON.stringify(body),
-    })
+    const response = await apiFetch<{ code: number; data: EmailSignature }>(
+      `${BASE_PATH}?${searchParams.toString()}`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    )
     return response.data
   },
 
@@ -97,10 +104,14 @@ export const emailSignaturesApi = {
     })
   },
 
-  // Set signature as default (userId extracted from auth token)
-  setDefault: async (id: string): Promise<void> => {
+  // Set signature as default for user in a workspace
+  // workspaceId is required
+  setDefault: async (id: string, workspaceId: string): Promise<void> => {
     try {
-      await apiFetch<void>(`${BASE_PATH}/${id}/set-default`, {
+      const searchParams = new URLSearchParams()
+      searchParams.append("workspaceId", workspaceId)
+
+      await apiFetch<void>(`${BASE_PATH}/${id}/set-default?${searchParams.toString()}`, {
         method: "PATCH",
       })
     } catch (error) {

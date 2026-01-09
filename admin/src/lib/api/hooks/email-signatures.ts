@@ -10,21 +10,21 @@ import type {
 export const emailSignatureKeys = {
   all: ["emailSignatures"] as const,
   lists: () => [...emailSignatureKeys.all, "list"] as const,
-  list: (params?: { includeInactive?: boolean }) =>
+  list: (params: { workspaceId: string; includeInactive?: boolean }) =>
     [...emailSignatureKeys.lists(), params] as const,
   detail: (id: string) => [...emailSignatureKeys.all, "detail", id] as const,
-  default: () => [...emailSignatureKeys.all, "default"] as const,
+  default: (workspaceId: string) => [...emailSignatureKeys.all, "default", workspaceId] as const,
 }
 
 // Queries
 export function useEmailSignatures(
-  params?: { includeInactive?: boolean; userId?: string },
+  params: { workspaceId: string; includeInactive?: boolean },
   enabled = true,
 ) {
   return useQuery({
     queryKey: emailSignatureKeys.list(params),
     queryFn: () => emailSignaturesApi.list(params),
-    enabled,
+    enabled: enabled && !!params.workspaceId,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   })
@@ -40,12 +40,12 @@ export function useEmailSignature(id: string, enabled = true) {
   })
 }
 
-export function useDefaultEmailSignature(enabled = true) {
+export function useDefaultEmailSignature(workspaceId: string, enabled = true) {
   return useQuery({
-    queryKey: emailSignatureKeys.default(),
+    queryKey: emailSignatureKeys.default(workspaceId),
     queryFn: async () => {
       try {
-        return await emailSignaturesApi.getDefault()
+        return await emailSignaturesApi.getDefault(workspaceId)
       } catch (error) {
         // 404, 401 에러는 기본 서명이 없는 것으로 처리
         if (
@@ -59,7 +59,7 @@ export function useDefaultEmailSignature(enabled = true) {
         throw error
       }
     },
-    enabled: typeof enabled === "boolean" ? enabled : true,
+    enabled: enabled && !!workspaceId,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: false, // 404, 401 에러는 재시도하지 않음
@@ -73,11 +73,11 @@ export function useCreateEmailSignature() {
   return useMutation({
     mutationFn: ({
       body,
-      params,
+      workspaceId,
     }: {
       body: CreateEmailSignatureRequest
-      params?: { workspaceId?: string; userId?: string }
-    }) => emailSignaturesApi.create(body, params),
+      workspaceId: string
+    }) => emailSignaturesApi.create(body, workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })
       toast.success("서명이 생성되었습니다")
@@ -127,11 +127,11 @@ export function useSetDefaultEmailSignature() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => emailSignaturesApi.setDefault(id),
+    mutationFn: ({ id, workspaceId }: { id: string; workspaceId: string }) =>
+      emailSignaturesApi.setDefault(id, workspaceId),
     onSuccess: () => {
       // 모든 관련 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: emailSignatureKeys.default() })
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.all })
       toast.success("기본 서명으로 설정되었습니다")
     },

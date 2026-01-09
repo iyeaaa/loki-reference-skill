@@ -149,7 +149,7 @@ export function WorkspacesTableWithPagination({
                   className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
                   style={{ width: "30%", minWidth: "250px" }}
                 >
-                  설명
+                  회사 설명
                 </th>
                 <th
                   className="p-2 text-left font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400"
@@ -248,10 +248,10 @@ export function WorkspacesTableWithPagination({
                   </td>
                   <td
                     className="p-2 text-gray-900 text-sm dark:text-gray-100"
-                    title={workspace.description || "-"}
+                    title={workspace.companyDescription || "-"}
                   >
-                    {workspace.description ? (
-                      <div className="line-clamp-3 break-words">{workspace.description}</div>
+                    {workspace.companyDescription ? (
+                      <div className="line-clamp-3 break-words">{workspace.companyDescription}</div>
                     ) : (
                       "-"
                     )}

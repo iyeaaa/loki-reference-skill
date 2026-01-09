@@ -4,12 +4,15 @@ import { users } from "./users"
 import { workspaces } from "./workspaces"
 
 // Email signatures table
+// 서명은 워크스페이스에 속함 (워크스페이스별 관리)
 export const emailSignatures = pgTable(
   "email_signatures",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // nullable: 생성자 추적용 (선택적)
-    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }), // nullable: 전역 서명 가능
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }), // 필수: 워크스페이스별 관리
 
     // Signature details
     name: varchar("name", { length: 100 }).notNull(),

@@ -271,6 +271,15 @@ emailDraftTest.success.summary,[NO TRANSLATION] settings.emailDraftTest.success.
 emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template
 language.description,앱에서 사용할 언어를 선택합니다,Select the language to use in the app
 language.title,언어 설정,Language Settings
-workspace.autoTranslated,[NO TRANSLATION] settings.workspace.autoTranslated,[NO TRANSLATION] settings.workspace.autoTranslated
-workspace.companyNameEn,[NO TRANSLATION] settings.workspace.companyNameEn,[NO TRANSLATION] settings.workspace.companyNameEn
-workspace.optional,[NO TRANSLATION] settings.workspace.optional,[NO TRANSLATION] settings.workspace.optional
+workspace.autoTranslated,자동 번역됨,Auto-translated
+workspace.companyNameEn,회사명 (영문),Company Name (English)
+workspace.optional,선택사항,Optional
+account.description,계정 설정 및 로그아웃,Account settings and logout
+account.legal,법적 고지,Legal
+account.logout,로그아웃,Logout
+account.logoutButton,로그아웃,Logout
+account.privacyPolicy,개인정보처리방침,Privacy Policy
+account.termsOfService,서비스 이용약관,Terms of Service
+account.title,계정,Account
+workspaces.createDescription,새 워크스페이스를 생성합니다,Create a new workspace
+workspaces.editDescription,워크스페이스 정보를 수정합니다,Edit workspace information

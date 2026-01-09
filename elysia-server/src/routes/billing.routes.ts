@@ -346,6 +346,7 @@ export const subscriptionsRoutes = new Elysia({ prefix: "/api/v1/billing/subscri
         statuses: query.statuses ? (query.statuses.split(",") as SubscriptionStatus[]) : undefined,
         tier: query.tier as "trial" | "basic" | "pro" | "enterprise" | undefined,
         isPrimary: query.isPrimary ? query.isPrimary === "true" : undefined,
+        search: query.search,
       }
 
       const data = await billingService.listSubscriptions(limit, offset, filters)
@@ -362,6 +363,7 @@ export const subscriptionsRoutes = new Elysia({ prefix: "/api/v1/billing/subscri
         statuses: t.Optional(t.String()),
         tier: t.Optional(t.String()),
         isPrimary: t.Optional(t.String()),
+        search: t.Optional(t.String()),
       }),
     },
   )

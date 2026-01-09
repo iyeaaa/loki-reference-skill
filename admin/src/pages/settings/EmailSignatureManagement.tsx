@@ -32,9 +32,11 @@ export function EmailSignatureManagement() {
   const [editingSignature, setEditingSignature] = useState<EmailSignature | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<EmailSignature | null>(null)
 
-  // Get workspaceId from localStorage
-  // 백엔드에서 JWT 토큰으로 "all"을 처리하므로 프론트엔드에서는 그대로 전달
+  // Get workspaceId from localStorage (필수)
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
+
+  // workspaceId 유효성 검사 ("all"은 유효하지 않음)
+  const isValidWorkspace = workspaceId && workspaceId !== "all"
 
   // 기본 서명 템플릿 생성 (HTML 형식)
   const getDefaultSignature = () => {
@@ -67,15 +69,15 @@ export function EmailSignatureManagement() {
   })
 
   // API Hooks
-  // 모든 서명 조회 (workspaceId 무관)
+  // 워크스페이스별 서명 조회
   const { data: signatures, isLoading } = useEmailSignatures(
     {
+      workspaceId,
       includeInactive: false,
-      userId: user?.id,
     },
-    true,
+    !!isValidWorkspace,
   )
-  const { data: defaultSignature } = useDefaultEmailSignature()
+  const { data: defaultSignature } = useDefaultEmailSignature(workspaceId, !!isValidWorkspace)
   const createMutation = useCreateEmailSignature()
   const updateMutation = useUpdateEmailSignature()
   const deleteMutation = useDeleteEmailSignature()
@@ -129,16 +131,20 @@ export function EmailSignatureManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!isValidWorkspace) {
+      return
+    }
+
     if (editingSignature) {
       await updateMutation.mutateAsync({
         id: editingSignature.id,
         body: formData,
       })
     } else {
-      // workspaceId, userId는 선택적 (생성자 추적용)
+      // workspaceId 필수
       await createMutation.mutateAsync({
         body: formData,
-        params: workspaceId && workspaceId !== "all" ? { workspaceId } : undefined,
+        workspaceId,
       })
     }
 
@@ -160,7 +166,32 @@ export function EmailSignatureManagement() {
   }
 
   const handleSetDefault = async (signatureId: string) => {
-    await setDefaultMutation.mutateAsync(signatureId)
+    if (!isValidWorkspace) {
+      return
+    }
+    await setDefaultMutation.mutateAsync({ id: signatureId, workspaceId })
+  }
+
+  // 워크스페이스가 선택되지 않은 경우
+  if (!isValidWorkspace) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            <CardTitle>이메일 서명 관리</CardTitle>
+          </div>
+          <CardDescription>이메일 발송 시 사용할 서명을 관리합니다</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center text-muted-foreground">
+            <Mail className="mx-auto mb-3 h-12 w-12 opacity-30" />
+            <p>워크스페이스를 선택해주세요.</p>
+            <p className="mt-1 text-sm">서명은 워크스페이스별로 관리됩니다.</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (isLoading) {

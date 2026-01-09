@@ -351,6 +351,9 @@ export async function listSubscriptions(
   if (filters?.tier) {
     conditions.push(eq(billingProducts.tier, filters.tier))
   }
+  if (filters?.search) {
+    conditions.push(ilike(workspaces.name, `%${filters.search}%`))
+  }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
@@ -398,8 +401,22 @@ export async function countSubscriptions(filters?: SubscriptionFilters): Promise
   if (filters?.isPrimary !== undefined) {
     conditions.push(eq(subscriptions.isPrimary, filters.isPrimary))
   }
+  if (filters?.search) {
+    conditions.push(ilike(workspaces.name, `%${filters.search}%`))
+  }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  // search 필터가 있을 때는 workspaces 테이블과 join 필요
+  if (filters?.search) {
+    const result = await db
+      .select({ count: count() })
+      .from(subscriptions)
+      .leftJoin(workspaces, eq(subscriptions.workspaceId, workspaces.id))
+      .where(whereClause)
+
+    return result[0]?.count || 0
+  }
 
   const result = await db.select({ count: count() }).from(subscriptions).where(whereClause)
 

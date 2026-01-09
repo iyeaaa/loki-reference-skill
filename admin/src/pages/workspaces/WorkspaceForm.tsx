@@ -53,7 +53,6 @@ export function WorkspaceForm({
   const industryId = useId()
   const companyAddressId = useId()
   const companyDescriptionId = useId()
-  const descriptionId = useId()
   const isActiveId = useId()
 
   const [formData, setFormData] = useState({
@@ -177,31 +176,6 @@ export function WorkspaceForm({
               placeholder={t("settings.workspace.companyDescriptionPlaceholder")}
               rows={4}
               value={formData.companyDescription}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={descriptionId}>{t("settings.workspaces.form.description")}</Label>
-            <Textarea
-              className="min-h-[72px] resize-none overflow-hidden"
-              id={descriptionId}
-              onChange={(e) => {
-                setFormData({ ...formData, description: e.target.value })
-                // Auto-expand textarea
-                const target = e.target as HTMLTextAreaElement
-                target.style.height = "auto"
-                target.style.height = `${Math.max(72, target.scrollHeight)}px`
-              }}
-              placeholder={t("settings.workspaces.form.descriptionPlaceholder")}
-              ref={(el) => {
-                if (el && formData.description) {
-                  el.style.height = "auto"
-                  el.style.height = `${Math.max(72, el.scrollHeight)}px`
-                }
-              }}
-              rows={3}
-              style={{ height: "auto" }}
-              value={formData.description}
             />
           </div>
 

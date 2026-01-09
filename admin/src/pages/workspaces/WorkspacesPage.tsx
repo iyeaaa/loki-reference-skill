@@ -1,11 +1,10 @@
-import { Plus, Search, Trash2, UserCheck, X } from "lucide-react"
+import { ArrowLeft, Plus, Search, Trash2, UserCheck, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { UpgradePlanModal } from "@/components/UpgradePlanModal"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
   useBulkUpdateWorkspaceStatus,
@@ -23,17 +22,21 @@ import { WorkspaceFilters } from "./WorkspaceFilters"
 import { WorkspaceForm } from "./WorkspaceForm"
 import { WorkspacesTableWithPagination } from "./WorkspacesTableWithPagination"
 
+type ViewMode = "list" | "create" | "edit"
+
 export default function WorkspacesPage() {
   const { t } = useTranslation()
   const [users, setUsers] = useState<User[]>([])
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
+  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null)
 
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedOwners, setSelectedOwners] = useState<string[]>([])
 
-  const [_showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null)
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"status" | null>(null)
@@ -80,17 +83,35 @@ export default function WorkspacesPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const _handleCreateWorkspace = async (workspaceData: unknown) => {
+  // Navigate to list view
+  const goToList = () => {
+    setViewMode("list")
+    setEditingWorkspace(null)
+  }
+
+  // Navigate to edit view
+  const goToEdit = (workspace: Workspace) => {
+    setEditingWorkspace(workspace)
+    setViewMode("edit")
+  }
+
+  // Navigate to create view
+  const goToCreate = () => {
+    setEditingWorkspace(null)
+    setViewMode("create")
+  }
+
+  const handleCreateWorkspace = async (workspaceData: unknown) => {
     try {
       await workspacesApi.create(workspaceData as Workspace)
       toast.success("워크스페이스가 생성되었습니다")
-      setShowCreateDialog(false)
+      goToList()
       // 수동으로 쿼리 무효화
       window.location.reload()
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       if (errorMessage?.includes("Trial users can only create 1 workspace")) {
-        setShowCreateDialog(false)
+        goToList()
         setShowUpgradeModal(true)
       } else {
         toast.error(errorMessage || "워크스페이스 생성에 실패했습니다")
@@ -109,7 +130,7 @@ export default function WorkspacesPage() {
       },
       {
         onSuccess: () => {
-          setEditingWorkspace(null)
+          goToList()
         },
       },
     )
@@ -184,7 +205,7 @@ export default function WorkspacesPage() {
   // Handle create workspace button click - check trial limit first
   const handleCreateWorkspaceClick = async () => {
     if (!userId) {
-      setShowCreateDialog(true)
+      goToCreate()
       return
     }
 
@@ -201,19 +222,71 @@ export default function WorkspacesPage() {
       // API 응답: { success, data: { canCreate, ... } }
       const canCreate = result.data?.canCreate ?? result.canCreate
       if (canCreate) {
-        // User can create workspace - show create dialog
-        setShowCreateDialog(true)
+        // User can create workspace
+        goToCreate()
       } else {
         // Trial limit reached - show upgrade modal
         setShowUpgradeModal(true)
       }
     } catch (error) {
       console.error("Failed to check trial limit:", error)
-      // On error, just show the create dialog
-      setShowCreateDialog(true)
+      // On error, just show the create form
+      goToCreate()
     }
   }
 
+  // Render create/edit form view
+  if (viewMode === "create" || viewMode === "edit") {
+    const isEdit = viewMode === "edit"
+    return (
+      <div className="h-full overflow-y-auto">
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <Button className="h-8 w-8 p-0" onClick={goToList} size="sm" variant="ghost">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <CardTitle className="text-lg">
+                  {isEdit ? t("settings.workspaces.edit") : t("settings.workspaces.create")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {isEdit
+                    ? t("settings.workspaces.editDescription", "워크스페이스 정보를 수정합니다")
+                    : t("settings.workspaces.createDescription", "새 워크스페이스를 생성합니다")}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <WorkspaceForm
+              isEdit={isEdit}
+              onAddMemberClick={() => setShowAddMemberDialog(true)}
+              onCancel={goToList}
+              onSave={isEdit ? handleUpdateWorkspace : handleCreateWorkspace}
+              users={users}
+              workspace={editingWorkspace || undefined}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Add Member Dialog */}
+        {editingWorkspace && (
+          <AddMemberDialog
+            existingMemberUserIds={members.map((m) => m.userId)}
+            isOpen={showAddMemberDialog}
+            onClose={() => setShowAddMemberDialog(false)}
+            workspaceId={editingWorkspace.id}
+          />
+        )}
+
+        {/* Upgrade Plan Modal */}
+        <UpgradePlanModal onOpenChange={setShowUpgradeModal} open={showUpgradeModal} />
+      </div>
+    )
+  }
+
+  // Render list view
   return (
     <div className="h-full space-y-6 overflow-y-auto">
       {/* Filters */}
@@ -292,7 +365,7 @@ export default function WorkspacesPage() {
 
           {/* Workspaces Table with Pagination */}
           <WorkspacesTableWithPagination
-            onEditWorkspace={setEditingWorkspace}
+            onEditWorkspace={goToEdit}
             onToggleAll={toggleAllWorkspaces}
             onToggleWorkspace={toggleWorkspaceSelection}
             searchQuery={searchQuery}
@@ -302,48 +375,6 @@ export default function WorkspacesPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Create Workspace Dialog */}
-      <Dialog onOpenChange={(open) => setShowCreateDialog(open)} open={_showCreateDialog}>
-        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="font-semibold text-xl">
-              {t("settings.workspaces.create")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="-mx-6 flex-1 overflow-y-auto px-6">
-            <WorkspaceForm
-              isEdit={false}
-              onCancel={() => setShowCreateDialog(false)}
-              onSave={_handleCreateWorkspace}
-              users={users}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Workspace Dialog */}
-      <Dialog onOpenChange={(open) => !open && setEditingWorkspace(null)} open={!!editingWorkspace}>
-        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="font-semibold text-xl">
-              {t("settings.workspaces.edit")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="-mx-6 flex-1 overflow-y-auto px-6">
-            {editingWorkspace && (
-              <WorkspaceForm
-                isEdit={true}
-                onAddMemberClick={() => setShowAddMemberDialog(true)}
-                onCancel={() => setEditingWorkspace(null)}
-                onSave={handleUpdateWorkspace}
-                users={users}
-                workspace={editingWorkspace}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Bulk Action Modal */}
       <BulkActionModal
@@ -356,16 +387,6 @@ export default function WorkspacesPage() {
         onConfirm={handleBulkAction}
         workspaceCount={selectedWorkspaces.length}
       />
-
-      {/* Add Member Dialog - 최상위 레벨에서 독립적으로 관리 */}
-      {editingWorkspace && (
-        <AddMemberDialog
-          existingMemberUserIds={members.map((m) => m.userId)}
-          isOpen={showAddMemberDialog}
-          onClose={() => setShowAddMemberDialog(false)}
-          workspaceId={editingWorkspace.id}
-        />
-      )}
 
       {/* Upgrade Plan Modal */}
       <UpgradePlanModal onOpenChange={setShowUpgradeModal} open={showUpgradeModal} />

@@ -77,9 +77,12 @@ export function CreateCampaignStep2({
   // const modeManualId = useId()
   // const [showModeDetails, setShowModeDetails] = useState(false)
 
-  // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
-  // console.log("defaultSignature", defaultSignature)
+  // Get default signature from database (워크스페이스별)
+  const isValidWorkspace = !!(data.workspaceId && data.workspaceId !== "all")
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    data.workspaceId,
+    isValidWorkspace && !!user?.id,
+  )
 
   // Get user signature
   const getUserSignature = () => {

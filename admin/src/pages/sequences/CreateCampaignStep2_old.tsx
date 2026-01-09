@@ -95,8 +95,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const updateSequenceStep = useUpdateSequenceStep()
   const deleteSequenceStep = useDeleteSequenceStep()
 
-  // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
+  // Get default signature from database (워크스페이스별)
+  const isValidWorkspace = !!(data.workspaceId && data.workspaceId !== "all")
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    data.workspaceId,
+    isValidWorkspace && !!user?.id,
+  )
 
   // Get user signature
   const getUserSignature = () => {

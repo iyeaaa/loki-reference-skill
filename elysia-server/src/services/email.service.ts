@@ -103,27 +103,35 @@ class EmailService {
   }
 
   // Generate email signature from user data
+  // 워크스페이스별 기본 서명 조회
   async generateUserSignature(
     userId: string,
-    workspaceId?: string, // 선택적 (워크스페이스 무관)
+    workspaceId: string, // 필수: 워크스페이스별 서명 관리
   ): Promise<{
     signatureHtml: string
     signatureText: string
   }> {
     try {
       // First, try to get the default signature from user_signature_preferences
+      // 유저 + 워크스페이스 조합으로 기본 서명 조회
       const [preference] = await db
         .select({
           signature: emailSignatures,
         })
         .from(userSignaturePreferences)
         .innerJoin(emailSignatures, eq(userSignaturePreferences.signatureId, emailSignatures.id))
-        .where(and(eq(userSignaturePreferences.userId, userId), eq(emailSignatures.isActive, true)))
+        .where(
+          and(
+            eq(userSignaturePreferences.userId, userId),
+            eq(userSignaturePreferences.workspaceId, workspaceId),
+            eq(emailSignatures.isActive, true),
+          ),
+        )
         .limit(1)
 
       if (preference) {
         logger.info(
-          { userId, signatureId: preference.signature.id },
+          { userId, workspaceId, signatureId: preference.signature.id },
           "Using user's default signature from database",
         )
         return {
@@ -133,15 +141,6 @@ class EmailService {
       }
 
       // Fallback: Get user info with department and workspace to generate signature
-      // workspaceId가 없으면 기본 서명만 반환
-      if (!workspaceId) {
-        logger.info({ userId }, "No workspaceId provided, using default signature")
-        const defaultHtml = "<p>Best regards,<br>Your Team</p>"
-        return {
-          signatureHtml: defaultHtml,
-          signatureText: htmlToText(defaultHtml),
-        }
-      }
 
       const [userInfo] = await db
         .select({

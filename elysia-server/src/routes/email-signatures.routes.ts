@@ -60,24 +60,30 @@ async function getUserIdFromToken(authorization?: string): Promise<string | null
 export const emailSignatureRoutes = new Elysia({
   prefix: "/api/v1/email-signatures",
 })
-  // Get all signatures (모든 서명 조회, workspaceId/userId 무관)
+  // Get all signatures for a workspace (워크스페이스별 서명 조회)
   .get(
     "/",
-    async ({ query, headers }) => {
+    async ({ query, headers, set }) => {
       try {
-        const { includeInactive } = query
+        const { workspaceId, includeInactive } = query
+
+        // workspaceId 필수 검증
+        if (!workspaceId) {
+          set.status = 400
+          return errorResponse("workspaceId는 필수입니다.", ResponseCode.BAD_REQUEST)
+        }
 
         // JWT에서 userId 추출 (기본 서명 표시용)
         const currentUserId = await getUserIdFromToken(headers.authorization)
 
-        const conditions = []
+        const conditions = [eq(emailSignatures.workspaceId, workspaceId)]
 
         // 활성 상태 필터
         if (includeInactive === false) {
           conditions.push(eq(emailSignatures.isActive, true))
         }
 
-        // 모든 서명 조회 (workspaceId, userId 필터 없음)
+        // 해당 워크스페이스의 서명만 조회
         const signatures = await db
           .select({
             id: emailSignatures.id,
@@ -96,16 +102,21 @@ export const emailSignatureRoutes = new Elysia({
           .from(emailSignatures)
           .leftJoin(workspaces, eq(emailSignatures.workspaceId, workspaces.id))
           .leftJoin(users, eq(emailSignatures.userId, users.id))
-          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .where(and(...conditions))
           .orderBy(emailSignatures.createdAt)
 
-        // 현재 유저의 기본 서명 ID 가져오기
+        // 현재 유저의 해당 워크스페이스 기본 서명 ID 가져오기
         let defaultSignatureId: string | null = null
         if (currentUserId) {
           const [preference] = await db
             .select({ signatureId: userSignaturePreferences.signatureId })
             .from(userSignaturePreferences)
-            .where(eq(userSignaturePreferences.userId, currentUserId))
+            .where(
+              and(
+                eq(userSignaturePreferences.userId, currentUserId),
+                eq(userSignaturePreferences.workspaceId, workspaceId),
+              ),
+            )
             .limit(1)
 
           if (preference) {
@@ -121,11 +132,12 @@ export const emailSignatureRoutes = new Elysia({
 
         logger.info(
           {
+            workspaceId,
             includeInactive,
             signaturesCount: signatures.length,
             defaultSignatureId,
           },
-          "Fetched email signatures",
+          "Fetched email signatures for workspace",
         )
 
         return {
@@ -139,6 +151,7 @@ export const emailSignatureRoutes = new Elysia({
     },
     {
       query: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
         includeInactive: t.Optional(t.Boolean()),
       }),
     },
@@ -177,46 +190,75 @@ export const emailSignatureRoutes = new Elysia({
     },
   )
 
-  // Get default signature for current user (JWT에서 userId 추출)
-  .get("/default", async ({ headers }) => {
-    try {
-      // POST / 엔드포인트와 동일한 방식으로 토큰 처리
-      const userId = await getUserIdFromToken(headers.authorization)
+  // Get default signature for current user in a workspace (JWT에서 userId 추출)
+  .get(
+    "/default",
+    async ({ query, headers, set }) => {
+      try {
+        const { workspaceId } = query
 
-      if (!userId) {
-        return errorResponse("인증 토큰이 없거나 유효하지 않습니다.", ResponseCode.UNAUTHORIZED)
+        // workspaceId 필수 검증
+        if (!workspaceId) {
+          set.status = 400
+          return errorResponse("workspaceId는 필수입니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        const userId = await getUserIdFromToken(headers.authorization)
+
+        if (!userId) {
+          set.status = 401
+          return errorResponse("인증 토큰이 없거나 유효하지 않습니다.", ResponseCode.UNAUTHORIZED)
+        }
+
+        const [preference] = await db
+          .select({
+            signature: emailSignatures,
+          })
+          .from(userSignaturePreferences)
+          .innerJoin(emailSignatures, eq(userSignaturePreferences.signatureId, emailSignatures.id))
+          .where(
+            and(
+              eq(userSignaturePreferences.userId, userId),
+              eq(userSignaturePreferences.workspaceId, workspaceId),
+              eq(emailSignatures.isActive, true),
+            ),
+          )
+          .limit(1)
+
+        if (!preference) {
+          set.status = 404
+          return errorResponse("No default signature found", ResponseCode.NOT_FOUND)
+        }
+
+        return {
+          code: ResponseCode.SUCCESS,
+          data: preference.signature,
+        }
+      } catch (error) {
+        logger.error({ err: error }, "Failed to fetch default email signature")
+        return errorResponse("Failed to fetch default signature")
       }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
 
-      const [preference] = await db
-        .select({
-          signature: emailSignatures,
-        })
-        .from(userSignaturePreferences)
-        .innerJoin(emailSignatures, eq(userSignaturePreferences.signatureId, emailSignatures.id))
-        .where(and(eq(userSignaturePreferences.userId, userId), eq(emailSignatures.isActive, true)))
-        .limit(1)
-
-      if (!preference) {
-        return errorResponse("No default signature found", ResponseCode.NOT_FOUND)
-      }
-
-      return {
-        code: ResponseCode.SUCCESS,
-        data: preference.signature,
-      }
-    } catch (error) {
-      logger.error({ err: error }, "Failed to fetch default email signature")
-      return errorResponse("Failed to fetch default signature")
-    }
-  })
-
-  // Create a new signature
+  // Create a new signature (워크스페이스 필수)
   .post(
     "/",
-    async ({ body, query, headers }) => {
+    async ({ body, query, headers, set }) => {
       try {
         const { workspaceId } = query
         const { name, signatureHtml, signatureText, isActive } = body
+
+        // workspaceId 필수 검증
+        if (!workspaceId) {
+          set.status = 400
+          return errorResponse("workspaceId는 필수입니다.", ResponseCode.BAD_REQUEST)
+        }
 
         // JWT에서 userId 추출 (생성자 추적용)
         const actualUserId = await getUserIdFromToken(headers.authorization)
@@ -225,7 +267,7 @@ export const emailSignatureRoutes = new Elysia({
           .insert(emailSignatures)
           .values({
             userId: actualUserId,
-            workspaceId: workspaceId || null, // 선택적
+            workspaceId, // 필수
             name,
             signatureHtml,
             signatureText,
@@ -254,7 +296,7 @@ export const emailSignatureRoutes = new Elysia({
     {
       body: emailSignatureSchema,
       query: t.Object({
-        workspaceId: t.Optional(t.String({ format: "uuid" })),
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )
@@ -356,12 +398,20 @@ export const emailSignatureRoutes = new Elysia({
     },
   )
 
-  // Set signature as default (userId extracted from auth token)
+  // Set signature as default for user in a workspace
   .patch(
     "/:id/set-default",
-    async ({ params, headers, set }) => {
+    async ({ params, query, headers, set }) => {
       try {
         const { id } = params
+        const { workspaceId } = query
+
+        // workspaceId 필수 검증
+        if (!workspaceId) {
+          set.status = 400
+          return errorResponse("workspaceId는 필수입니다.", ResponseCode.BAD_REQUEST)
+        }
+
         const userId = await getUserIdFromToken(headers.authorization)
 
         if (!userId) {
@@ -369,32 +419,39 @@ export const emailSignatureRoutes = new Elysia({
           return errorResponse("인증이 필요합니다.", ResponseCode.UNAUTHORIZED)
         }
 
-        // Check if signature exists
+        // Check if signature exists and belongs to the workspace
         const [existing] = await db
           .select()
           .from(emailSignatures)
-          .where(eq(emailSignatures.id, id))
+          .where(and(eq(emailSignatures.id, id), eq(emailSignatures.workspaceId, workspaceId)))
           .limit(1)
 
         if (!existing) {
-          return errorResponse("Email signature not found", ResponseCode.NOT_FOUND)
+          set.status = 404
+          return errorResponse(
+            "Email signature not found or does not belong to this workspace",
+            ResponseCode.NOT_FOUND,
+          )
         }
 
         // Check if signature is active
         if (!existing.isActive) {
+          set.status = 400
           return errorResponse("Cannot set inactive signature as default", ResponseCode.BAD_REQUEST)
         }
 
         // UPSERT: 기존 기본값이 있으면 업데이트, 없으면 삽입
+        // 복합 unique: (userId, workspaceId)
         const [preference] = await db
           .insert(userSignaturePreferences)
           .values({
             userId,
+            workspaceId,
             signatureId: id,
             updatedAt: new Date(),
           })
           .onConflictDoUpdate({
-            target: userSignaturePreferences.userId,
+            target: [userSignaturePreferences.userId, userSignaturePreferences.workspaceId],
             set: {
               signatureId: id,
               updatedAt: new Date(),
@@ -402,7 +459,7 @@ export const emailSignatureRoutes = new Elysia({
           })
           .returning()
 
-        logger.info({ signatureId: id, userId }, "Email signature set as default")
+        logger.info({ signatureId: id, userId, workspaceId }, "Email signature set as default")
 
         return {
           code: ResponseCode.SUCCESS,
@@ -416,6 +473,9 @@ export const emailSignatureRoutes = new Elysia({
     {
       params: t.Object({
         id: t.String({ format: "uuid" }),
+      }),
+      query: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )

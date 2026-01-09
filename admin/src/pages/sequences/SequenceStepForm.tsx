@@ -157,8 +157,12 @@ export function SequenceStepForm({
   const promptId = useId()
   const targetCountryId = useId()
 
-  // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
+  // Get default signature from database (워크스페이스별)
+  const isValidWorkspace = !!(workspaceId && workspaceId !== "all")
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    workspaceId || "",
+    isValidWorkspace && !!user?.id,
+  )
 
   // 사용자 서명 가져오기
   const getUserSignature = () => {

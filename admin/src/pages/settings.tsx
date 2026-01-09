@@ -4,16 +4,17 @@ import {
   Camera,
   ClipboardList,
   CreditCard,
-  FileText,
   FlaskConical,
   Globe,
   Key,
   ListTree,
+  LogOut,
   Mail,
   Menu,
   Package,
   Rocket,
   ScrollText,
+  Settings,
   Shield,
   ShieldCheck,
   Upload,
@@ -49,7 +50,6 @@ import { usePermissions } from "@/lib/permission"
 import ActivityLogsPage from "./activity-logs"
 import CompanyInformation from "./app/CompanyInformation"
 import { CustomersPage, PlansPage, ProductsPage, SubscriptionsPage } from "./billing"
-import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
 import { AuditLogsPage, PoliciesPage, RolesPage, TierBoundariesPage } from "./iam"
 import LeadImportPage from "./lead-import/index"
 import { BullMQTestPage } from "./settings/BullMQTestPage"
@@ -198,6 +198,12 @@ export default function SettingsPage() {
         permission: { resource: IAM_RESOURCES.SETTINGS_PROFILE, action: IAM_ACTIONS.READ },
       },
       {
+        id: "account",
+        label: t("settings.account.title", "계정 관리"),
+        icon: <Settings className="h-4 w-4" />,
+        permission: "public",
+      },
+      {
         id: "signature",
         label: t("settings.signature.title"),
         icon: <Mail className="h-4 w-4" />,
@@ -224,12 +230,6 @@ export default function SettingsPage() {
         label: t("settings.system.workspaces.title"),
         icon: <Building2 className="h-4 w-4" />,
         permission: "public", // 모든 사용자가 자신의 워크스페이스 정보 확인 가능
-      },
-      {
-        id: "email-templates",
-        label: t("settings.system.emailTemplates.title"),
-        icon: <FileText className="h-4 w-4" />,
-        permission: "public", // 모든 사용자가 이메일 템플릿 확인 가능
       },
       // ───────────────────────────────────────────────────────────────────────
       // 시스템 관리 - Admin 전용
@@ -411,9 +411,6 @@ export default function SettingsPage() {
     [t],
   )
 
-  // Trial 사용자 여부 확인
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive === true
-
   /**
    * 권한에 따라 메뉴 필터링
    */
@@ -430,11 +427,8 @@ export default function SettingsPage() {
         return true // 일단 통과, 나중에 빈 섹션 제거
       }
 
-      // Trial 사용자에게 이메일 서명 관리 메뉴 숨김
-      if (item.id === "signature" && isTrialUser) {
-        console.debug("[Settings] Hiding signature menu for trial user")
-        return false
-      }
+      // 서명 관리는 모든 사용자에게 표시 (워크스페이스별 관리)
+      // Trial 제한 제거됨
 
       // Admin은 모든 메뉴 접근 가능
       if (isSystemAdmin) {
@@ -491,15 +485,7 @@ export default function SettingsPage() {
     }
 
     return cleanedItems
-  }, [
-    allMenuItems,
-    isSystemAdmin,
-    hasPermission,
-    permissionLoading,
-    isOnboardingComplete,
-    isTrialUser,
-    t,
-  ])
+  }, [allMenuItems, isSystemAdmin, hasPermission, permissionLoading, isOnboardingComplete, t])
 
   if (isLoading || permissionLoading) {
     return (
@@ -611,7 +597,66 @@ export default function SettingsPage() {
                     : t("settings.profile.saveChanges")}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        )
+      case "account":
+        return (
+          <Card className="h-full">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-1.5">
+                <Settings className="h-4 w-4" />
+                <CardTitle className="text-base">
+                  {t("settings.account.title", "계정 관리")}
+                </CardTitle>
+              </div>
+              <CardDescription className="text-xs">
+                {t("settings.account.description", "계정 설정 및 로그아웃")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Logout Section */}
+              <div className="space-y-3">
+                <h3 className="font-medium text-sm">{t("settings.account.logout", "로그아웃")}</h3>
+                <Button
+                  className="w-full justify-start gap-2 sm:w-auto"
+                  onClick={() => {
+                    localStorage.removeItem("authToken")
+                    localStorage.removeItem("user")
+                    localStorage.removeItem("rinda_survey_data")
+                    window.location.href = "/auth"
+                  }}
+                  variant="outline"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {t("settings.account.logoutButton", "로그아웃")}
+                </Button>
+              </div>
 
+              {/* Legal Links */}
+              <div className="space-y-3">
+                <h3 className="font-medium text-sm">{t("settings.account.legal", "법적 고지")}</h3>
+                <div className="flex flex-wrap gap-4">
+                  <a
+                    className="text-muted-foreground text-sm transition-colors hover:text-foreground hover:underline"
+                    href="/privacy"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {t("settings.account.privacyPolicy", "개인정보처리방침")}
+                  </a>
+                  <a
+                    className="text-muted-foreground text-sm transition-colors hover:text-foreground hover:underline"
+                    href="/terms"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {t("settings.account.termsOfService", "이용약관")}
+                  </a>
+                </div>
+              </div>
+
+              {/* Danger Zone - Account Deletion */}
               <DangerZone
                 canDelete={deletionCheck?.canDelete ?? false}
                 isDeleting={deleteAccountMutation.isPending}
@@ -634,8 +679,6 @@ export default function SettingsPage() {
         return <WorkspacesPage />
       case "admin":
         return <UsersPage />
-      case "email-templates":
-        return <EmailTemplatesPage />
       case "bulk-lead-import":
         return <LeadImportPage />
       case "web-extraction":

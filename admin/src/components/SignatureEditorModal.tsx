@@ -40,10 +40,14 @@ export function SignatureEditorModal({
   const [signatureName, setSignatureName] = useState("")
   const [signatureContent, setSignatureContent] = useState(defaultSignature)
 
-  // DB에서 기본 서명 가져오기 (모달이 열려있을 때만)
-  const shouldFetchSignature = isOpen
+  // DB에서 기본 서명 가져오기 (모달이 열려있고 워크스페이스가 있을 때만)
+  const validWorkspaceId = workspaceId && workspaceId !== "all" ? workspaceId : ""
+  const shouldFetchSignature = isOpen && !!validWorkspaceId
 
-  const { data: existingSignature, refetch } = useDefaultEmailSignature(shouldFetchSignature)
+  const { data: existingSignature, refetch } = useDefaultEmailSignature(
+    validWorkspaceId,
+    shouldFetchSignature,
+  )
 
   const createSignature = useCreateEmailSignature()
   const updateSignature = useUpdateEmailSignature()
@@ -86,14 +90,18 @@ export function SignatureEditorModal({
         })
         toast.success("서명이 업데이트되었습니다.")
       } else {
-        // 새 서명 생성
+        // 새 서명 생성 (workspaceId 필수)
+        if (!validWorkspaceId) {
+          toast.error("워크스페이스를 선택해주세요.")
+          return
+        }
         await createSignature.mutateAsync({
           body: {
             name: signatureName || "기본 서명",
             signatureHtml: signatureContent,
             signatureText,
           },
-          params: workspaceId && workspaceId !== "all" ? { workspaceId } : undefined,
+          workspaceId: validWorkspaceId,
         })
         toast.success("서명이 저장되었습니다.")
       }

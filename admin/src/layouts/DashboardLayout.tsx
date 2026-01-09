@@ -1,11 +1,10 @@
 import { User } from "lucide-react"
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Outlet, useLocation, useParams, useSearchParams } from "react-router-dom"
+import { Outlet, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { NotificationBell } from "@/components/NotificationBell"
 import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
-import { ProfileCard } from "@/components/ProfileCard"
 import { getUserDisplayTier, UserTierBadge } from "@/components/UserTierBadge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -40,9 +39,9 @@ const getCachedLocalStorageUser = () => {
 function DashboardContent({ children }: DashboardContentProps) {
   const { t } = useTranslation()
   const location = useLocation()
+  const navigate = useNavigate()
   const pathname = location.pathname
   const pageName = getPageName(pathname, t)
-  const [showProfileCard, setShowProfileCard] = useState(false)
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>(
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
@@ -230,10 +229,10 @@ function DashboardContent({ children }: DashboardContentProps) {
               />
             )}
 
-            {/* Profile Button */}
+            {/* Profile Button - Navigate to Settings */}
             <button
               className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
-              onClick={() => setShowProfileCard(!showProfileCard)}
+              onClick={() => navigate("/settings")}
               type="button"
             >
               {currentUser?.profilePicture ? (
@@ -270,34 +269,6 @@ function DashboardContent({ children }: DashboardContentProps) {
           </div>
         </main>
       </div>
-
-      {/* Profile Card - positioned at the top level for global access */}
-      <ProfileCard
-        isAdmin={currentUser?.userRole === "admin"}
-        isOpen={showProfileCard}
-        onAdminClick={() => {
-          setShowProfileCard(false)
-          // Already in admin panel
-        }}
-        onClose={() => setShowProfileCard(false)}
-        onLogout={() => {
-          setShowProfileCard(false)
-
-          localStorage.removeItem("authToken")
-          localStorage.removeItem("user")
-          // Clear Jotai survey data to prevent stale data for next user
-          localStorage.removeItem("rinda_survey_data")
-
-          // Redirect all users to login page
-          window.location.href = "/auth"
-        }}
-        user={{
-          username: currentUser?.username || "Admin",
-          email: currentUser?.email || "",
-          image: currentUser?.profilePicture || null,
-          userRole: currentUser?.userRole || "user",
-        }}
-      />
     </>
   )
 }

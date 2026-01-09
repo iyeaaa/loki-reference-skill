@@ -82,8 +82,12 @@ export function SequenceLaunchModal({
   const targetCountryId = useId()
   const promptId = useId()
 
-  // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
+  // Get default signature from database (워크스페이스별)
+  const isValidWorkspace = !!(workspaceId && workspaceId !== "all")
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    workspaceId,
+    isValidWorkspace && !!user?.id,
+  )
 
   // 고객 그룹의 모든 멤버 조회
   const { data: membersData } = useCustomerGroupMembers(

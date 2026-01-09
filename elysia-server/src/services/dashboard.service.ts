@@ -1,10 +1,37 @@
 import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm"
+import countries from "i18n-iso-countries"
+import bgLocale from "i18n-iso-countries/langs/bg.json" // Bulgarian
+import csLocale from "i18n-iso-countries/langs/cs.json" // Czech
+import deLocale from "i18n-iso-countries/langs/de.json" // German
+import enLocale from "i18n-iso-countries/langs/en.json" // English
+import esLocale from "i18n-iso-countries/langs/es.json" // Spanish
+import frLocale from "i18n-iso-countries/langs/fr.json" // French
+import itLocale from "i18n-iso-countries/langs/it.json" // Italian
+import jaLocale from "i18n-iso-countries/langs/ja.json" // Japanese
+import koLocale from "i18n-iso-countries/langs/ko.json" // Korean
+import ptLocale from "i18n-iso-countries/langs/pt.json" // Portuguese
+import ruLocale from "i18n-iso-countries/langs/ru.json" // Russian
+import zhLocale from "i18n-iso-countries/langs/zh.json" // Chinese
 import { db } from "../db/index"
 import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
 import { emailReplies, emails } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { sequenceEnrollments, sequenceSteps, sequences } from "../db/schema/sequences"
+
+// Register multiple locales for comprehensive country name lookups
+countries.registerLocale(enLocale) // English (primary)
+countries.registerLocale(koLocale) // Korean (한국어)
+countries.registerLocale(jaLocale) // Japanese (日本語)
+countries.registerLocale(zhLocale) // Chinese (中文)
+countries.registerLocale(deLocale) // German (Deutsch)
+countries.registerLocale(frLocale) // French (Français)
+countries.registerLocale(esLocale) // Spanish (Español)
+countries.registerLocale(itLocale) // Italian (Italiano)
+countries.registerLocale(ptLocale) // Portuguese (Português)
+countries.registerLocale(ruLocale) // Russian (Русский)
+countries.registerLocale(bgLocale) // Bulgarian (Български)
+countries.registerLocale(csLocale) // Czech (Čeština)
 
 export interface DateRangeParams {
   startDate?: string // ISO 8601 date string
@@ -521,17 +548,343 @@ export async function getReplyNotifications(
 }
 
 // ============================================================================
-// Trial Dashboard Stats (체험판 대시보드 통합 API)
+// Country Name Normalization (국가명 정규화) - ISO 3166-1 기반
 // ============================================================================
 
-export interface TrialDashboardParams {
+/**
+ * Additional custom mappings for edge cases not covered by i18n-iso-countries
+ * (common abbreviations, typos, alternate names)
+ */
+const CUSTOM_COUNTRY_MAPPINGS: Record<string, string> = {
+  // Common abbreviations and variations not in ISO standard
+  usa: "US",
+  미국: "US",
+  america: "US",
+  "united states of america": "US",
+
+  korea: "KR",
+  한국: "KR",
+  "south korea": "KR",
+  "korea, south": "KR",
+  "korea republic": "KR",
+  "korea (south)": "KR",
+  "republic of korea": "KR",
+  대한민국: "KR",
+
+  uk: "GB",
+  영국: "GB",
+  britain: "GB",
+  "great britain": "GB",
+  england: "GB",
+
+  중국: "CN",
+  prc: "CN",
+  "people's republic of china": "CN",
+
+  일본: "JP",
+  nippon: "JP",
+
+  독일: "DE",
+  deutschland: "DE",
+
+  프랑스: "FR",
+
+  캐나다: "CA",
+
+  호주: "AU",
+
+  네덜란드: "NL",
+  holland: "NL",
+
+  이탈리아: "IT",
+  italia: "IT",
+
+  스페인: "ES",
+  españa: "ES",
+
+  브라질: "BR",
+  brasil: "BR",
+
+  인도: "IN",
+
+  멕시코: "MX",
+
+  싱가포르: "SG",
+
+  대만: "TW",
+  "chinese taipei": "TW",
+
+  홍콩: "HK",
+
+  베트남: "VN",
+  "viet nam": "VN",
+
+  태국: "TH",
+
+  인도네시아: "ID",
+
+  말레이시아: "MY",
+
+  필리핀: "PH",
+
+  러시아: "RU",
+  "russian federation": "RU",
+
+  터키: "TR",
+  türkiye: "TR",
+  turkiye: "TR",
+
+  사우디아라비아: "SA",
+  사우디: "SA",
+
+  아랍에미리트: "AE",
+  uae: "AE",
+
+  스위스: "CH",
+
+  스웨덴: "SE",
+
+  폴란드: "PL",
+
+  벨기에: "BE",
+
+  오스트리아: "AT",
+
+  뉴질랜드: "NZ",
+
+  노르웨이: "NO",
+
+  덴마크: "DK",
+
+  핀란드: "FI",
+
+  아일랜드: "IE",
+
+  포르투갈: "PT",
+
+  체코: "CZ",
+  czechia: "CZ",
+  "česká republika": "CZ",
+  "ceska republika": "CZ",
+
+  그리스: "GR",
+
+  이스라엘: "IL",
+
+  아르헨티나: "AR",
+
+  칠레: "CL",
+
+  콜롬비아: "CO",
+
+  남아프리카: "ZA",
+  남아공: "ZA",
+
+  이집트: "EG",
+
+  나이지리아: "NG",
+
+  파키스탄: "PK",
+
+  방글라데시: "BD",
+
+  우크라이나: "UA",
+
+  루마니아: "RO",
+
+  헝가리: "HU",
+
+  모로코: "MA",
+
+  알제리: "DZ",
+
+  튀니지: "TN",
+
+  케냐: "KE",
+
+  탄자니아: "TZ",
+
+  에티오피아: "ET",
+
+  카타르: "QA",
+
+  쿠웨이트: "KW",
+
+  바레인: "BH",
+
+  오만: "OM",
+
+  요르단: "JO",
+
+  레바논: "LB",
+
+  이란: "IR",
+
+  이라크: "IQ",
+
+  아프가니스탄: "AF",
+
+  스리랑카: "LK",
+
+  네팔: "NP",
+
+  미얀마: "MM",
+
+  캄보디아: "KH",
+
+  라오스: "LA",
+
+  몽골: "MN",
+
+  북한: "KP",
+  "north korea": "KP",
+
+  뉴기니: "PG",
+
+  피지: "FJ",
+
+  뉴칼레도니아: "NC",
+
+  괌: "GU",
+
+  푸에르토리코: "PR",
+
+  아이슬란드: "IS",
+
+  룩셈부르크: "LU",
+
+  슬로바키아: "SK",
+
+  슬로베니아: "SI",
+
+  크로아티아: "HR",
+
+  세르비아: "RS",
+
+  불가리아: "BG",
+  българия: "BG",
+  bulgariya: "BG",
+
+  리투아니아: "LT",
+
+  라트비아: "LV",
+
+  에스토니아: "EE",
+
+  벨라루스: "BY",
+
+  몰도바: "MD",
+
+  조지아: "GE",
+
+  아르메니아: "AM",
+
+  아제르바이잔: "AZ",
+
+  카자흐스탄: "KZ",
+
+  우즈베키스탄: "UZ",
+
+  투르크메니스탄: "TM",
+
+  키르기스스탄: "KG",
+
+  타지키스탄: "TJ",
+
+  페루: "PE",
+
+  베네수엘라: "VE",
+
+  에콰도르: "EC",
+
+  볼리비아: "BO",
+
+  파라과이: "PY",
+
+  우루과이: "UY",
+
+  코스타리카: "CR",
+
+  파나마: "PA",
+
+  쿠바: "CU",
+
+  도미니카: "DO",
+
+  자메이카: "JM",
+
+  트리니다드토바고: "TT",
+}
+
+/**
+ * Normalize a country name to its standard English name
+ * Uses ISO 3166-1 standard via i18n-iso-countries library
+ *
+ * @param country - Raw country name from database (can be ISO code, Korean, English, etc.)
+ * @returns Normalized country name in English
+ */
+function normalizeCountryName(country: string | null): string {
+  if (!country) return "Unknown"
+
+  const trimmed = country.trim()
+  if (trimmed.length === 0) return "Unknown"
+
+  const lowerCase = trimmed.toLowerCase()
+
+  // 1. Check custom mappings first (for edge cases)
+  const customMapping = CUSTOM_COUNTRY_MAPPINGS[lowerCase]
+  if (customMapping) {
+    const name = countries.getName(customMapping, "en")
+    return name || trimmed
+  }
+
+  // 2. Try to get ISO alpha-2 code from the input
+  // Check if it's already an ISO alpha-2 code (2 letters)
+  if (trimmed.length === 2) {
+    const alpha2Upper = trimmed.toUpperCase()
+    const name = countries.getName(alpha2Upper, "en")
+    if (name) return name
+  }
+
+  // 3. Check if it's an ISO alpha-3 code (3 letters)
+  if (trimmed.length === 3) {
+    const alpha3Upper = trimmed.toUpperCase()
+    const alpha2 = countries.alpha3ToAlpha2(alpha3Upper)
+    if (alpha2) {
+      const name = countries.getName(alpha2, "en")
+      if (name) return name
+    }
+  }
+
+  // 4. Try to find the country by name in all registered locales
+  const localesToSearch = ["en", "ko", "ja", "zh", "de", "fr", "es", "it", "pt", "ru", "bg", "cs"]
+  for (const locale of localesToSearch) {
+    const alpha2 = countries.getAlpha2Code(trimmed, locale)
+    if (alpha2) {
+      const name = countries.getName(alpha2, "en")
+      if (name) return name
+    }
+  }
+
+  // 5. If no match found, capitalize and return as-is
+  return trimmed
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ")
+}
+
+// ============================================================================
+// Unified Dashboard Stats (통합 대시보드 API)
+// ============================================================================
+
+export interface UnifiedDashboardParams {
   workspaceId?: string // Optional: 없으면 전체 워크스페이스 데이터 조회
   sequenceId?: string
   startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
   endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
 }
 
-export interface TrialFunnelData {
+export interface UnifiedFunnelData {
   scheduled: number // 발송 예정
   sent: number
   opened: number
@@ -542,17 +895,17 @@ export interface TrialFunnelData {
   replyRate: number
 }
 
-export interface TrialHotLead {
+export interface UnifiedHotLead {
   id: string
   companyName: string
   email: string
-  country: string | null
+  country: string // Normalized country name
   openCount: number
   clickCount: number
   score: number
 }
 
-export interface TrialRecentActivity {
+export interface UnifiedRecentActivity {
   id: string
   type: "sent" | "opened" | "clicked" | "replied"
   leadName: string | null
@@ -563,7 +916,7 @@ export interface TrialRecentActivity {
   openCount?: number
 }
 
-export interface TrialSubscriptionInfo {
+export interface UnifiedSubscriptionInfo {
   status: string
   trialStart: Date | null
   trialEnd: Date | null
@@ -571,26 +924,26 @@ export interface TrialSubscriptionInfo {
   trialDays: number
 }
 
-export interface TrialDailyStats {
+export interface UnifiedDailyStats {
   date: string // YYYY-MM-DD
   sent: number
   opened: number
   clicked: number
 }
 
-export interface TrialCountryStats {
+export interface UnifiedCountryStats {
   country: string
   count: number
   percentage: number
 }
 
-export interface TrialDashboardStats {
-  subscription: TrialSubscriptionInfo
-  funnel: TrialFunnelData
-  hotLeads: TrialHotLead[]
-  recentActivity: TrialRecentActivity[]
-  dailyStats: TrialDailyStats[]
-  countryStats: TrialCountryStats[]
+export interface UnifiedDashboardStats {
+  subscription: UnifiedSubscriptionInfo
+  funnel: UnifiedFunnelData
+  hotLeads: UnifiedHotLead[]
+  recentActivity: UnifiedRecentActivity[]
+  dailyStats: UnifiedDailyStats[]
+  countryStats: UnifiedCountryStats[]
   sequence: {
     id: string
     name: string
@@ -609,9 +962,9 @@ export interface TrialDashboardStats {
  * Get all trial dashboard stats in one API call (optimized for performance)
  * workspaceId가 없으면 전체 워크스페이스 데이터를 조회합니다.
  */
-export async function getTrialDashboardStats(
-  params: TrialDashboardParams,
-): Promise<TrialDashboardStats> {
+export async function getUnifiedDashboardStats(
+  params: UnifiedDashboardParams,
+): Promise<UnifiedDashboardStats> {
   const { workspaceId, sequenceId, startDate, endDate } = params
 
   // Parse date strings to Date objects
@@ -620,7 +973,7 @@ export async function getTrialDashboardStats(
 
   // 1. Get subscription info (workspaceId가 있을 때만)
   const subscriptionInfo = workspaceId
-    ? await getTrialSubscriptionInfo(workspaceId)
+    ? await getUnifiedSubscriptionInfo(workspaceId)
     : {
         status: "active",
         trialStart: null,
@@ -632,16 +985,16 @@ export async function getTrialDashboardStats(
   // 2. Get sequence info (only if sequenceId is provided)
   // sequenceId가 없으면(undefined) 워크스페이스의 전체 이메일을 조회
   const sequenceInfo =
-    sequenceId && workspaceId ? await getTrialSequenceInfo(workspaceId, sequenceId) : null
+    sequenceId && workspaceId ? await getSequenceInfo(workspaceId, sequenceId) : null
 
   // 시퀀스 필터링에 사용할 ID (없으면 undefined로 전체 조회)
   const filterSequenceId = sequenceInfo?.id
 
   // 3. Get funnel data (with date filtering)
-  const funnel = await getTrialFunnelData(workspaceId, filterSequenceId, startDateObj, endDateObj)
+  const funnel = await getUnifiedFunnelData(workspaceId, filterSequenceId, startDateObj, endDateObj)
 
   // 4. Get hot leads (2+ opens, with date filtering)
-  const hotLeads = await getTrialHotLeads(
+  const hotLeads = await getUnifiedHotLeads(
     workspaceId,
     filterSequenceId,
     5,
@@ -650,7 +1003,7 @@ export async function getTrialDashboardStats(
   )
 
   // 5. Get recent activity (with date filtering)
-  const recentActivity = await getTrialRecentActivity(
+  const recentActivity = await getUnifiedRecentActivity(
     workspaceId,
     filterSequenceId,
     10,
@@ -659,7 +1012,7 @@ export async function getTrialDashboardStats(
   )
 
   // 6. Get daily stats (with date filtering)
-  const dailyStats = await getTrialDailyStats(
+  const dailyStats = await getUnifiedDailyStats(
     workspaceId,
     filterSequenceId,
     startDateObj,
@@ -667,7 +1020,7 @@ export async function getTrialDashboardStats(
   )
 
   // 7. Get country stats (with date filtering)
-  const countryStats = await getTrialCountryStats(
+  const countryStats = await getUnifiedCountryStats(
     workspaceId,
     filterSequenceId,
     startDateObj,
@@ -693,7 +1046,7 @@ export async function getTrialDashboardStats(
   }
 }
 
-async function getTrialSubscriptionInfo(workspaceId: string): Promise<TrialSubscriptionInfo> {
+async function getUnifiedSubscriptionInfo(workspaceId: string): Promise<UnifiedSubscriptionInfo> {
   const { subscriptions } = await import("../db/schema/billing")
 
   const result = await db
@@ -742,7 +1095,7 @@ async function getTrialSubscriptionInfo(workspaceId: string): Promise<TrialSubsc
   }
 }
 
-async function getTrialSequenceInfo(
+async function getSequenceInfo(
   workspaceId: string,
   sequenceId?: string,
 ): Promise<{
@@ -799,12 +1152,12 @@ async function getTrialSequenceInfo(
   }
 }
 
-async function getTrialFunnelData(
+async function getUnifiedFunnelData(
   workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
-): Promise<TrialFunnelData> {
+): Promise<UnifiedFunnelData> {
   const conditions = [eq(emails.direction, "outbound")]
   if (workspaceId) {
     conditions.push(eq(emails.workspaceId, workspaceId))
@@ -849,13 +1202,13 @@ async function getTrialFunnelData(
   }
 }
 
-async function getTrialHotLeads(
+async function getUnifiedHotLeads(
   workspaceId?: string,
   sequenceId?: string,
   limit = 5,
   startDate?: Date,
   endDate?: Date,
-): Promise<TrialHotLead[]> {
+): Promise<UnifiedHotLead[]> {
   const conditions = [eq(emails.direction, "outbound"), isNotNull(emails.leadId)]
   if (workspaceId) {
     conditions.push(eq(emails.workspaceId, workspaceId))
@@ -897,20 +1250,20 @@ async function getTrialHotLeads(
     id: row.leadId || "",
     companyName: row.companyName || "Unknown",
     email: row.email,
-    country: row.country,
+    country: normalizeCountryName(row.country),
     openCount: row.openCount,
     clickCount: row.clickCount,
     score: Math.min(100, row.openCount * 15 + row.clickCount * 25),
   }))
 }
 
-async function getTrialRecentActivity(
+async function getUnifiedRecentActivity(
   workspaceId?: string,
   sequenceId?: string,
   limit = 10,
   startDate?: Date,
   endDate?: Date,
-): Promise<TrialRecentActivity[]> {
+): Promise<UnifiedRecentActivity[]> {
   const { emailEvents } = await import("../db/schema/emails")
 
   const conditions: ReturnType<typeof eq>[] = []
@@ -1022,12 +1375,12 @@ async function getTrialRecentActivity(
 /**
  * Get daily email stats for the specified date range
  */
-async function getTrialDailyStats(
+async function getUnifiedDailyStats(
   workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
-): Promise<TrialDailyStats[]> {
+): Promise<UnifiedDailyStats[]> {
   // Default to last 90 days if no date range specified
   const effectiveStartDate =
     startDate ||
@@ -1075,14 +1428,18 @@ async function getTrialDailyStats(
 }
 
 /**
- * Get lead distribution by country
+ * Get lead distribution by country (with normalization)
+ * - Fetches all country data from DB
+ * - Normalizes country names to standard format
+ * - Aggregates counts for the same normalized country
+ * - Returns top 10 countries sorted by count
  */
-async function getTrialCountryStats(
+async function getUnifiedCountryStats(
   workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
-): Promise<TrialCountryStats[]> {
+): Promise<UnifiedCountryStats[]> {
   const conditions = [eq(emails.direction, "outbound"), isNotNull(emails.leadId)]
   if (workspaceId) {
     conditions.push(eq(emails.workspaceId, workspaceId))
@@ -1102,6 +1459,7 @@ async function getTrialCountryStats(
     )
   }
 
+  // Fetch all country data (no limit) for proper aggregation after normalization
   const result = await db
     .select({
       country: leads.country,
@@ -1111,14 +1469,26 @@ async function getTrialCountryStats(
     .innerJoin(leads, eq(emails.leadId, leads.id))
     .where(and(...conditions))
     .groupBy(leads.country)
-    .orderBy(desc(sql`COUNT(DISTINCT ${leads.id})`))
-    .limit(10)
 
-  const total = result.reduce((sum, row) => sum + row.count, 0)
+  // Normalize and aggregate country counts
+  const normalizedCounts = new Map<string, number>()
 
-  return result.map((row) => ({
-    country: row.country || "Unknown",
-    count: row.count,
-    percentage: total > 0 ? Math.round((row.count / total) * 1000) / 10 : 0,
+  for (const row of result) {
+    const normalizedCountry = normalizeCountryName(row.country)
+    const currentCount = normalizedCounts.get(normalizedCountry) || 0
+    normalizedCounts.set(normalizedCountry, currentCount + row.count)
+  }
+
+  // Convert to array and sort by count (descending)
+  const sortedCountries = Array.from(normalizedCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10) // Top 10
+
+  const total = sortedCountries.reduce((sum, [, countValue]) => sum + countValue, 0)
+
+  return sortedCountries.map(([country, countValue]) => ({
+    country,
+    count: countValue,
+    percentage: total > 0 ? Math.round((countValue / total) * 1000) / 10 : 0,
   }))
 }

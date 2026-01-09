@@ -41,7 +41,7 @@ import {
   TooltipTrigger,
   Tooltip as UITooltip,
 } from "@/components/ui/tooltip"
-import { useTrialDashboardStats } from "@/lib/api/hooks/dashboard"
+import { useUnifiedDashboardStats } from "@/lib/api/hooks/dashboard"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
@@ -122,7 +122,7 @@ export default function DashboardV2Page() {
     isLoading,
     refetch,
     isRefetching,
-  } = useTrialDashboardStats({
+  } = useUnifiedDashboardStats({
     workspaceId,
     startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
     endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,

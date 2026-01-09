@@ -62,15 +62,15 @@ export type ReplyNotification = {
   createdAt: string
 }
 
-// Trial Dashboard Types
-export type TrialDashboardParams = {
+// Unified Dashboard Types (통합 대시보드)
+export type UnifiedDashboardParams = {
   workspaceId?: string // Optional: 없으면 전체 워크스페이스 데이터 조회
   sequenceId?: string
   startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
   endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
 }
 
-export type TrialFunnelData = {
+export type UnifiedFunnelData = {
   scheduled: number // 발송 예정
   sent: number
   opened: number
@@ -81,17 +81,17 @@ export type TrialFunnelData = {
   replyRate: number
 }
 
-export type TrialHotLead = {
+export type UnifiedHotLead = {
   id: string
   companyName: string
   email: string
-  country: string | null
+  country: string
   openCount: number
   clickCount: number
   score: number
 }
 
-export type TrialRecentActivity = {
+export type UnifiedRecentActivity = {
   id: string
   type: "sent" | "opened" | "clicked" | "replied"
   leadName: string | null
@@ -102,7 +102,7 @@ export type TrialRecentActivity = {
   openCount?: number
 }
 
-export type TrialSubscriptionInfo = {
+export type UnifiedSubscriptionInfo = {
   status: string
   trialStart: string | null
   trialEnd: string | null
@@ -110,26 +110,26 @@ export type TrialSubscriptionInfo = {
   trialDays: number
 }
 
-export type TrialDailyStats = {
+export type UnifiedDailyStats = {
   date: string
   sent: number
   opened: number
   clicked: number
 }
 
-export type TrialCountryStats = {
+export type UnifiedCountryStats = {
   country: string
   count: number
   percentage: number
 }
 
-export type TrialDashboardStats = {
-  subscription: TrialSubscriptionInfo
-  funnel: TrialFunnelData
-  hotLeads: TrialHotLead[]
-  recentActivity: TrialRecentActivity[]
-  dailyStats: TrialDailyStats[]
-  countryStats: TrialCountryStats[]
+export type UnifiedDashboardStats = {
+  subscription: UnifiedSubscriptionInfo
+  funnel: UnifiedFunnelData
+  hotLeads: UnifiedHotLead[]
+  recentActivity: UnifiedRecentActivity[]
+  dailyStats: UnifiedDailyStats[]
+  countryStats: UnifiedCountryStats[]
   sequence: {
     id: string
     name: string
@@ -278,9 +278,11 @@ export const dashboardApi = {
     )
   },
 
-  // Trial Dashboard - Single optimized API call
+  // Unified Dashboard - Single optimized API call (통합 대시보드)
   // workspaceId가 없으면 전체 워크스페이스 데이터 조회
-  getTrialDashboardStats: async (params: TrialDashboardParams): Promise<TrialDashboardStats> => {
+  getUnifiedDashboardStats: async (
+    params: UnifiedDashboardParams,
+  ): Promise<UnifiedDashboardStats> => {
     const searchParams = new URLSearchParams()
     if (params.workspaceId) {
       searchParams.append("workspaceId", params.workspaceId)
@@ -296,6 +298,6 @@ export const dashboardApi = {
     }
 
     const query = searchParams.toString()
-    return apiFetch<TrialDashboardStats>(`/api/v1/dashboard/trial${query ? `?${query}` : ""}`)
+    return apiFetch<UnifiedDashboardStats>(`/api/v1/dashboard/unified${query ? `?${query}` : ""}`)
   },
 }

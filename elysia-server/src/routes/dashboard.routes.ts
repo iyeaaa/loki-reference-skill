@@ -4,13 +4,13 @@ import { errorResponse, ResponseCode, successResponse } from "../types/response.
 import logger from "../utils/logger"
 
 export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
-  // Get trial dashboard stats (single optimized API for trial users)
+  // Get unified dashboard stats (single optimized API)
   // workspaceId가 없으면 전체 워크스페이스 데이터 조회
   .get(
-    "/trial",
+    "/unified",
     async ({ query }) => {
       try {
-        const stats = await dashboardService.getTrialDashboardStats({
+        const stats = await dashboardService.getUnifiedDashboardStats({
           workspaceId: query.workspaceId,
           sequenceId: query.sequenceId,
           startDate: query.startDate,
@@ -19,11 +19,8 @@ export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
 
         return successResponse(stats, "정상 처리되었습니다.")
       } catch (error) {
-        logger.error({ error, query }, "Failed to get trial dashboard stats")
-        return errorResponse(
-          "체험판 대시보드 통계 조회에 실패했습니다.",
-          ResponseCode.INTERNAL_ERROR,
-        )
+        logger.error({ error, query }, "Failed to get unified dashboard stats")
+        return errorResponse("대시보드 통계 조회에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
       }
     },
     {
@@ -39,9 +36,9 @@ export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
       }),
       detail: {
         tags: ["dashboard"],
-        summary: "Get trial dashboard statistics",
+        summary: "Get unified dashboard statistics",
         description:
-          "Returns all statistics for trial dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering. If workspaceId is not provided, returns data for all workspaces.",
+          "Returns all statistics for dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering. If workspaceId is not provided, returns data for all workspaces.",
       },
     },
   )

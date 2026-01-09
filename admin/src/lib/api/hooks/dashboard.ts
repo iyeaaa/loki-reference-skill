@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { dashboardApi, type TrialDashboardParams } from "../services/dashboard"
+import { dashboardApi, type UnifiedDashboardParams } from "../services/dashboard"
 
 export type DateRangeParams = {
   startDate?: string
@@ -23,7 +23,8 @@ export const dashboardKeys = {
     [...dashboardKeys.notifications(), "campaigns", params] as const,
   replyNotifications: (params?: DateRangeParams & { limit?: number }) =>
     [...dashboardKeys.notifications(), "replies", params] as const,
-  trialStats: (params: TrialDashboardParams) => [...dashboardKeys.all, "trial", params] as const,
+  unifiedStats: (params: UnifiedDashboardParams) =>
+    [...dashboardKeys.all, "unified", params] as const,
 }
 
 // Queries
@@ -104,12 +105,12 @@ export function useReplyNotifications(params?: DateRangeParams & { limit?: numbe
   })
 }
 
-// Trial Dashboard - Single optimized API call
+// Unified Dashboard - Single optimized API call (통합 대시보드)
 // workspaceId가 없으면 전체 워크스페이스 데이터 조회
-export function useTrialDashboardStats(params: TrialDashboardParams, enabled = true) {
+export function useUnifiedDashboardStats(params: UnifiedDashboardParams, enabled = true) {
   return useQuery({
-    queryKey: dashboardKeys.trialStats(params),
-    queryFn: () => dashboardApi.getTrialDashboardStats(params),
+    queryKey: dashboardKeys.unifiedStats(params),
+    queryFn: () => dashboardApi.getUnifiedDashboardStats(params),
     enabled,
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes

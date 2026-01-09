@@ -525,7 +525,7 @@ export async function getReplyNotifications(
 // ============================================================================
 
 export interface TrialDashboardParams {
-  workspaceId: string
+  workspaceId?: string // Optional: 없으면 전체 워크스페이스 데이터 조회
   sequenceId?: string
   startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
   endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
@@ -607,6 +607,7 @@ export interface TrialDashboardStats {
 
 /**
  * Get all trial dashboard stats in one API call (optimized for performance)
+ * workspaceId가 없으면 전체 워크스페이스 데이터를 조회합니다.
  */
 export async function getTrialDashboardStats(
   params: TrialDashboardParams,
@@ -617,12 +618,21 @@ export async function getTrialDashboardStats(
   const startDateObj = startDate ? new Date(startDate) : undefined
   const endDateObj = endDate ? new Date(endDate) : undefined
 
-  // 1. Get subscription info
-  const subscriptionInfo = await getTrialSubscriptionInfo(workspaceId)
+  // 1. Get subscription info (workspaceId가 있을 때만)
+  const subscriptionInfo = workspaceId
+    ? await getTrialSubscriptionInfo(workspaceId)
+    : {
+        status: "active",
+        trialStart: null,
+        trialEnd: null,
+        daysRemaining: 0,
+        trialDays: 0,
+      }
 
   // 2. Get sequence info (only if sequenceId is provided)
   // sequenceId가 없으면(undefined) 워크스페이스의 전체 이메일을 조회
-  const sequenceInfo = sequenceId ? await getTrialSequenceInfo(workspaceId, sequenceId) : null
+  const sequenceInfo =
+    sequenceId && workspaceId ? await getTrialSequenceInfo(workspaceId, sequenceId) : null
 
   // 시퀀스 필터링에 사용할 ID (없으면 undefined로 전체 조회)
   const filterSequenceId = sequenceInfo?.id
@@ -790,12 +800,15 @@ async function getTrialSequenceInfo(
 }
 
 async function getTrialFunnelData(
-  workspaceId: string,
+  workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
 ): Promise<TrialFunnelData> {
-  const conditions = [eq(emails.workspaceId, workspaceId), eq(emails.direction, "outbound")]
+  const conditions = [eq(emails.direction, "outbound")]
+  if (workspaceId) {
+    conditions.push(eq(emails.workspaceId, workspaceId))
+  }
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
@@ -837,17 +850,16 @@ async function getTrialFunnelData(
 }
 
 async function getTrialHotLeads(
-  workspaceId: string,
+  workspaceId?: string,
   sequenceId?: string,
   limit = 5,
   startDate?: Date,
   endDate?: Date,
 ): Promise<TrialHotLead[]> {
-  const conditions = [
-    eq(emails.workspaceId, workspaceId),
-    eq(emails.direction, "outbound"),
-    isNotNull(emails.leadId),
-  ]
+  const conditions = [eq(emails.direction, "outbound"), isNotNull(emails.leadId)]
+  if (workspaceId) {
+    conditions.push(eq(emails.workspaceId, workspaceId))
+  }
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
@@ -893,7 +905,7 @@ async function getTrialHotLeads(
 }
 
 async function getTrialRecentActivity(
-  workspaceId: string,
+  workspaceId?: string,
   sequenceId?: string,
   limit = 10,
   startDate?: Date,
@@ -901,7 +913,10 @@ async function getTrialRecentActivity(
 ): Promise<TrialRecentActivity[]> {
   const { emailEvents } = await import("../db/schema/emails")
 
-  const conditions = [eq(emails.workspaceId, workspaceId)]
+  const conditions: ReturnType<typeof eq>[] = []
+  if (workspaceId) {
+    conditions.push(eq(emails.workspaceId, workspaceId))
+  }
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
@@ -916,6 +931,7 @@ async function getTrialRecentActivity(
   }
 
   // Get recent email events
+  const allConditions = [...conditions, ...eventConditions]
   const result = await db
     .select({
       id: emailEvents.id,
@@ -930,7 +946,7 @@ async function getTrialRecentActivity(
     })
     .from(emailEvents)
     .innerJoin(emails, eq(emailEvents.emailId, emails.id))
-    .where(and(...conditions, ...eventConditions))
+    .where(allConditions.length > 0 ? and(...allConditions) : undefined)
     .orderBy(desc(emailEvents.timestamp))
     .limit(limit)
 
@@ -1007,7 +1023,7 @@ async function getTrialRecentActivity(
  * Get daily email stats for the specified date range
  */
 async function getTrialDailyStats(
-  workspaceId: string,
+  workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
@@ -1024,11 +1040,10 @@ async function getTrialDailyStats(
   // COALESCE로 날짜 기준 통일: sentAt > scheduledAt > createdAt
   const dateCoalesce = sql`COALESCE(${emails.sentAt}, ${emails.scheduledAt}, ${emails.createdAt})`
 
-  const conditions = [
-    eq(emails.workspaceId, workspaceId),
-    eq(emails.direction, "outbound"),
-    gte(dateCoalesce, effectiveStartDate),
-  ]
+  const conditions = [eq(emails.direction, "outbound"), gte(dateCoalesce, effectiveStartDate)]
+  if (workspaceId) {
+    conditions.push(eq(emails.workspaceId, workspaceId))
+  }
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }
@@ -1063,16 +1078,15 @@ async function getTrialDailyStats(
  * Get lead distribution by country
  */
 async function getTrialCountryStats(
-  workspaceId: string,
+  workspaceId?: string,
   sequenceId?: string,
   startDate?: Date,
   endDate?: Date,
 ): Promise<TrialCountryStats[]> {
-  const conditions = [
-    eq(emails.workspaceId, workspaceId),
-    eq(emails.direction, "outbound"),
-    isNotNull(emails.leadId),
-  ]
+  const conditions = [eq(emails.direction, "outbound"), isNotNull(emails.leadId)]
+  if (workspaceId) {
+    conditions.push(eq(emails.workspaceId, workspaceId))
+  }
   if (sequenceId) {
     conditions.push(eq(emails.sequenceId, sequenceId))
   }

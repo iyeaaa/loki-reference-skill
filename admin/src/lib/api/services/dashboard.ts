@@ -64,7 +64,7 @@ export type ReplyNotification = {
 
 // Trial Dashboard Types
 export type TrialDashboardParams = {
-  workspaceId: string
+  workspaceId?: string // Optional: 없으면 전체 워크스페이스 데이터 조회
   sequenceId?: string
   startDate?: string // ISO 8601 date string (e.g., "2024-01-01")
   endDate?: string // ISO 8601 date string (e.g., "2024-01-31")
@@ -279,9 +279,12 @@ export const dashboardApi = {
   },
 
   // Trial Dashboard - Single optimized API call
+  // workspaceId가 없으면 전체 워크스페이스 데이터 조회
   getTrialDashboardStats: async (params: TrialDashboardParams): Promise<TrialDashboardStats> => {
     const searchParams = new URLSearchParams()
-    searchParams.append("workspaceId", params.workspaceId)
+    if (params.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
     if (params.sequenceId) {
       searchParams.append("sequenceId", params.sequenceId)
     }
@@ -292,6 +295,7 @@ export const dashboardApi = {
       searchParams.append("endDate", params.endDate)
     }
 
-    return apiFetch<TrialDashboardStats>(`/api/v1/dashboard/trial?${searchParams.toString()}`)
+    const query = searchParams.toString()
+    return apiFetch<TrialDashboardStats>(`/api/v1/dashboard/trial${query ? `?${query}` : ""}`)
   },
 }

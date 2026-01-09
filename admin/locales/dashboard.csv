@@ -141,3 +141,52 @@ notifications.campaign.active,활성,Active
 notifications.campaign.archived,보관됨,Archived
 notifications.campaign.completed,완료,Completed
 notifications.campaign.paused,일시정지,Paused
+user,사용자,User
+dateRange.last7days,최근 7일,Last 7 days
+dateRange.last14days,최근 14일,Last 14 days
+dateRange.last30days,최근 30일,Last 30 days
+dateRange.last90days,최근 90일,Last 90 days
+selectPeriod,기간 선택,Select Period
+region,지역,Region
+countryFilter,국가 필터,Country Filter
+all,전체,All
+count,회,times
+countUnit,건,items
+scheduledCount,건 발송 예정,scheduled
+rateLabel.totalSent,전체 발송 대비,vs total sent
+metrics.sent,발송,Sent
+metrics.opened,오픈,Opened
+metrics.clicked,클릭,Clicked
+metrics.replied,답장,Replied
+ctor.title,오픈 대비 클릭률,Click-to-Open Rate
+ctor.description,이메일을 연 사람 중 클릭한 비율,Percentage of people who clicked after opening
+charts.emailTrend.title,이메일 발송 및 오픈 현황,Email Sending & Open Status
+charts.emailTrend.description,일별 발송 및 오픈 추이를 확인하세요,Check daily sending and open trends
+charts.funnel.title,영업 성과 퍼널,Sales Performance Funnel
+charts.funnel.description,발송부터 답장까지 전환율을 확인하세요,Check conversion rate from sending to reply
+funnel.sentWithScheduled,발송(예정 포함),Sent (incl. scheduled)
+funnel.totalSentRate,전체 발송 대비,vs total sent
+funnel.dropOffRate,이전 단계 대비 이탈률,Drop-off rate vs previous step
+charts.country.title,국가별 바이어,Buyers by Country
+charts.country.description,바이어들의 국가 분포입니다,Country distribution of buyers
+charts.country.leads,잠재고객,Leads
+charts.hotLeads.title,관심 보이는 바이어,Interested Buyers
+charts.hotLeads.description,이메일을 여러 번 열어봤어요,Opened email multiple times
+charts.hotLeads.openCount,오픈 {{count}}회,Opened {{count}} times
+charts.hotLeads.viewDetails,상세 정보 확인하기,View Details
+people,명,people
+charts.activity.title,최근 활동,Recent Activity
+charts.activity.description,실시간 이메일 활동 현황입니다,Real-time email activity status
+items,건,items
+placeholder.companyName,회사명,Company Name
+countries.usa,미국,USA
+countries.germany,독일,Germany
+countries.japan,일본,Japan
+countries.uk,영국,UK
+countries.france,프랑스,France
+time.justNow,방금,Just now
+time.minutesAgo,{{minutes}}분 전,{{minutes}} min ago
+time.hoursAgo,{{hours}}시간 전,{{hours}} hours ago
+time.daysAgo,{{days}}일 전,{{days}} days ago
+info.replyStop,바이어가 답장하면 자동으로 발송을 멈춰요. 스팸 걱정 없이 안심하세요!,When a buyer replies auto-sending stops. No spam worries!
+info.hotLeadAlert,바이어가 이메일을 10회 이상 열어보면 팀이 직접 연락드려요.,If a buyer opens email 10+ times our team will contact you directly.

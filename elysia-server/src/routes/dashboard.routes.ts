@@ -5,14 +5,11 @@ import logger from "../utils/logger"
 
 export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
   // Get trial dashboard stats (single optimized API for trial users)
+  // workspaceId가 없으면 전체 워크스페이스 데이터 조회
   .get(
     "/trial",
     async ({ query }) => {
       try {
-        if (!query.workspaceId) {
-          return errorResponse("workspaceId가 필요합니다.", ResponseCode.BAD_REQUEST)
-        }
-
         const stats = await dashboardService.getTrialDashboardStats({
           workspaceId: query.workspaceId,
           sequenceId: query.sequenceId,
@@ -31,7 +28,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
     },
     {
       query: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
         sequenceId: t.Optional(t.String({ format: "uuid" })),
         startDate: t.Optional(
           t.String({ description: "Start date in ISO 8601 format (e.g., 2024-01-01)" }),
@@ -44,7 +41,7 @@ export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
         tags: ["dashboard"],
         summary: "Get trial dashboard statistics",
         description:
-          "Returns all statistics for trial dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering.",
+          "Returns all statistics for trial dashboard in a single API call: funnel, hot leads, recent activity, subscription info. Supports date range filtering. If workspaceId is not provided, returns data for all workspaces.",
       },
     },
   )

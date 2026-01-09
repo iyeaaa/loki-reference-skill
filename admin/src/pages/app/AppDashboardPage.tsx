@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useTrialDashboardStats } from "@/lib/api/hooks/dashboard"
 import { useSequencesByWorkspace } from "@/lib/api/hooks/sequences"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { SequenceLeadsTable } from "@/pages/sequences/SequenceLeadsTable"
 import { SequenceStepsList } from "@/pages/sequences/SequenceStepList"
@@ -101,36 +101,26 @@ export default function AppDashboardPage() {
   })
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
 
-  const currentUser = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "{}")
-    } catch {
-      return {}
-    }
-  }, [])
-  const userId = currentUser?.id || ""
-  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
-  const workspaceId = userWorkspaces?.[0]?.id || ""
+  const { selectedWorkspace } = useWorkspace()
+
+  // workspaceId: "all"이면 undefined로 전체 조회
+  const workspaceId = selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id
 
   // 바이어 목록, 이메일 캠페인 탭에서 사용할 첫 번째 시퀀스 ID
-  const { data: sequences } = useSequencesByWorkspace(workspaceId, !!workspaceId)
+  const { data: sequences } = useSequencesByWorkspace(workspaceId || "", !!workspaceId)
   const firstSequenceId = sequences?.[0]?.id
 
-  // 체험판은 시퀀스 1개만 있으므로 시퀀스 필터링 없이 워크스페이스 전체 데이터 조회
+  // 워크스페이스 전체/선택에 따라 데이터 조회
   const {
     data: stats,
     isLoading,
     refetch,
     isRefetching,
-  } = useTrialDashboardStats(
-    {
-      workspaceId,
-      // sequenceId 미전달 시 워크스페이스 전체 이메일 통계 조회
-      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-    },
-    !!workspaceId,
-  )
+  } = useTrialDashboardStats({
+    workspaceId,
+    startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+    endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+  })
 
   // Preset date range selection
   const selectPresetRange = (days: number) => {
@@ -259,13 +249,7 @@ export default function AppDashboardPage() {
     }
   }, [stats?.funnel])
 
-  if (!workspaceId) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">워크스페이스를 선택해주세요.</p>
-      </div>
-    )
-  }
+  // workspaceId가 undefined면 전체 워크스페이스 조회 (더 이상 에러 표시 안함)
 
   return (
     <div className="space-y-4">

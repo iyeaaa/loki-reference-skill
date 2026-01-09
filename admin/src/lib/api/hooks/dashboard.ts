@@ -105,11 +105,12 @@ export function useReplyNotifications(params?: DateRangeParams & { limit?: numbe
 }
 
 // Trial Dashboard - Single optimized API call
+// workspaceId가 없으면 전체 워크스페이스 데이터 조회
 export function useTrialDashboardStats(params: TrialDashboardParams, enabled = true) {
   return useQuery({
     queryKey: dashboardKeys.trialStats(params),
     queryFn: () => dashboardApi.getTrialDashboardStats(params),
-    enabled: enabled && !!params.workspaceId,
+    enabled,
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates

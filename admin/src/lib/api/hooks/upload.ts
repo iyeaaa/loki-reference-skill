@@ -19,7 +19,7 @@ export function useUploadProfileImage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch(`${API_BASE_URL}/upload/profile-image`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload/profile-image`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -54,7 +54,7 @@ export function useUploadWorkspaceLogo() {
       formData.append("file", file)
       formData.append("workspaceId", workspaceId)
 
-      const response = await fetch(`${API_BASE_URL}/upload/workspace-logo`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload/workspace-logo`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -79,7 +79,7 @@ export function useUploadWorkspaceLogo() {
 export function useDeleteImage() {
   return useMutation({
     mutationFn: async (imageUrl: string): Promise<void> => {
-      const response = await fetch(`${API_BASE_URL}/upload/image`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

@@ -4,7 +4,7 @@ import * as s3Service from "../services/s3.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
 
-export const uploadRoutes = new Elysia({ prefix: "/upload" })
+export const uploadRoutes = new Elysia({ prefix: "/api/upload" })
   // 프로필 이미지 업로드
   .post(
     "/profile-image",

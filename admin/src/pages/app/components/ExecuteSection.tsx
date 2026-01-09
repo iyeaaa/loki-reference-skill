@@ -92,7 +92,7 @@ export function ExecuteSection({
             onClick={onExecute}
           >
             <Send className="mr-2 h-4 w-4" />
-            {isKorean ? "캠페인 시작" : "Launch Campaign"}
+            {isKorean ? "30개 기업에 영업 시작하기" : "Start Sales Campaign for 30 Companies"}
           </Button>
 
           <div className="flex gap-2">

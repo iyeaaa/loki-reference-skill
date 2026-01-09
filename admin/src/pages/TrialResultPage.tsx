@@ -879,7 +879,7 @@ export default function TrialResultPage() {
               onClick={handleGetStarted}
             >
               <Sparkles className="mr-2 h-5 w-5" />
-              {isKorean ? "캠페인 시작" : "Start Campaign"}
+              {isKorean ? "30개 기업에 영업 시작하기" : "Start Sales Campaign for 30 Companies"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>

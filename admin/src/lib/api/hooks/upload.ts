@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 
-import { API_BASE_URL } from "@/lib/env"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
 
 type UploadResponse = {
   success: boolean

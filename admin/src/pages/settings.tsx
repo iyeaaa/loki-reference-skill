@@ -23,6 +23,7 @@ import {
   Users,
   X,
 } from "lucide-react"
+import { parseAsString, useQueryState } from "nuqs"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { DangerZone } from "@/components/settings/DangerZone"
@@ -93,7 +94,7 @@ export default function SettingsPage() {
   const updateProfileMutation = useUpdateProfileMutation()
   const { data: deletionCheck } = useAccountDeletionCheck()
   const deleteAccountMutation = useDeleteAccountMutation()
-  const [activeTab, setActiveTab] = useState("profile")
+  const [activeTab, setActiveTab] = useQueryState("tab", parseAsString.withDefault("profile"))
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSettingsSidebarCollapsed, setIsSettingsSidebarCollapsed] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)

@@ -30,6 +30,7 @@ import * as jobLogService from "../../services/job-log.service"
 import * as leadService from "../../services/lead.service"
 import { extractWebsiteContent, summarizeCompanyInfo } from "../../services/lead-enrichment.service"
 import * as sequenceService from "../../services/sequence.service"
+import { checkAndNotifyStepCompletion } from "../../services/sequence-notification.service"
 import * as workflowEmailService from "../../services/workflow-email.service"
 import logger from "../../utils/logger"
 
@@ -829,6 +830,21 @@ export function startSequenceEmailWorker(): Worker<SequenceEmailJob, SequenceEma
       },
       "[SequenceEmailWorker] Job completed",
     )
+
+    // 스텝 완료 체크 및 알림 생성 (비동기, 메인 플로우에 영향 없음)
+    if (result.success) {
+      checkAndNotifyStepCompletion({
+        sequenceId: job.data.sequenceId,
+        stepOrder: job.data.stepOrder,
+        workspaceId: job.data.workspaceId,
+        userId: job.data.userId ?? undefined,
+      }).catch((err) => {
+        logger.warn(
+          { jobId, error: err },
+          "[SequenceEmailWorker] Step completion notification check failed",
+        )
+      })
+    }
   })
 
   sequenceEmailWorker.on("failed", async (job, err) => {

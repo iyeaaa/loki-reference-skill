@@ -1587,7 +1587,30 @@ async function handleEmailReplied(event: Record<string, unknown>): Promise<void>
       )
     }
 
-    // 6. AI classification (async, non-blocking)
+    // 6. 답장 알림 생성 (비동기, 새 답장인 경우에만)
+    const isNewReply = !existingReply
+    if (emailReply) {
+      import("./email-reply-notification.service")
+        .then(({ notifyEmailReply }) => {
+          notifyEmailReply({
+            emailReplyId: emailReply.id,
+            originalEmailId: originalEmail.id,
+            replyEmailId: inboundEmail.id,
+            workspaceId: originalEmail.workspaceId,
+            isNewReply,
+          }).catch((err) => {
+            logger.warn(
+              { err, emailReplyId: emailReply.id },
+              "[UNIPILE] email.replied - Reply notification failed",
+            )
+          })
+        })
+        .catch((err) => {
+          logger.warn({ err }, "[UNIPILE] email.replied - Failed to import notification service")
+        })
+    }
+
+    // 7. AI classification (async, non-blocking)
     const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
     if (emailReply && classificationEnabled) {
       try {

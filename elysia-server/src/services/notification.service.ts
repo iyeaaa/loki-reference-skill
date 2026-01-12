@@ -433,8 +433,8 @@ function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
       return {
         type: "success",
         priority: "high",
-        title: "바이어 찾기 완료! 🎉",
-        message: `바이어 ${leadsFound}명과 이메일 ${previewsGenerated}개가 준비되었습니다`,
+        title: "바이어 검색 완료",
+        message: `${leadsFound}명의 바이어와 ${previewsGenerated}개 이메일이 준비되었습니다`,
         // 체험판 유저는 결과 확인 불가하므로 CTA 제거
       }
 
@@ -442,8 +442,8 @@ function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
       return {
         type: "error",
         priority: "urgent",
-        title: "잠깐 문제가 생겼어요",
-        message: details.error || "다시 시도해 주세요",
+        title: "오류가 발생했습니다",
+        message: details.error || "잠시 후 다시 시도해 주세요",
         actionUrl: "/app/trial?step=2",
         actionLabel: "다시 시도",
       }
@@ -452,8 +452,8 @@ function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
       return {
         type: "onboarding",
         priority: "normal",
-        title: "바이어 찾는 중",
-        message: leadsFound > 0 ? `${leadsFound}명 찾았어요` : "바이어 검색 중...",
+        title: "바이어 검색 중",
+        message: leadsFound > 0 ? `현재 ${leadsFound}명 발견` : "바이어를 검색하고 있습니다",
       }
 
     case "previews": {
@@ -461,9 +461,11 @@ function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
       return {
         type: "onboarding",
         priority: "normal",
-        title: "이메일 작성 중",
+        title: "이메일 생성 중",
         message:
-          totalPreviews > 0 ? `${previewsGenerated}/${totalPreviews}개 완료` : "이메일 생성 중...",
+          totalPreviews > 0
+            ? `${previewsGenerated}/${totalPreviews}개 완료`
+            : "이메일을 생성하고 있습니다",
       }
     }
 
@@ -471,7 +473,7 @@ function getOnboardingNotificationContent(event: OnboardingProgressEvent): {
       return {
         type: "onboarding",
         priority: "normal",
-        title: "바이어 찾는 중",
+        title: "바이어 검색 중",
         message: event.messageKr || event.message,
       }
   }

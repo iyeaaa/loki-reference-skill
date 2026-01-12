@@ -9,8 +9,8 @@ import {
 } from "../lib/queue/queues"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
 import { generateAICampaign } from "../services/campaign-generation.service"
-import { createNotification } from "../services/notification.service"
 import * as sequenceService from "../services/sequence.service"
+import { notifyCampaignStart } from "../services/sequence-notification.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import { convertFilesToAttachments } from "../utils/file.util"
@@ -697,6 +697,19 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
               result.updatedCount +
               ")",
           )
+
+          // 캠페인 시작 알림 생성
+          if (result.enrolledCount > 0 && currentSequence.createdBy) {
+            await notifyCampaignStart({
+              sequenceId: id,
+              sequenceName: currentSequence.name,
+              workspaceId: currentSequence.workspaceId,
+              userId: currentSequence.createdBy,
+              enrolledCount: result.enrolledCount,
+              scheduledExecutions: result.scheduledExecutions,
+              totalSteps: steps.length,
+            })
+          }
         } catch (error) {
           logger.error(
             { err: error, sequenceId: id },
@@ -1322,36 +1335,19 @@ export const adminSequenceRoutes = new Elysia({
         if (body.enrolledBy && result.enrolledCount > 0) {
           const sequence = await sequenceService.getSequence(id)
           if (sequence?.workspaceId) {
-            try {
-              await createNotification({
-                userId: body.enrolledBy,
-                workspaceId: sequence.workspaceId,
-                type: "success",
-                priority: "high",
-                title: "캠페인 시작됐어요! 🚀",
-                message: `${result.enrolledCount}명에게 ${result.scheduledExecutions}개 이메일이 예약됐어요`,
-                metadata: {
-                  sequenceId: id,
-                  sequenceName: sequence.name,
-                  enrolledCount: result.enrolledCount,
-                  scheduledExecutions: result.scheduledExecutions,
-                  actionUrl: "/dashboard",
-                  actionLabel: "대시보드에서 확인",
-                },
-                entityType: "sequence",
-                entityId: id,
-              })
-              logger.info(
-                { sequenceId: id, userId: body.enrolledBy, enrolledCount: result.enrolledCount },
-                "📣 [CAMPAIGN] Campaign started notification created",
-              )
-            } catch (notificationError) {
-              // 알림 생성 실패해도 캠페인 시작은 성공으로 처리
-              logger.error(
-                { err: notificationError, sequenceId: id },
-                "⚠️ [CAMPAIGN] Failed to create campaign started notification",
-              )
-            }
+            // 총 스텝 수 조회
+            const steps = await sequenceService.getSequenceSteps(id)
+            const totalSteps = steps?.length || 1
+
+            await notifyCampaignStart({
+              sequenceId: id,
+              sequenceName: sequence.name,
+              workspaceId: sequence.workspaceId,
+              userId: body.enrolledBy,
+              enrolledCount: result.enrolledCount,
+              scheduledExecutions: result.scheduledExecutions,
+              totalSteps,
+            })
           }
         }
 

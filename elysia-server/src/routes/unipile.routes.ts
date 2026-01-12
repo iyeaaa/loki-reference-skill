@@ -1018,7 +1018,32 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
             "[Unipile Webhook] Reply saved as inbound email",
           )
 
-          // 4. AI classification (async, non-blocking)
+          // 4. 답장 알림 생성 (비동기)
+          if (emailReply) {
+            import("../services/email-reply-notification.service")
+              .then(({ notifyEmailReply }) => {
+                notifyEmailReply({
+                  emailReplyId: emailReply.id,
+                  originalEmailId: originalEmail.id,
+                  replyEmailId: inboundEmail.id,
+                  workspaceId: originalEmail.workspaceId,
+                  isNewReply: true,
+                }).catch((err) => {
+                  logger.warn(
+                    { err, emailReplyId: emailReply.id },
+                    "[Unipile Webhook] Reply notification failed",
+                  )
+                })
+              })
+              .catch((err) => {
+                logger.warn(
+                  { err },
+                  "[Unipile Webhook] Failed to import email-reply-notification.service",
+                )
+              })
+          }
+
+          // 5. AI classification (async, non-blocking)
           const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
           if (emailReply && classificationEnabled) {
             try {

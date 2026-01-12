@@ -784,6 +784,29 @@ class WebhookService {
         })
       }
 
+      // 답장 알림 생성 (비동기, 새 답장인 경우에만)
+      const isNewReply = !existingReply
+      if (emailReply) {
+        import("./email-reply-notification.service")
+          .then(({ notifyEmailReply }) => {
+            notifyEmailReply({
+              emailReplyId: emailReply.id,
+              originalEmailId: originalEmail.id,
+              replyEmailId: inboundEmail.id,
+              workspaceId: originalEmail.workspaceId,
+              isNewReply,
+            }).catch((err) => {
+              logger.warn(
+                { err, emailReplyId: emailReply.id },
+                "[WEBHOOK] Reply notification failed",
+              )
+            })
+          })
+          .catch((err) => {
+            logger.warn({ err }, "[WEBHOOK] Failed to import email-reply-notification.service")
+          })
+      }
+
       // AI classification (enabled by default, non-blocking - errors won't fail email ingestion)
       const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
       logger.info({
@@ -1029,6 +1052,32 @@ class WebhookService {
               originalEmailId: recentOutbound.id,
               replyEmailId: inboundEmail.id,
             })
+          }
+
+          // 답장 알림 생성 (비동기, 새 답장인 경우에만) - fallback
+          const isNewReplyFallback = !existingReply
+          if (emailReply) {
+            import("./email-reply-notification.service")
+              .then(({ notifyEmailReply }) => {
+                notifyEmailReply({
+                  emailReplyId: emailReply.id,
+                  originalEmailId: recentOutbound.id,
+                  replyEmailId: inboundEmail.id,
+                  workspaceId: recentOutbound.workspaceId,
+                  isNewReply: isNewReplyFallback,
+                }).catch((err) => {
+                  logger.warn(
+                    { err, emailReplyId: emailReply.id },
+                    "[WEBHOOK] Reply notification failed (fallback)",
+                  )
+                })
+              })
+              .catch((err) => {
+                logger.warn(
+                  { err },
+                  "[WEBHOOK] Failed to import email-reply-notification.service (fallback)",
+                )
+              })
           }
 
           // AI classification

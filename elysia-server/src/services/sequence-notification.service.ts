@@ -61,11 +61,10 @@ const LOCK_PREFIX = "notification:step-complete"
  * 구독 티어에 따른 actionUrl 생성
  *
  * Trial 사용자는 sequences 리소스 접근 권한이 없으므로
- * /dashboard로 리다이렉트하고, 그 외 사용자는 시퀀스 디자이너로 이동
+ * /dashboard로 리다이렉트하고, 그 외 사용자는 시퀀스 목록으로 이동
  */
 async function getSequenceActionUrl(
   workspaceId: string,
-  sequenceId: string,
 ): Promise<{ actionUrl: string; actionLabel: string }> {
   try {
     const workspace = await db.query.workspaces.findFirst({
@@ -81,17 +80,17 @@ async function getSequenceActionUrl(
     }
 
     return {
-      actionUrl: `/sequences/${sequenceId}/designer`,
+      actionUrl: "/sequences",
       actionLabel: "캠페인 확인",
     }
   } catch (error) {
     logger.warn(
-      { error, workspaceId, sequenceId },
+      { error, workspaceId },
       "[SequenceNotification] Failed to get subscription tier, using default URL",
     )
     // 에러 시 기본값 반환
     return {
-      actionUrl: `/sequences/${sequenceId}/designer`,
+      actionUrl: "/sequences",
       actionLabel: "캠페인 확인",
     }
   }
@@ -145,10 +144,7 @@ export async function notifyStepCompletion(stats: StepCompletionStats): Promise<
     })
 
     // 구독 티어에 따른 actionUrl 결정
-    const { actionUrl, actionLabel } = await getSequenceActionUrl(
-      stats.workspaceId,
-      stats.sequenceId,
-    )
+    const { actionUrl, actionLabel } = await getSequenceActionUrl(stats.workspaceId)
 
     await createNotification({
       userId: stats.userId,
@@ -396,7 +392,7 @@ export async function notifyCampaignStart(params: CampaignStartParams): Promise<
     const stepInfo = totalSteps > 1 ? ` · ${totalSteps}단계` : ""
 
     // 구독 티어에 따른 actionUrl 결정
-    const { actionUrl, actionLabel } = await getSequenceActionUrl(workspaceId, sequenceId)
+    const { actionUrl, actionLabel } = await getSequenceActionUrl(workspaceId)
 
     await createNotification({
       userId,

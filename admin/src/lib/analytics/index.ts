@@ -23,99 +23,6 @@ let gaInitialized = false
 // const clarityInitialized = false
 
 // =====================================
-// 내부 직원 판별 설정
-// =====================================
-const INTERNAL_IPS = ["115.91.133.187"] // 대전 tipstown 사무실 IP
-
-// 내부 직원 이메일 목록 (개인 이메일 포함)
-const INTERNAL_EMAILS = new Set([
-  "admin@grinda.ai",
-  "ahmed@grinda.ai",
-  "chaewon00927@gmail.com",
-  "cjfgml17@gmail.com",
-  "cjfgml1@gmail.com",
-  "cjfgml2@gmail.com",
-  "classygoody@grinda.ai",
-  "csh13080@gmail.com",
-  "csh1668@gmail.com",
-  "daniyaraslanuly@gmail.com",
-  "dmswn0700@daum.net",
-  "dmswn0700@gmail.com",
-  "dmswn0700@kakao.com",
-  "dmswn0700@naver.com",
-  "ehddus2007@naver.com",
-  "ganghojin21@gmail.com",
-  "ganghojin94@daum.net",
-  "ganghojin94@naver.com",
-  "grindaai1@gmail.com",
-  "grindaai2@gmail.com",
-  "grindaai@gmail.com",
-  "hdy7339@gmail.com",
-  "hdy7339@grinda.ai",
-  "hikariseohyeon@gmail.com",
-  "hoang.nv.ral@gmail.com",
-  "hogingpt@grinda.ai",
-  "iyeaaa@icloud.com",
-  "jaykim@grinda.ai",
-  "juny21c@gmail.com",
-  "juny21c@grinda.ai",
-  "juny21c@naver.com",
-  "lauren.kim@grinda.ai",
-  "mmmagdy97.0@gmail.com",
-  "mmmagdy97.0@grinda.ai",
-  "rbehd6129@gmail.com",
-  "rbehd6129@grinda.ai",
-  "rbehd6129@naver.com",
-  "rinda@daum.net",
-  "rinda@naver.com",
-  "rindaai.indonesia@gmail.com",
-  "rlaxowls1316@likelion.org",
-  "rlaxowls1316@nana.com",
-  "rlaxowls31@naver.com",
-  "rlaxowls@daum.net",
-  "sales@grinda.ai",
-  "soodata20@gmail.com",
-  "taejindev326@gmail.com",
-  "test2007@naver.com",
-  "test910@test.com",
-  "test915@test.com",
-  "test916@test.com",
-  "test917@test.com",
-  "test922@test.com",
-  "testadmin@naver.com",
-  "tjgus1668@o.cnu.ac.kr",
-  "vikyw89@gmail.com",
-  "vikyw@grinda.ai",
-  "wks0968@gmail.com",
-  "xmdnlsel6479@gmail.com",
-])
-
-/**
- * IP 주소로 내부 직원 여부 확인
- */
-async function checkInternalByIP(): Promise<boolean> {
-  try {
-    const response = await fetch("https://api.ipify.org?format=json")
-    const data = await response.json()
-    const userIP = data.ip
-    return INTERNAL_IPS.includes(userIP)
-  } catch (error) {
-    console.warn("[Analytics] IP check failed:", error)
-    return false
-  }
-}
-
-/**
- * 이메일로 내부 직원 여부 확인
- */
-function checkInternalByEmail(email?: string): boolean {
-  if (!email) {
-    return false
-  }
-  return INTERNAL_EMAILS.has(email.toLowerCase())
-}
-
-// =====================================
 // Mixpanel 설정
 // =====================================
 function initMixpanel() {
@@ -143,15 +50,6 @@ function initMixpanel() {
 
   mixpanelInitialized = true
   console.log("[Analytics] Mixpanel initialized")
-
-  // 내부 직원 여부 IP로 체크 (비동기)
-  checkInternalByIP().then((isInternal) => {
-    if (isInternal) {
-      mixpanel.register({ is_internal: true })
-      mixpanel.people.set({ is_internal: true })
-      console.log("[Analytics] Internal user detected by IP")
-    }
-  })
 }
 
 // =====================================
@@ -268,13 +166,6 @@ export function identifyUser(
   if (mixpanelInitialized) {
     mixpanel.identify(userId)
 
-    // 내부 직원 여부 확인 (이메일 도메인 기반)
-    const isInternalByEmail = checkInternalByEmail(traits?.email)
-    if (isInternalByEmail) {
-      mixpanel.register({ is_internal: true })
-      console.log("[Analytics] Internal user detected by email")
-    }
-
     if (traits) {
       const { email, name, plan, planStartDate, ...rest } = traits
       mixpanel.people.set({
@@ -282,7 +173,6 @@ export function identifyUser(
         ...(name && { $name: name }),
         ...(plan && { current_plan: plan }),
         ...(planStartDate && { plan_start_date: planStartDate }),
-        is_internal: isInternalByEmail,
         ...rest,
       })
     }

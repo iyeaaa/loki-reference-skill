@@ -114,7 +114,7 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, industry }))
     setSurveyData(updated)
     // 📊 Analytics: Survey Step 1 완료
-    trackSurveyStep(1, { industry })
+    trackSurveyStep(1, 4, { industry })
     navigate("/trial/survey/2")
   }
 
@@ -123,7 +123,7 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, target }))
     setSurveyData(updated)
     // 📊 Analytics: Survey Step 2 완료
-    trackSurveyStep(2, { target })
+    trackSurveyStep(2, 4, { target })
     navigate("/trial/survey/3")
   }
 
@@ -132,7 +132,7 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, country }))
     setSurveyData(updated)
     // 📊 Analytics: Survey Step 3 완료
-    trackSurveyStep(3, { country })
+    trackSurveyStep(3, 4, { country })
     navigate("/trial/survey/4")
   }
 
@@ -141,7 +141,7 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, experience }))
     setSurveyData(updated)
     // 📊 Analytics: Survey Step 4 완료 (마지막)
-    trackSurveyStep(4, { experience })
+    trackSurveyStep(4, 4, { experience })
     navigate("/trial")
   }
 

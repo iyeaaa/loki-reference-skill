@@ -152,12 +152,28 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
 /**
  * 사용자 식별 (로그인 시)
  */
-export function identifyUser(userId: string, traits?: Record<string, unknown>) {
+export function identifyUser(
+  userId: string,
+  traits?: {
+    email?: string
+    name?: string
+    plan?: string
+    planStartDate?: string
+    [key: string]: unknown
+  },
+) {
   // Mixpanel
   if (mixpanelInitialized) {
     mixpanel.identify(userId)
     if (traits) {
-      mixpanel.people.set(traits)
+      const { email, name, plan, planStartDate, ...rest } = traits
+      mixpanel.people.set({
+        ...(email && { $email: email }),
+        ...(name && { $name: name }),
+        ...(plan && { current_plan: plan }),
+        ...(planStartDate && { plan_start_date: planStartDate }),
+        ...rest,
+      })
     }
   }
 
@@ -182,6 +198,24 @@ export function resetAnalytics() {
 // 사전 정의된 이벤트들
 // =====================================
 
+/**
+ * 앱 세션 시작 (DAU 측정용)
+ * - 앱 진입 시 호출
+ */
+export function trackAppSessionStart() {
+  const hasVisited = typeof window !== "undefined" && !!localStorage.getItem("rinda_has_visited")
+
+  trackEvent("App Session Start", {
+    entry_page: window.location.pathname,
+    referrer: document.referrer,
+    is_returning_user: hasVisited,
+  })
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rinda_has_visited", "true")
+  }
+}
+
 /** Trial 페이지 진입 */
 export function trackTrialPageVisit(source?: string) {
   const searchParams = new URLSearchParams(window.location.search)
@@ -197,11 +231,31 @@ export function trackTrialPageVisit(source?: string) {
   })
 }
 
-/** 서베이 스텝 완료 */
-export function trackSurveyStep(step: number, data?: Record<string, unknown>) {
+/**
+ * 서베이 스텝 완료
+ * @param step - 현재 스텝 번호
+ * @param totalSteps - 전체 스텝 수
+ * @param data - 추가 데이터
+ */
+export function trackSurveyStep(step: number, totalSteps: number, data?: Record<string, unknown>) {
   trackEvent("Survey Step Completed", {
     step,
+    total_steps: totalSteps,
+    is_final_step: step === totalSteps,
     ...data,
+  })
+}
+
+/**
+ * 서베이 전체 완료
+ */
+export function trackSurveyCompleted(data?: {
+  totalSteps?: number
+  completionTimeSeconds?: number
+}) {
+  trackEvent("Survey Completed", {
+    total_steps: data?.totalSteps,
+    completion_time_seconds: data?.completionTimeSeconds,
   })
 }
 
@@ -215,9 +269,25 @@ export function trackLogin(method: string) {
   trackEvent("Login Completed", { method })
 }
 
-/** 온보딩 완료 */
-export function trackOnboardingComplete() {
-  trackEvent("Onboarding Completed")
+/**
+ * 온보딩 전체 완료
+ */
+export function trackOnboardingComplete(data?: {
+  completionTimeMinutes?: number
+  country?: string
+}) {
+  trackEvent("Onboarding Completed", {
+    completion_time_minutes: data?.completionTimeMinutes,
+    country: data?.country,
+  })
+
+  // User Property 업데이트
+  if (mixpanelInitialized) {
+    mixpanel.people.set({
+      onboarding_completed: true,
+      onboarding_completed_at: new Date().toISOString(),
+    })
+  }
 }
 
 // =====================================
@@ -236,8 +306,19 @@ export function trackOnboardingStep1Complete(data?: {
   trackEvent("Onboarding Step 1 Completed", {
     step: 1,
     stepName: "Company Info",
+    total_steps: 4,
     ...data,
   })
+
+  // User Property에도 저장 (국가별/산업군별 분석용)
+  if (mixpanelInitialized && data) {
+    mixpanel.people.set({
+      ...(data.companyName && { company_name: data.companyName }),
+      ...(data.industry && { industry: data.industry }),
+      ...(data.target && { target_market: data.target }),
+      ...(data.country && { country: data.country }),
+    })
+  }
 }
 
 /**
@@ -250,8 +331,16 @@ export function trackOnboardingStep2Complete(data?: {
   trackEvent("Onboarding Step 2 Completed", {
     step: 2,
     stepName: "Email Link",
+    total_steps: 4,
     ...data,
   })
+
+  // User Property에도 저장
+  if (mixpanelInitialized && data?.emailProvider) {
+    mixpanel.people.set({
+      email_provider: data.emailProvider,
+    })
+  }
 }
 
 /**
@@ -264,6 +353,7 @@ export function trackOnboardingStep3Complete(data?: {
   trackEvent("Onboarding Step 3 Completed", {
     step: 3,
     stepName: "Buyer Loading",
+    total_steps: 4,
     ...data,
   })
 }
@@ -278,16 +368,84 @@ export function trackOnboardingStep4Complete(data?: {
   trackEvent("Onboarding Step 4 Completed", {
     step: 4,
     stepName: "Campaign Execution",
+    total_steps: 4,
     ...data,
   })
 }
 
+// =====================================
+// 캠페인 추적을 위한 상태 (세션 기반)
+// =====================================
+let campaignCountInSession = 0
+
 /**
- * 캠페인 실행 (온보딩 최종 단계)
+ * 캠페인 실행
+ * @param data.leadsCount - 리드 수
+ * @param data.sequenceId - 시퀀스 ID
+ * @param data.isFirstCampaign - 첫 캠페인 여부 (서버에서 전달받거나, 없으면 세션 기준)
+ * @param data.campaignNumber - N번째 캠페인 (서버에서 전달받거나, 없으면 세션 기준)
  */
-export function trackCampaignExecuted(data?: { leadsCount?: number; sequenceId?: string }) {
-  trackEvent("Campaign Executed", data)
+export function trackCampaignExecuted(data?: {
+  leadsCount?: number
+  sequenceId?: string
+  isFirstCampaign?: boolean
+  campaignNumber?: number
+}) {
+  campaignCountInSession++
+
+  const isFirst = data?.isFirstCampaign ?? campaignCountInSession === 1
+  const campaignNum = data?.campaignNumber ?? campaignCountInSession
+
+  trackEvent("Campaign Executed", {
+    leadsCount: data?.leadsCount,
+    sequenceId: data?.sequenceId,
+    is_first_campaign: isFirst,
+    campaign_number: campaignNum,
+  })
+
+  // User Property 업데이트
+  if (mixpanelInitialized) {
+    mixpanel.people.increment("total_campaigns_executed", 1)
+    if (isFirst) {
+      mixpanel.people.set({
+        first_campaign_at: new Date().toISOString(),
+      })
+    }
+  }
 }
+
+// =====================================
+// 요금제 관련 이벤트
+// =====================================
+
+/**
+ * 요금제 변경
+ */
+export function trackPlanChanged(data: {
+  previousPlan: string
+  newPlan: string
+  changeType: "upgrade" | "downgrade" | "cancel"
+  previousPlanDurationDays?: number
+}) {
+  trackEvent("Plan Changed", {
+    previous_plan: data.previousPlan,
+    new_plan: data.newPlan,
+    change_type: data.changeType,
+    previous_plan_duration_days: data.previousPlanDurationDays,
+  })
+
+  // User Property 업데이트
+  if (mixpanelInitialized) {
+    mixpanel.people.set({
+      current_plan: data.newPlan,
+      plan_changed_at: new Date().toISOString(),
+    })
+  }
+}
+
+// =====================================
+// 기능 사용 추적
+// =====================================
 
 /** 기능 사용 */
 export function trackFeatureUse(featureName: string, properties?: Record<string, unknown>) {

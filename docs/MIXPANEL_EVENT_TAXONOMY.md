@@ -49,6 +49,21 @@ mixpanel.init(TOKEN, {
 | `platform` | `"landing"` | `"app"` |
 | `app_domain` | `"rinda.ai"` | `"app.rinda.ai"` |
 
+### 내부 직원 필터링
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `is_internal` | boolean | 내부 직원 여부 (대시보드 필터링용) |
+
+**판별 기준:**
+- IP 주소: `115.91.133.187` (대전 tipstown 사무실)
+- 이메일 도메인: `@grinda.ai`, `@fingu.ai`
+
+**대시보드 필터링:**
+```
+모든 리포트에 필터 추가: is_internal ≠ true
+```
+
 ### Attribution (랜딩에서 설정, 앱까지 유지)
 
 | Property | Type | Description |
@@ -892,3 +907,4 @@ export const trackCTAClicked = (data: {
 | 2025-01-09 | 기존 이벤트 개선: Campaign Executed, Survey Step, Onboarding Steps |
 | 2025-01-09 | 리텐션/드롭오프 분석 추가: 주간 리텐션, 국가별 전환율, 단계별 이탈율 |
 | 2025-01-12 | 자동 페이지뷰 비활성화: track_pageview, autocapture.pageview를 false로 설정 (Super Property 일관성) |
+| 2025-01-12 | 내부 직원 필터링 추가: IP(115.91.133.187) 및 이메일 도메인(@grinda.ai, @fingu.ai) 기반 is_internal 속성 |

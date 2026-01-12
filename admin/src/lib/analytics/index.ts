@@ -23,6 +23,37 @@ let gaInitialized = false
 // const clarityInitialized = false
 
 // =====================================
+// 내부 직원 판별 설정
+// =====================================
+const INTERNAL_IPS = ["115.91.133.187"] // 대전 tipstown 사무실 IP
+const INTERNAL_EMAIL_DOMAINS = ["@grinda.ai", "@fingu.ai"] // 회사 이메일 도메인
+
+/**
+ * IP 주소로 내부 직원 여부 확인
+ */
+async function checkInternalByIP(): Promise<boolean> {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json")
+    const data = await response.json()
+    const userIP = data.ip
+    return INTERNAL_IPS.includes(userIP)
+  } catch (error) {
+    console.warn("[Analytics] IP check failed:", error)
+    return false
+  }
+}
+
+/**
+ * 이메일 도메인으로 내부 직원 여부 확인
+ */
+function checkInternalByEmail(email?: string): boolean {
+  if (!email) {
+    return false
+  }
+  return INTERNAL_EMAIL_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain))
+}
+
+// =====================================
 // Mixpanel 설정
 // =====================================
 function initMixpanel() {
@@ -50,6 +81,15 @@ function initMixpanel() {
 
   mixpanelInitialized = true
   console.log("[Analytics] Mixpanel initialized")
+
+  // 내부 직원 여부 IP로 체크 (비동기)
+  checkInternalByIP().then((isInternal) => {
+    if (isInternal) {
+      mixpanel.register({ is_internal: true })
+      mixpanel.people.set({ is_internal: true })
+      console.log("[Analytics] Internal user detected by IP")
+    }
+  })
 }
 
 // =====================================
@@ -165,6 +205,14 @@ export function identifyUser(
   // Mixpanel
   if (mixpanelInitialized) {
     mixpanel.identify(userId)
+
+    // 내부 직원 여부 확인 (이메일 도메인 기반)
+    const isInternalByEmail = checkInternalByEmail(traits?.email)
+    if (isInternalByEmail) {
+      mixpanel.register({ is_internal: true })
+      console.log("[Analytics] Internal user detected by email")
+    }
+
     if (traits) {
       const { email, name, plan, planStartDate, ...rest } = traits
       mixpanel.people.set({
@@ -172,6 +220,7 @@ export function identifyUser(
         ...(name && { $name: name }),
         ...(plan && { current_plan: plan }),
         ...(planStartDate && { plan_start_date: planStartDate }),
+        is_internal: isInternalByEmail,
         ...rest,
       })
     }

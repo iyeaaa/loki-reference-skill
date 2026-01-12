@@ -637,13 +637,13 @@ export default function AppDashboardPage() {
                           prevValue: totalStats.clicked,
                         },
                       ]
-                      // 급격한 깔때기 모양 - 고정 비율 사용
-                      const defaultWidths = [100, 70, 45, 25] // 급격한 기울기
+                      // 완만한 깔때기 모양 - 작은 화면에서도 텍스트 잘림 방지
+                      const defaultWidths = [100, 80, 60, 45]
 
                       return funnelData.map((item, index) => {
                         const topWidth = defaultWidths[index]
                         const bottomWidth =
-                          index < funnelData.length - 1 ? defaultWidths[index + 1] : 15
+                          index < funnelData.length - 1 ? defaultWidths[index + 1] : 35
 
                         // 사다리꼴 clip-path 계산
                         const topLeft = (100 - topWidth) / 2

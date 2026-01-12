@@ -159,6 +159,8 @@ export default function NewTrialPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     try {
+      // 진입점 저장: 로그아웃 시 /trial로 복귀하기 위함
+      sessionStorage.setItem("auth_entry_point", "trial")
       const response = await apiFetch<{ authUrl: string }>("/api/v1/auth/google")
       window.location.href = response.authUrl
     } catch (error) {

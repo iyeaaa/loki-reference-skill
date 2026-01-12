@@ -83,13 +83,23 @@ export function useLogoutMutation() {
   return useMutation({
     mutationKey: ["auth", "logout"],
     mutationFn: async () => {
-      // Check if current user is trial user before logout
-      const currentUser = authApi.getStoredUser()
-      const isTrialUser = currentUser?.trialStatus?.isTrialActive
+      // 진입점 확인: /trial에서 로그인했으면 /trial로 복귀
+      const entryPoint = sessionStorage.getItem("auth_entry_point")
+      console.log("[useLogoutMutation] entryPoint:", entryPoint)
 
       authApi.logout()
 
-      return { isTrialUser }
+      // Clear survey data to prevent stale data for next user
+      localStorage.removeItem("rinda_survey_data")
+
+      // Clear onboarding-related session storage
+      sessionStorage.removeItem("onboarding_sequence")
+      sessionStorage.removeItem("onboarding_leads")
+      sessionStorage.removeItem("onboarding_company_info")
+      sessionStorage.removeItem("onboarding_customer_group_id")
+      sessionStorage.removeItem("auth_entry_point")
+
+      return { entryPoint }
     },
     onSuccess: (result) => {
       queryClient.removeQueries({ queryKey: authKeys.all })
@@ -97,8 +107,10 @@ export function useLogoutMutation() {
 
       toast.success("로그아웃되었습니다.")
 
-      // Redirect trial users to trial page, others to auth page
-      navigate(result.isTrialUser ? "/trial" : "/auth")
+      // 진입점 기반 리다이렉트: trial에서 들어왔으면 /trial로, 아니면 /auth로
+      const redirectPath = result.entryPoint === "trial" ? "/trial?from=logout" : "/auth"
+      console.log("[useLogoutMutation] redirecting to:", redirectPath)
+      navigate(redirectPath)
     },
   })
 }

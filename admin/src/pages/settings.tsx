@@ -37,6 +37,7 @@ import {
   useAccountDeletionCheck,
   useCurrentUser,
   useDeleteAccountMutation,
+  useLogoutMutation,
   useUpdateProfileMutation,
 } from "@/lib/api/hooks/auth"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
@@ -97,6 +98,7 @@ export default function SettingsPage() {
   const uploadProfileImageMutation = useUploadProfileImage()
   const { data: deletionCheck } = useAccountDeletionCheck()
   const deleteAccountMutation = useDeleteAccountMutation()
+  const logoutMutation = useLogoutMutation()
   const [activeTab, setActiveTab] = useQueryState("tab", parseAsString.withDefault("profile"))
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSettingsSidebarCollapsed, setIsSettingsSidebarCollapsed] = useState(false)
@@ -639,16 +641,14 @@ export default function SettingsPage() {
                 <h3 className="font-medium text-sm">{t("settings.account.logout", "로그아웃")}</h3>
                 <Button
                   className="w-full justify-start gap-2 sm:w-auto"
-                  onClick={() => {
-                    localStorage.removeItem("authToken")
-                    localStorage.removeItem("user")
-                    localStorage.removeItem("rinda_survey_data")
-                    window.location.href = "/auth"
-                  }}
+                  disabled={logoutMutation.isPending}
+                  onClick={() => logoutMutation.mutate()}
                   variant="outline"
                 >
                   <LogOut className="h-4 w-4" />
-                  {t("settings.account.logoutButton", "로그아웃")}
+                  {logoutMutation.isPending
+                    ? t("settings.account.loggingOut", "로그아웃 중...")
+                    : t("settings.account.logoutButton", "로그아웃")}
                 </Button>
               </div>
 

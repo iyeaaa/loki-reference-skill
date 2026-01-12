@@ -92,6 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // 진입점 확인: /trial에서 로그인했으면 /trial로 복귀
+    const entryPoint = sessionStorage.getItem("auth_entry_point")
+    console.log("[AuthProvider] logout - entryPoint:", entryPoint)
+
     localStorage.removeItem("authToken")
     localStorage.removeItem("user")
     // Clear Jotai survey data to prevent stale data for next user
@@ -102,11 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem("onboarding_leads")
     sessionStorage.removeItem("onboarding_company_info")
     sessionStorage.removeItem("onboarding_customer_group_id")
+    sessionStorage.removeItem("auth_entry_point")
 
     setUser(null)
 
-    // Redirect all users to login page
-    window.location.href = "/auth"
+    // 진입점 기반 리다이렉트: trial에서 들어왔으면 /trial로, 아니면 /auth로
+    const redirectPath = entryPoint === "trial" ? "/trial?from=logout" : "/auth"
+    console.log("[AuthProvider] logout - redirecting to:", redirectPath)
+    window.location.href = redirectPath
   }
 
   return (

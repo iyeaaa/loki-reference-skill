@@ -39,3 +39,9 @@ locales/.scanned/
 
 webset:page.csv
 webset:search.csv
+
+# Test files
+**/__tests__/
+coverage/
+vitest.config.ts
+src/test/

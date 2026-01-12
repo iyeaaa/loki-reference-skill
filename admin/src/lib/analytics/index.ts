@@ -26,7 +26,69 @@ let gaInitialized = false
 // 내부 직원 판별 설정
 // =====================================
 const INTERNAL_IPS = ["115.91.133.187"] // 대전 tipstown 사무실 IP
-const INTERNAL_EMAIL_DOMAINS = ["@grinda.ai", "@fingu.ai"] // 회사 이메일 도메인
+
+// 내부 직원 이메일 목록 (개인 이메일 포함)
+const INTERNAL_EMAILS = new Set([
+  "admin@grinda.ai",
+  "ahmed@grinda.ai",
+  "chaewon00927@gmail.com",
+  "cjfgml17@gmail.com",
+  "cjfgml1@gmail.com",
+  "cjfgml2@gmail.com",
+  "classygoody@grinda.ai",
+  "csh13080@gmail.com",
+  "csh1668@gmail.com",
+  "daniyaraslanuly@gmail.com",
+  "dmswn0700@daum.net",
+  "dmswn0700@gmail.com",
+  "dmswn0700@kakao.com",
+  "dmswn0700@naver.com",
+  "ehddus2007@naver.com",
+  "ganghojin21@gmail.com",
+  "ganghojin94@daum.net",
+  "ganghojin94@naver.com",
+  "grindaai1@gmail.com",
+  "grindaai2@gmail.com",
+  "grindaai@gmail.com",
+  "hdy7339@gmail.com",
+  "hdy7339@grinda.ai",
+  "hikariseohyeon@gmail.com",
+  "hoang.nv.ral@gmail.com",
+  "hogingpt@grinda.ai",
+  "iyeaaa@icloud.com",
+  "jaykim@grinda.ai",
+  "juny21c@gmail.com",
+  "juny21c@grinda.ai",
+  "juny21c@naver.com",
+  "lauren.kim@grinda.ai",
+  "mmmagdy97.0@gmail.com",
+  "mmmagdy97.0@grinda.ai",
+  "rbehd6129@gmail.com",
+  "rbehd6129@grinda.ai",
+  "rbehd6129@naver.com",
+  "rinda@daum.net",
+  "rinda@naver.com",
+  "rindaai.indonesia@gmail.com",
+  "rlaxowls1316@likelion.org",
+  "rlaxowls1316@nana.com",
+  "rlaxowls31@naver.com",
+  "rlaxowls@daum.net",
+  "sales@grinda.ai",
+  "soodata20@gmail.com",
+  "taejindev326@gmail.com",
+  "test2007@naver.com",
+  "test910@test.com",
+  "test915@test.com",
+  "test916@test.com",
+  "test917@test.com",
+  "test922@test.com",
+  "testadmin@naver.com",
+  "tjgus1668@o.cnu.ac.kr",
+  "vikyw89@gmail.com",
+  "vikyw@grinda.ai",
+  "wks0968@gmail.com",
+  "xmdnlsel6479@gmail.com",
+])
 
 /**
  * IP 주소로 내부 직원 여부 확인
@@ -44,13 +106,13 @@ async function checkInternalByIP(): Promise<boolean> {
 }
 
 /**
- * 이메일 도메인으로 내부 직원 여부 확인
+ * 이메일로 내부 직원 여부 확인
  */
 function checkInternalByEmail(email?: string): boolean {
   if (!email) {
     return false
   }
-  return INTERNAL_EMAIL_DOMAINS.some((domain) => email.toLowerCase().endsWith(domain))
+  return INTERNAL_EMAILS.has(email.toLowerCase())
 }
 
 // =====================================

@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
+  Building2,
   Check,
   CheckCircle2,
   MoreHorizontal,
@@ -38,6 +39,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { type Notification, useNotificationsManager } from "@/lib/api/hooks/notifications"
+import { dispatchWorkspaceChange, useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { useOnboardingProgress, useOnboardingProgressReadOnly } from "@/store/onboarding-progress"
 
@@ -204,8 +206,13 @@ type NotificationItemProps = {
   notification: Notification
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
-  onAction?: (url: string) => void
+  onAction?: (
+    url: string,
+    targetWorkspaceId?: string | null,
+    targetWorkspaceName?: string | null,
+  ) => void
   parentWorkspaceId?: string // 부모에서 전달받은 workspaceId (fallback)
+  currentWorkspaceId?: string // 현재 선택된 workspaceId (자동 전환용)
 }
 
 function NotificationItem({
@@ -214,8 +221,15 @@ function NotificationItem({
   onDelete,
   onAction,
   parentWorkspaceId,
+  currentWorkspaceId,
 }: NotificationItemProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  // 다른 워크스페이스의 알림인지 확인 (배지 표시용)
+  const isFromDifferentWorkspace =
+    notification.workspaceId &&
+    currentWorkspaceId &&
+    notification.workspaceId !== currentWorkspaceId
 
   const metadata = notification.metadata as {
     phase?: string
@@ -279,7 +293,8 @@ function NotificationItem({
       if (!notification.read) {
         onMarkAsRead(notification.id)
       }
-      onAction(ctaAction.url)
+      // 워크스페이스 정보 전달 (자동 전환용)
+      onAction(ctaAction.url, notification.workspaceId, notification.workspaceName)
     }
   }
 
@@ -310,6 +325,16 @@ function NotificationItem({
             >
               {notification.title || notification.message}
             </p>
+
+            {/* Workspace Badge (다른 워크스페이스의 알림일 경우만 표시) */}
+            {isFromDifferentWorkspace && notification.workspaceName && (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
+                <Building2 className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">
+                  {notification.workspaceName}
+                </span>
+              </div>
+            )}
 
             {/* Details (바이어 수, 이메일 수 등) */}
             {detailsText && <p className="mt-0.5 text-muted-foreground text-xs">{detailsText}</p>}
@@ -446,11 +471,23 @@ type DateGroupProps = {
   group: GroupedNotifications
   onMarkAsRead: (id: string) => void
   onDelete: (id: string) => void
-  onAction: (url: string) => void
+  onAction: (
+    url: string,
+    targetWorkspaceId?: string | null,
+    targetWorkspaceName?: string | null,
+  ) => void
   workspaceId?: string
+  currentWorkspaceId?: string
 }
 
-function DateGroup({ group, onMarkAsRead, onDelete, onAction, workspaceId }: DateGroupProps) {
+function DateGroup({
+  group,
+  onMarkAsRead,
+  onDelete,
+  onAction,
+  workspaceId,
+  currentWorkspaceId,
+}: DateGroupProps) {
   return (
     <div>
       {/* Date Header */}
@@ -462,6 +499,7 @@ function DateGroup({ group, onMarkAsRead, onDelete, onAction, workspaceId }: Dat
       <ul>
         {group.notifications.map((notification) => (
           <NotificationItem
+            currentWorkspaceId={currentWorkspaceId}
             key={notification.id}
             notification={notification}
             onAction={onAction}
@@ -482,6 +520,7 @@ function DateGroup({ group, onMarkAsRead, onDelete, onAction, workspaceId }: Dat
 export function NotificationBell({ workspaceId, className }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
+  const { selectedWorkspace } = useWorkspace()
 
   const {
     notifications,
@@ -496,6 +535,9 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     limit: 50,
     enableSSE: true,
   })
+
+  // 현재 선택된 워크스페이스 ID
+  const currentWorkspaceId = selectedWorkspace?.id
 
   // NEW: 진행 중인 온보딩이 있는지 확인
   const hasInProgressOnboarding = useMemo(
@@ -537,8 +579,20 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     }
   }
 
-  const handleAction = (url: string) => {
+  const handleAction = (
+    url: string,
+    targetWorkspaceId?: string | null,
+    targetWorkspaceName?: string | null,
+  ) => {
     setIsOpen(false)
+
+    // 다른 워크스페이스의 알림이면 워크스페이스 자동 전환
+    if (targetWorkspaceId && targetWorkspaceId !== currentWorkspaceId) {
+      localStorage.setItem("selectedWorkspace", targetWorkspaceId)
+      localStorage.setItem("selectedWorkspaceName", targetWorkspaceName || "")
+      dispatchWorkspaceChange()
+    }
+
     navigate(url)
   }
 
@@ -604,6 +658,7 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
             <div className="divide-y">
               {groupedNotifications.map((group) => (
                 <DateGroup
+                  currentWorkspaceId={currentWorkspaceId}
                   group={group}
                   key={group.dateKey}
                   onAction={handleAction}

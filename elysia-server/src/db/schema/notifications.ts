@@ -152,6 +152,14 @@ export type NotificationType = (typeof notificationTypeEnum.enumValues)[number]
 export type NotificationPriority = (typeof notificationPriorityEnum.enumValues)[number]
 
 /**
+ * 워크스페이스 정보 포함 알림 타입
+ * - 알림 목록 조회 시 workspaces 테이블 JOIN 결과
+ */
+export type NotificationWithWorkspace = Notification & {
+  workspaceName: string | null
+}
+
+/**
  * 알림 메타데이터 타입
  */
 export interface NotificationMetadata {

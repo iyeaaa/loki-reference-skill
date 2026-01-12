@@ -28,6 +28,7 @@ export type Notification = {
   id: string
   userId: string
   workspaceId: string | null
+  workspaceName: string | null
   type: NotificationType
   priority: NotificationPriority
   title: string

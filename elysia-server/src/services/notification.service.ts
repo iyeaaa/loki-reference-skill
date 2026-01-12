@@ -17,8 +17,10 @@ import {
   type NotificationMetadata,
   type NotificationPriority,
   type NotificationType,
+  type NotificationWithWorkspace,
   notifications,
 } from "../db/schema/notifications"
+import { workspaces } from "../db/schema/workspaces"
 import {
   createNotificationCreatedEvent,
   createNotificationDeletedEvent,
@@ -108,24 +110,26 @@ export async function createNotification(params: CreateNotificationParams): Prom
  * 사용자의 알림 목록 조회 (단일 쿼리 최적화)
  *
  * PostgreSQL 윈도우 함수를 사용하여 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회
+ * workspaces 테이블 JOIN으로 워크스페이스 이름 포함
  */
 export async function getNotifications(filter: NotificationFilter): Promise<{
-  notifications: Notification[]
+  notifications: NotificationWithWorkspace[]
   total: number
   unreadCount: number
 }> {
   const { userId, workspaceId, type, read, limit = 50, offset = 0 } = filter
 
   // 동적 필터 조건 구성 - CTE에서 사용하기 위해 raw 컬럼명 사용
-  const workspaceCondition = workspaceId ? sql`AND workspace_id = ${workspaceId}` : sql``
+  const workspaceCondition = workspaceId ? sql`AND n.workspace_id = ${workspaceId}` : sql``
   const typeCondition = type ? sql`AND type = ${type}` : sql``
   const readCondition = read !== undefined ? sql`AND read = ${read}` : sql``
 
-  // 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회
+  // 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회 (workspaces JOIN 포함)
   const result = await db.execute<{
     id: string
     user_id: string
     workspace_id: string | null
+    workspace_name: string | null
     type: string
     priority: string
     title: string
@@ -155,9 +159,11 @@ export async function getNotifications(filter: NotificationFilter): Promise<{
     )
     SELECT
       n.*,
+      w.name as workspace_name,
       c.total,
       c.unread_count
     FROM base_filter n
+    LEFT JOIN ${workspaces} w ON w.id = n.workspace_id
     CROSS JOIN counts c
     WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}
     ORDER BY n.created_at DESC
@@ -186,13 +192,14 @@ export async function getNotifications(filter: NotificationFilter): Promise<{
   const total = Number(result.rows[0]?.total ?? 0)
   const unreadCount = Number(result.rows[0]?.unread_count ?? 0)
 
-  // snake_case → camelCase 변환
-  const notificationList: Notification[] = result.rows.map((row) => ({
+  // snake_case → camelCase 변환 (workspaceName 포함)
+  const notificationList: NotificationWithWorkspace[] = result.rows.map((row) => ({
     id: row.id,
     userId: row.user_id,
     workspaceId: row.workspace_id,
-    type: row.type as Notification["type"],
-    priority: row.priority as Notification["priority"],
+    workspaceName: row.workspace_name,
+    type: row.type as NotificationWithWorkspace["type"],
+    priority: row.priority as NotificationWithWorkspace["priority"],
     title: row.title,
     message: row.message,
     read: row.read,

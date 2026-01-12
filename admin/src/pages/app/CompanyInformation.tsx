@@ -193,6 +193,7 @@ export default function CompanyInformation() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const autoSaveAttempted = useRef(false)
+  const [redirectLoopDetected, setRedirectLoopDetected] = useState(false)
 
   // Check if localStorage is enabled
   const isLocalStorageEnabled = useLocalStorageEnabled()
@@ -214,6 +215,33 @@ export default function CompanyInformation() {
   const userId = currentUser?.id || ""
 
   console.log("[CompanyInformation] 1. userId:", userId)
+
+  // Redirect loop detection - 무한루프 방지
+  useEffect(() => {
+    const REDIRECT_COUNT_KEY = "company_redirect_count"
+    const REDIRECT_THRESHOLD = 5
+    const currentCount = Number.parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || "0", 10)
+    const newCount = currentCount + 1
+
+    sessionStorage.setItem(REDIRECT_COUNT_KEY, newCount.toString())
+
+    console.log(
+      "[CompanyInformation] Redirect loop detection - count:",
+      newCount,
+      "threshold:",
+      REDIRECT_THRESHOLD,
+    )
+
+    if (newCount >= REDIRECT_THRESHOLD) {
+      console.error(
+        `[CompanyInformation] ❌ Redirect loop detected! Count: ${newCount}. Breaking the loop.`,
+      )
+      // 루프 감지됨 - 상태 업데이트하여 에러 화면 표시
+      setRedirectLoopDetected(true)
+      // 카운트 리셋하여 사용자가 다시 시도할 수 있도록
+      sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+    }
+  }, [])
 
   // Get user's workspace
   const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
@@ -244,6 +272,23 @@ export default function CompanyInformation() {
 
   console.log("[CompanyInformation] 5. hasSurveyDataInDb:", hasSurveyDataInDb)
   console.log("[CompanyInformation] 6. jotaiSurveyData:", JSON.stringify(jotaiSurveyData, null, 2))
+
+  // Reset redirect count when onboarding progress is made
+  useEffect(() => {
+    const REDIRECT_COUNT_KEY = "company_redirect_count"
+
+    if (hasSurveyDataInDb) {
+      const currentCount = sessionStorage.getItem(REDIRECT_COUNT_KEY)
+      if (currentCount && Number.parseInt(currentCount, 10) > 0) {
+        console.log(
+          "[CompanyInformation] Onboarding progress detected, resetting redirect count from",
+          currentCount,
+          "to 0",
+        )
+        sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+      }
+    }
+  }, [hasSurveyDataInDb])
 
   // Get current step from URL, default to 1
   const currentStep = Number.parseInt(searchParams.get("step") || "1", 10)
@@ -357,6 +402,51 @@ export default function CompanyInformation() {
   const handleWelcomeComplete = () => {
     localStorage.setItem(WELCOME_POPUP_KEY, "true")
     setShowWelcome(false)
+  }
+
+  // 리다이렉트 루프 감지 시 에러 화면 표시
+  if (redirectLoopDetected) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center py-6">
+        <div className="mx-auto max-w-md rounded-xl border border-red-200 bg-white p-8 shadow-lg">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="mb-2 font-bold text-gray-900 text-xl">
+              {currentUser?.lang === "ko" ? "페이지 오류가 발생했습니다" : "Page Error Detected"}
+            </h2>
+            <p className="mb-6 text-gray-600 text-sm">
+              {currentUser?.lang === "ko"
+                ? "페이지가 반복적으로 새로고침되고 있습니다. 이 문제가 계속되면 다시 로그인해주세요."
+                : "The page is refreshing repeatedly. If this persists, please log in again."}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  setRedirectLoopDetected(false)
+                  window.location.reload()
+                }}
+                variant="outline"
+              >
+                {currentUser?.lang === "ko" ? "다시 시도" : "Try Again"}
+              </Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  localStorage.removeItem("authToken")
+                  localStorage.removeItem("user")
+                  sessionStorage.clear()
+                  window.location.href = "/auth"
+                }}
+              >
+                {currentUser?.lang === "ko" ? "다시 로그인" : "Log In Again"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Show loading while checking onboarding status

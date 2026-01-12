@@ -166,14 +166,25 @@ export function StepConfirmation() {
     }
   }
 
-  // Complete onboarding
-  const completeOnboardingAndClearData = async () => {
-    if (workspace?.id) {
-      try {
-        await completeOnboardingMutation.mutateAsync({ workspaceId: workspace.id, userId })
-      } catch (error) {
-        console.error("Failed to complete onboarding:", error)
-      }
+  // Complete onboarding - returns true if successful, false if failed
+  const completeOnboardingAndClearData = async (): Promise<boolean> => {
+    if (!workspace?.id) {
+      console.error("[StepConfirmation] completeOnboarding - No workspace ID")
+      return false
+    }
+
+    try {
+      await completeOnboardingMutation.mutateAsync({ workspaceId: workspace.id, userId })
+      console.log("[StepConfirmation] completeOnboarding - Success")
+      return true
+    } catch (error) {
+      console.error("[StepConfirmation] completeOnboarding - Failed:", error)
+      toast.error(
+        isKorean
+          ? "온보딩 완료 처리에 실패했습니다. 다시 시도해주세요."
+          : "Failed to complete onboarding. Please try again.",
+      )
+      return false
     }
   }
 
@@ -239,11 +250,21 @@ export function StepConfirmation() {
           : `Emails scheduled for ${enrollResult.enrolledCount} leads`,
       )
 
-      await completeOnboardingAndClearData()
+      const onboardingCompleted = await completeOnboardingAndClearData()
 
-      setTimeout(() => {
-        navigate("/dashboard")
-      }, 3000)
+      if (onboardingCompleted) {
+        setTimeout(() => {
+          navigate("/dashboard")
+        }, 3000)
+      } else {
+        // 온보딩 완료 실패 시 리다이렉트하지 않고 에러 상태로 전환
+        setExecutionError(
+          isKorean
+            ? "캠페인은 시작됐지만, 온보딩 완료 처리에 실패했습니다."
+            : "Campaign started but failed to complete onboarding.",
+        )
+        setIsExecuting(false)
+      }
     } catch (error) {
       console.error("Failed to execute campaign:", error)
       const errorMessage =
@@ -265,9 +286,14 @@ export function StepConfirmation() {
   }
 
   const handleSkipToDashboard = async () => {
-    await completeOnboardingAndClearData()
-    trackOnboardingComplete()
-    navigate("/dashboard")
+    const onboardingCompleted = await completeOnboardingAndClearData()
+
+    if (onboardingCompleted) {
+      trackOnboardingComplete()
+      navigate("/dashboard")
+    }
+    // 실패 시 toast는 completeOnboardingAndClearData에서 이미 표시됨
+    // 현재 페이지에 머물러서 사용자가 다시 시도할 수 있도록 함
   }
 
   // Counts

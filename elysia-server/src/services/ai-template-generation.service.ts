@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { parse } from "csv-parse/sync"
@@ -42,11 +43,15 @@ interface EmailExample {
 
 class AITemplateGenerationService {
   private openai: ReturnType<typeof createOpenAI>
+  private google: ReturnType<typeof createGoogleGenerativeAI>
   private emailExamples: EmailExample[] = []
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, googleApiKey: string) {
     this.openai = createOpenAI({
       apiKey: apiKey,
+    })
+    this.google = createGoogleGenerativeAI({
+      apiKey: googleApiKey,
     })
     this.loadEmailExamples()
   }
@@ -357,7 +362,7 @@ ${previousEmailsSection}
       workspaceDescription,
       country,
       emailConfigs,
-      model = "gpt-5.2",
+      model = "gemini-3-flash-preview",
       temperature: _temperature = 0.7,
     } = options
 
@@ -512,7 +517,7 @@ ${sequenceSection}
 
 CRITICAL RULES:
 1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
-2. VARIABLES: Use {{company_name}} for recipient company. Start with "Hi there," or "Hello," (no contact name).
+2. VARIABLES: Use {{company_name}} for recipient company. Use appropriate greeting for target language (no contact name).
 3. STRUCTURE:
    - Hook (13 words): Personalized opener about THEM
    - Bridge: Connect their situation to value (NO fabricated stats/numbers)
@@ -525,14 +530,6 @@ AVOID:
 ❌ Signatures, "We are a leading provider", fabricated numbers
 ❌ Translating company description literally without adapting
 
-GOOD EXAMPLE:
-"Hi there,
-
-Noticed {{company_name}} expanding into [specific market].
-
-Many similar companies struggled with [challenge]. We've helped businesses like yours build [outcome] and accelerate [result].
-
-Worth a quick chat?"
 ${
   examplesText
     ? `
@@ -555,19 +552,14 @@ Requirements: ${config.userPrompt}
 
 Key points:
 - Use {{company_name}} variable
-- Start with "Hi there," or "Hello,"
+- Use appropriate greeting for "${country}" (${isEnglishTarget ? 'e.g., "Hi there," or "Hello,"' : "use natural greeting in target language"})
 - No signature
 ${workspaceDescription ? `- Naturally incorporate company value proposition (translate first if needed)` : ""}`
 
         const { text } = await generateText({
-          model: this.openai(model),
+          model: this.google(model),
           system: systemPrompt,
           prompt: userMessage,
-          providerOptions: {
-            openai: {
-              reasoningEffort: "medium",
-            },
-          },
         })
 
         return this.parseAIResponse(text)
@@ -601,7 +593,7 @@ ${workspaceDescription ? `- Naturally incorporate company value proposition (tra
       workspaceDescription,
       country,
       userPrompt,
-      model = "gpt-5-mini",
+      model = "gemini-3-flash-preview",
       temperature: _temperature = 0.7,
       sequenceContext,
     } = options
@@ -757,7 +749,7 @@ ${sequenceSection}
 
 CRITICAL RULES:
 1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
-2. VARIABLES: Use {{company_name}} for recipient company. Start with "Hi there," or "Hello," (no contact name).
+2. VARIABLES: Use {{company_name}} for recipient company. Use appropriate greeting for target language (no contact name).
 3. STRUCTURE:
    - Hook (13 words): Personalized opener about THEM
    - Bridge: Connect their situation to value (NO fabricated stats/numbers)
@@ -770,14 +762,6 @@ AVOID:
 ❌ Signatures, "We are a leading provider", fabricated numbers
 ❌ Translating company description literally without adapting
 
-GOOD EXAMPLE:
-"Hi there,
-
-Noticed {{company_name}} expanding into [specific market].
-
-Many similar companies struggled with [challenge]. We've helped businesses like yours build [outcome] and accelerate [result].
-
-Worth a quick chat?"
 ${
   examplesText
     ? `
@@ -800,26 +784,21 @@ Requirements: ${userPrompt}
 
 Key points:
 - Use {{company_name}} variable
-- Start with "Hi there," or "Hello,"
+- Use appropriate greeting for "${country}" (${isEnglishTarget ? 'e.g., "Hi there," or "Hello,"' : "use natural greeting in target language"})
 - No signature
 ${workspaceDescription ? `- Naturally incorporate company value proposition (translate first if needed)` : ""}`
 
       // 2. AI API 호출
-      console.log(`[AITemplate] Calling OpenAI API...`)
+      console.log(`[AITemplate] Calling Google Gemini API...`)
       const startTime = Date.now()
       const { text } = await generateText({
-        model: this.openai(model),
+        model: this.google(model),
         system: systemPrompt,
         prompt: userMessage,
         // temperature,
-        providerOptions: {
-          openai: {
-            reasoningEffort: "minimal",
-          },
-        },
       })
       const elapsed = Date.now() - startTime
-      console.log(`[AITemplate] OpenAI API response received (${elapsed}ms)`)
+      console.log(`[AITemplate] Gemini API response received (${elapsed}ms)`)
 
       logger.info({ country, workspaceName }, "AI template generation successful")
 
@@ -1035,7 +1014,7 @@ ${workspaceDescription ? `- Naturally incorporate company value proposition (tra
       bodyText,
       editPrompt,
       targetLanguage = "English",
-      model = "gpt-5-mini",
+      model = "gemini-3-flash-preview",
       // temperature = 0.7,
     } = options
 
@@ -1074,15 +1053,10 @@ Apply the edit instruction and return the modified email in JSON format.`
 
       const startTime = Date.now()
       const { text } = await generateText({
-        model: this.openai(model),
+        model: this.google(model),
         system: systemPrompt,
         prompt: userMessage,
         // temperature,
-        providerOptions: {
-          openai: {
-            reasoningEffort: "minimal",
-          },
-        },
       })
       const elapsed = Date.now() - startTime
       console.log(`[AITemplate] Email edit completed (${elapsed}ms)`)
@@ -1120,7 +1094,13 @@ Apply the edit instruction and return the modified email in JSON format.`
     model?: string
     temperature?: number
   }): Promise<GeneratedTemplate> {
-    const { subject, bodyText, bodyHtml: _bodyHtml, targetLanguage, model = "gpt-5-mini" } = options
+    const {
+      subject,
+      bodyText,
+      bodyHtml: _bodyHtml,
+      targetLanguage,
+      model = "gemini-3-flash-preview",
+    } = options
 
     console.log(`[AITemplate] Translating email to ${targetLanguage}`)
 
@@ -1172,15 +1152,10 @@ ${bodyText}`
 
       const startTime = Date.now()
       const { text } = await generateText({
-        model: this.openai(model),
+        model: this.google(model),
         system: systemPrompt,
         prompt: userMessage,
         // temperature,
-        providerOptions: {
-          openai: {
-            reasoningEffort: "minimal",
-          },
-        },
       })
       const elapsed = Date.now() - startTime
       console.log(`[AITemplate] Translation completed (${elapsed}ms)`)
@@ -1300,11 +1275,17 @@ let aiTemplateServiceInstance: AITemplateGenerationService | null = null
  */
 export function getAITemplateGenerationService(): AITemplateGenerationService {
   if (!aiTemplateServiceInstance) {
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
+    const openaiApiKey = process.env.OPENAI_API_KEY
+    const googleApiKey = process.env.GEMINI_API_KEY
+
+    if (!openaiApiKey) {
       throw new Error("OPENAI_API_KEY 환경변수가 설정되지 않았습니다")
     }
-    aiTemplateServiceInstance = new AITemplateGenerationService(apiKey)
+    if (!googleApiKey) {
+      throw new Error("GOOGLE_API_KEY 또는 GEMINI_API_KEY 환경변수가 설정되지 않았습니다")
+    }
+
+    aiTemplateServiceInstance = new AITemplateGenerationService(openaiApiKey, googleApiKey)
   }
   return aiTemplateServiceInstance
 }

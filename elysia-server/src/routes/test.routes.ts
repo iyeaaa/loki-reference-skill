@@ -1,8 +1,8 @@
 import Elysia, { t } from "elysia"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
-import { searchAndEnrichLeads } from "../services/lead-search-enrichment.service"
+import { type Country, type Industry, searchBuyers } from "../services/buyer-search"
 import { sendOnboardingCompleteEmail } from "../services/loops.service"
-import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH, INDUSTRY_NAMES } from "../services/onboarding.service"
+import { COUNTRY_NAMES, EMAIL_TYPES_3TOUCH } from "../services/onboarding.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 
 // In-memory job storage
@@ -73,13 +73,46 @@ interface LeadData {
 }
 
 /**
- * 🆕 Discover leads using ICP-based customer search
+ * Map onboarding industry to buyer-search industry
+ */
+function mapIndustry(industry: string): Industry {
+  const mapping: Record<string, Industry> = {
+    manufacturing: "manufacturing_parts",
+    it_saas: "it_software",
+    beauty: "beauty_cosmetics",
+    food: "food_supplements",
+    fashion: "fashion_apparel",
+    electronics: "electronics",
+    healthcare: "healthcare",
+    guitar: "other",
+  }
+  return mapping[industry] || "other"
+}
+
+/**
+ * Map onboarding country to buyer-search country
+ */
+function mapCountry(country: string): Country {
+  const mapping: Record<string, Country> = {
+    jp: "japan",
+    us: "usa",
+    cn: "china",
+    sea: "southeast_asia",
+    eu: "europe",
+    ae: "middle_east",
+  }
+  return mapping[country] || "japan"
+}
+
+/**
+ * 🆕 Discover leads using buyer-search service
  *
- * workspaceDescription이 있으면 ICP 기반 고객사 검색 사용
- * 없으면 기존 하이브리드 검색 사용
+ * 실제 온보딩 프로세스와 동일한 buyer-search 서비스 사용
  */
 async function discoverLeadsEnhanced(
   options: {
+    workspaceName: string
+    workspaceNameEn?: string
     industry: string
     target: string
     country: string
@@ -94,66 +127,62 @@ async function discoverLeadsEnhanced(
   }) => void,
 ) {
   const countryName = COUNTRY_NAMES[options.country] || options.country
-  const industryName = INDUSTRY_NAMES[options.industry] || options.industry
 
-  console.log(
-    `[TestOnboarding] 🆕 Enhanced lead discovery: ICP search = ${!!options.myCompanyDescription}`,
-  )
+  console.log(`[TestOnboarding] 🆕 Using buyer-search service`)
+  console.log(`[TestOnboarding] Company: "${options.workspaceName}"`)
   if (options.myCompanyDescription) {
-    console.log(`[TestOnboarding] My company: "${options.myCompanyDescription.slice(0, 50)}..."`)
+    console.log(`[TestOnboarding] Description: "${options.myCompanyDescription.slice(0, 50)}..."`)
   }
 
-  const query = `${industryName} companies in ${countryName}`
-
-  const result = await searchAndEnrichLeads(
-    30, // TARGET_LEADS
-    query,
-    0, // minimumMatchScore
+  // Call buyer-search service
+  const result = await searchBuyers(
+    {
+      companyName: options.workspaceName,
+      companyDescription: options.myCompanyDescription || "",
+      industry: mapIndustry(options.industry),
+      target: options.target as "b2b" | "b2c" | "both",
+      country: [mapCountry(options.country)],
+      locale: "ko",
+      companySize: "medium", // Default to medium for test
+    },
     // Progress callback for real-time updates
     onProgress
-      ? async (progress) => {
+      ? (progress) => {
           onProgress({
-            currentCount: progress.currentCount,
-            targetCount: progress.targetCount,
-            message: progress.messageKr || progress.message,
-            phase: progress.phase, // phase 정보 전달
+            currentCount: progress.progress,
+            targetCount: 100,
+            message: progress.message,
+            phase: progress.phase,
           })
         }
       : undefined,
-    {
-      industry: industryName,
-      country: countryName,
-      target: options.target,
-      // 🆕 본인 회사 설명 → ICP 기반 고객사 검색
-      myCompanyDescription: options.myCompanyDescription,
-    },
   )
 
   // Transform to expected format
-  const leads: LeadData[] = result.leads.map((lead) => ({
-    company: lead.companyName,
-    website: lead.websiteUrl,
-    industry: lead.businessType || "",
-    employees: lead.employeeCount || "",
-    country: lead.country || countryName,
+  const leads: LeadData[] = result.buyers.map((buyer) => ({
+    company: buyer.companyName,
+    website: buyer.website,
+    industry: buyer.industry || "",
+    employees: "", // buyer-search doesn't return employee count in buyer object
+    country: buyer.country || countryName,
     enriched: {
-      companyName: lead.companyName,
-      websiteUrl: lead.websiteUrl,
-      businessType: lead.businessType || "",
-      country: lead.country || countryName,
-      employeeCount: lead.employeeCount || "",
-      description: lead.description,
-      primaryEmail: lead.primaryEmail || undefined,
+      companyName: buyer.companyName,
+      websiteUrl: buyer.website,
+      businessType: buyer.industry || "",
+      country: buyer.country || countryName,
+      employeeCount: "",
+      description: buyer.description,
+      primaryEmail: buyer.email || undefined,
     },
   }))
 
   return {
     leads,
     stats: {
-      totalFound: result.stats.totalFound,
-      totalEnriched: result.stats.totalFound,
-      totalWithEmail: result.stats.withEmails,
-      duplicatesSkipped: result.stats.skippedDuplicates,
+      totalFound: result.metadata.totalSearched,
+      totalEnriched: result.metadata.totalSearched,
+      totalWithEmail: result.metadata.totalWithEmail,
+      duplicatesSkipped: 0,
       iterations: 1,
     },
   }
@@ -245,6 +274,8 @@ async function processOnboardingTest(
 
         const result = await discoverLeadsEnhanced(
           {
+            workspaceName: params.workspaceName,
+            workspaceNameEn: params.workspaceNameEn,
             industry: params.industry,
             target: params.target,
             country: params.country,

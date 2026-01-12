@@ -14,6 +14,7 @@ import {
   sequenceSteps,
   sequences,
 } from "../db/schema/sequences"
+import { workspaces } from "../db/schema/workspaces"
 import { redisConnection } from "../lib/redis/connection"
 import logger from "../utils/logger"
 import { createNotification } from "./notification.service"
@@ -51,6 +52,50 @@ export interface CampaignStartParams {
 
 const STEP_COMPLETION_LOCK_TTL = 60 // 60초 락
 const LOCK_PREFIX = "notification:step-complete"
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * 구독 티어에 따른 actionUrl 생성
+ *
+ * Trial 사용자는 sequences 리소스 접근 권한이 없으므로
+ * /dashboard로 리다이렉트하고, 그 외 사용자는 시퀀스 디자이너로 이동
+ */
+async function getSequenceActionUrl(
+  workspaceId: string,
+  sequenceId: string,
+): Promise<{ actionUrl: string; actionLabel: string }> {
+  try {
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+      columns: { subscriptionTier: true },
+    })
+
+    if (workspace?.subscriptionTier === "trial") {
+      return {
+        actionUrl: "/dashboard",
+        actionLabel: "대시보드 확인",
+      }
+    }
+
+    return {
+      actionUrl: `/sequences/${sequenceId}/designer`,
+      actionLabel: "캠페인 확인",
+    }
+  } catch (error) {
+    logger.warn(
+      { error, workspaceId, sequenceId },
+      "[SequenceNotification] Failed to get subscription tier, using default URL",
+    )
+    // 에러 시 기본값 반환
+    return {
+      actionUrl: `/sequences/${sequenceId}/designer`,
+      actionLabel: "캠페인 확인",
+    }
+  }
+}
 
 // ============================================================================
 // Step Completion Notification
@@ -99,6 +144,12 @@ export async function notifyStepCompletion(stats: StepCompletionStats): Promise<
       isLastStep,
     })
 
+    // 구독 티어에 따른 actionUrl 결정
+    const { actionUrl, actionLabel } = await getSequenceActionUrl(
+      stats.workspaceId,
+      stats.sequenceId,
+    )
+
     await createNotification({
       userId: stats.userId,
       workspaceId: stats.workspaceId,
@@ -117,8 +168,8 @@ export async function notifyStepCompletion(stats: StepCompletionStats): Promise<
         skipped: stats.skipped,
         total,
         successCount,
-        actionUrl: `/sequences/${stats.sequenceId}`,
-        actionLabel: "발송 결과 확인",
+        actionUrl,
+        actionLabel: actionLabel === "캠페인 확인" ? "발송 결과 확인" : actionLabel,
       },
       entityType: "sequence_step_completion",
       entityId: `${stats.sequenceId}:step${stats.stepOrder}`,
@@ -344,6 +395,9 @@ export async function notifyCampaignStart(params: CampaignStartParams): Promise<
     // 스텝 정보 (멀티 스텝일 경우만 표시)
     const stepInfo = totalSteps > 1 ? ` · ${totalSteps}단계` : ""
 
+    // 구독 티어에 따른 actionUrl 결정
+    const { actionUrl, actionLabel } = await getSequenceActionUrl(workspaceId, sequenceId)
+
     await createNotification({
       userId,
       workspaceId,
@@ -357,8 +411,8 @@ export async function notifyCampaignStart(params: CampaignStartParams): Promise<
         enrolledCount,
         scheduledExecutions,
         totalSteps,
-        actionUrl: `/sequences/${sequenceId}`,
-        actionLabel: "캠페인 확인",
+        actionUrl,
+        actionLabel,
       },
       entityType: "sequence",
       entityId: sequenceId,

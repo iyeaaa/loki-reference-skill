@@ -491,8 +491,8 @@ export function useMyPermissions(workspaceId?: string, enabled = true) {
     enabled,
     staleTime: 0,
     gcTime: 0,
-    refetchOnWindowFocus: true, // 탭 전환 시 최신 데이터 조회
-    refetchOnMount: true, // 컴포넌트 마운트 시 항상 조회
+    refetchOnWindowFocus: enabled, // 탭 전환 시 최신 데이터 조회 (enabled일 때만)
+    refetchOnMount: enabled, // 컴포넌트 마운트 시 항상 조회 (enabled일 때만)
     // 워크스페이스 전환 시 이전 데이터 유지 → 깜빡임 없는 부드러운 전환
     placeholderData: keepPreviousData,
   })

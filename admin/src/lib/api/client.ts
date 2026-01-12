@@ -90,19 +90,27 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
         status: response.status,
         statusText: response.statusText,
         url,
-        errorText,
+        errorText: errorText || "(empty response)",
       })
 
       let message: string
       let errorData: { message?: string } | undefined
-      try {
-        errorData = JSON.parse(errorText)
-        console.error("❌ Parsed error data:", errorData)
-        message = errorData?.message || `Request failed (${response.status})`
-      } catch (parseError) {
-        console.error("❌ Failed to parse error response:", parseError)
-        message = errorText.trim() || `Request failed (${response.status})`
+
+      // Only try to parse if response body is not empty
+      if (errorText?.trim()) {
+        try {
+          errorData = JSON.parse(errorText)
+          console.error("❌ Parsed error data:", errorData)
+          message = errorData?.message || `Request failed (${response.status})`
+        } catch (parseError) {
+          console.error("❌ Failed to parse error response:", parseError)
+          message = errorText.trim()
+        }
+      } else {
+        // Empty response body
+        message = `Request failed (${response.status}: ${response.statusText})`
       }
+
       // Throw ApiError with status code for proper error handling
       throw new ApiError(message, response.status, errorData)
     }

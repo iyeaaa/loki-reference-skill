@@ -68,7 +68,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     }
   }, [])
 
-  // React Query로 권한 정보 가져오기 (로그인된 경우에만 호출)
+  // React Query로 권한 정보 가져오기 (로그인되고 워크스페이스가 선택된 경우에만 호출)
   const {
     data: permissionData,
     isLoading,

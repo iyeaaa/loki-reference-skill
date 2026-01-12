@@ -32,8 +32,8 @@ function initMixpanel() {
 
   mixpanel.init(env.VITE_MIXPANEL_TOKEN, {
     debug: !isProduction,
-    // SPA에서는 'full-url'로 설정하여 URL 변경 시 자동 페이지뷰 추적
-    track_pageview: "full-url",
+    // 자동 페이지뷰 비활성화 (수동 trackPageView만 사용하여 Super Property 일관성 확보)
+    track_pageview: false,
     // 크로스 서브도메인 추적을 위해 cookie persistence 사용 (localStorage는 크로스 서브도메인 불가)
     persistence: "cookie",
     // rinda.ai에서 app.rinda.ai로 유입 추적을 위해 cross_subdomain 활성화

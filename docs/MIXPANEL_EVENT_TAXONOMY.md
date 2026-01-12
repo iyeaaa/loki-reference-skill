@@ -28,9 +28,13 @@
 mixpanel.init(TOKEN, {
   persistence: "cookie",           // 필수: 쿠키 기반 persistence
   cross_subdomain_cookie: true,    // 필수: 서브도메인 간 쿠키 공유
-  track_pageview: "full-url",      // 자동 페이지뷰 추적
+  track_pageview: false,           // 자동 페이지뷰 비활성화 (수동 이벤트만 사용)
 });
 ```
+
+> ⚠️ **중요**: `track_pageview`와 `autocapture.pageview`를 비활성화해야 합니다.
+> 자동 페이지뷰 이벤트에는 `mixpanel.register()`로 설정한 Super Property가 포함되지 않을 수 있어서,
+> 수동 이벤트만 사용하여 `platform` 속성의 일관성을 확보합니다.
 
 ---
 
@@ -887,3 +891,4 @@ export const trackCTAClicked = (data: {
 | 2025-01-09 | 신규 이벤트 추가: App Session Start, Survey Completed, Plan Changed, CTA Clicked |
 | 2025-01-09 | 기존 이벤트 개선: Campaign Executed, Survey Step, Onboarding Steps |
 | 2025-01-09 | 리텐션/드롭오프 분석 추가: 주간 리텐션, 국가별 전환율, 단계별 이탈율 |
+| 2025-01-12 | 자동 페이지뷰 비활성화: track_pageview, autocapture.pageview를 false로 설정 (Super Property 일관성) |

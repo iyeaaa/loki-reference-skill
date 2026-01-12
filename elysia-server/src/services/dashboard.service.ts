@@ -7,6 +7,36 @@ import { leads } from "../db/schema/leads"
 import { sequenceEnrollments, sequenceSteps, sequences } from "../db/schema/sequences"
 import { normalizeCountryName } from "../utils/country-normalizer"
 
+// ============================================================================
+// Date Helpers
+// ============================================================================
+
+/**
+ * Parse date string to Date object for start date filtering
+ * Returns the start of the day (00:00:00.000Z)
+ */
+function parseStartDate(dateStr: string): Date {
+  return new Date(dateStr)
+}
+
+/**
+ * Parse date string to Date object for end date filtering
+ * Returns the end of the day (23:59:59.999Z) to include the entire day
+ *
+ * 이유: "2026-01-12" 문자열이 new Date()로 파싱되면 UTC 자정(00:00:00.000Z)이 됨
+ * 따라서 해당 날짜에 발생한 이벤트(예: 04:45:02Z)가 필터에서 제외됨
+ * 하루 전체를 포함하려면 해당 일의 끝(23:59:59.999Z)으로 설정해야 함
+ */
+function parseEndDate(dateStr: string): Date {
+  const d = new Date(dateStr)
+  d.setUTCHours(23, 59, 59, 999)
+  return d
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
 export interface DateRangeParams {
   startDate?: string // ISO 8601 date string
   endDate?: string // ISO 8601 date string
@@ -87,10 +117,10 @@ export async function getDashboardStats(params: DateRangeParams): Promise<Dashbo
 
   const periodLeadsConditions = [...conditions]
   if (startDate) {
-    periodLeadsConditions.push(gte(leads.createdAt, new Date(startDate)))
+    periodLeadsConditions.push(gte(leads.createdAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    periodLeadsConditions.push(lte(leads.createdAt, new Date(endDate)))
+    periodLeadsConditions.push(lte(leads.createdAt, parseEndDate(endDate)))
   }
 
   const periodLeadsResult = await db
@@ -110,10 +140,10 @@ export async function getDashboardStats(params: DateRangeParams): Promise<Dashbo
 
   const periodEmailConditions = [...emailConditions, eq(emails.direction, "outbound")]
   if (startDate) {
-    periodEmailConditions.push(gte(emails.sentAt, new Date(startDate)))
+    periodEmailConditions.push(gte(emails.sentAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    periodEmailConditions.push(lte(emails.sentAt, new Date(endDate)))
+    periodEmailConditions.push(lte(emails.sentAt, parseEndDate(endDate)))
   }
 
   const periodEmailsResult = await db
@@ -145,10 +175,10 @@ export async function getDashboardStats(params: DateRangeParams): Promise<Dashbo
     isNotNull(emails.sentAt),
   ]
   if (startDate) {
-    periodOpenConditions.push(gte(emails.openedAt, new Date(startDate)))
+    periodOpenConditions.push(gte(emails.openedAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    periodOpenConditions.push(lte(emails.openedAt, new Date(endDate)))
+    periodOpenConditions.push(lte(emails.openedAt, parseEndDate(endDate)))
   }
 
   const periodOpenedResult = await db
@@ -186,10 +216,10 @@ export async function getLeadTrends(params: DateRangeParams): Promise<TrendDataP
 
   const conditions = workspaceId ? [eq(leads.workspaceId, workspaceId)] : []
   if (startDate) {
-    conditions.push(gte(leads.createdAt, new Date(startDate)))
+    conditions.push(gte(leads.createdAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(leads.createdAt, new Date(endDate)))
+    conditions.push(lte(leads.createdAt, parseEndDate(endDate)))
   }
 
   const result = await db
@@ -219,10 +249,10 @@ export async function getEmailTrends(params: DateRangeParams): Promise<TrendData
     conditions.push(eq(emails.workspaceId, workspaceId))
   }
   if (startDate) {
-    conditions.push(gte(emails.sentAt, new Date(startDate)))
+    conditions.push(gte(emails.sentAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(emails.sentAt, new Date(endDate)))
+    conditions.push(lte(emails.sentAt, parseEndDate(endDate)))
   }
 
   const result = await db
@@ -252,10 +282,10 @@ export async function getOpenRateTrends(params: DateRangeParams): Promise<TrendD
     conditions.push(eq(emails.workspaceId, workspaceId))
   }
   if (startDate) {
-    conditions.push(gte(emails.sentAt, new Date(startDate)))
+    conditions.push(gte(emails.sentAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(emails.sentAt, new Date(endDate)))
+    conditions.push(lte(emails.sentAt, parseEndDate(endDate)))
   }
 
   const result = await db
@@ -289,10 +319,10 @@ export async function getLeadDiscoveryNotifications(
   // Build conditions for customer_group_members.addedAt
   const memberConditions = []
   if (startDate) {
-    memberConditions.push(gte(customerGroupMembers.addedAt, new Date(startDate)))
+    memberConditions.push(gte(customerGroupMembers.addedAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    memberConditions.push(lte(customerGroupMembers.addedAt, new Date(endDate)))
+    memberConditions.push(lte(customerGroupMembers.addedAt, parseEndDate(endDate)))
   }
 
   // Build conditions for customer_groups
@@ -338,10 +368,10 @@ export async function getCampaignNotifications(
   // Query sequences with customer group info
   const conditions = workspaceId ? [eq(sequences.workspaceId, workspaceId)] : []
   if (startDate) {
-    conditions.push(gte(sequences.updatedAt, new Date(startDate)))
+    conditions.push(gte(sequences.updatedAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(sequences.updatedAt, new Date(endDate)))
+    conditions.push(lte(sequences.updatedAt, parseEndDate(endDate)))
   }
 
   const result = await db
@@ -392,10 +422,10 @@ export async function getCampaignNotifications(
         isNotNull(emails.sentAt),
       ]
       if (startDate) {
-        emailConditions.push(gte(emails.sentAt, new Date(startDate)))
+        emailConditions.push(gte(emails.sentAt, parseStartDate(startDate)))
       }
       if (endDate) {
-        emailConditions.push(lte(emails.sentAt, new Date(endDate)))
+        emailConditions.push(lte(emails.sentAt, parseEndDate(endDate)))
       }
 
       // Get email metrics in the selected period
@@ -424,8 +454,8 @@ export async function getCampaignNotifications(
             eq(emails.direction, "outbound"),
             isNotNull(emails.sentAt),
             isNotNull(emails.deliveredAt),
-            ...(startDate ? [gte(emails.sentAt, new Date(startDate))] : []),
-            ...(endDate ? [lte(emails.sentAt, new Date(endDate))] : []),
+            ...(startDate ? [gte(emails.sentAt, parseStartDate(startDate))] : []),
+            ...(endDate ? [lte(emails.sentAt, parseEndDate(endDate))] : []),
           ),
         )
 
@@ -473,10 +503,10 @@ export async function getReplyNotifications(
     conditions.push(eq(emails.workspaceId, workspaceId))
   }
   if (startDate) {
-    conditions.push(gte(emails.createdAt, new Date(startDate)))
+    conditions.push(gte(emails.createdAt, parseStartDate(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(emails.createdAt, new Date(endDate)))
+    conditions.push(lte(emails.createdAt, parseEndDate(endDate)))
   }
 
   const result = await db
@@ -615,9 +645,9 @@ export async function getUnifiedDashboardStats(
 ): Promise<UnifiedDashboardStats> {
   const { workspaceId, sequenceId, startDate, endDate } = params
 
-  // Parse date strings to Date objects
-  const startDateObj = startDate ? new Date(startDate) : undefined
-  const endDateObj = endDate ? new Date(endDate) : undefined
+  // Parse date strings to Date objects (헬퍼 함수 사용)
+  const startDateObj = startDate ? parseStartDate(startDate) : undefined
+  const endDateObj = endDate ? parseEndDate(endDate) : undefined
 
   // 1. Get subscription info (workspaceId가 있을 때만)
   const subscriptionInfo = workspaceId

@@ -20,6 +20,7 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  Loader2,
   MoreHorizontal,
   RefreshCw,
   Trash2,
@@ -28,7 +29,6 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import { type Notification, useNotificationsManager } from "@/lib/api/hooks/notifications"
 import { dispatchWorkspaceChange, useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
@@ -63,8 +64,7 @@ type GroupedNotifications = {
 // ============================================================================
 
 function getNotificationIcon(type: Notification["type"], metadata?: Notification["metadata"]) {
-  // 온보딩 완료 상태 체크
-  const isOnboardingComplete = metadata?.phase === "complete"
+  const phase = metadata?.phase as string | undefined
 
   // 컴팩트 스타일: 36x36 컨테이너, rounded-xl
   const baseClass = "flex h-9 w-9 items-center justify-center rounded-xl"
@@ -89,16 +89,32 @@ function getNotificationIcon(type: Notification["type"], metadata?: Notification
           <AlertCircle className={`${iconClass} text-amber-600 dark:text-amber-400`} />
         </div>
       )
-    case "onboarding":
-      return isOnboardingComplete ? (
-        <div className={`${baseClass} bg-green-100 dark:bg-green-900/30`}>
-          <Users className={`${iconClass} text-green-600 dark:text-green-400`} />
-        </div>
-      ) : (
+    case "onboarding": {
+      // 온보딩 상태별 아이콘 분기
+      // 1. 완료 또는 phase 없음 (오래된 알림) → Users 아이콘
+      // 2. 에러 → XCircle 아이콘
+      // 3. 진행 중 (discovery, previews 등) → Loader2 스피너
+      if (phase === "complete" || !phase) {
+        return (
+          <div className={`${baseClass} bg-green-100 dark:bg-green-900/30`}>
+            <Users className={`${iconClass} text-green-600 dark:text-green-400`} />
+          </div>
+        )
+      }
+      if (phase === "error") {
+        return (
+          <div className={`${baseClass} bg-red-100 dark:bg-red-900/30`}>
+            <XCircle className={`${iconClass} text-red-600 dark:text-red-400`} />
+          </div>
+        )
+      }
+      // 진행 중
+      return (
         <div className={`${baseClass} bg-blue-100 dark:bg-blue-900/30`}>
-          <StarSpinner size={18} />
+          <Loader2 className={`${iconClass} animate-spin text-blue-600 dark:text-blue-400`} />
         </div>
       )
+    }
     default:
       return (
         <div className={`${baseClass} bg-gray-100 dark:bg-gray-800`}>
@@ -644,8 +660,17 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
         {/* Notification List */}
         <ScrollArea className="h-[360px]">
           {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <StarSpinner size={24} />
+            <div className="space-y-1">
+              {/* 로딩 Skeleton: 알림 아이템 3개 형태 */}
+              {[1, 2, 3].map((i) => (
+                <div className="flex gap-3 px-4 py-3" key={i}>
+                  <Skeleton className="h-9 w-9 flex-shrink-0 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 py-8">

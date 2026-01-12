@@ -42,6 +42,12 @@ function initMixpanel() {
     record_sessions_percent: 100,
   })
 
+  // 플랫폼 구분을 위한 Super Property (모든 이벤트에 자동 첨부)
+  mixpanel.register({
+    platform: "app",
+    app_domain: "app.rinda.ai",
+  })
+
   mixpanelInitialized = true
   console.log("[Analytics] Mixpanel initialized")
 }

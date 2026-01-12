@@ -107,10 +107,12 @@ export async function createNotification(params: CreateNotificationParams): Prom
 }
 
 /**
- * 사용자의 알림 목록 조회 (단일 쿼리 최적화)
+ * 사용자의 알림 목록 조회 (최적화 버전)
  *
- * PostgreSQL 윈도우 함수를 사용하여 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회
- * workspaces 테이블 JOIN으로 워크스페이스 이름 포함
+ * 성능 최적화:
+ * - CTE 대신 서브쿼리 사용 (물리화 방지)
+ * - 목록 조회와 카운트 조회 병렬 실행
+ * - expires_at 조건 단순화
  */
 export async function getNotifications(filter: NotificationFilter): Promise<{
   notifications: NotificationWithWorkspace[]
@@ -119,81 +121,72 @@ export async function getNotifications(filter: NotificationFilter): Promise<{
 }> {
   const { userId, workspaceId, type, read, limit = 50, offset = 0 } = filter
 
-  // 동적 필터 조건 구성 - CTE에서 사용하기 위해 raw 컬럼명 사용
+  // 동적 필터 조건 구성
   const workspaceCondition = workspaceId ? sql`AND n.workspace_id = ${workspaceId}` : sql``
-  const typeCondition = type ? sql`AND type = ${type}` : sql``
-  const readCondition = read !== undefined ? sql`AND read = ${read}` : sql``
+  const typeCondition = type ? sql`AND n.type = ${type}` : sql``
+  const readCondition = read !== undefined ? sql`AND n.read = ${read}` : sql``
 
-  // 단일 쿼리로 목록 + 전체 개수 + 읽지 않은 개수 조회 (workspaces JOIN 포함)
-  const result = await db.execute<{
-    id: string
-    user_id: string
-    workspace_id: string | null
-    workspace_name: string | null
-    type: string
-    priority: string
-    title: string
-    message: string
-    read: boolean
-    read_at: Date | null
-    metadata: Record<string, unknown> | null
-    entity_type: string | null
-    entity_id: string | null
-    expires_at: Date | null
-    created_at: Date
-    updated_at: Date
-    total: string
-    unread_count: string
-  }>(sql`
-    WITH base_filter AS (
-      SELECT *
-      FROM ${notifications}
-      WHERE user_id = ${userId}
-        AND (expires_at IS NULL OR NOW() < expires_at)
-    ),
-    counts AS (
+  // 병렬로 목록 조회와 카운트 조회 실행
+  const [listResult, countResult] = await Promise.all([
+    // 1. 알림 목록 조회 (단순 쿼리)
+    db.execute<{
+      id: string
+      user_id: string
+      workspace_id: string | null
+      workspace_name: string | null
+      type: string
+      priority: string
+      title: string
+      message: string
+      read: boolean
+      read_at: Date | null
+      metadata: Record<string, unknown> | null
+      entity_type: string | null
+      entity_id: string | null
+      expires_at: Date | null
+      created_at: Date
+      updated_at: Date
+    }>(sql`
       SELECT
-        COUNT(*) FILTER (WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}) as total,
-        COUNT(*) FILTER (WHERE read = false ${workspaceCondition}) as unread_count
-      FROM base_filter
-    )
-    SELECT
-      n.*,
-      w.name as workspace_name,
-      c.total,
-      c.unread_count
-    FROM base_filter n
-    LEFT JOIN ${workspaces} w ON w.id = n.workspace_id
-    CROSS JOIN counts c
-    WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}
-    ORDER BY n.created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `)
+        n.id, n.user_id, n.workspace_id, n.type, n.priority,
+        n.title, n.message, n.read, n.read_at, n.metadata,
+        n.entity_type, n.entity_id, n.expires_at, n.created_at, n.updated_at,
+        w.name as workspace_name
+      FROM ${notifications} n
+      LEFT JOIN ${workspaces} w ON w.id = n.workspace_id
+      WHERE n.user_id = ${userId}
+        AND (n.expires_at IS NULL OR n.expires_at > NOW())
+        ${workspaceCondition}
+        ${typeCondition}
+        ${readCondition}
+      ORDER BY n.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `),
 
-  // 결과가 없는 경우 개수만 조회
-  if (result.rows.length === 0) {
-    const countResult = await db.execute<{ total: string; unread_count: string }>(sql`
+    // 2. 카운트 조회 (별도 쿼리 - 캐싱 가능)
+    db.execute<{ total: string; unread_count: string }>(sql`
       SELECT
-        COUNT(*) FILTER (WHERE true ${workspaceCondition} ${typeCondition} ${readCondition}) as total,
-        COUNT(*) FILTER (WHERE read = false ${workspaceCondition}) as unread_count
-      FROM ${notifications}
-      WHERE user_id = ${userId}
-        AND (expires_at IS NULL OR NOW() < expires_at)
-    `)
+        COUNT(*) FILTER (
+          WHERE true
+            ${workspaceCondition}
+            ${typeCondition}
+            ${readCondition}
+        ) as total,
+        COUNT(*) FILTER (
+          WHERE n.read = false
+            ${workspaceCondition}
+        ) as unread_count
+      FROM ${notifications} n
+      WHERE n.user_id = ${userId}
+        AND (n.expires_at IS NULL OR n.expires_at > NOW())
+    `),
+  ])
 
-    return {
-      notifications: [],
-      total: Number(countResult.rows[0]?.total ?? 0),
-      unreadCount: Number(countResult.rows[0]?.unread_count ?? 0),
-    }
-  }
+  const total = Number(countResult.rows[0]?.total ?? 0)
+  const unreadCount = Number(countResult.rows[0]?.unread_count ?? 0)
 
-  // 첫 번째 row에서 total, unread_count 추출
-  const total = Number(result.rows[0]?.total ?? 0)
-  const unreadCount = Number(result.rows[0]?.unread_count ?? 0)
-
-  // snake_case → camelCase 변환 (workspaceName 포함)
-  const notificationList: NotificationWithWorkspace[] = result.rows.map((row) => ({
+  // snake_case → camelCase 변환
+  const notificationList: NotificationWithWorkspace[] = listResult.rows.map((row) => ({
     id: row.id,
     userId: row.user_id,
     workspaceId: row.workspace_id,

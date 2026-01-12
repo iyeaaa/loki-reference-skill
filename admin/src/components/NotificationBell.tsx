@@ -546,7 +546,6 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    refetch,
   } = useNotificationsManager(workspaceId, {
     limit: 50,
     enableSSE: true,
@@ -586,12 +585,10 @@ export function NotificationBell({ workspaceId, className }: NotificationBellPro
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
-    if (open) {
-      refetch()
-      // 알림 메뉴 열 때 모든 알림 읽음 처리
-      if (hasUnread) {
-        markAllAsRead()
-      }
+    // 팝오버 열 때 읽음 처리만 수행 (refetch 제거 - SSE로 실시간 업데이트됨)
+    // markAllAsRead 내부에서 optimistic update로 UI 즉시 반영
+    if (open && hasUnread) {
+      markAllAsRead()
     }
   }
 

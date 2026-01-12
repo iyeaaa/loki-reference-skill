@@ -122,20 +122,48 @@ export function useMarkAsRead() {
 }
 
 /**
- * 모든 알림 읽음 처리 훅
+ * 모든 알림 읽음 처리 훅 (Optimistic Update)
  */
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (workspaceId?: string) => notificationsApi.markAllAsRead(workspaceId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all })
+    onMutate: async () => {
+      // 진행 중인 쿼리 취소
+      await queryClient.cancelQueries({ queryKey: notificationKeys.all })
+
+      // 현재 캐시된 데이터 백업
+      const previousData = queryClient.getQueriesData({ queryKey: notificationKeys.all })
+
+      // Optimistic update: 모든 알림을 읽음으로 표시
+      queryClient.setQueriesData<NotificationListResponse>(
+        { queryKey: notificationKeys.all },
+        (old) => {
+          if (!old) {
+            return old
+          }
+          return {
+            ...old,
+            notifications: old.notifications.map((n) => ({ ...n, read: true })),
+            unreadCount: 0,
+          }
+        },
+      )
+
+      return { previousData }
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      // 에러 시 이전 데이터로 롤백
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      }
       toast.error("알림 읽음 처리에 실패했습니다")
       console.error("[Notifications] Failed to mark all as read:", error)
     },
+    // onSuccess에서 invalidate 제거 - optimistic update로 충분
   })
 }
 

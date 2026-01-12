@@ -451,7 +451,7 @@ export function StepConfirmation() {
         <p className="mb-1 font-medium text-blue-600 text-sm">
           {isKorean ? "마지막 단계예요" : "Final step"}
         </p>
-        <h2 className="font-bold text-xl text-gray-900 tracking-tight sm:text-2xl">
+        <h2 className="font-bold text-gray-900 text-xl tracking-tight sm:text-2xl">
           {isKorean ? "캠페인을 확인하고 시작하세요" : "Review and launch your campaign"}
         </h2>
       </div>

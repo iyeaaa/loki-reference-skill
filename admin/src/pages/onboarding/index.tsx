@@ -202,7 +202,6 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-center gap-2 md:hidden">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <div
-                key={i}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
                   i + 1 === currentStep
@@ -211,6 +210,7 @@ export default function OnboardingPage() {
                       ? "w-1.5 bg-blue-400"
                       : "w-1.5 bg-gray-300",
                 )}
+                key={i}
               />
             ))}
           </div>
@@ -218,10 +218,10 @@ export default function OnboardingPage() {
           {/* 데스크톱: 기존 유지 */}
           <div className="hidden md:block">
             <div className="mb-2 flex items-center justify-center gap-2">
-              <Badge variant="outline" className="border-blue-200 text-blue-600">
+              <Badge className="border-blue-200 text-blue-600" variant="outline">
                 Step {currentStep} / {TOTAL_STEPS}
               </Badge>
-              <Badge variant="secondary" className="text-xs">
+              <Badge className="text-xs" variant="secondary">
                 {getStepCta()}
               </Badge>
             </div>
@@ -240,10 +240,7 @@ export default function OnboardingPage() {
         <div className="mb-2 flex items-center justify-between md:mb-4">
           {/* 모바일: 뒤로가기만 표시 (좌상단) */}
           <Button
-            className={cn(
-              "text-gray-500 hover:text-gray-700",
-              "h-8 w-8 p-0 md:h-10 md:w-10",
-            )}
+            className={cn("text-gray-500 hover:text-gray-700", "h-8 w-8 p-0 md:h-10 md:w-10")}
             disabled={currentStep === 1}
             onClick={handleBack}
             variant="ghost"
@@ -265,15 +262,15 @@ export default function OnboardingPage() {
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           {/* Question Card - Left side */}
           <div className="relative lg:col-span-2">
-            <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <AnimatePresence custom={direction} initial={false} mode="wait">
               <motion.div
-                key={currentStep}
-                custom={direction}
-                variants={isMobile ? slideMobileVariants : slideVariants}
-                initial="enter"
                 animate="center"
-                exit="exit"
                 className="w-full"
+                custom={direction}
+                exit="exit"
+                initial="enter"
+                key={currentStep}
+                variants={isMobile ? slideMobileVariants : slideVariants}
               >
                 {renderStep()}
               </motion.div>
@@ -367,7 +364,7 @@ function Step1({
                 "md:hover:scale-[1.01] md:hover:shadow-md",
                 // Selection states
                 selected === industry
-                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md shadow-blue-100 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100 shadow-md hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={industry}
@@ -381,8 +378,8 @@ function Step1({
               {selected === industry && (
                 <motion.div
                   animate={{ scale: 1, opacity: 1 }}
-                  initial={{ scale: 0, opacity: 0 }}
                   className="absolute top-2 right-2"
+                  initial={{ scale: 0, opacity: 0 }}
                 >
                   <Check className="h-5 w-5 text-blue-600" />
                 </motion.div>
@@ -453,7 +450,7 @@ function Step2({
                 "md:hover:scale-[1.01] md:hover:shadow-md",
                 // Selection states
                 selected === target
-                  ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-100 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 shadow-blue-100 shadow-md hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={target}
@@ -476,8 +473,8 @@ function Step2({
               {selected === target && (
                 <motion.div
                   animate={{ scale: 1, opacity: 1 }}
-                  initial={{ scale: 0, opacity: 0 }}
                   className="absolute top-2 right-2"
+                  initial={{ scale: 0, opacity: 0 }}
                 >
                   <Check className="h-5 w-5 text-blue-600" />
                 </motion.div>
@@ -544,7 +541,7 @@ function Step3({
                 "md:hover:scale-[1.01] md:hover:shadow-md",
                 // Selection states
                 selected === country
-                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md shadow-blue-100 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100 shadow-md hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={country}
@@ -558,8 +555,8 @@ function Step3({
               {selected === country && (
                 <motion.div
                   animate={{ scale: 1, opacity: 1 }}
-                  initial={{ scale: 0, opacity: 0 }}
                   className="absolute top-2 right-2"
+                  initial={{ scale: 0, opacity: 0 }}
                 >
                   <Check className="h-5 w-5 text-blue-600" />
                 </motion.div>
@@ -633,7 +630,7 @@ function Step4({
                 "md:hover:scale-[1.01] md:hover:shadow-md",
                 // Selection states
                 selected === experience
-                  ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-100 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 shadow-blue-100 shadow-md hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={experience}
@@ -661,8 +658,8 @@ function Step4({
               {selected === experience && (
                 <motion.div
                   animate={{ scale: 1, opacity: 1 }}
-                  initial={{ scale: 0, opacity: 0 }}
                   className="absolute top-2 right-2"
+                  initial={{ scale: 0, opacity: 0 }}
                 >
                   <Check className="h-5 w-5 text-blue-600" />
                 </motion.div>

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
-import { DashboardPreview } from "@/components/trial/DashboardPreview"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { trackLogin, trackTrialPageVisit } from "@/lib/analytics"
@@ -221,10 +220,10 @@ export default function NewTrialPage() {
             className="mb-8 text-center lg:mb-10"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
-            <h1 className="mb-3 font-bold text-gray-900 text-2xl leading-tight sm:text-3xl">
+            <h1 className="mb-3 font-bold text-2xl text-gray-900 leading-tight sm:text-3xl">
               {t("trial.new.title")}
             </h1>
-            <p className="text-gray-600 text-base sm:text-lg">{t("trial.new.subtitle")}</p>
+            <p className="text-base text-gray-600 sm:text-lg">{t("trial.new.subtitle")}</p>
           </motion.div>
 
           {/* Mobile-only: 3 Feature Icon Cards */}
@@ -236,51 +235,90 @@ export default function NewTrialPage() {
               {/* Card 1: Find Buyers */}
               <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 text-center shadow-sm">
                 <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500">
-                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg
+                    aria-hidden="true"
+                    className="h-6 w-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                    />
                   </svg>
                 </div>
                 <p className="font-semibold text-gray-900 text-xs leading-tight">
-                  {t("trial.new.card1").split("|").map((line, i) => (
-                    <span key={i}>
-                      {line}
-                      {i === 0 && <br />}
-                    </span>
-                  ))}
+                  {t("trial.new.card1")
+                    .split("|")
+                    .map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        {i === 0 && <br />}
+                      </span>
+                    ))}
                 </p>
               </div>
 
               {/* Card 2: Auto Email */}
               <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 text-center shadow-sm">
                 <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500">
-                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <svg
+                    aria-hidden="true"
+                    className="h-6 w-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                    />
                   </svg>
                 </div>
                 <p className="font-semibold text-gray-900 text-xs leading-tight">
-                  {t("trial.new.card2").split("|").map((line, i) => (
-                    <span key={i}>
-                      {line}
-                      {i === 0 && <br />}
-                    </span>
-                  ))}
+                  {t("trial.new.card2")
+                    .split("|")
+                    .map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        {i === 0 && <br />}
+                      </span>
+                    ))}
                 </p>
               </div>
 
               {/* Card 3: Real-time Alert */}
               <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 text-center shadow-sm">
                 <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-purple-500">
-                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <svg
+                    aria-hidden="true"
+                    className="h-6 w-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                    />
                   </svg>
                 </div>
                 <p className="font-semibold text-gray-900 text-xs leading-tight">
-                  {t("trial.new.card3").split("|").map((line, i) => (
-                    <span key={i}>
-                      {line}
-                      {i === 0 && <br />}
-                    </span>
-                  ))}
+                  {t("trial.new.card3")
+                    .split("|")
+                    .map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        {i === 0 && <br />}
+                      </span>
+                    ))}
                 </p>
               </div>
             </div>
@@ -298,16 +336,28 @@ export default function NewTrialPage() {
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-white border-b-2" />
                   연결 중...
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-3">
                   <svg aria-label="Google logo" className="h-6 w-6" role="img" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fill="#4285F4"
+                    />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      fill="#34A853"
+                    />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      fill="#FBBC05"
+                    />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      fill="#EA4335"
+                    />
                   </svg>
                   <span>Google로 시작하기</span>
                 </div>
@@ -315,10 +365,19 @@ export default function NewTrialPage() {
             </Button>
 
             {/* Trust badges inline */}
-            <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-600">
+            <div className="mt-3 flex items-center justify-center gap-2 text-gray-600 text-xs">
               <span className="flex items-center gap-1">
-                <svg className="h-3 w-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <svg
+                  aria-hidden="true"
+                  className="h-3 w-3 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    clipRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    fillRule="evenodd"
+                  />
                 </svg>
                 14일 무료
               </span>
@@ -330,7 +389,10 @@ export default function NewTrialPage() {
           </motion.div>
 
           {/* Google Login Button */}
-          <motion.div className="mb-6 hidden lg:block" variants={shouldReduceMotion() ? {} : staggerItemVariants}>
+          <motion.div
+            className="mb-6 hidden lg:block"
+            variants={shouldReduceMotion() ? {} : staggerItemVariants}
+          >
             <Button
               className="h-11 w-full border border-gray-300 bg-white text-gray-900 text-sm shadow-sm hover:bg-gray-50 sm:h-12 sm:text-base"
               disabled={isLoading}

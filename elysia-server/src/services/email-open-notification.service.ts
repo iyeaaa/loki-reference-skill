@@ -18,6 +18,7 @@ import { leads } from "../db/schema/leads"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
 import logger from "../utils/logger"
+import { createNotification } from "./notification.service"
 import * as unipileService from "./unipile.service"
 
 // ============================================================================
@@ -344,10 +345,82 @@ async function getUserUnipileAccount(
 }
 
 /**
- * 이메일 오픈 알림 발송 (Unipile 사용)
- * - 체험판 사용자에게만 발송
+ * 이메일 오픈 벨 알림 생성 (모든 사용자)
+ * - notifications 테이블에 저장
+ * - 우측 상단 알림 벨에 표시
+ */
+async function createEmailOpenBellNotification(params: {
+  emailId: string
+  userId: string
+  workspaceId: string
+  leadName: string | null
+  leadId: string | null
+  companyName: string | null
+  toEmail: string
+  subject: string | null
+  sequenceId: string | null
+  sequenceName: string | null
+  openedAt: Date
+}): Promise<void> {
+  const {
+    emailId,
+    userId,
+    workspaceId,
+    leadName,
+    leadId,
+    companyName,
+    toEmail,
+    subject,
+    sequenceId,
+    sequenceName,
+    openedAt,
+  } = params
+
+  // 표시할 이름 결정
+  const displayName = leadName || toEmail.split("@")[0] || "바이어"
+
+  // 메시지 구성
+  const title = "이메일이 열람되었습니다"
+  let message = `${displayName}님이 이메일을 확인했습니다`
+  if (sequenceName) {
+    message += `\n${sequenceName}`
+  }
+
+  await createNotification({
+    userId,
+    workspaceId,
+    type: "info",
+    priority: "normal",
+    title,
+    message,
+    metadata: {
+      emailId,
+      leadId,
+      leadName,
+      companyName,
+      toEmail,
+      subject,
+      sequenceId,
+      sequenceName,
+      openedAt: openedAt.toISOString(),
+      actionUrl: "/dashboard",
+      actionLabel: "대시보드 확인",
+    },
+    entityType: "email_open",
+    entityId: emailId,
+  })
+
+  logger.info(
+    { emailId, userId, leadName: displayName },
+    "[EmailOpenNotification] Bell notification created",
+  )
+}
+
+/**
+ * 이메일 오픈 알림 발송
+ * - 벨 알림: 모든 사용자 (notifications 테이블)
+ * - 이메일 알림: 체험판 사용자만 (Unipile 발송)
  * - 최초 오픈 시에만 발송 (openCount === 1)
- * - 유저의 Unipile 연동 이메일로 발송
  */
 export async function sendEmailOpenNotification(
   emailId: string,
@@ -362,17 +435,7 @@ export async function sendEmailOpenNotification(
 
     const { email, user, workspace, lead } = data
 
-    // 2. 체험판 사용자인지 확인
-    const isTrial = await isTrialWorkspace(workspace.id)
-    if (!isTrial) {
-      logger.debug(
-        { emailId, workspaceId: workspace.id },
-        "Skipping notification: not a trial workspace",
-      )
-      return { success: false, skipped: true, reason: "Not a trial workspace" }
-    }
-
-    // 3. 최초 오픈인지 확인 (openCount가 1인 경우만)
+    // 2. 최초 오픈인지 확인 (openCount가 1인 경우만)
     const [currentEmail] = await db
       .select({ openCount: emailsTable.openCount })
       .from(emailsTable)
@@ -387,17 +450,42 @@ export async function sendEmailOpenNotification(
       return { success: false, skipped: true, reason: "Not the first open" }
     }
 
-    // 4. 유저의 Unipile 계정 조회
+    // 3. 벨 알림 생성 (모든 사용자)
+    await createEmailOpenBellNotification({
+      emailId,
+      userId: user.id,
+      workspaceId: workspace.id,
+      leadName: email.leadName || lead?.contactName || null,
+      leadId: email.leadId,
+      companyName: lead?.companyName || null,
+      toEmail: email.toEmail,
+      subject: email.subject,
+      sequenceId: email.sequenceId,
+      sequenceName: email.sequenceName,
+      openedAt,
+    })
+
+    // 4. 체험판 사용자인지 확인 (이메일 알림은 체험판만)
+    const isTrial = await isTrialWorkspace(workspace.id)
+    if (!isTrial) {
+      logger.debug(
+        { emailId, workspaceId: workspace.id },
+        "Skipping Unipile email: not a trial workspace (bell notification created)",
+      )
+      return { success: true, skipped: false }
+    }
+
+    // 5. 유저의 Unipile 계정 조회
     const unipileAccount = await getUserUnipileAccount(user.id, workspace.id)
     if (!unipileAccount) {
       logger.warn(
         { userId: user.id, workspaceId: workspace.id },
-        "No Unipile account found for user",
+        "No Unipile account found for user (bell notification created)",
       )
-      return { success: false, skipped: true, reason: "No Unipile account for user" }
+      return { success: true, skipped: false }
     }
 
-    // 5. 알림 이메일 데이터 준비
+    // 6. 알림 이메일 데이터 준비
     const buyerDisplay = email.leadName || lead?.contactName || email.toEmail.split("@")[0]
     const notificationData: EmailOpenNotificationData = {
       userId: user.id,
@@ -413,7 +501,7 @@ export async function sendEmailOpenNotification(
       openCount: currentEmail.openCount,
     }
 
-    // 6. Unipile을 통해 알림 이메일 발송
+    // 7. Unipile을 통해 알림 이메일 발송 (체험판 전용)
     const result = await unipileService.sendEmail({
       accountId: unipileAccount.accountId,
       to: unipileAccount.emailAddress, // 자신에게 발송
@@ -424,9 +512,9 @@ export async function sendEmailOpenNotification(
     if (!result.success) {
       logger.error(
         { error: result.error, emailId, userId: user.id },
-        "Failed to send email open notification via Unipile",
+        "Failed to send email open notification via Unipile (bell notification created)",
       )
-      return { success: false, skipped: false, reason: result.error }
+      return { success: true, skipped: false, reason: result.error }
     }
 
     logger.info(

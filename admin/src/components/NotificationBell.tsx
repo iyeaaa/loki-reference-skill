@@ -21,6 +21,7 @@ import {
   Check,
   CheckCircle2,
   Loader2,
+  MailOpen,
   MoreHorizontal,
   RefreshCw,
   Trash2,
@@ -63,12 +64,25 @@ type GroupedNotifications = {
 // Helper Functions
 // ============================================================================
 
-function getNotificationIcon(type: Notification["type"], metadata?: Notification["metadata"]) {
+function getNotificationIcon(
+  type: Notification["type"],
+  metadata?: Notification["metadata"],
+  entityType?: string | null,
+) {
   const phase = metadata?.phase as string | undefined
 
   // 컴팩트 스타일: 36x36 컨테이너, rounded-xl
   const baseClass = "flex h-9 w-9 items-center justify-center rounded-xl"
   const iconClass = "h-[18px] w-[18px]"
+
+  // 이메일 오픈 알림은 특별 아이콘
+  if (entityType === "email_open") {
+    return (
+      <div className={`${baseClass} bg-purple-100 dark:bg-purple-900/30`}>
+        <MailOpen className={`${iconClass} text-purple-600 dark:text-purple-400`} />
+      </div>
+    )
+  }
 
   switch (type) {
     case "success":
@@ -241,11 +255,13 @@ function NotificationItem({
 }: NotificationItemProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  // 다른 워크스페이스의 알림인지 확인 (배지 표시용)
-  const isFromDifferentWorkspace =
+  // 워크스페이스 배지 표시 여부
+  // - "전체" 선택 시: 모든 알림에 워크스페이스 배지 표시
+  // - 특정 워크스페이스 선택 시: 다른 워크스페이스의 알림에만 배지 표시
+  const showWorkspaceBadge =
     notification.workspaceId &&
-    currentWorkspaceId &&
-    notification.workspaceId !== currentWorkspaceId
+    notification.workspaceName &&
+    (!currentWorkspaceId || notification.workspaceId !== currentWorkspaceId)
 
   const metadata = notification.metadata as {
     phase?: string
@@ -324,7 +340,7 @@ function NotificationItem({
     >
       {/* Thumbnail Icon */}
       <div className="flex-shrink-0">
-        {getNotificationIcon(notification.type, notification.metadata)}
+        {getNotificationIcon(notification.type, notification.metadata, notification.entityType)}
       </div>
 
       {/* Content */}
@@ -342,8 +358,8 @@ function NotificationItem({
               {notification.title || notification.message}
             </p>
 
-            {/* Workspace Badge (다른 워크스페이스의 알림일 경우만 표시) */}
-            {isFromDifferentWorkspace && notification.workspaceName && (
+            {/* Workspace Badge */}
+            {showWorkspaceBadge && (
               <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
                 <Building2 className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground">

@@ -290,3 +290,65 @@ export function getAnimationProps(variants: Variants, reducedMotion = false) {
     exit: "exit",
   }
 }
+
+/**
+ * 온보딩 슬라이드 전환 애니메이션 (데스크톱)
+ * position: absolute로 exit 시 height 붕괴 방지
+ */
+export const slideVariants: Variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 300 : -300,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.4,
+      ease: [0.32, 0.72, 0, 1], // easeOutExpo
+    },
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? -300 : 300,
+    opacity: 0,
+    position: "absolute" as const, // exit 시 absolute로 변경하여 height 유지
+    width: "100%", // absolute 시 width 유지
+    top: 0,
+    left: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.32, 0.72, 0, 1],
+    },
+  }),
+}
+
+/**
+ * 온보딩 슬라이드 전환 애니메이션 (모바일)
+ * position: absolute로 exit 시 height 붕괴 방지
+ */
+export const slideMobileVariants: Variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 100 : -100,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.3,
+      ease: [0.32, 0.72, 0, 1],
+    },
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? -100 : 100,
+    opacity: 0,
+    position: "absolute" as const, // exit 시 absolute로 변경하여 height 유지
+    width: "100%", // absolute 시 width 유지
+    top: 0,
+    left: 0,
+    transition: {
+      duration: 0.25,
+      ease: [0.32, 0.72, 0, 1],
+    },
+  }),
+}

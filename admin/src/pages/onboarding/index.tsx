@@ -2,15 +2,21 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useSetAtom } from "jotai"
 import {
   ArrowLeft,
-  ArrowRight,
-  Briefcase,
   Building2,
+  Check,
+  Code2,
+  Globe,
   Globe2,
+  Heart,
+  MoreHorizontal,
   Rocket,
+  Shirt,
+  Smartphone,
   Sparkles,
   Users,
+  UtensilsCrossed,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -18,7 +24,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { trackSurveyStep } from "@/lib/analytics"
+import { slideMobileVariants, slideVariants } from "@/lib/animations"
 import { cn } from "@/lib/utils"
 import {
   getLastCompletedStep,
@@ -46,9 +54,19 @@ export default function OnboardingPage() {
   const { step } = useParams<{ step: string }>()
   const currentStep = Math.min(Math.max(Number(step) || 1, 1), TOTAL_STEPS)
   const isKorean = i18n.language === "ko"
+  const isMobile = useIsMobile()
 
   // Jotai atom setter (for syncing after localStorage update)
   const setSurveyData = useSetAtom(surveyDataAtom)
+
+  // Slide animation direction tracking (동기적 계산으로 타이밍 문제 해결)
+  const prevStepRef = useRef(currentStep)
+  const direction = useMemo(() => {
+    const prev = prevStepRef.current
+    const dir = currentStep > prev ? 1 : currentStep < prev ? -1 : 0
+    prevStepRef.current = currentStep
+    return dir
+  }, [currentStep])
 
   // Local state for UI - initialized from localStorage
   const [data, setData] = useState<OnboardingData>(() => {
@@ -62,7 +80,7 @@ export default function OnboardingPage() {
   })
 
   // Redirect logic: invalid step or trying to skip ahead
-  // data 상태 기반으로 검증 (localStorage 재호출 제거 - 동기화 문제 해결)
+  // localStorage 기반으로 검증 (state 타이밍 문제 해결)
   useEffect(() => {
     const stepNum = Number(step)
 
@@ -71,13 +89,17 @@ export default function OnboardingPage() {
       return
     }
 
-    const lastCompleted = getLastCompletedStep(data)
+    // ✅ FIX: localStorage에서 직접 읽기 (React state 대신)
+    // mergeSurveyData()가 동기적으로 localStorage를 업데이트하므로
+    // state보다 항상 최신 데이터를 가지고 있음
+    const storedData = getSurveyFromStorage()
+    const lastCompleted = getLastCompletedStep(storedData)
     const maxAllowedStep = lastCompleted + 1
 
     if (stepNum > maxAllowedStep) {
       navigate(`/trial/survey/${maxAllowedStep}`, { replace: true })
     }
-  }, [step, navigate, data])
+  }, [step, navigate])
 
   const progress = (currentStep / TOTAL_STEPS) * 100
 
@@ -165,64 +187,101 @@ export default function OnboardingPage() {
         <LanguageSwitcher className="rounded-lg border border-gray-200/50 bg-white/80 shadow-sm backdrop-blur-sm" />
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-3 py-4 md:px-4 md:py-8">
         {/* Header - 토스 스타일 */}
-        <div className="mb-8 text-center">
-          <Badge className="mb-4 bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-1.5 text-white">
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-            RINDA AI
-          </Badge>
-          <h1 className="mb-2 font-bold text-2xl text-gray-900 tracking-tight">
-            {isKorean ? "간단한 질문 4개만 답해주세요" : "Just 4 quick questions"}
-          </h1>
-          <p className="text-gray-500">
-            {isKorean
-              ? "AI가 딱 맞는 해외 바이어를 찾아드릴게요"
-              : "AI will find the perfect international buyers for you"}
-          </p>
+        <div className="mb-3 text-center md:mb-6">
+          {/* 모바일: 간소화된 헤더 */}
+          <div className="mb-2 md:mb-4">
+            <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 px-3 py-1 text-white text-xs md:px-4 md:py-1.5 md:text-sm">
+              <Sparkles className="mr-1 h-3 w-3 md:mr-1.5 md:h-3.5 md:w-3.5" />
+              RINDA AI
+            </Badge>
+          </div>
+
+          {/* 모바일: h1 제거, dots만 표시 */}
+          <div className="flex items-center justify-center gap-2 md:hidden">
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i + 1 === currentStep
+                    ? "w-8 bg-blue-600"
+                    : i + 1 < currentStep
+                      ? "w-1.5 bg-blue-400"
+                      : "w-1.5 bg-gray-300",
+                )}
+              />
+            ))}
+          </div>
+
+          {/* 데스크톱: 기존 유지 */}
+          <div className="hidden md:block">
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <Badge variant="outline" className="border-blue-200 text-blue-600">
+                Step {currentStep} / {TOTAL_STEPS}
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {getStepCta()}
+              </Badge>
+            </div>
+            <h1 className="mb-2 font-bold text-2xl text-gray-900 tracking-tight">
+              {isKorean ? "간단한 질문 4개만 답해주세요" : "Just 4 quick questions"}
+            </h1>
+            <p className="text-gray-500">
+              {isKorean
+                ? "AI가 딱 맞는 해외 바이어를 찾아드릴게요"
+                : "AI will find the perfect international buyers for you"}
+            </p>
+          </div>
         </div>
 
         {/* Navigation Bar */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between md:mb-4">
+          {/* 모바일: 뒤로가기만 표시 (좌상단) */}
           <Button
-            className="text-gray-500 hover:text-gray-700"
+            className={cn(
+              "text-gray-500 hover:text-gray-700",
+              "h-8 w-8 p-0 md:h-10 md:w-10",
+            )}
             disabled={currentStep === 1}
             onClick={handleBack}
-            size="sm"
             variant="ghost"
           >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            {isKorean ? "이전" : "Back"}
+            <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
+            <span className="sr-only">{isKorean ? "이전" : "Back"}</span>
           </Button>
 
-          <div className="mx-4 flex max-w-xs flex-1 items-center gap-3">
+          {/* 데스크톱: Progress bar + Step counter */}
+          <div className="hidden flex-1 items-center gap-3 md:flex">
             <Progress className="h-2" value={progress} />
+            <span className="font-medium text-gray-500 text-sm">
+              {currentStep} / {TOTAL_STEPS}
+            </span>
           </div>
-
-          <span className="font-medium text-gray-500 text-sm">
-            {currentStep} / {TOTAL_STEPS}
-          </span>
         </div>
 
         {/* Main Content */}
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           {/* Question Card - Left side */}
-          <div className="lg:col-span-2">
-            <AnimatePresence mode="wait">
+          <div className="relative lg:col-span-2">
+            <AnimatePresence mode="wait" initial={false} custom={direction}>
               <motion.div
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                initial={{ opacity: 0, x: -20 }}
                 key={currentStep}
-                transition={{ duration: 0.2 }}
+                custom={direction}
+                variants={isMobile ? slideMobileVariants : slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="w-full"
               >
                 {renderStep()}
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Value Props Panel - Right side */}
-          <div className="hidden lg:block">
+          {/* Value Props Panel - Desktop only */}
+          <div className="hidden lg:col-span-1 lg:block">
             <ValuePropsPanel currentStep={currentStep} data={data} isKorean={isKorean} />
 
             {/* CTA & Footer */}
@@ -251,16 +310,16 @@ export default function OnboardingPage() {
   )
 }
 
-// 산업군별 아이콘 매핑
+// 산업군별 아이콘 매핑 (lucide로 통일)
 const INDUSTRY_ICONS: Record<Industry, React.ReactNode> = {
-  manufacturing: <Building2 className="h-5 w-5" />,
-  it_saas: <Briefcase className="h-5 w-5" />,
-  beauty: <Sparkles className="h-5 w-5" />,
-  food: <span className="text-lg">🍽️</span>,
-  fashion: <span className="text-lg">👗</span>,
-  electronics: <span className="text-lg">📱</span>,
-  healthcare: <span className="text-lg">💊</span>,
-  guitar: <span className="text-lg">🎸</span>,
+  manufacturing: <Building2 className="h-6 w-6 text-gray-700" />,
+  it_saas: <Code2 className="h-6 w-6 text-gray-700" />,
+  beauty: <Sparkles className="h-6 w-6 text-gray-700" />,
+  food: <UtensilsCrossed className="h-6 w-6 text-gray-700" />,
+  fashion: <Shirt className="h-6 w-6 text-gray-700" />,
+  electronics: <Smartphone className="h-6 w-6 text-gray-700" />,
+  healthcare: <Heart className="h-6 w-6 text-gray-700" />,
+  guitar: <MoreHorizontal className="h-6 w-6 text-gray-700" />,
 }
 
 // Step 1: Industry Selection
@@ -296,14 +355,19 @@ function Step1({
             : "We'll find buyers that match your industry"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-3">
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
           {INDUSTRIES.map((industry) => (
             <Button
               className={cn(
-                "h-auto justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all",
+                "relative h-auto min-h-[56px] justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[64px] md:p-5",
+                // Touch feedback
+                "active:scale-[0.98] active:brightness-95",
+                // Desktop hover
+                "md:hover:scale-[1.01] md:hover:shadow-md",
+                // Selection states
                 selected === industry
-                  ? "border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md shadow-blue-100 hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={industry}
@@ -314,6 +378,15 @@ function Step1({
               <span className="font-medium">
                 {isKorean ? industryLabels[industry].ko : industryLabels[industry].en}
               </span>
+              {selected === industry && (
+                <motion.div
+                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  className="absolute top-2 right-2"
+                >
+                  <Check className="h-5 w-5 text-blue-600" />
+                </motion.div>
+              )}
             </Button>
           ))}
         </div>
@@ -368,31 +441,47 @@ function Step2({
             : "We'll create a strategy for your target audience"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+        <div className="space-y-4 md:space-y-5">
           {TARGET_CUSTOMERS.map((target) => (
             <Button
               className={cn(
-                "h-auto w-full flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all",
+                "relative h-auto min-h-[68px] w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[80px] md:p-5",
+                // Touch feedback
+                "active:scale-[0.98] active:brightness-95",
+                // Desktop hover
+                "md:hover:scale-[1.01] md:hover:shadow-md",
+                // Selection states
                 selected === target
-                  ? "border-blue-500 bg-blue-50 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-100 hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={target}
               onClick={() => onSelect(target)}
               variant="outline"
             >
-              <span
-                className={cn(
-                  "font-medium",
-                  selected === target ? "text-blue-700" : "text-gray-900",
-                )}
-              >
-                {isKorean ? targetLabels[target].ko : targetLabels[target].en}
-              </span>
-              <span className="text-gray-500 text-sm">
-                {isKorean ? targetLabels[target].descKo : targetLabels[target].descEn}
-              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span
+                  className={cn(
+                    "font-medium",
+                    selected === target ? "text-blue-700" : "text-gray-900",
+                  )}
+                >
+                  {isKorean ? targetLabels[target].ko : targetLabels[target].en}
+                </span>
+                <span className="text-gray-500 text-sm">
+                  {isKorean ? targetLabels[target].descKo : targetLabels[target].descEn}
+                </span>
+              </div>
+              {selected === target && (
+                <motion.div
+                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  className="absolute top-2 right-2"
+                >
+                  <Check className="h-5 w-5 text-blue-600" />
+                </motion.div>
+              )}
             </Button>
           ))}
         </div>
@@ -401,14 +490,14 @@ function Step2({
   )
 }
 
-// 국가별 플래그 이모지
-const COUNTRY_FLAGS: Record<TargetCountry, string> = {
-  jp: "🇯🇵",
-  us: "🇺🇸",
-  sea: "🌏",
-  eu: "🇪🇺",
-  cn: "🇨🇳",
-  ae: "🇦🇪",
+// 국가별 아이콘
+const COUNTRY_ICONS: Record<TargetCountry, React.ReactNode> = {
+  jp: <Globe className="h-6 w-6 text-gray-700" />,
+  us: <Globe className="h-6 w-6 text-gray-700" />,
+  sea: <Globe className="h-6 w-6 text-gray-700" />,
+  eu: <Globe className="h-6 w-6 text-gray-700" />,
+  cn: <Globe className="h-6 w-6 text-gray-700" />,
+  ae: <Globe className="h-6 w-6 text-gray-700" />,
 }
 
 // Step 3: Target Country
@@ -443,24 +532,38 @@ function Step3({
             : "We'll find buyers in that market for you"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-3">
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+        <div className="grid grid-cols-2 gap-3 md:gap-5">
           {TARGET_COUNTRIES.map((country) => (
             <Button
               className={cn(
-                "h-auto justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all",
+                "relative h-auto min-h-[56px] justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[64px] md:p-5",
+                // Touch feedback
+                "active:scale-[0.98] active:brightness-95",
+                // Desktop hover
+                "md:hover:scale-[1.01] md:hover:shadow-md",
+                // Selection states
                 selected === country
-                  ? "border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md shadow-blue-100 hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={country}
               onClick={() => onSelect(country)}
               variant="outline"
             >
-              <span className="text-xl">{COUNTRY_FLAGS[country]}</span>
+              <span className="text-gray-600">{COUNTRY_ICONS[country]}</span>
               <span className="font-medium">
                 {isKorean ? countryLabels[country].ko : countryLabels[country].en}
               </span>
+              {selected === country && (
+                <motion.div
+                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  className="absolute top-2 right-2"
+                >
+                  <Check className="h-5 w-5 text-blue-600" />
+                </motion.div>
+              )}
             </Button>
           ))}
         </div>
@@ -518,14 +621,19 @@ function Step4({
             : "We'll customize our help based on your experience"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+        <div className="space-y-4 md:space-y-5">
           {EXPORT_EXPERIENCES.map((experience) => (
             <Button
               className={cn(
-                "h-auto w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                "relative h-auto min-h-[68px] w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all md:min-h-[80px] md:p-5",
+                // Touch feedback
+                "active:scale-[0.98] active:brightness-95",
+                // Desktop hover
+                "md:hover:scale-[1.01] md:hover:shadow-md",
+                // Selection states
                 selected === experience
-                  ? "border-blue-500 bg-blue-50 hover:bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 shadow-md shadow-blue-100 hover:bg-blue-50"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
               )}
               key={experience}
@@ -551,7 +659,13 @@ function Step4({
                 </span>
               </div>
               {selected === experience && (
-                <ArrowRight className="ml-auto h-5 w-5 flex-shrink-0 text-blue-500" />
+                <motion.div
+                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  className="absolute top-2 right-2"
+                >
+                  <Check className="h-5 w-5 text-blue-600" />
+                </motion.div>
               )}
             </Button>
           ))}

@@ -64,7 +64,7 @@ export function EmailsSection({ steps, onEditStep, isKorean }: EmailsSectionProp
                   </Badge>
                 </div>
                 <Button
-                  className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                  className="h-6 w-6 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100"
                   onClick={() => onEditStep(step)}
                   size="icon"
                   variant="ghost"

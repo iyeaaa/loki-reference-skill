@@ -421,17 +421,41 @@ export function StepConfirmation() {
   return (
     <div className="mx-auto max-w-full px-4 pb-8">
       {/* Header */}
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center sm:mb-6">
         <p className="mb-1 font-medium text-blue-600 text-sm">
           {isKorean ? "마지막 단계예요" : "Final step"}
         </p>
-        <h2 className="font-bold text-2xl text-gray-900 tracking-tight">
+        <h2 className="font-bold text-xl text-gray-900 tracking-tight sm:text-2xl">
           {isKorean ? "캠페인을 확인하고 시작하세요" : "Review and launch your campaign"}
         </h2>
       </div>
 
-      {/* 3 Column Layout */}
+      {/* 3 Column Layout - Mobile: stacked with execute section first for visibility */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Mobile: Show execute section summary at top */}
+        <div className="lg:hidden">
+          <ExecuteSection
+            emailAccount={emailAccount}
+            isExecuting={isExecuting}
+            isKorean={isKorean}
+            onBack={handleBack}
+            onExecute={handleExecute}
+            onSkip={handleSkipToDashboard}
+            selectedCount={selectedCount}
+            stepsCount={steps.length}
+            totalEmails={totalEmails}
+          />
+        </div>
+
+        {/* Mobile only: Show emails section early for easy access */}
+        <div className="lg:hidden">
+          <EmailsSection
+            isKorean={isKorean}
+            onEditStep={(step) => setEditingStep(step)}
+            steps={steps}
+          />
+        </div>
+
         {/* ========== LEADS SECTION (2 columns) ========== */}
         <div className="lg:col-span-2">
           <LeadsSection
@@ -444,14 +468,15 @@ export function StepConfirmation() {
           />
         </div>
 
-        {/* ========== RIGHT COLUMN: EMAILS + EXECUTE ========== */}
-        <div className="space-y-4">
+        {/* ========== RIGHT COLUMN: EMAILS + EXECUTE (Desktop only) ========== */}
+        <div className="hidden space-y-4 lg:block">
           <EmailsSection
             isKorean={isKorean}
             onEditStep={(step) => setEditingStep(step)}
             steps={steps}
           />
 
+          {/* Desktop only: Execute section in sidebar */}
           <ExecuteSection
             emailAccount={emailAccount}
             isExecuting={isExecuting}
@@ -465,6 +490,29 @@ export function StepConfirmation() {
           />
         </div>
       </div>
+
+      {/* Mobile: Sticky bottom execute button */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-gray-200 border-t bg-white p-4 shadow-lg lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+          <div className="flex-1 text-sm">
+            <span className="font-semibold text-blue-600">{selectedCount}</span>
+            <span className="text-gray-500">{isKorean ? "명 선택" : " selected"}</span>
+            <span className="mx-1 text-gray-300">·</span>
+            <span className="font-semibold text-green-600">{totalEmails}</span>
+            <span className="text-gray-500">{isKorean ? "개 이메일" : " emails"}</span>
+          </div>
+          <Button
+            className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 font-medium shadow-md hover:from-blue-700 hover:to-indigo-700"
+            disabled={isExecuting || selectedCount === 0 || !emailAccount?.id}
+            onClick={handleExecute}
+          >
+            {isKorean ? "캠페인 시작" : "Launch"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Add bottom padding on mobile for sticky button */}
+      <div className="h-20 lg:hidden" />
 
       {/* ========== LEAD DETAIL MODAL ========== */}
       <LeadDetailModal

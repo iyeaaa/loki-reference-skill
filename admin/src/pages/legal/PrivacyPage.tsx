@@ -374,24 +374,6 @@ export default function PrivacyPage() {
               </div>
             </section>
 
-            {/* 제11조 */}
-            <section className="mb-8">
-              <h2 className="mb-4 font-semibold text-gray-900 text-lg">
-                제11조 (권익침해 구제방법)
-              </h2>
-              <p className="mb-4 text-gray-700">
-                정보주체는 개인정보침해로 인한 구제를 받기 위하여 개인정보분쟁조정위원회,
-                한국인터넷진흥원 개인정보침해신고센터 등에 분쟁해결이나 상담 등을 신청할 수
-                있습니다.
-              </p>
-              <ul className="list-disc space-y-2 pl-5 text-gray-700">
-                <li>개인정보분쟁조정위원회: (국번없이) 1833-6972 (www.kopico.go.kr)</li>
-                <li>개인정보침해신고센터: (국번없이) 118 (privacy.kisa.or.kr)</li>
-                <li>대검찰청: (국번없이) 1301 (www.spo.go.kr)</li>
-                <li>경찰청: (국번없이) 182 (ecrm.cyber.go.kr)</li>
-              </ul>
-            </section>
-
             {/* 부칙 */}
             <section className="mb-8 rounded-lg bg-gray-100 p-6">
               <h2 className="mb-4 font-semibold text-gray-900 text-lg">부칙</h2>

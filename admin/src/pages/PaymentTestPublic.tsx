@@ -81,7 +81,7 @@ type PaymentResult = {
   paidAt?: string
 }
 
-// 테스트 카드 정보
+// 테스트 카드 정보 (PG 심사용)
 const TEST_CARD_INFO = {
   cardNumber: "4242424242424242",
   expiry: "12/30",
@@ -439,9 +439,10 @@ export default function PaymentTestPublic() {
       <div className="mx-auto max-w-4xl px-4">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="mb-2 font-bold text-3xl">PG 결제 테스트</h1>
-          <p className="text-gray-600">토스페이먼츠 / PayPal 결제 심사용 테스트 페이지</p>
-          <Badge className="mt-2" variant="outline">
+          <p className="mb-1 font-medium text-blue-600 text-sm">Rinda AI</p>
+          <h1 className="mb-2 font-bold text-2xl">해외 바이어 발굴 및 글로벌 세일즈 자동화</h1>
+          <p className="text-gray-500 text-sm">PG 결제 심사용 테스트 페이지</p>
+          <Badge className="mt-3" variant="outline">
             테스트 모드
           </Badge>
         </div>
@@ -489,9 +490,9 @@ export default function PaymentTestPublic() {
               </Alert>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-3">
               {/* Plan Selection */}
-              <Card>
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-base">결제 정보</CardTitle>
                   <CardDescription>요금제를 선택하세요</CardDescription>
@@ -630,50 +631,53 @@ export default function PaymentTestPublic() {
 
                       {/* Terms */}
                       <div className="space-y-3 rounded-lg border p-4">
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            checked={agreedTerms}
-                            id={termsId}
-                            onCheckedChange={(checked) => setAgreedTerms(checked === true)}
-                          />
-                          <Label
-                            className="cursor-pointer text-sm leading-relaxed"
-                            htmlFor={termsId}
-                          >
-                            <span className="text-red-500">[필수]</span>{" "}
-                            <Link
-                              className="text-blue-600 underline hover:text-blue-800"
-                              onClick={(e) => e.stopPropagation()}
-                              target="_blank"
-                              to="/terms"
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              checked={agreedTerms}
+                              id={termsId}
+                              onCheckedChange={(checked) => setAgreedTerms(checked === true)}
+                            />
+                            <Label
+                              className="cursor-pointer text-sm leading-relaxed"
+                              htmlFor={termsId}
                             >
-                              이용약관
-                            </Link>
-                            에 동의합니다
-                          </Label>
+                              <span className="text-red-500">[필수]</span> 이용약관에 동의합니다
+                            </Label>
+                          </div>
+                          <Link
+                            className="text-gray-500 text-sm hover:text-blue-600"
+                            onClick={(e) => e.stopPropagation()}
+                            target="_blank"
+                            to="/terms"
+                          >
+                            (보기)
+                          </Link>
                         </div>
 
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            checked={agreedPrivacy}
-                            id={privacyId}
-                            onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
-                          />
-                          <Label
-                            className="cursor-pointer text-sm leading-relaxed"
-                            htmlFor={privacyId}
-                          >
-                            <span className="text-red-500">[필수]</span>{" "}
-                            <Link
-                              className="text-blue-600 underline hover:text-blue-800"
-                              onClick={(e) => e.stopPropagation()}
-                              target="_blank"
-                              to="/privacy"
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              checked={agreedPrivacy}
+                              id={privacyId}
+                              onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
+                            />
+                            <Label
+                              className="cursor-pointer text-sm leading-relaxed"
+                              htmlFor={privacyId}
                             >
-                              개인정보 처리방침
-                            </Link>
-                            에 동의합니다
-                          </Label>
+                              <span className="text-red-500">[필수]</span> 개인정보 처리방침에
+                              동의합니다
+                            </Label>
+                          </div>
+                          <Link
+                            className="text-gray-500 text-sm hover:text-blue-600"
+                            onClick={(e) => e.stopPropagation()}
+                            target="_blank"
+                            to="/privacy"
+                          >
+                            (보기)
+                          </Link>
                         </div>
                       </div>
                     </>
@@ -821,33 +825,30 @@ export default function PaymentTestPublic() {
               </Card>
             </div>
 
-            {/* Test Card Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">테스트 카드 정보</CardTitle>
-                <CardDescription>토스페이먼츠 테스트 결제용 카드</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 text-sm sm:grid-cols-4">
-                  <div className="flex justify-between rounded-lg bg-gray-100 p-3">
-                    <span className="text-gray-500">카드번호</span>
-                    <code className="rounded bg-gray-200 px-2">{TEST_CARD_INFO.cardNumber}</code>
-                  </div>
-                  <div className="flex justify-between rounded-lg bg-gray-100 p-3">
-                    <span className="text-gray-500">유효기간</span>
-                    <code className="rounded bg-gray-200 px-2">{TEST_CARD_INFO.expiry}</code>
-                  </div>
-                  <div className="flex justify-between rounded-lg bg-gray-100 p-3">
-                    <span className="text-gray-500">CVC</span>
-                    <code className="rounded bg-gray-200 px-2">{TEST_CARD_INFO.cvc}</code>
-                  </div>
-                  <div className="flex justify-between rounded-lg bg-gray-100 p-3">
-                    <span className="text-gray-500">비밀번호</span>
-                    <code className="rounded bg-gray-200 px-2">{TEST_CARD_INFO.password}**</code>
-                  </div>
+            {/* Test Card Info - PG 심사용 */}
+            <div className="rounded-lg border border-amber-300 border-dashed bg-amber-50/50 p-4">
+              <p className="mb-3 text-center text-amber-700 text-xs">
+                PG 심사용 테스트 카드 (실제 결제 X)
+              </p>
+              <div className="overflow-hidden rounded-md border border-amber-200 bg-white text-sm">
+                <div className="flex border-amber-100 border-b px-4 py-2">
+                  <span className="w-20 text-gray-500">카드번호</span>
+                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.cardNumber}</code>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex border-amber-100 border-b px-4 py-2">
+                  <span className="w-20 text-gray-500">유효기간</span>
+                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.expiry}</code>
+                </div>
+                <div className="flex border-amber-100 border-b px-4 py-2">
+                  <span className="w-20 text-gray-500">CVC</span>
+                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.cvc}</code>
+                </div>
+                <div className="flex px-4 py-2">
+                  <span className="w-20 text-gray-500">비밀번호</span>
+                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.password}**</code>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent className="space-y-6" value="lookup">

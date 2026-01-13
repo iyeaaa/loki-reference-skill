@@ -117,8 +117,12 @@ export default function OnboardingPage() {
 
   const progress = (currentStep / TOTAL_STEPS) * 100
 
-  // 이탈 감지 훅
-  const exitIntent = useExitIntent({ enabled: true, idleTimeout: 30_000 })
+  // 이탈 감지 훅 - 화면 밖 이탈 감지 포함
+  const exitIntent = useExitIntent({
+    enabled: true,
+    idleTimeout: 30_000,
+    mouseLeaveEnabled: true, // 🆕 화면 상단으로 마우스 이탈 시 감지
+  })
 
   // 현재 스텝을 OnboardingStep 타입으로 매핑
   const currentExitStep: OnboardingStep = currentStep === 1 ? "survey1" : "survey2"

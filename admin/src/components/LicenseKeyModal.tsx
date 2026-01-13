@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
 import { Eye, EyeOff, Key, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -55,18 +54,13 @@ export function removeLicenseKey(): void {
   }
 }
 
-// Verify license key API call
-async function verifyLicenseKeyApi(licenseKey: string): Promise<LicenseVerifyResponse> {
-  return apiFetch<LicenseVerifyResponse>("/api/v1/auth/verify-license", {
-    method: "POST",
-    body: JSON.stringify({ licenseKey }),
-  })
-}
-
-// Legacy function for backward compatibility (used by external modules)
+// Verify license key with backend
 export async function verifyLicenseKey(licenseKey: string): Promise<boolean> {
   try {
-    const response = await verifyLicenseKeyApi(licenseKey)
+    const response = await apiFetch<LicenseVerifyResponse>("/api/v1/auth/verify-license", {
+      method: "POST",
+      body: JSON.stringify({ licenseKey }),
+    })
     return response.valid
   } catch {
     return false
@@ -88,29 +82,12 @@ export function LicenseKeyModal({
 }: LicenseKeyModalProps) {
   const navigate = useNavigate()
   const [showKey, setShowKey] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const form = useForm<LicenseKeyFormValues>({
     resolver: zodResolver(licenseKeySchema),
     defaultValues: {
       licenseKey: "",
-    },
-  })
-
-  // License verification mutation
-  const verifyMutation = useMutation({
-    mutationFn: verifyLicenseKeyApi,
-    onSuccess: (response, licenseKey) => {
-      if (response.valid) {
-        setLicenseKey(licenseKey)
-        toast.success("라이센스가 확인되었습니다")
-        onVerified()
-        onOpenChange(false)
-      } else {
-        toast.error("유효하지 않은 라이센스 키입니다")
-      }
-    },
-    onError: () => {
-      toast.error("라이센스 확인 중 오류가 발생했습니다")
     },
   })
 
@@ -122,8 +99,24 @@ export function LicenseKeyModal({
     }
   }, [form])
 
-  const onSubmit = (data: LicenseKeyFormValues) => {
-    verifyMutation.mutate(data.licenseKey)
+  const onSubmit = async (data: LicenseKeyFormValues) => {
+    setIsVerifying(true)
+    try {
+      const isValid = await verifyLicenseKey(data.licenseKey)
+
+      if (isValid) {
+        setLicenseKey(data.licenseKey)
+        toast.success("라이센스가 확인되었습니다")
+        onVerified()
+        onOpenChange(false)
+      } else {
+        toast.error("유효하지 않은 라이센스 키입니다")
+      }
+    } catch {
+      toast.error("라이센스 확인 중 오류가 발생했습니다")
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   const handleDelete = () => {
@@ -167,7 +160,7 @@ export function LicenseKeyModal({
                     placeholder="라이센스 키를 입력하세요"
                     type={showKey ? "text" : "password"}
                     {...form.register("licenseKey")}
-                    disabled={verifyMutation.isPending}
+                    disabled={isVerifying}
                   />
                   <button
                     className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-400 hover:text-gray-600"
@@ -179,10 +172,10 @@ export function LicenseKeyModal({
                 </div>
                 <Button
                   className="h-12 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] px-6 shadow-md hover:from-[#5936B1] hover:to-[#2B72E6]"
-                  disabled={verifyMutation.isPending}
+                  disabled={isVerifying}
                   type="submit"
                 >
-                  {verifyMutation.isPending ? (
+                  {isVerifying ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-white border-b-2" />
                   ) : (
                     "확인"

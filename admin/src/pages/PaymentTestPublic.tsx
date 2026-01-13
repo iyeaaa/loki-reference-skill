@@ -60,9 +60,8 @@ const PORTONE_STORE_ID = env.VITE_PORTONE_STORE_ID
 const PORTONE_CHANNEL_KEY_TOSS = env.VITE_PORTONE_CHANNEL_KEY_TOSS
 const PORTONE_CHANNEL_KEY_PAYPAL = env.VITE_PORTONE_CHANNEL_KEY_PAYPAL
 
-// API Base URL - Public 페이지는 항상 상대 경로 사용 (CSP 위반 방지)
-// 프론트엔드와 API가 같은 도메인에서 서빙되어야 함
-const API_BASE_URL = ""
+// API Base URL
+const API_BASE_URL = env.VITE_API_URL || ""
 
 // ============================================================================
 // Types
@@ -584,7 +583,7 @@ export default function PaymentTestPublic() {
                   {" → "}
                   {locale.isKorean ? "한국 카드결제 (KRW)" : "PayPal (USD)"} 기본 선택
                 </div>
-                {exchangeRate?.rate && (
+                {exchangeRate && (
                   <div className="mt-1 text-gray-500 text-xs">
                     환율: 1 USD = {exchangeRate.rate.toLocaleString()} KRW
                     <span className="ml-2 rounded bg-blue-100 px-1 text-blue-700">

@@ -37,7 +37,6 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/v1/auth/refresh",
   "POST /api/v1/auth/google",
   "GET /api/v1/auth/google/callback",
-  "POST /api/v1/auth/verify-license", // 라이센스 키 검증 (로그인 전 사용)
   // Webhooks (외부 서비스 콜백)
   "POST /api/v1/webhooks/sendgrid",
   "POST /api/v1/webhooks/nylas",

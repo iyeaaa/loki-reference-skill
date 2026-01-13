@@ -28,6 +28,7 @@ import { emailRepliesApi } from "@/lib/api/services/email-replies"
 import type { RepliedEmail } from "@/lib/api/types/email"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
+import { InboxOnboardingGuide } from "./InboxOnboardingGuide"
 import { OverallSummaryModal } from "./OverallSummaryModal"
 import { RepliedEmailsList } from "./RepliedEmailsList"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
@@ -496,6 +497,9 @@ export default function EmailRepliesPage() {
           onClose={() => setShowOverallSummary(false)}
           workspaceId={selectedWorkspace?.id}
         />
+
+        {/* Inbox Onboarding Guide for Trial Users */}
+        <InboxOnboardingGuide />
       </div>
     </div>
   )

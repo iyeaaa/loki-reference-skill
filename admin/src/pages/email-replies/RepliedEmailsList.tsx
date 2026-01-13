@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Inbox, Rocket } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -187,8 +188,30 @@ export function RepliedEmailsList({
             {t("email-replies.table.empty.loading")}
           </div>
         ) : repliedEmails.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-500 text-sm">
-            {t("email-replies.table.empty.noReplies")}
+          <div className="px-4 py-16 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100">
+                <Inbox className="h-7 w-7 text-blue-500" />
+              </div>
+            </div>
+            <h3 className="mb-2 font-semibold text-gray-700">
+              {t("email-replies.empty.title", "아직 도착한 답장이 없어요")}
+            </h3>
+            <p className="mx-auto mb-4 max-w-sm text-gray-500 text-sm">
+              {t(
+                "email-replies.empty.description",
+                "캠페인을 시작하면 바이어 답장이 여기에 모여요. 보통 첫 답장은 3~5일 내에 도착해요!",
+              )}
+            </p>
+            <Link to="/sequences">
+              <Button
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700"
+                size="sm"
+              >
+                <Rocket className="mr-2 h-4 w-4" />
+                {t("email-replies.empty.action", "캠페인 현황 보기")}
+              </Button>
+            </Link>
           </div>
         ) : (
           <div>

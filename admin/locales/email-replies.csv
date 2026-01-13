@@ -145,3 +145,17 @@ overallSummary.prompt,[NO TRANSLATION] email-replies.overallSummary.prompt,[NO T
 overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount
 overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title
 overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open
+empty.title,아직 도착한 답장이 없어요,No replies yet
+empty.description,캠페인을 시작하면 바이어 답장이 여기에 모여요. 보통 첫 답장은 3~5일 내에 도착해요!,Buyer replies will appear here after starting your campaign. First replies usually arrive within 3-5 days!
+empty.action,캠페인 현황 보기,View Campaign Status
+onboarding.title,바이어 답장 여기서 한눈에 확인하세요,Check All Buyer Replies Here at a Glance
+onboarding.description,RINDA가 보낸 영업 메일에 바이어가 답장하면 이곳에서 바로 확인하고 대응할 수 있어요.,When buyers reply to your outreach emails sent by RINDA you can check and respond right here.
+onboarding.aiCategories,AI가 자동으로 분류해드려요:,AI automatically categorizes for you:
+onboarding.positive.title,긍정적 반응,Positive Responses
+onboarding.positive.desc,관심 있는 바이어를 놓치지 마세요,Do not miss interested buyers
+onboarding.meeting.title,미팅 요청,Meeting Requests
+onboarding.meeting.desc,즉시 대응이 필요한 바이어예요,Buyers who need immediate attention
+onboarding.auto.title,자동 응답,Auto Replies
+onboarding.auto.desc,부재중 메시지는 따로 모아둬요,Out-of-office messages are organized separately
+onboarding.button.gotIt,알겠어요,Got it
+onboarding.tip,캠페인 시작 후 보통 3~5일 내에 첫 답장이 도착해요,First replies usually arrive within 3-5 days after starting your campaign

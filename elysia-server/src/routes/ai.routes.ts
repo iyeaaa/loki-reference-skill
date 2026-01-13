@@ -1,6 +1,8 @@
+import { GoogleGenAI } from "@google/genai"
 import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import OpenAI from "openai"
+import { config } from "../config"
 import { db } from "../db/index"
 import { emailReplies, emails } from "../db/schema/emails"
 import { leads } from "../db/schema/leads"
@@ -11,6 +13,35 @@ import logger from "../utils/logger"
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+// Lead 필드 정의 (프론트엔드와 동기화)
+const LEAD_FIELD_DEFINITIONS = [
+  { key: "companyName", label: "Company Name", labelKo: "회사명", required: true },
+  { key: "primaryEmail", label: "Primary Email", labelKo: "대표 이메일", required: true },
+  { key: "websiteUrl", label: "Website URL", labelKo: "웹사이트", required: true },
+  { key: "contactName", label: "Contact Name", labelKo: "담당자명", required: false },
+  { key: "primaryPhone", label: "Primary Phone", labelKo: "대표 전화번호", required: false },
+  { key: "businessType", label: "Business Type", labelKo: "업종", required: false },
+  { key: "description", label: "Description", labelKo: "설명", required: false },
+  { key: "country", label: "Country", labelKo: "국가", required: false },
+  { key: "city", label: "City", labelKo: "도시", required: false },
+  { key: "state", label: "State/Province", labelKo: "주/도", required: false },
+  { key: "address", label: "Address", labelKo: "주소", required: false },
+  { key: "employeeCount", label: "Employee Count", labelKo: "직원 수", required: false },
+  { key: "foundedYear", label: "Founded Year", labelKo: "설립년도", required: false },
+  { key: "leadSource", label: "Lead Source", labelKo: "리드 소스", required: false },
+  { key: "notes", label: "Notes", labelKo: "메모", required: false },
+  { key: "secondaryEmail", label: "Secondary Email", labelKo: "보조 이메일", required: false },
+  { key: "secondaryPhone", label: "Secondary Phone", labelKo: "보조 전화번호", required: false },
+  {
+    key: "foundCompanyName",
+    label: "Found Company Name",
+    labelKo: "검색된 회사명",
+    required: false,
+  },
+  { key: "leadStatus", label: "Lead Status", labelKo: "리드 상태", required: false },
+  { key: "leadScore", label: "Lead Score", labelKo: "리드 점수", required: false },
+] as const
 
 export const aiRoutes = new Elysia({ prefix: "/api/ai" })
   .post(
@@ -694,6 +725,146 @@ ${selectedLanguage.instruction}`,
         bodyText: t.String({ minLength: 1 }),
         editPrompt: t.String({ minLength: 5 }),
         targetLanguage: t.Optional(t.String()),
+      }),
+    },
+  )
+  .post(
+    "/column-mapping",
+    async ({ body, set }) => {
+      try {
+        const { columns } = body
+
+        logger.info({
+          msg: "AI Column Mapping requested",
+          columnCount: columns.length,
+        })
+
+        // Gemini AI 초기화
+        const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey })
+
+        // 필드 정의 목록 생성
+        const fieldList = LEAD_FIELD_DEFINITIONS.map(
+          (f) => `- ${f.key}: ${f.labelKo} (${f.label})${f.required ? " [필수]" : ""}`,
+        ).join("\n")
+
+        // 컬럼 정보 포맷팅
+        const columnInfo = columns
+          .map((col, idx) => {
+            const sampleStr = col.sampleValues.slice(0, 3).join(", ")
+            return `${idx + 1}. 헤더: "${col.header}"\n   샘플 데이터: ${sampleStr || "(없음)"}`
+          })
+          .join("\n\n")
+
+        const prompt = `You are an expert at mapping CSV columns to CRM lead fields.
+
+## Available Lead Fields:
+${fieldList}
+
+## CSV Columns to Analyze:
+${columnInfo}
+
+## Instructions:
+1. Map each CSV column to the most appropriate lead field.
+2. Use null for columns that cannot be mapped.
+3. Do NOT map the same field more than once.
+4. Email patterns (data containing @) should map to primaryEmail or secondaryEmail.
+5. URL patterns (http, www, .com, etc.) should map to websiteUrl.
+6. Phone number patterns should map to primaryPhone or secondaryPhone.
+7. Confidence levels: high (certain), medium (recommended), low (guess).
+
+## Response Format (must be JSON array):
+[
+  {
+    "header": "original header name",
+    "mappedField": "mapped field key or null",
+    "confidence": "high" | "medium" | "low",
+    "reason": "brief reason for mapping in Korean"
+  }
+]
+
+Output ONLY the JSON array. No additional explanation needed.`
+
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: prompt,
+        })
+
+        const responseText = response.text || ""
+
+        // JSON 추출 (마크다운 코드블록 처리)
+        let jsonStr = responseText.trim()
+        if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "")
+        }
+
+        let mappingResult: Array<{
+          header: string
+          mappedField: string | null
+          confidence: "high" | "medium" | "low"
+          reason: string
+        }>
+
+        try {
+          mappingResult = JSON.parse(jsonStr)
+        } catch (parseError) {
+          logger.error({
+            msg: "Failed to parse AI response",
+            responseText,
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+          })
+          throw new Error("AI 응답을 파싱할 수 없습니다.")
+        }
+
+        // 중복 매핑 제거 (먼저 매핑된 필드 우선)
+        const usedFields = new Set<string>()
+        const finalMappings = mappingResult.map((item) => {
+          if (item.mappedField && usedFields.has(item.mappedField)) {
+            return {
+              ...item,
+              mappedField: null,
+              confidence: "low" as const,
+              reason: "중복 매핑 제거됨",
+            }
+          }
+          if (item.mappedField) {
+            usedFields.add(item.mappedField)
+          }
+          return item
+        })
+
+        logger.info({
+          msg: "AI Column Mapping completed",
+          columnCount: columns.length,
+          mappedCount: finalMappings.filter((m) => m.mappedField).length,
+        })
+
+        return successResponse(
+          {
+            mappings: finalMappings,
+          },
+          "AI 컬럼 매핑이 완료되었습니다.",
+        )
+      } catch (error) {
+        logger.error({
+          msg: "Failed to perform AI column mapping",
+          error: error instanceof Error ? error.message : String(error),
+        })
+
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "AI 컬럼 매핑 실패",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        columns: t.Array(
+          t.Object({
+            header: t.String(),
+            sampleValues: t.Array(t.String()),
+          }),
+        ),
       }),
     },
   )

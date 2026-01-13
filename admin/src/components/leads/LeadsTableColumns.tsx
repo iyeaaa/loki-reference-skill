@@ -465,6 +465,45 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     cell: ({ row }) => row.original.businessType || "-",
   },
   {
+    accessorKey: "description",
+    header: ({ column, table }) => {
+      const meta = table.options.meta as LeadsTableMeta | undefined
+      const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
+
+      return createColumnHeader(
+        column.id,
+        "Description",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
+      )
+    },
+    enableSorting: false,
+    enableColumnFilter: true,
+    meta: {
+      filterConfig: {
+        type: "text",
+        operators: ["contains", "isEmpty", "isNotEmpty"],
+      } as ColumnFilterConfig,
+    },
+    cell: ({ row }) => {
+      const description = row.original.description
+      if (!description) {
+        return "-"
+      }
+      // 긴 설명은 잘라서 표시
+      const maxLength = 50
+      const truncated =
+        description.length > maxLength ? `${description.slice(0, maxLength)}...` : description
+      return (
+        <span className="text-muted-foreground" title={description}>
+          {truncated}
+        </span>
+      )
+    },
+  },
+  {
     accessorKey: "employeeCount",
     header: ({ column, table }) => {
       const meta = table.options.meta as LeadsTableMeta | undefined

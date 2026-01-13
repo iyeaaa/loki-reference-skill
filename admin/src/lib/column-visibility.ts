@@ -22,6 +22,7 @@ export const AVAILABLE_COLUMNS: ColumnDefinition[] = [
   { id: "country", label: "국가", isDefault: false, canHide: true },
   { id: "city", label: "도시", isDefault: false, canHide: true },
   { id: "businessType", label: "비즈니스 타입", isDefault: false, canHide: true },
+  { id: "description", label: "설명", isDefault: false, canHide: true },
   { id: "employeeCount", label: "직원수", isDefault: false, canHide: true },
   { id: "leadSource", label: "리드 소스", isDefault: false, canHide: true },
   { id: "foundedYear", label: "설립연도", isDefault: false, canHide: true },

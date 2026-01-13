@@ -1,12 +1,14 @@
 /**
  * CSV 컬럼 매핑 모달
  *
- * 업로드된 CSV 파일의 컬럼을 리드 필드에 자동으로 매핑하고
+ * 업로드된 CSV 파일의 컬럼을 리드 필드에 AI로 자동 매핑하고
  * 사용자가 수동으로 조정할 수 있게 해주는 모달
+ *
+ * AI 매핑 실패 시 기존 패턴 매칭으로 폴백
  */
 
-import { AlertCircle, ArrowRight, Check, ChevronDown, Info, Sparkles, X } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { AlertCircle, ArrowRight, Bot, Check, ChevronDown, Info, Loader2, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { aiEmailApi } from "@/lib/api/services/ai-email"
 import type { LeadCSVData } from "@/lib/csv-utils"
 import {
   type ColumnAnalysis,
@@ -48,28 +51,26 @@ type ColumnMappingModalProps = {
   onClose: () => void
   onConfirm: (mappings: Record<string, keyof LeadCSVData | null>, hasHeaders: boolean) => void
   parseResult: SmartParseResult | null
-  onToggleHeaders?: (hasHeaders: boolean) => void // 헤더 토글 시 재분석 요청
+  onToggleHeaders?: (hasHeaders: boolean) => void
 }
+
+type MappingSource = "ai" | "pattern" | "loading"
 
 function ConfidenceBadge({ confidence }: { confidence: ColumnAnalysis["confidence"] }) {
   const config = {
     high: {
-      variant: "default" as const,
       label: "정확",
       className: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
     },
     medium: {
-      variant: "secondary" as const,
       label: "추천",
       className: "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30",
     },
     low: {
-      variant: "outline" as const,
       label: "추측",
       className: "bg-slate-500/20 text-slate-600 dark:text-slate-400 border-slate-500/30",
     },
     none: {
-      variant: "outline" as const,
       label: "미매핑",
       className: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
     },
@@ -79,7 +80,6 @@ function ConfidenceBadge({ confidence }: { confidence: ColumnAnalysis["confidenc
 
   return (
     <Badge className={`text-xs ${className}`} variant="outline">
-      {confidence === "high" && <Sparkles className="mr-1 h-3 w-3" />}
       {label}
     </Badge>
   )
@@ -104,10 +104,12 @@ function FieldSelector({
   currentField,
   usedFields,
   onSelect,
+  disabled,
 }: {
   currentField: keyof LeadCSVData | null
   usedFields: Set<keyof LeadCSVData>
   onSelect: (field: keyof LeadCSVData | null) => void
+  disabled?: boolean
 }) {
   const requiredFields = LEAD_FIELD_DEFINITIONS.filter((f) => f.required)
   const optionalFields = LEAD_FIELD_DEFINITIONS.filter((f) => !f.required)
@@ -127,6 +129,7 @@ function FieldSelector({
                 : ""
               : "border-dashed text-muted-foreground"
           }`}
+          disabled={disabled}
           variant="outline"
         >
           <span className="flex items-center gap-2">
@@ -210,23 +213,69 @@ export function ColumnMappingModal({
 }: ColumnMappingModalProps) {
   const [mappings, setMappings] = useState<Record<string, keyof LeadCSVData | null>>({})
   const [hasHeaders, setHasHeaders] = useState(true)
+  const [mappingSource, setMappingSource] = useState<MappingSource>("loading")
+  const aiMappingAttemptedRef = useRef<string | null>(null)
 
-  // parseResult가 변경되면 매핑 초기화
+  // 모달이 열리고 parseResult가 변경되면 AI 매핑 시도
   useEffect(() => {
-    if (parseResult) {
-      setMappings(parseResult.mappings)
-      setHasHeaders(parseResult.hasHeaders)
+    if (!(isOpen && parseResult)) {
+      return
     }
-  }, [parseResult])
+
+    // 이미 이 parseResult에 대해 AI 매핑을 시도했으면 스킵
+    const parseResultKey = parseResult.columns.map((c) => c.originalHeader).join(",")
+    if (aiMappingAttemptedRef.current === parseResultKey) {
+      return
+    }
+
+    aiMappingAttemptedRef.current = parseResultKey
+    setHasHeaders(parseResult.hasHeaders)
+    setMappingSource("loading")
+
+    // AI 매핑 시도
+    const performAIMapping = async () => {
+      try {
+        const columnsForAI = parseResult.columns.map((col) => ({
+          header: col.originalHeader,
+          sampleValues: col.sampleValues,
+        }))
+
+        const response = await aiEmailApi.columnMapping({ columns: columnsForAI })
+
+        // AI 결과를 매핑에 적용
+        const newMappings: Record<string, keyof LeadCSVData | null> = {}
+        for (const mapping of response.mappings) {
+          newMappings[mapping.header] = mapping.mappedField as keyof LeadCSVData | null
+        }
+
+        setMappings(newMappings)
+        setMappingSource("ai")
+      } catch (error) {
+        // AI 매핑 실패 시 기존 패턴 매칭으로 폴백
+        console.warn("AI mapping failed, falling back to pattern matching:", error)
+        setMappings(parseResult.mappings)
+        setMappingSource("pattern")
+      }
+    }
+
+    performAIMapping()
+  }, [isOpen, parseResult])
+
+  // 모달이 닫힐 때 상태 초기화
+  useEffect(() => {
+    if (!isOpen) {
+      aiMappingAttemptedRef.current = null
+    }
+  }, [isOpen])
 
   // 현재 사용 중인 필드 목록
   const usedFields = useMemo(() => {
     const fields = new Set<keyof LeadCSVData>()
-    Object.values(mappings).forEach((field) => {
+    for (const field of Object.values(mappings)) {
       if (field) {
         fields.add(field)
       }
-    })
+    }
     return fields
   }, [mappings])
 
@@ -267,23 +316,49 @@ export function ColumnMappingModal({
 
   const mappedCount = Object.values(mappings).filter(Boolean).length
   const totalColumns = parseResult.columns.length
+  const isLoading = mappingSource === "loading"
 
   return (
     <Dialog onOpenChange={onClose} open={isOpen}>
       <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            스마트 컬럼 매핑
+            {isLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+                AI 컬럼 분석 중...
+              </>
+            ) : (
+              <>
+                {mappingSource === "ai" ? (
+                  <Bot className="h-5 w-5 text-purple-500" />
+                ) : (
+                  <Info className="h-5 w-5 text-amber-500" />
+                )}
+                컬럼 매핑
+                <Badge
+                  className={`ml-2 ${
+                    mappingSource === "ai"
+                      ? "bg-purple-500/20 text-purple-700 dark:text-purple-400"
+                      : "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                  }`}
+                >
+                  {mappingSource === "ai" ? "AI 매핑" : "패턴 매핑"}
+                </Badge>
+              </>
+            )}
           </DialogTitle>
           <DialogDescription>
-            업로드된 파일의 컬럼을 리드 필드에 자동으로 매핑했습니다. 필요한 경우 수동으로
-            조정하세요.
+            {isLoading
+              ? "AI가 CSV 컬럼을 분석하고 있습니다. 잠시만 기다려주세요."
+              : mappingSource === "ai"
+                ? "AI가 컬럼을 자동으로 매핑했습니다. 필요한 경우 수동으로 조정하세요."
+                : "패턴 매칭으로 컬럼을 매핑했습니다. 필요한 경우 수동으로 조정하세요."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-          {/* 요약 정보 및 헤더 토글 */}
+          {/* 요약 정보 */}
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-4 text-sm">
               <span>
@@ -297,11 +372,9 @@ export function ColumnMappingModal({
                 컬럼
               </span>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-600 text-sm dark:text-emerald-400">●</span>
-                <span className="text-muted-foreground text-sm">= 필수 필드</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-600 text-sm dark:text-emerald-400">●</span>
+              <span className="text-muted-foreground text-sm">= 필수 필드</span>
             </div>
           </div>
 
@@ -323,6 +396,7 @@ export function ColumnMappingModal({
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   hasHeaders ? "bg-emerald-500" : "bg-gray-300"
                 }`}
+                disabled={isLoading}
                 onClick={() => handleToggleHeaders(!hasHeaders)}
                 type="button"
               >
@@ -337,7 +411,7 @@ export function ColumnMappingModal({
           </div>
 
           {/* 경고/에러 알림 */}
-          {!validation.valid && (
+          {!(isLoading || validation.valid) && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>필수 필드 누락</AlertTitle>
@@ -347,7 +421,7 @@ export function ColumnMappingModal({
             </Alert>
           )}
 
-          {parseResult.warnings.length > 0 && validation.valid && (
+          {!isLoading && parseResult.warnings.length > 0 && validation.valid && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertTitle>참고 사항</AlertTitle>
@@ -363,75 +437,87 @@ export function ColumnMappingModal({
 
           {/* 매핑 테이블 */}
           <div className="flex-1 overflow-auto rounded-lg border">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-background">
-                <TableRow>
-                  <TableHead className="w-[200px]">원본 컬럼</TableHead>
-                  <TableHead className="w-[100px]">데이터 타입</TableHead>
-                  <TableHead className="w-[100px]">신뢰도</TableHead>
-                  <TableHead className="w-[60px] text-center">
-                    <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
-                  </TableHead>
-                  <TableHead className="w-[200px]">리드 필드</TableHead>
-                  <TableHead>샘플 데이터</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parseResult.columns.map((column) => {
-                  const currentField = mappings[column.originalHeader]
+            {isLoading ? (
+              <div className="flex h-full min-h-[200px] items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <span className="text-muted-foreground text-sm">
+                    AI가 컬럼을 분석하고 있습니다...
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableRow>
+                    <TableHead className="w-[200px]">원본 컬럼</TableHead>
+                    <TableHead className="w-[100px]">데이터 타입</TableHead>
+                    <TableHead className="w-[100px]">신뢰도</TableHead>
+                    <TableHead className="w-[60px] text-center">
+                      <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
+                    </TableHead>
+                    <TableHead className="w-[200px]">리드 필드</TableHead>
+                    <TableHead>샘플 데이터</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parseResult.columns.map((column) => {
+                    const currentField = mappings[column.originalHeader]
 
-                  return (
-                    <TableRow key={column.originalHeader}>
-                      <TableCell className="font-medium">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger className="text-left">
-                              <span className="inline-block max-w-[180px] truncate">
-                                {column.originalHeader}
+                    return (
+                      <TableRow key={column.originalHeader}>
+                        <TableCell className="font-medium">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger className="text-left">
+                                <span className="inline-block max-w-[180px] truncate">
+                                  {column.originalHeader}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{column.originalHeader}</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          <DataTypeBadge dataType={column.dataType} />
+                        </TableCell>
+                        <TableCell>
+                          <ConfidenceBadge confidence={column.confidence} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell>
+                          <FieldSelector
+                            currentField={currentField}
+                            disabled={isLoading}
+                            onSelect={(field) => handleMappingChange(column.originalHeader, field)}
+                            usedFields={usedFields}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            {column.sampleValues.slice(0, 2).map((value, idx) => (
+                              <span
+                                className="max-w-[200px] truncate text-muted-foreground text-xs"
+                                key={idx}
+                                title={value}
+                              >
+                                {value || <span className="italic">빈 값</span>}
                               </span>
-                            </TooltipTrigger>
-                            <TooltipContent>{column.originalHeader}</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell>
-                        <DataTypeBadge dataType={column.dataType} />
-                      </TableCell>
-                      <TableCell>
-                        <ConfidenceBadge confidence={column.confidence} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <FieldSelector
-                          currentField={currentField}
-                          onSelect={(field) => handleMappingChange(column.originalHeader, field)}
-                          usedFields={usedFields}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          {column.sampleValues.slice(0, 2).map((value, idx) => (
-                            <span
-                              className="max-w-[200px] truncate text-muted-foreground text-xs"
-                              key={idx}
-                              title={value}
-                            >
-                              {value || <span className="italic">빈 값</span>}
-                            </span>
-                          ))}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </div>
 
           {/* 데이터 미리보기 */}
-          {parseResult.previewData.length > 0 && (
+          {!isLoading && parseResult.previewData.length > 0 && (
             <div className="space-y-2">
               <h4 className="font-medium text-muted-foreground text-sm">데이터 미리보기</h4>
               <div className="overflow-x-auto rounded-lg border">
@@ -476,7 +562,7 @@ export function ColumnMappingModal({
           <Button onClick={onClose} variant="outline">
             취소
           </Button>
-          <Button disabled={!validation.valid} onClick={handleConfirm}>
+          <Button disabled={!validation.valid || isLoading} onClick={handleConfirm}>
             <Check className="mr-2 h-4 w-4" />
             매핑 확인 ({mappedCount}개 필드)
           </Button>

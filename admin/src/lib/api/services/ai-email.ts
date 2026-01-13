@@ -98,6 +98,27 @@ export type GenerateOverallSummaryResponse = {
   summary: string
 }
 
+// Types for AI Column Mapping
+export type ColumnMappingInput = {
+  header: string
+  sampleValues: string[]
+}
+
+export type ColumnMappingResult = {
+  header: string
+  mappedField: string | null
+  confidence: "high" | "medium" | "low"
+  reason: string
+}
+
+export type AIColumnMappingRequest = {
+  columns: ColumnMappingInput[]
+}
+
+export type AIColumnMappingResponse = {
+  mappings: ColumnMappingResult[]
+}
+
 export const aiEmailApi = {
   /**
    * Generate AI email reply draft
@@ -165,6 +186,16 @@ export const aiEmailApi = {
    */
   generateOverallSummary: (data: GenerateOverallSummaryRequest) =>
     apiFetch<GenerateOverallSummaryResponse>("/api/ai/generate-overall-summary", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /**
+   * AI-powered column mapping for CSV import
+   * POST /api/ai/column-mapping
+   */
+  columnMapping: (data: AIColumnMappingRequest) =>
+    apiFetch<AIColumnMappingResponse>("/api/ai/column-mapping", {
       method: "POST",
       body: JSON.stringify(data),
     }),

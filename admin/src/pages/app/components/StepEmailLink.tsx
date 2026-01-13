@@ -174,14 +174,14 @@ export function StepEmailLink() {
 
           {/* Title */}
           <h2 className="mb-3 font-bold text-2xl text-gray-900">
-            {isKorean ? "발송 계정을 연결해주세요" : "Connect your email account"}
+            {isKorean ? "이메일 계정을 연결해주세요" : "Connect your email account"}
           </h2>
 
           {/* Description */}
           <p className="mb-4 max-w-sm text-gray-500">
             {isKorean
-              ? "이 계정에서 바이어에게 이메일이 발송돼요"
-              : "Emails will be sent from this account to your buyers"}
+              ? "이 계정으로 바이어에게 영업 메일을 보내드릴게요"
+              : "I'll send sales emails to buyers from this account"}
           </p>
 
           {/* Current user email info */}
@@ -325,8 +325,8 @@ function LinkedEmailAccountsView({
             </h2>
             <p className="text-gray-500 text-sm">
               {isKorean
-                ? "이 계정에서 바이어에게 이메일이 발송돼요"
-                : "Emails will be sent from this account"}
+                ? "좋아요! 이제 제가 대신 영업 메일을 보낼 수 있어요"
+                : "Great! Now I can send sales emails on your behalf"}
             </p>
           </div>
         </div>
@@ -409,7 +409,7 @@ function LinkedEmailAccountsView({
             onClick={onNext}
           >
             {isNextLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isKorean ? "캠페인 확인하기" : "Review campaign"}
+            {isKorean ? "바이어 확인하기" : "Review buyers"}
             {!isNextLoading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>

@@ -41,13 +41,13 @@ function getStatusIcon(status: PhaseStatus) {
 }
 
 const phases = [
-  { id: "discovery", labelKr: "바이어 찾는 중", labelEn: "Finding buyers", icon: Search },
-  { id: "group", labelKr: "리스트 정리하는 중", labelEn: "Organizing list", icon: Users },
-  { id: "templates", labelKr: "이메일 초안 쓰는 중", labelEn: "Writing email drafts", icon: Zap },
+  { id: "discovery", labelKr: "관심있을 바이어 찾는 중", labelEn: "Finding interested buyers", icon: Search },
+  { id: "group", labelKr: "바이어 정보 정리하는 중", labelEn: "Organizing buyer info", icon: Users },
+  { id: "templates", labelKr: "영업 메일 초안 작성 중", labelEn: "Writing sales email drafts", icon: Zap },
   {
     id: "previews",
-    labelKr: "맞춤 이메일 쓰는 중",
-    labelEn: "Writing personalized emails",
+    labelKr: "바이어별 맞춤 메일 완성 중",
+    labelEn: "Completing personalized emails",
     icon: Mail,
   },
 ]
@@ -314,12 +314,12 @@ export function StepBuyerLoading() {
               <CheckCircle2 className="h-10 w-10 text-green-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "바이어와 이메일이 준비됐어요" : "Buyers and emails are ready"}
+              {isKorean ? "바이어와 영업 메일이 준비됐어요!" : "Buyers and sales emails are ready!"}
             </h2>
             <p className="mb-6 text-center text-gray-500 text-sm">
               {isKorean
-                ? `${leadCount}명의 바이어에게 보낼 이메일이 생성됐어요`
-                : `Emails for ${leadCount} buyers have been generated`}
+                ? `${leadCount}명의 바이어에게 보낼 영업 메일을 작성했어요`
+                : `I've written sales emails for ${leadCount} buyers`}
             </p>
             <div className="flex gap-3">
               <Button onClick={handleBack} variant="outline">
@@ -345,13 +345,13 @@ export function StepBuyerLoading() {
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-2xl">
             <StarSpinner size={24} />
-            {isKorean ? "바이어 찾고 이메일 생성" : "Finding buyers & generating emails"}
+            {isKorean ? "바이어를 찾고 있어요" : "Finding buyers for you"}
           </CardTitle>
           <p className="mt-1 text-gray-600 text-sm">
             {message ||
               (isKorean
-                ? "바이어를 찾고 맞춤 이메일을 작성 중이에요"
-                : "Finding buyers and writing personalized emails")}
+                ? "30초만 기다려주세요. 곧 관심있을 바이어를 보여드릴게요!"
+                : "Just 30 seconds. I'll show you interested buyers soon!")}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -386,7 +386,7 @@ export function StepBuyerLoading() {
               <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-gray-700">
-                    {isKorean ? "이메일 생성" : "Writing Emails"}
+                    {isKorean ? "영업 메일 작성" : "Writing Sales Emails"}
                   </span>
                   <span className="text-gray-600">
                     {parallelProgress.templates.done

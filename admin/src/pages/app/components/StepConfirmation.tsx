@@ -191,7 +191,7 @@ export function StepConfirmation() {
   // Execute campaign
   const handleExecute = async () => {
     if (!sequenceId) {
-      toast.error(isKorean ? "캠페인 정보가 없어요" : "Missing campaign information")
+      toast.error(isKorean ? "영업 메일 정보가 없어요" : "Missing sales email information")
       return
     }
 
@@ -229,7 +229,7 @@ export function StepConfirmation() {
       })
 
       setExecutionProgress(60)
-      setExecutionStatus(isKorean ? "캠페인 활성화 중" : "Activating campaign")
+      setExecutionStatus(isKorean ? "발송 준비 중" : "Preparing to send")
 
       await apiFetch(`/api/v1/sequences/${sequenceId}/activate-step-based`, {
         method: "POST",
@@ -317,8 +317,8 @@ export function StepConfirmation() {
               </h2>
               <p className="mb-8 text-gray-500 leading-relaxed">
                 {isKorean
-                  ? "바이어와 이메일을 먼저 준비해야\n캠페인을 시작할 수 있어요"
-                  : "Let's prepare buyers and emails\nbefore starting the campaign"}
+                  ? "바이어와 영업 메일을 먼저 준비해야\n영업을 시작할 수 있어요"
+                  : "Let's prepare buyers and sales emails\nbefore starting"}
               </p>
               <Button
                 className="h-12 w-full max-w-xs rounded-xl bg-blue-500 font-medium hover:bg-blue-600"
@@ -348,7 +348,7 @@ export function StepConfirmation() {
               </div>
               <div className="space-y-2">
                 <h2 className="font-bold text-[22px] text-gray-900 tracking-tight">
-                  {isKorean ? "캠페인 준비 중" : "Setting up campaign"}
+                  {isKorean ? "영업 시작 준비 중" : "Setting up your outreach"}
                 </h2>
                 <p className="text-gray-500">
                   {executionStatus || (isKorean ? "잠시만요" : "Just a moment")}
@@ -376,12 +376,12 @@ export function StepConfirmation() {
                 <CheckCircle2 className="h-8 w-8 text-white" />
               </div>
               <h2 className="mb-2 font-bold text-[22px] text-gray-900 tracking-tight">
-                {isKorean ? "시작됐어요!" : "You're live!"}
+                {isKorean ? "영업이 시작됐어요!" : "You're live!"}
               </h2>
               <p className="mb-8 text-gray-500 leading-relaxed">
                 {isKorean
-                  ? "이메일 발송이 예약됐어요.\n대시보드에서 바이어 반응을 확인하세요."
-                  : "Emails have been scheduled.\nTrack buyer responses on your dashboard."}
+                  ? "제가 영업 메일을 보내기 시작했어요.\n대시보드에서 바이어 반응을 확인하세요!"
+                  : "I've started sending sales emails.\nTrack buyer responses on your dashboard!"}
               </p>
               <div className="mb-8 flex w-full max-w-xs justify-center gap-12">
                 <div className="text-center">
@@ -452,7 +452,7 @@ export function StepConfirmation() {
           {isKorean ? "마지막 단계예요" : "Final step"}
         </p>
         <h2 className="font-bold text-gray-900 text-xl tracking-tight sm:text-2xl">
-          {isKorean ? "캠페인을 확인하고 시작하세요" : "Review and launch your campaign"}
+          {isKorean ? "영업을 시작할 준비가 됐어요!" : "Ready to start your outreach!"}
         </h2>
       </div>
 
@@ -532,7 +532,7 @@ export function StepConfirmation() {
             disabled={isExecuting || selectedCount === 0 || !emailAccount?.id}
             onClick={handleExecute}
           >
-            {isKorean ? "캠페인 시작" : "Launch"}
+            {isKorean ? "영업 시작하기" : "Start outreach"}
           </Button>
         </div>
       </div>

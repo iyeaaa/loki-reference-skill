@@ -36,12 +36,12 @@ export function EmailsSection({ steps, onEditStep, isKorean }: EmailsSectionProp
       <CardContent className="p-4">
         <div className="mb-3">
           <h3 className="font-semibold text-gray-900 text-sm">
-            {isKorean ? "이메일 시퀀스" : "Email Sequence"}
+            {isKorean ? "영업 메일" : "Sales Emails"}
           </h3>
           <p className="text-gray-500 text-sm">
             {isKorean
-              ? `${steps.length}개 스텝으로 순차 발송`
-              : `${steps.length} steps, sent sequentially`}
+              ? `${steps.length}단계로 자동 발송됩니다`
+              : `${steps.length} steps, sent automatically`}
           </p>
         </div>
 

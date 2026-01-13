@@ -450,12 +450,12 @@ export function StepCompanyInfo() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isKorean ? "회사를 알려주세요" : "Tell us about your company"}
+            {isKorean ? "저에게 회사를 소개해주세요" : "Tell me about your company"}
           </CardTitle>
           <p className="mt-1 text-gray-600 text-sm">
             {isKorean
-              ? "입력해주신 내용으로 딱 맞는 바이어를 찾아드릴게요"
-              : "We'll find the perfect buyers based on what you share"}
+              ? "이 정보로 관심있을 바이어를 찾아볼게요"
+              : "I'll find buyers who might be interested"}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -682,7 +682,7 @@ export function StepCompanyInfo() {
 
             {/* Target Customer */}
             <div className="space-y-2">
-              <Label className="text-sm">{isKorean ? "타겟 고객" : "Target Customer"}</Label>
+              <Label className="text-sm">{isKorean ? "판매 대상" : "Target Customer"}</Label>
               <Select
                 onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
                 value={editedData.target}

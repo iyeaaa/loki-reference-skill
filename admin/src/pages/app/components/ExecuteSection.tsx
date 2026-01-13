@@ -34,7 +34,7 @@ export function ExecuteSection({
           <span>{isKorean ? "명" : "buyers"}</span>
           <span className="text-gray-400">×</span>
           <span className="font-semibold text-gray-900">{stepsCount}</span>
-          <span>{isKorean ? "스텝" : "steps"}</span>
+          <span>{isKorean ? "단계" : "steps"}</span>
           <span className="text-gray-400">=</span>
           <span className="font-bold text-blue-600">{totalEmails}</span>
           <span>{isKorean ? "통" : "emails"}</span>
@@ -45,15 +45,15 @@ export function ExecuteSection({
           <div className="flex items-center gap-1.5 text-gray-600 text-xs">
             <Check className="h-3 w-3 text-green-500" />
             <span>
-              {isKorean ? `${selectedCount}명의 리드가 선택됨` : `${selectedCount} leads selected`}
+              {isKorean ? `${selectedCount}명의 바이어 선택됨` : `${selectedCount} buyers selected`}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-gray-600 text-xs">
             <Check className="h-3 w-3 text-green-500" />
             <span>
               {isKorean
-                ? `${stepsCount}개의 이메일 스텝 준비됨`
-                : `${stepsCount} email steps ready`}
+                ? `${stepsCount}단계 영업 메일 준비됨`
+                : `${stepsCount}-step sales emails ready`}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-gray-600 text-xs">
@@ -92,7 +92,9 @@ export function ExecuteSection({
             onClick={onExecute}
           >
             <Send className="mr-2 h-4 w-4" />
-            {isKorean ? "30개 기업에 영업 시작하기" : "Start Sales Campaign for 30 Companies"}
+            {isKorean
+              ? `${selectedCount}개 바이어에게 영업 시작하기`
+              : `Start contacting ${selectedCount} buyers`}
           </Button>
 
           <div className="flex gap-2">

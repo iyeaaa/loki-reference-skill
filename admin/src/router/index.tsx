@@ -1,10 +1,9 @@
-import { lazy } from "react"
+import { lazy, Suspense } from "react"
 import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
 import { ProtectedRoute, UserProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 import { PermissionProvider, RouteGuard } from "@/lib/permission"
 import { getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
-
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
@@ -78,6 +77,9 @@ const GeminiSearchPage = lazy(() => import("../pages/gemini-search/GeminiSearchP
 const BigQuerySearchPage = lazy(() => import("../pages/bigquery-search/BigQuerySearchPage"))
 const AnalyticsDashboardPage = lazy(() => import("../pages/dashboard/DashboardV2Page"))
 
+// Public Pages (No auth required)
+const PaymentTestPublic = lazy(() => import("../pages/PaymentTestPublic"))
+
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
@@ -135,6 +137,21 @@ function TrialRedirect() {
 }
 
 export const router = createBrowserRouter([
+  // Public Payment Test Page (No auth required - for PG inspection)
+  {
+    path: "/payment-test",
+    element: (
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        }
+      >
+        <PaymentTestPublic />
+      </Suspense>
+    ),
+  },
   {
     path: "/",
     element: (

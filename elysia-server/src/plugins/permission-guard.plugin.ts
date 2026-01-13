@@ -45,6 +45,7 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/webhook/inbound",
   "POST /api/webhook/inbound-store",
   "POST /api/webhook/sendgrid-events",
+  "POST /api/webhook/portone", // PortOne V2 payment webhook
   // Swagger
   "GET /swagger",
   "GET /swagger/json",
@@ -73,6 +74,15 @@ const AUTH_ONLY_ROUTES = new Set([
   // 계정 삭제 (본인만)
   "GET /api/v1/auth/account/deletion-check",
   "DELETE /api/v1/auth/account",
+  // 결제 관련 (본인 워크스페이스 결제)
+  "POST /api/v1/payments/complete",
+  "GET /api/v1/payments/:id",
+  "POST /api/v1/payments/:id/cancel",
+  // 요금제 조회 (공개 정보)
+  "GET /api/v1/billing/plans",
+  "GET /api/v1/billing/plans/:id",
+  "GET /api/v1/billing/products",
+  "GET /api/v1/billing/products/:id",
 ])
 
 // 라우트별 권한 매핑 (Resource:Action)

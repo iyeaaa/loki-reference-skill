@@ -1,4 +1,5 @@
-import { Elysia } from "elysia"
+import { Elysia, t } from "elysia"
+import * as portoneService from "../services/portone.service"
 import { webhookService } from "../services/webhook.service"
 import logger, { generateTraceId, inboundEmailLogger, webhookLogger } from "../utils/logger"
 
@@ -186,3 +187,57 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       throw error
     }
   })
+  // PortOne V2 Payment Webhook
+  .post(
+    "/portone",
+    async ({ body, headers, set }) => {
+      const startTime = Date.now()
+      const traceId = generateTraceId()
+
+      // Get raw body for signature verification
+      const payload = JSON.stringify(body)
+      const signature = headers["x-portone-signature"] || ""
+
+      webhookLogger.batchReceived({ source: "portone", traceId }, 1)
+
+      // Verify webhook signature
+      if (!portoneService.verifyWebhookSignature(payload, signature)) {
+        logger.warn({ traceId }, "[PortOne Webhook] Invalid signature")
+        set.status = 401
+        return { success: false, error: "Invalid signature" }
+      }
+
+      try {
+        const event = body as portoneService.PortOneWebhookPayload
+        const result = await portoneService.handleWebhookEvent(event)
+
+        const durationMs = Date.now() - startTime
+        webhookLogger.processed(
+          { source: "portone", eventType: event.type, traceId },
+          { success: result.success, durationMs, metadata: { message: result.message } },
+        )
+
+        return result
+      } catch (error) {
+        const durationMs = Date.now() - startTime
+        webhookLogger.processed(
+          { source: "portone", eventType: "unknown", traceId },
+          {
+            success: false,
+            durationMs,
+            metadata: { error: error instanceof Error ? error.message : String(error) },
+          },
+        )
+        logger.error({ error, traceId }, "[PortOne Webhook] Processing error")
+        set.status = 500
+        return { success: false, error: "Internal server error" }
+      }
+    },
+    {
+      body: t.Object({
+        type: t.String(),
+        timestamp: t.String(),
+        data: t.Any(),
+      }),
+    },
+  )

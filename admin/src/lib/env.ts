@@ -47,6 +47,24 @@ const envSchema = z.object({
    * Google Analytics 4 measurement ID (G-XXXXXXXXXX)
    */
   VITE_GA_MEASUREMENT_ID: z.string().optional(),
+
+  /**
+   * PortOne Store ID for payment integration
+   * Optional: Payment features will be disabled if not set
+   */
+  VITE_PORTONE_STORE_ID: z.string().optional().default(""),
+
+  /**
+   * PortOne Channel Key for TossPayments (KRW payments)
+   * Optional: TossPayments will be disabled if not set
+   */
+  VITE_PORTONE_CHANNEL_KEY_TOSS: z.string().optional().default(""),
+
+  /**
+   * PortOne Channel Key for PayPal (USD payments)
+   * Optional: PayPal will be disabled if not set
+   */
+  VITE_PORTONE_CHANNEL_KEY_PAYPAL: z.string().optional().default(""),
 })
 
 /**
@@ -66,6 +84,9 @@ function parseEnv(): Env {
     PROD: import.meta.env.PROD ?? false,
     VITE_MIXPANEL_TOKEN: import.meta.env.VITE_MIXPANEL_TOKEN,
     VITE_GA_MEASUREMENT_ID: import.meta.env.VITE_GA_MEASUREMENT_ID,
+    VITE_PORTONE_STORE_ID: import.meta.env.VITE_PORTONE_STORE_ID,
+    VITE_PORTONE_CHANNEL_KEY_TOSS: import.meta.env.VITE_PORTONE_CHANNEL_KEY_TOSS,
+    VITE_PORTONE_CHANNEL_KEY_PAYPAL: import.meta.env.VITE_PORTONE_CHANNEL_KEY_PAYPAL,
   }
 
   const result = envSchema.safeParse(rawEnv)

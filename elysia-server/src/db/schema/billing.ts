@@ -313,6 +313,7 @@ export const billingPlansRelations = relations(billingPlans, ({ one, many }) => 
     references: [billingProducts.id],
   }),
   subscriptions: many(subscriptions),
+  prices: many(planPrices),
 }))
 
 export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
@@ -371,3 +372,105 @@ export type {
   SubscriptionStatus,
   SubscriptionTier,
 } from "./enums"
+
+// ============================================================================
+// Multi-Currency Support Tables (다중 통화 지원)
+// ============================================================================
+
+/**
+ * 요금제 가격 테이블 (plan_prices)
+ *
+ * 하나의 요금제에 여러 통화 가격을 설정할 수 있음
+ * - KRW: 원화 (한국 고객)
+ * - USD: 달러 (해외 고객)
+ *
+ * @field id - 기본 식별자 (UUID)
+ * @field planId - 요금제 연결 (billing_plans.id 참조)
+ * @field currency - 통화 코드 (ISO 4217: KRW, USD, JPY 등)
+ * @field amount - 금액 (minor unit: 원, 센트)
+ * @field isPrimary - 기본 표시 통화 여부
+ * @field displayAmount - 표시용 문자열 ("₩9,900", "$9.99")
+ * @field createdAt - 생성 시간
+ * @field updatedAt - 수정 시간
+ *
+ * @unique (planId, currency) - 요금제당 통화는 유일
+ */
+export const planPrices = pgTable(
+  "plan_prices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => billingPlans.id, { onDelete: "cascade" }),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    isPrimary: boolean("is_primary").default(false),
+    displayAmount: varchar("display_amount", { length: 20 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    planIdIdx: index("plan_prices_plan_id_idx").on(table.planId),
+    currencyIdx: index("plan_prices_currency_idx").on(table.currency),
+    uniquePlanCurrency: index("plan_prices_unique_idx").on(table.planId, table.currency),
+  }),
+)
+
+/**
+ * 환율 캐시 테이블 (exchange_rates)
+ *
+ * 외부 API에서 조회한 환율을 캐시하여 API 호출 최소화
+ * 기본 6시간 캐시, 만료 시 재조회
+ *
+ * @field id - 기본 식별자 (UUID)
+ * @field baseCurrency - 기준 통화 (기본: USD)
+ * @field targetCurrency - 대상 통화 (KRW, JPY 등)
+ * @field rate - 환율 (1 USD = ? KRW)
+ * @field source - 데이터 출처 ('exchangerate-api', 'manual')
+ * @field fetchedAt - 조회 시간
+ * @field expiresAt - 만료 시간
+ *
+ * @unique (baseCurrency, targetCurrency) - 통화 쌍은 유일
+ */
+export const exchangeRates = pgTable(
+  "exchange_rates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    baseCurrency: varchar("base_currency", { length: 3 }).notNull().default("USD"),
+    targetCurrency: varchar("target_currency", { length: 3 }).notNull(),
+    rate: varchar("rate", { length: 30 }).notNull(), // decimal stored as string
+    source: varchar("source", { length: 50 }),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+  },
+  (table) => ({
+    currenciesIdx: index("exchange_rates_currencies_idx").on(
+      table.baseCurrency,
+      table.targetCurrency,
+    ),
+    uniqueCurrencyPair: index("exchange_rates_unique_idx").on(
+      table.baseCurrency,
+      table.targetCurrency,
+    ),
+  }),
+)
+
+// ============================================================================
+// Multi-Currency Relations
+// ============================================================================
+
+export const planPricesRelations = relations(planPrices, ({ one }) => ({
+  plan: one(billingPlans, {
+    fields: [planPrices.planId],
+    references: [billingPlans.id],
+  }),
+}))
+
+// ============================================================================
+// Multi-Currency Type Exports
+// ============================================================================
+
+export type PlanPrice = typeof planPrices.$inferSelect
+export type NewPlanPrice = typeof planPrices.$inferInsert
+export type ExchangeRate = typeof exchangeRates.$inferSelect
+export type NewExchangeRate = typeof exchangeRates.$inferInsert

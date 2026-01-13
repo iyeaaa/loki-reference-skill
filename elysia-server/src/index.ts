@@ -17,6 +17,8 @@ import {
   billingCustomersRoutes,
   billingPlansRoutes,
   billingProductsRoutes,
+  exchangeRatesRoutes,
+  pricingRoutes,
   subscriptionsRoutes,
 } from "./routes/billing.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
@@ -50,6 +52,7 @@ import { notificationRoutes } from "./routes/notification.routes"
 import { nylasRoutes } from "./routes/nylas.routes"
 import { onboardingRoutes } from "./routes/onboarding.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
+import { paymentRoutes } from "./routes/payment.routes"
 import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
@@ -233,6 +236,10 @@ const app = new Elysia()
   .use(billingPlansRoutes)
   .use(subscriptionsRoutes)
   .use(billingCustomersRoutes)
+  .use(exchangeRatesRoutes)
+  .use(pricingRoutes)
+  // Payment routes (PortOne V2)
+  .use(paymentRoutes)
   // IAM routes
   .use(iamPoliciesRoutes)
   .use(iamRolesRoutes)

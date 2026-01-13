@@ -7,6 +7,8 @@
 import { Elysia, t } from "elysia"
 import type { SubscriptionStatus } from "../db/schema/billing"
 import * as billingService from "../services/billing.service"
+import * as exchangeRateService from "../services/exchange-rate.service"
+import * as pricingService from "../services/pricing.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 
 // Schema definitions
@@ -319,6 +321,92 @@ export const billingPlansRoutes = new Elysia({ prefix: "/api/v1/billing/plans" }
     },
   )
 
+  // Get plan price for specific currency
+  .get(
+    "/:id/price",
+    async ({ params: { id }, query, set }) => {
+      const currency = query.currency?.toUpperCase() || "KRW"
+      const price = await pricingService.getPlanPrice(id, currency)
+      if (!price) {
+        set.status = 404
+        return errorResponse("가격 정보를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return price
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      query: t.Object({
+        currency: t.Optional(t.String({ maxLength: 3 })),
+      }),
+    },
+  )
+
+  // Get all prices for a plan
+  .get(
+    "/:id/prices",
+    async ({ params: { id }, query }) => {
+      const currencies = query.currencies?.split(",").map((c) => c.trim().toUpperCase()) || [
+        "KRW",
+        "USD",
+      ]
+      const prices = await Promise.all(
+        currencies.map((currency) => pricingService.getPlanPrice(id, currency)),
+      )
+      return prices.filter((p) => p !== null)
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      query: t.Object({
+        currencies: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Set plan price for specific currency (admin)
+  .post(
+    "/:id/prices",
+    async ({ params: { id }, body }) => {
+      await pricingService.setPlanPrice(
+        id,
+        body.currency,
+        body.amount,
+        body.displayAmount,
+        body.isPrimary,
+      )
+      return { success: true, message: "가격이 설정되었습니다." }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        currency: t.String({ minLength: 3, maxLength: 3 }),
+        amount: t.Number({ minimum: 0 }),
+        displayAmount: t.Optional(t.String()),
+        isPrimary: t.Optional(t.Boolean()),
+      }),
+    },
+  )
+
+  // Delete plan price (revert to calculated rate)
+  .delete(
+    "/:id/prices/:currency",
+    async ({ params: { id, currency } }) => {
+      await pricingService.deletePlanPrice(id, currency)
+      return { success: true, message: "가격이 삭제되었습니다. 환율 계산으로 전환됩니다." }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        currency: t.String({ minLength: 3, maxLength: 3 }),
+      }),
+    },
+  )
+
 // ============================================================================
 // Subscriptions Routes
 // ============================================================================
@@ -526,6 +614,129 @@ export const billingCustomersRoutes = new Elysia({ prefix: "/api/v1/billing/cust
     {
       params: t.Object({
         id: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+// ============================================================================
+// Exchange Rates Routes
+// ============================================================================
+
+export const exchangeRatesRoutes = new Elysia({ prefix: "/api/v1/billing/exchange-rates" })
+  // Get current exchange rate
+  .get(
+    "/",
+    async ({ query }) => {
+      const baseCurrency = query.base?.toUpperCase() || "USD"
+      const targetCurrency = query.target?.toUpperCase() || "KRW"
+      const rate = await exchangeRateService.getExchangeRate(baseCurrency, targetCurrency)
+      return rate
+    },
+    {
+      query: t.Object({
+        base: t.Optional(t.String({ maxLength: 3 })),
+        target: t.Optional(t.String({ maxLength: 3 })),
+      }),
+    },
+  )
+
+  // Get all cached exchange rates
+  .get("/cached", async () => {
+    const rates = await exchangeRateService.getAllCachedRates()
+    return { rates }
+  })
+
+  // Convert amount between currencies
+  .get(
+    "/convert",
+    async ({ query }) => {
+      const amount = parseFloat(query.amount)
+      const fromCurrency = query.from?.toUpperCase() || "USD"
+      const toCurrency = query.to?.toUpperCase() || "KRW"
+
+      let convertedAmount: number
+      if (fromCurrency === "USD") {
+        convertedAmount = await exchangeRateService.convertFromUSD(amount, toCurrency)
+      } else if (toCurrency === "USD") {
+        convertedAmount = await exchangeRateService.convertToUSD(amount, fromCurrency)
+      } else {
+        // Convert via USD as intermediate
+        const usdAmount = await exchangeRateService.convertToUSD(amount, fromCurrency)
+        convertedAmount = await exchangeRateService.convertFromUSD(usdAmount, toCurrency)
+      }
+
+      return {
+        from: { currency: fromCurrency, amount },
+        to: { currency: toCurrency, amount: convertedAmount },
+      }
+    },
+    {
+      query: t.Object({
+        amount: t.String(),
+        from: t.Optional(t.String({ maxLength: 3 })),
+        to: t.Optional(t.String({ maxLength: 3 })),
+      }),
+    },
+  )
+
+  // Set manual exchange rate (admin)
+  .post(
+    "/",
+    async ({ body }) => {
+      await exchangeRateService.setManualRate(
+        body.baseCurrency,
+        body.targetCurrency,
+        body.rate,
+        body.ttlHours,
+      )
+      return { success: true, message: "환율이 설정되었습니다." }
+    },
+    {
+      body: t.Object({
+        baseCurrency: t.String({ minLength: 3, maxLength: 3 }),
+        targetCurrency: t.String({ minLength: 3, maxLength: 3 }),
+        rate: t.Number({ minimum: 0 }),
+        ttlHours: t.Optional(t.Number({ minimum: 1 })),
+      }),
+    },
+  )
+
+// ============================================================================
+// Pricing Routes (Plans with Multi-Currency)
+// ============================================================================
+
+export const pricingRoutes = new Elysia({ prefix: "/api/v1/billing/pricing" })
+  // Get all plans with multi-currency prices
+  .get(
+    "/plans",
+    async ({ query }) => {
+      const currencies = query.currencies?.split(",").map((c) => c.trim().toUpperCase()) || [
+        "KRW",
+        "USD",
+      ]
+      const activeOnly = query.activeOnly !== "false"
+      const plans = await pricingService.getPlansWithPrices(currencies, activeOnly)
+      return { plans }
+    },
+    {
+      query: t.Object({
+        currencies: t.Optional(t.String()),
+        activeOnly: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Generate prices for all plans in a currency
+  .post(
+    "/generate",
+    async ({ body }) => {
+      await pricingService.generatePricesForCurrency(body.currency, body.roundTo)
+      return { success: true, message: `${body.currency} 가격이 생성되었습니다.` }
+    },
+    {
+      body: t.Object({
+        currency: t.String({ minLength: 3, maxLength: 3 }),
+        roundTo: t.Optional(t.Number({ minimum: 0 })),
       }),
     },
   )

@@ -65,6 +65,7 @@ import { LicenseKeySettings } from "./settings/LicenseKeySettings"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { OnboardingEmailTest } from "./settings/OnboardingEmailTest"
 import { OnboardingTest } from "./settings/OnboardingTest"
+import { PaymentTestPage } from "./settings/PaymentTestPage"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
@@ -427,6 +428,12 @@ export default function SettingsPage() {
         icon: <Mail className="h-4 w-4" />,
         permission: "admin-only",
       },
+      {
+        id: "payment-test",
+        label: "결제 테스트 (PG심사)",
+        icon: <CreditCard className="h-4 w-4" />,
+        permission: "admin-only",
+      },
     ],
     [t],
   )
@@ -742,6 +749,8 @@ export default function SettingsPage() {
         return <OnboardingTest />
       case "onboarding-email-test":
         return <OnboardingEmailTest />
+      case "payment-test":
+        return <PaymentTestPage />
       default:
         return null
     }

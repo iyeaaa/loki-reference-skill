@@ -46,4 +46,5 @@ export type {
   UpdatePolicyStatementRequest,
 } from "./iam"
 export type * from "./job-log"
+export type * from "./payment"
 export type * from "./user"

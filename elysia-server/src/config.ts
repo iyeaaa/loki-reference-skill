@@ -263,7 +263,36 @@ export const config = {
     kakaoLink: getEnvOrDefault("CS_KAKAO_LINK", ""),
     phoneNumber: getEnvOrDefault("CS_PHONE_NUMBER", ""),
   },
+
+  // PortOne (Payment Gateway Integration)
+  // All keys must be set in environment variables
+  portone: {
+    storeId: getEnvOrDefault("PORTONE_STORE_ID", ""),
+    apiSecret: getEnvOrDefault("PORTONE_API_SECRET", ""),
+    webhookSecret: getEnvOrDefault("PORTONE_WEBHOOK_SECRET", ""),
+    channelKeys: {
+      toss: getEnvOrDefault("PORTONE_CHANNEL_KEY_TOSS", ""),
+      paypal: getEnvOrDefault("PORTONE_CHANNEL_KEY_PAYPAL", ""),
+    },
+  },
 } as const
+
+// PortOne configuration validation (warn on startup if missing)
+if (isProduction) {
+  const portoneWarnings: string[] = []
+  if (!config.portone.apiSecret) {
+    portoneWarnings.push("PORTONE_API_SECRET")
+  }
+  if (!config.portone.webhookSecret) {
+    portoneWarnings.push("PORTONE_WEBHOOK_SECRET")
+  }
+  if (portoneWarnings.length > 0) {
+    console.warn(
+      `\n⚠️  [Config] Missing PortOne environment variables: ${portoneWarnings.join(", ")}`,
+      "\n   Payment features will not work properly.\n",
+    )
+  }
+}
 
 // Log configuration on startup (only in development)
 if (isDevelopment) {

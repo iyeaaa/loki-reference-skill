@@ -1095,6 +1095,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@portone/browser-sdk@npm:^0.1.2":
+  version: 0.1.2
+  resolution: "@portone/browser-sdk@npm:0.1.2"
+  checksum: 10c0/cd8ea840828ea94dce1274b8a9798e6c1702ffd639fc7f245659113d28106db6db9b8a963aacca0f41ade6db09298f36a85462b7bc3fd53e8bfa76dea31ad07f
+  languageName: node
+  linkType: hard
+
 "@radix-ui/number@npm:1.1.1":
   version: 1.1.1
   resolution: "@radix-ui/number@npm:1.1.1"
@@ -4289,6 +4296,7 @@ __metadata:
     "@biomejs/biome": "npm:2.3.8"
     "@hookform/resolvers": "npm:^5.2.2"
     "@monaco-editor/react": "npm:^4.7.0"
+    "@portone/browser-sdk": "npm:^0.1.2"
     "@radix-ui/react-accordion": "npm:^1.2.12"
     "@radix-ui/react-alert-dialog": "npm:^1.1.15"
     "@radix-ui/react-aspect-ratio": "npm:^1.1.7"

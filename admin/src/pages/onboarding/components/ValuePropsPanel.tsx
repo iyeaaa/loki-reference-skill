@@ -27,8 +27,8 @@ export function ValuePropsPanel({
       icon: <Search className="h-4 w-4" />,
       titleKo: "맞춤 바이어 리스트",
       titleEn: "Matched buyer list",
-      descKo: "AI가 찾은 해외 바이어",
-      descEn: "Buyers found by AI",
+      descKo: "해외 잠재 바이어",
+      descEn: "International potential buyers",
       completed: data.industry !== null && currentStep >= 1,
     },
     {
@@ -43,8 +43,8 @@ export function ValuePropsPanel({
       icon: <Mail className="h-4 w-4" />,
       titleKo: "맞춤 이메일",
       titleEn: "Personalized emails",
-      descKo: "AI가 작성한 영업 이메일",
-      descEn: "Sales emails by AI",
+      descKo: "바이어별 맞춤 영업 이메일",
+      descEn: "Personalized sales emails",
       completed: currentStep > 3,
     },
     {
@@ -61,10 +61,10 @@ export function ValuePropsPanel({
     <Card className="border-0 bg-gradient-to-br from-gray-50 to-slate-50 shadow-md">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">
-          {isKorean ? "완료하면 바로 받아요" : "You'll get these instantly"}
+          {isKorean ? "준비해드릴 것들" : "What we'll prepare for you"}
         </CardTitle>
         <CardDescription className="text-xs">
-          {isKorean ? "약 30초 후 AI가 준비해드려요" : "AI prepares in about 30 seconds"}
+          {isKorean ? "잠시 후 모두 준비돼요" : "Ready in just a moment"}
         </CardDescription>
       </CardHeader>
       <CardContent>

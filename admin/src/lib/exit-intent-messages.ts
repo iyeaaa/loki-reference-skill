@@ -1,12 +1,8 @@
 /**
  * 온보딩 이탈 방지 모달 메시지
  * 각 단계별 고객 심리 기반 카피라이팅
- *
- * 심리 원칙:
- * 1. 손실 회피 (Loss Aversion): 놓치면 아쉬운 것 강조
- * 2. 희소성/긴급성: 지금이 기회라는 느낌
- * 3. 사회적 증거: 다른 기업들도 사용 중
- * 4. 구체적 가치: 명확한 혜택 제시
+ * - RINDA AI 에이전트 브랜딩 반영
+ * - 수출 초보 기업을 위한 신뢰감 있는 톤
  */
 
 export type OnboardingStep = "survey1" | "survey2" | "login" | "step1" | "step2" | "step3" | "step4"
@@ -25,179 +21,148 @@ export type ExitIntentMessage = {
 
 /**
  * 단계별 이탈 방지 메시지
- * - 고객친화적 톤
- * - 손실 회피 심리 활용
- * - 구체적 가치 제안
- * - 긴급성/희소성 강조
+ * - RINDA 브랜딩 일관화
+ * - 친근하면서 전문적인 톤
+ * - 완료 근접감 강조
  */
 export const exitIntentMessages: Record<OnboardingStep, ExitIntentMessage> = {
   // Survey Step 1: 산업군 선택
   survey1: {
     title: {
-      ko: "잠깐! 이대로 가시면 아까워요",
-      en: "Wait! Don't miss this opportunity",
+      ko: "잠깐, 거의 다 됐어요",
+      en: "Wait, almost there",
     },
     description: {
-      ko: "딱 1분만 투자하시면\n맞춤 해외 바이어를 무료로 찾아드려요",
-      en: "Invest just 1 minute\nand get free access to matched international buyers",
+      ko: "간단한 질문 2개만 답하면\n맞춤 바이어를 찾아드려요",
+      en: "Answer just 2 questions\nand we'll find perfect buyers for you",
     },
     stayButton: {
-      ko: "무료로 바이어 찾기",
-      en: "Find Buyers for Free",
+      ko: "계속하기",
+      en: "Continue",
     },
     leaveButton: {
-      ko: "다음에 할게요",
-      en: "I'll do it later",
-    },
-    urgencyBadge: {
-      ko: "무료 체험 중",
-      en: "Free Trial",
-    },
-    benefits: [
-      { ko: "AI가 24시간 바이어 탐색", en: "AI searches buyers 24/7" },
-      { ko: "검증된 해외 바이어 매칭", en: "Verified international buyer matching" },
-      { ko: "200개+ 기업이 사용 중", en: "Used by 200+ companies" },
-    ],
-    socialProof: {
-      ko: "오늘만 12개 기업이 바이어를 찾았어요",
-      en: "12 companies found buyers today",
-    },
-    lossMessage: {
-      ko: "지금 떠나시면, 해외 진출 기회를 놓칠 수 있어요",
-      en: "Leaving now may mean missing export opportunities",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Survey Step 2: 국가 선택
   survey2: {
     title: {
-      ko: "마지막 한 단계만 남았어요!",
-      en: "Just one step left!",
+      ko: "마지막 질문이에요",
+      en: "Last question",
     },
     description: {
-      ko: "진출 국가만 선택하면\n바로 AI가 바이어를 찾기 시작해요",
-      en: "Just pick your target market\nand AI starts finding buyers immediately",
+      ko: "진출 국가만 선택하면\n바로 바이어를 찾기 시작해요",
+      en: "Just pick your target market\nand we start finding buyers immediately",
     },
     stayButton: {
-      ko: "지금 완료하기",
-      en: "Complete Now",
+      ko: "마저 하기",
+      en: "Finish",
     },
     leaveButton: {
-      ko: "다음에 할게요",
-      en: "I'll do it later",
-    },
-    urgencyBadge: {
-      ko: "거의 다 됐어요!",
-      en: "Almost done!",
-    },
-    benefits: [
-      { ko: "클릭 한 번이면 끝", en: "Just one click away" },
-      { ko: "바로 AI 바이어 탐색 시작", en: "AI buyer search starts immediately" },
-      { ko: "평균 3일 내 바이어 매칭", en: "Buyer matching in avg. 3 days" },
-    ],
-    lossMessage: {
-      ko: "여기서 멈추면 지금까지 입력이 모두 사라져요",
-      en: "Your progress will be lost if you leave now",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Login/Signup
   login: {
     title: {
-      ko: "가입하면 바로 시작해요!",
-      en: "Sign up to start now!",
+      ko: "가입하면 바로 시작해요",
+      en: "Sign up to start now",
     },
     description: {
-      ko: "간편 가입 후 바로\n해외 바이어 탐색을 시작할 수 있어요",
-      en: "Quick signup and you can\nstart exploring international buyers right away",
+      ko: "간편 가입 후 바로\n해외 바이어를 찾아드려요",
+      en: "Quick signup and\nwe start finding international buyers for you",
     },
     stayButton: {
-      ko: "가입할게요",
-      en: "I'll sign up",
+      ko: "가입하기",
+      en: "Sign up",
     },
     leaveButton: {
-      ko: "나중에 할게요",
-      en: "Maybe later",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Onboarding Step 1: 회사 정보
   step1: {
     title: {
-      ko: "회사 정보만 입력하면 돼요!",
-      en: "Just enter company info!",
+      ko: "곧 바이어를 찾아드려요",
+      en: "We'll find buyers soon",
     },
     description: {
-      ko: "기본 정보 입력 후\nAI가 맞춤 바이어를 찾기 시작해요",
-      en: "Enter basic info and\nAI starts finding perfect buyers for you",
+      ko: "회사 정보만 입력하면\n맞춤 바이어 검색을 시작해요",
+      en: "Enter company info and\nwe start searching for matched buyers",
     },
     stayButton: {
-      ko: "입력할게요",
-      en: "I'll enter it",
+      ko: "입력하기",
+      en: "Enter info",
     },
     leaveButton: {
-      ko: "나중에 할게요",
-      en: "Maybe later",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Onboarding Step 2: 이메일 연동
   step2: {
     title: {
-      ko: "이메일 연동하면 자동 영업 시작!",
-      en: "Connect email for auto-sales!",
+      ko: "한 단계만 더, 곧 영업 시작",
+      en: "One more step to start",
     },
     description: {
-      ko: "이메일만 연동하면\nAI가 자동으로 바이어에게 연락해요",
-      en: "Connect your email and\nAI automatically contacts buyers for you",
+      ko: "이메일만 연동하면\n바이어에게 연락을 대신 드려요",
+      en: "Connect your email and\nwe'll reach out to buyers for you",
     },
     stayButton: {
-      ko: "연동할게요",
-      en: "I'll connect",
+      ko: "연동하기",
+      en: "Connect",
     },
     leaveButton: {
-      ko: "나중에 할게요",
-      en: "Maybe later",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Onboarding Step 3: 진행 중
   step3: {
     title: {
-      ko: "조금만 기다려주세요!",
-      en: "Just a moment!",
+      ko: "열심히 준비하고 있어요",
+      en: "We're preparing for you",
     },
     description: {
-      ko: "AI가 열심히 준비하고 있어요\n곧 해외 영업을 시작할 수 있어요",
-      en: "AI is working hard\nYou'll start international sales soon",
+      ko: "잠시만 기다려주세요\n곧 해외 영업을 시작할 수 있어요",
+      en: "Just a moment\nYou'll start international sales soon",
     },
     stayButton: {
-      ko: "기다릴게요",
-      en: "I'll wait",
+      ko: "기다리기",
+      en: "Wait",
     },
     leaveButton: {
-      ko: "나중에 할게요",
-      en: "Maybe later",
+      ko: "나중에",
+      en: "Later",
     },
   },
 
   // Onboarding Step 4: 최종 확인
   step4: {
     title: {
-      ko: "한 클릭으로 해외 영업 시작!",
-      en: "One click to start!",
+      ko: "마지막 확인만 하면 영업 시작",
+      en: "One confirmation and we start",
     },
     description: {
-      ko: "마지막 확인만 하면\n해외 바이어 발굴이 시작돼요",
-      en: "One final confirmation and\ninternational buyer discovery begins",
+      ko: "바이어와 이메일을 확인하고\n영업 시작 버튼을 눌러주세요",
+      en: "Review buyers and emails\nthen click start to begin outreach",
     },
     stayButton: {
-      ko: "시작할게요",
-      en: "I'll start",
+      ko: "시작하기",
+      en: "Start",
     },
     leaveButton: {
-      ko: "나중에 할게요",
-      en: "Maybe later",
+      ko: "나중에",
+      en: "Later",
     },
   },
 }

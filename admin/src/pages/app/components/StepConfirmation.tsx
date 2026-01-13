@@ -313,7 +313,7 @@ export function StepConfirmation() {
                 <Zap className="h-7 w-7 text-amber-600" />
               </div>
               <h2 className="mb-2 font-bold text-[22px] text-gray-900 tracking-tight">
-                {isKorean ? "앗, 먼저 해야 할 게 있어요" : "One more thing first"}
+                {isKorean ? "먼저 준비할 게 있어요" : "Let's prepare something first"}
               </h2>
               <p className="mb-8 text-gray-500 leading-relaxed">
                 {isKorean
@@ -376,12 +376,12 @@ export function StepConfirmation() {
                 <CheckCircle2 className="h-8 w-8 text-white" />
               </div>
               <h2 className="mb-2 font-bold text-[22px] text-gray-900 tracking-tight">
-                {isKorean ? "영업이 시작됐어요!" : "You're live!"}
+                {isKorean ? "영업이 시작됐어요" : "Outreach is now live"}
               </h2>
               <p className="mb-8 text-gray-500 leading-relaxed">
                 {isKorean
-                  ? "제가 영업 메일을 보내기 시작했어요.\n대시보드에서 바이어 반응을 확인하세요!"
-                  : "I've started sending sales emails.\nTrack buyer responses on your dashboard!"}
+                  ? "영업 이메일 발송이 시작됐어요.\n대시보드에서 바이어 반응을 확인해보세요"
+                  : "Sales emails have started sending.\nTrack buyer responses on your dashboard"}
               </p>
               <div className="mb-8 flex w-full max-w-xs justify-center gap-12">
                 <div className="text-center">
@@ -449,10 +449,10 @@ export function StepConfirmation() {
       {/* Header */}
       <div className="mb-4 text-center sm:mb-6">
         <p className="mb-1 font-medium text-blue-600 text-sm">
-          {isKorean ? "마지막 단계예요" : "Final step"}
+          {isKorean ? "영업 시작 준비 완료" : "Ready to start"}
         </p>
         <h2 className="font-bold text-gray-900 text-xl tracking-tight sm:text-2xl">
-          {isKorean ? "영업을 시작할 준비가 됐어요!" : "Ready to start your outreach!"}
+          {isKorean ? "바이어와 이메일을 확인해보세요" : "Take a look at buyers and emails"}
         </h2>
       </div>
 

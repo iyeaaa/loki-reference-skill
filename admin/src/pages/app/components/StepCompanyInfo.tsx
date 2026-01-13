@@ -1,4 +1,4 @@
-import { ArrowRight, Globe, Loader2, Settings } from "lucide-react"
+import { ArrowRight, Globe, Loader2, Mail, Search, Settings, Users } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -330,10 +330,10 @@ export function StepCompanyInfo() {
       console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
 
       // 시작 알림 toast
-      toast.success(isKorean ? "바이어 찾기 시작!" : "Started finding buyers!", {
+      toast.success(isKorean ? "바이어 찾기를 시작했어요" : "Started finding buyers", {
         description: isKorean
-          ? "바이어 20명 + 이메일 40개 작성 중"
-          : "Finding 20 buyers + writing 40 emails",
+          ? "맞춤 바이어와 영업 이메일을 준비하고 있어요"
+          : "Preparing matched buyers and sales emails",
         duration: 4000,
       })
 
@@ -406,15 +406,48 @@ export function StepCompanyInfo() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isKorean ? "저에게 회사를 소개해주세요" : "Tell me about your company"}
+            {isKorean ? "RINDA에게 회사를 소개해주세요" : "Tell RINDA about your company"}
           </CardTitle>
           <p className="mt-1 text-gray-600 text-sm">
             {isKorean
-              ? "이 정보로 관심있을 바이어를 찾아볼게요"
-              : "I'll find buyers who might be interested"}
+              ? "이 정보로 딱 맞는 해외 바이어를 찾아드릴게요"
+              : "RINDA will find the perfect international buyers for you"}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* 가치 체감 안내 섹션 */}
+          <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+            <p className="mb-3 font-medium text-blue-800 text-sm">
+              {isKorean ? "입력하시면 준비해드릴 것들" : "What we'll prepare for you"}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                  <Search className="h-3 w-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 text-xs">
+                  {isKorean ? "맞춤 바이어 리스트" : "Matched buyer list"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                  <Mail className="h-3 w-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 text-xs">
+                  {isKorean ? "바이어별 맞춤 이메일" : "Personalized emails per buyer"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                  <Users className="h-3 w-3 text-blue-600" />
+                </div>
+                <span className="text-gray-700 text-xs">
+                  {isKorean ? "발송 대행 + 후속 관리" : "Sending + follow-up management"}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Company Name - Grid layout with English name */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

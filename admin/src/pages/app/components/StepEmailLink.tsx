@@ -174,14 +174,14 @@ export function StepEmailLink() {
 
           {/* Title */}
           <h2 className="mb-3 font-bold text-2xl text-gray-900">
-            {isKorean ? "이메일 계정을 연결해주세요" : "Connect your email account"}
+            {isKorean ? "발송에 사용할 이메일을 연결해주세요" : "Connect your email for sending"}
           </h2>
 
           {/* Description */}
           <p className="mb-4 max-w-sm text-gray-500">
             {isKorean
-              ? "이 계정으로 바이어에게 영업 메일을 보내드릴게요"
-              : "I'll send sales emails to buyers from this account"}
+              ? "이 계정으로 바이어에게 영업 이메일을 보내드려요"
+              : "Sales emails will be sent to buyers from this account"}
           </p>
 
           {/* Current user email info */}
@@ -321,12 +321,12 @@ function LinkedEmailAccountsView({
           </div>
           <div>
             <h2 className="font-bold text-gray-900 text-xl">
-              {isKorean ? "연결 완료!" : "Connected!"}
+              {isKorean ? "연결 완료" : "Connected"}
             </h2>
             <p className="text-gray-500 text-sm">
               {isKorean
-                ? "좋아요! 이제 제가 대신 영업 메일을 보낼 수 있어요"
-                : "Great! Now I can send sales emails on your behalf"}
+                ? "이제 영업 이메일을 대신 보내드릴 준비가 됐어요"
+                : "Now ready to send sales emails on your behalf"}
             </p>
           </div>
         </div>

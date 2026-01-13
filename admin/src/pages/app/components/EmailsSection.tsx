@@ -73,9 +73,19 @@ export function EmailsSection({ steps, onEditStep, isKorean }: EmailsSectionProp
                 </Button>
               </div>
 
-              {/* Subject only (no body preview) */}
-              <p className="line-clamp-1 font-medium text-gray-900 text-xs">
+              {/* Subject */}
+              <p className="mb-1 line-clamp-1 font-medium text-gray-900 text-xs">
                 {step.emailSubject || (isKorean ? "(제목 없음)" : "(No subject)")}
+              </p>
+
+              {/* Body preview */}
+              <p className="line-clamp-2 text-gray-500 text-xs leading-relaxed">
+                {step.emailBodyText
+                  ? step.emailBodyText.slice(0, 100) +
+                    (step.emailBodyText.length > 100 ? "..." : "")
+                  : isKorean
+                    ? "(본문 없음)"
+                    : "(No content)"}
               </p>
             </div>
           ))}

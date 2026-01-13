@@ -218,7 +218,7 @@ export function EmailEditModal({
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isKorean ? `스텝 ${step.stepOrder} 이메일 수정` : `Edit Step ${step.stepOrder} Email`}
+            {isKorean ? `${step.stepOrder}번째 이메일 수정` : `Edit Email #${step.stepOrder}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -250,9 +250,9 @@ export function EmailEditModal({
 
           {/* AI Edit Section */}
           {showAIEdit && (
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <Label className="flex items-center gap-2 text-purple-700">
+                <Label className="flex items-center gap-2 text-blue-700">
                   <Sparkles className="h-4 w-4" />
                   {isKorean ? "AI 편집 지시사항" : "AI Edit Instructions"}
                 </Label>
@@ -266,7 +266,7 @@ export function EmailEditModal({
                 </Button>
               </div>
               <Textarea
-                className="mb-3 min-h-[80px] border-purple-200 bg-white"
+                className="mb-3 min-h-[80px] border-blue-200 bg-white"
                 onChange={(e) => setEditPrompt(e.target.value)}
                 placeholder={
                   isKorean
@@ -276,7 +276,7 @@ export function EmailEditModal({
                 value={editPrompt}
               />
               <Button
-                className="w-full bg-purple-600 hover:bg-purple-700"
+                className="w-full bg-blue-600 hover:bg-blue-700"
                 disabled={isEditing || !editPrompt.trim()}
                 onClick={handleAIEdit}
                 size="sm"

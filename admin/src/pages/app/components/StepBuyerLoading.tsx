@@ -11,7 +11,7 @@
  */
 
 import { CheckCircle2, Circle, Loader2, Mail, Search, Users, XCircle, Zap } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { StarSpinner } from "@/components/chatbot/StarSpinner"
@@ -43,26 +43,26 @@ function getStatusIcon(status: PhaseStatus) {
 const phases = [
   {
     id: "discovery",
-    labelKr: "관심있을 바이어 찾는 중",
+    labelKr: "관심 바이어를 찾고 있어요",
     labelEn: "Finding interested buyers",
     icon: Search,
   },
   {
     id: "group",
-    labelKr: "바이어 정보 정리하는 중",
-    labelEn: "Organizing buyer info",
+    labelKr: "바이어 정보를 정리하고 있어요",
+    labelEn: "Organizing buyer information",
     icon: Users,
   },
   {
     id: "templates",
-    labelKr: "영업 메일 초안 작성 중",
+    labelKr: "영업 이메일 초안을 작성하고 있어요",
     labelEn: "Writing sales email drafts",
     icon: Zap,
   },
   {
     id: "previews",
-    labelKr: "바이어별 맞춤 메일 완성 중",
-    labelEn: "Completing personalized emails",
+    labelKr: "바이어별 맞춤 이메일을 마무리하고 있어요",
+    labelEn: "Finishing personalized emails",
     icon: Mail,
   },
 ]
@@ -170,6 +170,31 @@ export function StepBuyerLoading() {
 
   // Use progress from unified store (includes fake progress)
   const progressPercent = displayProgress
+
+  // 신규 바이어 하이라이트 로직
+  const [newLeadIds, setNewLeadIds] = useState<Set<string>>(new Set())
+  const prevLeadsRef = useRef<string[]>([])
+
+  useEffect(() => {
+    const currentIds = leads.map((l) => l.leadId)
+    const prevIds = prevLeadsRef.current
+    const newIds = currentIds.filter((id) => !prevIds.includes(id))
+
+    if (newIds.length > 0) {
+      setNewLeadIds((prev) => new Set([...prev, ...newIds]))
+      // 3초 후 하이라이트 제거
+      setTimeout(() => {
+        setNewLeadIds((prev) => {
+          const updated = new Set(prev)
+          for (const id of newIds) {
+            updated.delete(id)
+          }
+          return updated
+        })
+      }, 3000)
+    }
+    prevLeadsRef.current = currentIds
+  }, [leads])
 
   // Determine initial view state based on job status
   useEffect(() => {
@@ -329,12 +354,12 @@ export function StepBuyerLoading() {
               <CheckCircle2 className="h-10 w-10 text-green-500" />
             </div>
             <h2 className="mb-2 text-center font-semibold text-gray-900 text-xl">
-              {isKorean ? "바이어와 영업 메일이 준비됐어요!" : "Buyers and sales emails are ready!"}
+              {isKorean ? "바이어와 영업 이메일이 준비됐어요" : "Buyers and emails are ready"}
             </h2>
             <p className="mb-6 text-center text-gray-500 text-sm">
               {isKorean
                 ? `${leadCount}명의 바이어에게 보낼 영업 메일을 작성했어요`
-                : `I've written sales emails for ${leadCount} buyers`}
+                : `Sales emails written for ${leadCount} buyers`}
             </p>
             <div className="flex gap-3">
               <Button onClick={handleBack} variant="outline">
@@ -365,8 +390,8 @@ export function StepBuyerLoading() {
           <p className="mt-1 text-gray-600 text-sm">
             {message ||
               (isKorean
-                ? "30초만 기다려주세요. 곧 관심있을 바이어를 보여드릴게요!"
-                : "Just 30 seconds. I'll show you interested buyers soon!")}
+                ? "잠시만 기다려주세요. 맞춤 바이어를 찾고 영업 이메일도 준비하고 있어요"
+                : "Please wait a moment. Finding matched buyers and preparing sales emails")}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -423,8 +448,12 @@ export function StepBuyerLoading() {
           {leads.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-gray-900">
-                  {isKorean ? `찾은 바이어 ${completedLeads}명` : `Found ${completedLeads} buyers`}
+                <h3 className="flex items-center gap-2 font-medium text-gray-900">
+                  {isKorean ? "찾은 바이어" : "Found buyers"}
+                  <span className="inline-flex min-w-[2rem] items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 font-bold text-blue-700 text-sm">
+                    {completedLeads}
+                  </span>
+                  {isKorean ? "명" : ""}
                 </h3>
                 <span className="text-gray-400 text-sm">
                   {isKorean ? `총 ${leadCount}명` : `Total: ${leadCount}`}
@@ -433,7 +462,12 @@ export function StepBuyerLoading() {
               <div className="max-h-[200px] space-y-2 overflow-y-auto rounded-lg border p-3">
                 {leads.slice(0, 10).map((lead) => (
                   <div
-                    className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2"
+                    className={cn(
+                      "flex items-center justify-between rounded-md px-3 py-2 transition-all duration-500",
+                      newLeadIds.has(lead.leadId)
+                        ? "border border-blue-200 bg-blue-50"
+                        : "bg-gray-50",
+                    )}
                     key={lead.leadId}
                   >
                     <span className="truncate text-gray-700 text-sm">{lead.companyName}</span>

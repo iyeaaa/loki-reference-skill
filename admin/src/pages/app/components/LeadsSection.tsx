@@ -117,7 +117,9 @@ export function LeadsSection({
         {/* Header with view toggle */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-semibold text-gray-900">{isKorean ? "연락할 바이어" : "Buyers to contact"}</h3>
+            <h3 className="font-semibold text-gray-900">
+              {isKorean ? "연락할 바이어" : "Buyers to contact"}
+            </h3>
             <p className="text-gray-500 text-sm">
               {isKorean
                 ? `${selectedCount}명 선택됨 / 전체 ${leads.length}명`

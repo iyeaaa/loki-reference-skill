@@ -41,9 +41,24 @@ function getStatusIcon(status: PhaseStatus) {
 }
 
 const phases = [
-  { id: "discovery", labelKr: "관심있을 바이어 찾는 중", labelEn: "Finding interested buyers", icon: Search },
-  { id: "group", labelKr: "바이어 정보 정리하는 중", labelEn: "Organizing buyer info", icon: Users },
-  { id: "templates", labelKr: "영업 메일 초안 작성 중", labelEn: "Writing sales email drafts", icon: Zap },
+  {
+    id: "discovery",
+    labelKr: "관심있을 바이어 찾는 중",
+    labelEn: "Finding interested buyers",
+    icon: Search,
+  },
+  {
+    id: "group",
+    labelKr: "바이어 정보 정리하는 중",
+    labelEn: "Organizing buyer info",
+    icon: Users,
+  },
+  {
+    id: "templates",
+    labelKr: "영업 메일 초안 작성 중",
+    labelEn: "Writing sales email drafts",
+    icon: Zap,
+  },
   {
     id: "previews",
     labelKr: "바이어별 맞춤 메일 완성 중",

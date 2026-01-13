@@ -497,7 +497,7 @@ function LinkedEmailAccountsView({
         </Button>
 
         {/* Change Account Confirmation Dialog */}
-        <AlertDialog open={showChangeAccountDialog} onOpenChange={setShowChangeAccountDialog}>
+        <AlertDialog onOpenChange={setShowChangeAccountDialog} open={showChangeAccountDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
@@ -509,13 +509,18 @@ function LinkedEmailAccountsView({
               <AlertDialogDescription className="text-center">
                 {isKorean ? (
                   <>
-                    현재 연동된 <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span> 계정의 연결이 해제되고,
+                    현재 연동된{" "}
+                    <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span>{" "}
+                    계정의 연결이 해제되고,
                     <br />새 계정으로 연동됩니다.
                   </>
                 ) : (
                   <>
-                    Your current account <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span> will be disconnected,
-                    <br />and a new account will be connected.
+                    Your current account{" "}
+                    <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span>{" "}
+                    will be disconnected,
+                    <br />
+                    and a new account will be connected.
                   </>
                 )}
               </AlertDialogDescription>

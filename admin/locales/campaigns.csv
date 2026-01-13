@@ -1,48 +1,48 @@
 key,ko,en
-title.campaignManagement,캠페인 관리,Campaign Management
-title.createCampaign,캠페인 생성,Create Campaign
-button.newCampaign,새 캠페인 만들기,Create New Campaign
+title.campaignManagement,AI 영업 현황,AI Sales Status
+title.createCampaign,영업 생성,Create Sales
+button.newCampaign,린다에게 영업 맡기기,Let Rinda Handle Sales
 button.continueSetup,설정 계속하기,Continue Setup
 button.cancel,취소,Cancel
 button.previous,이전,Previous
 button.next,다음,Next
-button.startCampaign,캠페인 시작하기,Start Campaign
+button.startCampaign,영업 시작하기,Start Sales
 button.generateWithAI,AI로 생성하기,Generate with AI
 status.draft,초안,Draft
-status.active,활성,Active
-status.paused,일시중지,Paused
+status.active,린다가 연락 중,Rinda Contacting
+status.paused,대기 중,Waiting
 status.archived,보관됨,Archived
-step.campaignInfo,캠페인 정보,Campaign Info
+step.campaignInfo,영업 정보,Sales Info
 step.campaignInfoDesc,기본 정보 입력,Enter basic information
 step.aiGeneration,AI 생성,AI Generation
 step.aiGenerationDesc,이메일 초안 생성,Generate email drafts
 step.reviewAndRun,검토 및 실행,Review & Run
-step.reviewAndRunDesc,초안 검토 및 캠페인 시작,Review drafts and start campaign
-form.campaignName,캠페인 이름,Campaign Name
-form.campaignNamePlaceholder,예: 2025 K-뷰티 신규 고객 캠페인,Ex: 2025 K-Beauty New Customer Campaign
+step.reviewAndRunDesc,초안 검토 및 영업 시작,Review drafts and start sales
+form.campaignName,영업명,Sales Name
+form.campaignNamePlaceholder,예: 2025 K-뷰티 신규 바이어 영업,Ex: 2025 K-Beauty New Buyer Sales
 form.description,설명,Description
-form.descriptionPlaceholder,캠페인에 대한 간단한 설명을 입력하세요,Enter a brief description of the campaign
+form.descriptionPlaceholder,영업에 대한 간단한 설명을 입력하세요,Enter a brief description of the sales
 form.workspace,워크스페이스,Workspace
 form.workspacePlaceholder,워크스페이스 선택,Select workspace
 form.customerGroup,고객 그룹,Customer Group
 form.customerGroupPlaceholder,고객 그룹 선택,Select customer group
 form.emailAccount,발신 이메일 계정,Sender Email Account
 form.emailAccountPlaceholder,이메일 계정 선택,Select email account
-wizard.basicInfo,캠페인 기본 정보,Campaign Basic Information
-wizard.basicInfoDesc,캠페인 이름 워크스페이스 대상 고객 그룹을 설정하세요,Set campaign name workspace and target customer group
+wizard.basicInfo,영업 기본 정보,Sales Basic Information
+wizard.basicInfoDesc,영업명 워크스페이스 대상 고객 그룹을 설정하세요,Set sales name workspace and target customer group
 wizard.aiEmail,AI 이메일 생성,AI Email Generation
-wizard.aiEmailDesc,AI가 각 리드에 맞춰 6단계 이메일 캠페인을 자동으로 생성합니다,AI automatically generates a 6-step email campaign tailored for each lead
-wizard.aiSteps,AI가 생성할 6단계 캠페인:,6-step campaign that AI will generate:
-wizard.aiStepsHeader,스마트 AI 생성,Smart AI Generation
-wizard.aiStepsDesc,AI가 워크스페이스와 리드를 분석하여 4-8개의 최적화된 캠페인 단계와 각 리드별 맞춤 이메일 초안을 생성합니다,AI will analyze your workspace and leads to create 4-8 optimized campaign steps with personalized email drafts for each lead
+wizard.aiEmailDesc,린다가 각 바이어에게 맞춤 이메일 6통을 자동으로 작성해요,Rinda automatically creates 6 personalized emails for each buyer
+wizard.aiSteps,린다가 생성할 6단계 이메일:,6-step emails that Rinda will create:
+wizard.aiStepsHeader,린다 AI 생성,Rinda AI Generation
+wizard.aiStepsDesc,린다가 워크스페이스와 바이어를 분석하여 4-8개의 최적화된 영업 단계와 각 바이어별 맞춤 이메일 초안을 생성해요,Rinda will analyze your workspace and buyers to create 4-8 optimized sales steps with personalized email drafts for each buyer
 wizard.step1,초기 소개 (Day 1),Initial Introduction (Day 1)
 wizard.step2,가치 제안 팔로우업 (+3일),Value Proposition Follow-up (+3 days)
 wizard.step3,문제-솔루션 제시 (+5일),Problem-Solution Presentation (+5 days)
 wizard.step4,부드러운 리마인더 (+4일),Gentle Reminder (+4 days)
 wizard.step5,미팅 요청 (+5일),Meeting Request (+5 days)
 wizard.step6,마지막 접촉 (+7일),Final Touch (+7 days)
-stats.campaignStats,캠페인 통계,Campaign Statistics
-stats.enrolledLeads,등록된 리드,Enrolled Leads
+stats.campaignStats,영업 통계,Sales Statistics
+stats.enrolledLeads,등록된 바이어,Enrolled Buyers
 stats.generatedDrafts,생성된 이메일 초안,Generated Email Drafts
 stats.generatedDraftsDesc,개의 이메일이 생성되었습니다,emails have been generated
 drafts.generatedEmails,생성된 이메일 초안,Generated Email Drafts
@@ -51,19 +51,19 @@ drafts.generationMode.template,템플릿,Template
 drafts.status.edited,수정됨,Edited
 drafts.status.generated,생성됨,Generated
 toast.requiredFields,필수 항목을 입력해주세요,Please enter required fields
-toast.requiredFieldsDesc,캠페인 이름 워크스페이스 고객 그룹은 필수 항목입니다.,Campaign name workspace and customer group are required.
-toast.campaignCreated,캠페인 생성 완료,Campaign Created
-toast.campaignCreatedDesc,이제 AI로 이메일을 생성해보세요!,Now generate emails with AI!
-toast.campaignCreateFailed,캠페인 생성 실패,Campaign Creation Failed
+toast.requiredFieldsDesc,영업명 워크스페이스 고객 그룹은 필수 항목입니다.,Sales name workspace and customer group are required.
+toast.campaignCreated,영업 생성 완료,Sales Created
+toast.campaignCreatedDesc,이제 린다가 이메일을 생성해드려요!,Now Rinda will generate emails for you!
+toast.campaignCreateFailed,영업 생성 실패,Sales Creation Failed
 toast.selectEmailAccount,이메일 계정을 선택해주세요,Please select an email account
-toast.aiGenerationComplete,AI 캠페인 생성 완료!,AI Campaign Generation Complete!
-toast.aiGenerationCompleteDesc,{{totalLeads}}명의 리드에 대해 {{totalDrafts}}개의 이메일 초안이 생성되었습니다.,{{totalDrafts}} email drafts have been generated for {{totalLeads}} leads.
+toast.aiGenerationComplete,린다가 이메일 작성 완료!,Rinda Email Generation Complete!
+toast.aiGenerationCompleteDesc,{{totalLeads}}명의 바이어에 대해 {{totalDrafts}}개의 이메일 초안이 생성되었습니다.,{{totalDrafts}} email drafts have been generated for {{totalLeads}} buyers.
 toast.aiGenerationFailed,AI 생성 실패,AI Generation Failed
-toast.campaignStarted,캠페인 시작!,Campaign Started!
-toast.campaignStartedDesc,이메일이 예약된 시간에 자동으로 발송됩니다.,Emails will be sent automatically at scheduled times.
-toast.campaignStartFailed,캠페인 시작 실패,Campaign Start Failed
+toast.campaignStarted,린다가 영업을 시작해요!,Rinda Started Sales!
+toast.campaignStartedDesc,바이어에게 자동으로 연락하고 답장이 오면 발송이 멈춰요.,Rinda will contact buyers automatically and stop when they reply.
+toast.campaignStartFailed,영업 시작 실패,Sales Start Failed
 toast.unknownError,알 수 없는 오류가 발생했습니다.,An unknown error occurred.
-table.column.campaignName,캠페인명,Campaign Name
+table.column.campaignName,영업명,Sales Name
 table.column.description,설명,Description
 table.column.status,상태,Status
 table.column.workspace,워크스페이스,Workspace
@@ -72,12 +72,12 @@ table.column.createdBy,생성자,Created By
 table.column.createdAt,생성일,Created Date
 table.column.updatedAt,수정일,Updated Date
 table.column.actions,작업,Actions
-table.noCampaigns,캠페인이 없습니다,No campaigns available
-table.noCampaignsDesc,새 캠페인을 생성하여 시작하세요,Create a new campaign to get started
+table.noCampaigns,아직 린다에게 맡긴 영업이 없어요,No sales assigned to Rinda yet
+table.noCampaignsDesc,'린다에게 영업 맡기기' 버튼을 눌러 시작하세요,Click 'Let Rinda Handle Sales' to get started
 generating.aiGenerating,AI 생성 중...,AI Generating...
 creating.creating,생성 중...,Creating...
 starting.starting,시작 중...,Starting...
-form.campaignNameRequired,캠페인 이름 *,Campaign Name *
+form.campaignNameRequired,영업명 *,Sales Name *
 form.descriptionLabel,설명,Description
 form.workspaceRequired,워크스페이스 *,Workspace *
 form.customerGroupRequired,고객 그룹 *,Customer Group *
@@ -86,17 +86,17 @@ form.leadCount,{{count}}명,{{count}} leads
 button.nextStep,다음,Next
 button.previousStep,이전,Previous
 button.generateWithAIButton,AI로 생성하기,Generate with AI
-button.startCampaignButton,캠페인 시작하기,Start Campaign
-wizard.step1Title,캠페인 기본 정보,Campaign Basic Information
-wizard.step1Description,캠페인 이름 워크스페이스 대상 고객 그룹을 설정하세요,Set campaign name workspace and target customer group
+button.startCampaignButton,영업 시작하기,Start Sales
+wizard.step1Title,영업 기본 정보,Sales Basic Information
+wizard.step1Description,영업명 워크스페이스 대상 고객 그룹을 설정하세요,Set sales name workspace and target customer group
 wizard.step2Title,AI 이메일 생성,AI Email Generation
-wizard.step2Description,AI가 각 리드에 맞춰 6단계 이메일 캠페인을 자동으로 생성합니다,AI automatically generates a 6-step email campaign tailored for each lead
-wizard.step3Title,캠페인 통계,Campaign Statistics
+wizard.step2Description,린다가 각 바이어에게 맞춤 이메일 6통을 자동으로 작성해요,Rinda automatically creates 6 personalized emails for each buyer
+wizard.step3Title,영업 통계,Sales Statistics
 review.generatedEmailDrafts,생성된 이메일 초안,Generated Email Drafts
 review.draftsGenerated,{{count}}개의 이메일이 생성되었습니다,{{count}} emails have been generated
 review.noDataAvailable,데이터 없음,No data available
-detail.notFound,캠페인을 찾을 수 없습니다,Campaign not found
-detail.info.title,캠페인 정보,Campaign Information
+detail.notFound,영업을 찾을 수 없습니다,Sales not found
+detail.info.title,영업 정보,Sales Information
 detail.info.workspace,워크스페이스,Workspace
 detail.info.customerGroup,고객 그룹,Customer Group
 detail.info.createdBy,생성자,Created By
@@ -130,7 +130,7 @@ steps.addStep,단계 추가,Add Step
 steps.editStep,단계 수정,Edit Step
 steps.noStepsYet,아직 생성된 단계가 없습니다. '단계 추가'를 클릭하여 첫 번째 단계를 생성하세요.,No steps created yet. Click 'Add Step' to create your first step.
 steps.noSteps,아직 생성된 단계가 없습니다,No steps created yet
-steps.noStepsDesc,캠페인이 생성되면 단계가 여기에 표시됩니다,Steps will appear here once the campaign is generated
+steps.noStepsDesc,영업이 생성되면 단계가 여기에 표시됩니다,Steps will appear here once the sales is generated
 steps.formDescription,타이밍과 콘텐츠를 포함한 이메일 단계 세부 정보를 설정하세요.,Configure the email step details including timing and content.
 steps.fields.stepOrder,단계 순서,Step Order
 steps.fields.stepOrderDesc,이 단계가 실행될 순서,The order in which this step will be executed
@@ -169,23 +169,23 @@ enrollments.statusUpdateFailed,등록 상태 업데이트 실패,Failed to updat
 enrollments.statusUpdated,등록 상태가 업데이트되었습니다,Enrollment status updated
 steps.addNewStep,새 단계 추가,Add New Step
 steps.addStepButton,단계 추가,Add Step
-toast.fallbackUsed,AI 생성 실패 기본 6단계 템플릿 사용,AI generation failed using default 6-step template
+toast.fallbackUsed,린다 생성 실패 기본 6단계 템플릿 사용,Rinda generation failed using default 6-step template
 review.afterDays,+{{days}}일,+{{days}} days
-review.campaignSteps,캠페인 단계,Campaign Steps
+review.campaignSteps,영업 단계,Sales Steps
 review.stepsGenerated,{{count}}개 단계 생성됨,{{count}} steps created
 review.dayZero,Day 0,Day 0
 review.noSchedule,예약 없음,Not scheduled
 toast.stepUpdated,단계가 업데이트되었습니다,Step updated successfully
 toast.stepUpdateFailed,단계 업데이트 실패,Failed to update step
-success.title,캠페인이 성공적으로 생성되었습니다!,Campaign Generated Successfully!
+success.title,영업이 성공적으로 생성되었습니다!,Sales Generated Successfully!
 success.description,시작하기 전에 단계를 편집할 수 있는 검토 단계로 이동 중...,Moving to review step where you can edit steps before launching...
 success.loading,검토 로딩 중...,Loading review...
 filter.all,전체,All
-search.placeholder,캠페인 검색...,Search campaigns...
-confirm.deleteCampaigns,선택한 {{count}}개의 캠페인을 삭제하시겠습니까?,Are you sure you want to delete {{count}} selected campaign(s)?
-toast.bulkDeleteSuccess,선택한 캠페인이 삭제되었습니다,Selected campaigns deleted successfully
-toast.noCampaignsSelected,캠페인을 선택해주세요,Please select campaigns
-toast.bulkStatusUpdateSuccess,선택한 캠페인의 상태가 업데이트되었습니다,Selected campaigns status updated successfully
+search.placeholder,영업 검색...,Search sales...
+confirm.deleteCampaigns,선택한 {{count}}개의 영업을 삭제하시겠습니까?,Are you sure you want to delete {{count}} selected sales?
+toast.bulkDeleteSuccess,선택한 영업이 삭제되었습니다,Selected sales deleted successfully
+toast.noCampaignsSelected,영업을 선택해주세요,Please select sales
+toast.bulkStatusUpdateSuccess,선택한 영업의 상태가 업데이트되었습니다,Selected sales status updated successfully
 table.status.completed,완료됨,Completed
 button.changeStatus,상태 변경,Change Status
 button.deleteSelected,선택 항목 삭제,Delete Selected
@@ -193,7 +193,7 @@ status.selectedCount,개 선택됨, selected
 table.button.pause,일시중지,Pause
 table.button.activate,활성화,Activate
 table.pagination.displaying,전체 {{count}}개,{{count}} total
-table.pagination.displayingZero,표시할 캠페인이 없습니다,No campaigns to display
+table.pagination.displayingZero,표시할 영업이 없습니다,No sales to display
 table.pagination.first,처음,First
 table.pagination.last,마지막,Last
 table.pagination.goTo,이동,Go to

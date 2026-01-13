@@ -50,16 +50,16 @@ v2.stats.totalLeads,총 고객수,Total Leads
 v2.stats.totalEmails,총 발송 수,Total Sent
 v2.stats.openRate,오픈 대비 응답률,Open vs Response Rate
 v2.stats.periodIncrease,기간 내,During Period
-v2.trends.leads.title,리드 추가 트렌드,Lead Addition Trend
-v2.trends.leads.description,일별 추가된 리드 수,Daily Added Leads
+v2.trends.leads.title,바이어 추가 트렌드,Buyer Addition Trend
+v2.trends.leads.description,일별 추가된 바이어 수,Daily Added Buyers
 v2.trends.emails.title,이메일 발송 트렌드,Email Sending Trend
 v2.trends.emails.description,일별 발송된 이메일 수,Daily Sent Emails
 v2.trends.openRate.title,오픈률 트렌드,Open Rate Trend
 v2.trends.openRate.description,일별 오픈률 (%),Daily Open Rate (%)
 v2.trends.noData,데이터가 없습니다,No data available
-v2.notifications.leadDiscovery.title,리드 탐색 알림,Lead Discovery Notifications
-v2.notifications.leadDiscovery.description,최근 발견된 리드 그룹,Recently Discovered Lead Groups
-v2.notifications.leadDiscovery.noData,리드 탐색 기록이 없습니다,No lead discovery records
+v2.notifications.leadDiscovery.title,바이어 탐색 알림,Buyer Discovery Notifications
+v2.notifications.leadDiscovery.description,최근 발견된 바이어 그룹,Recently Discovered Buyer Groups
+v2.notifications.leadDiscovery.noData,바이어 탐색 기록이 없습니다,No buyer discovery records
 v2.notifications.leadDiscovery.viewMore,더보기,View More
 v2.notifications.campaign.title,영업활동 알림,Campaign Notifications
 v2.notifications.campaign.description,시퀀스 생성 및 발송 현황,Sequence Creation and Sending Status
@@ -102,16 +102,16 @@ stats.totalCustomers,총 고객수,Total Customers
 stats.totalEmails,총 발송 수,Total Emails
 stats.openRate,오픈 대비 응답률,Open vs Response Rate
 totalCustomers,총 고객수,Total Customers
-trends.leads.title,리드 추가 트렌드,Lead Addition Trend
-trends.leads.description,일별 추가된 리드 수,Daily Added Leads
+trends.leads.title,바이어 추가 트렌드,Buyer Addition Trend
+trends.leads.description,일별 추가된 바이어 수,Daily Added Buyers
 trends.emails.title,이메일 발송 트렌드,Email Sending Trend
 trends.emails.description,일별 발송된 이메일 수,Daily Sent Emails
 trends.openRate.title,오픈률 트렌드,Open Rate Trend
 trends.openRate.description,일별 오픈률 (%),Daily Open Rate (%)
 trends.noData,데이터가 없습니다,No data available
 notifications.leadDiscovery.title,고객 현황 알림,Lead Discovery Notifications
-notifications.leadDiscovery.description,최근 발견된 리드 그룹,Recently Discovered Lead Groups
-notifications.leadDiscovery.noData,리드 탐색 기록이 없습니다,No lead discovery records
+notifications.leadDiscovery.description,최근 발견된 바이어 그룹,Recently Discovered Buyer Groups
+notifications.leadDiscovery.noData,바이어 탐색 기록이 없습니다,No buyer discovery records
 notifications.leadDiscovery.viewMore,더보기,View More
 notifications.leadDiscovery.status,{{status}}명,{{status}} recipients
 notifications.campaign.created,생성됨,Created
@@ -136,7 +136,7 @@ notifications.reply.title,답장 알림,Reply Notifications
 notifications.reply.viewMore,더보기,View More
 notifications.reply.noContent,내용 없음,No Content
 notifications.reply.noSubject,제목 없음,No Subject
-stats.leads.title,리드 현황,Lead Status
+stats.leads.title,바이어 현황,Buyer Status
 notifications.campaign.active,활성,Active
 notifications.campaign.archived,보관됨,Archived
 notifications.campaign.completed,완료,Completed

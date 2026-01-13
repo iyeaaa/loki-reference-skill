@@ -8,8 +8,8 @@ workspace.default,워크스페이스,Workspace
 menu.customerManagement,고객 관리,Customer Management
 menu.dashboard,대시보드,Dashboard
 menu.customerMonitoring,고객 모니터링,Customer Monitoring
-menu.leadManagement,고객 관리,Lead Management
-menu.campaign,캠페인,Campaign
+menu.leadManagement,바이어 관리,Buyer Management
+menu.campaign,AI 영업,AI Sales
 menu.followupSequenceManagement,팔로우업 시퀀스 관리,Follow-up Sequence Management
 menu.emailTemplateManagement,이메일 템플릿 관리,Email Template Management
 menu.reply,메일함,Mailbox
@@ -20,13 +20,13 @@ menu.aiDataAnalysis,AI 데이터 분석,AI Data Analysis
 menu.workspaceManagement,워크스페이스 관리,Workspace Management
 menu.userManagement,유저 관리,User Management
 menu.emailSendTest,메일 발송 테스트,Email Send Test
-menu.leadDataImport,리드 데이터 임포트,Lead Data Import
+menu.leadDataImport,바이어 가져오기,Import Buyers
 menu.bulkEmailCSV,CSV 대량 메일 발송,Bulk Email CSV
 menu.aiSalesAutomation,린다 GPT,Rinda GPT
 menu.webset,웹 정보 수집,Web Information Search
 menu.geminiSearch,해외 바이어 찾기,Find Overseas Buyers
 menu.bigquerySearch,BigQuery 검색,BigQuery Search
-menu.leadDiscovery,고객 탐색,Lead Discovery
+menu.leadDiscovery,바이어 찾기,Find Buyers
 menu.analytics,분석 대시보드,Analytics Dashboard
 menu.home,홈,Home
 menu.companySetup,회사 설정,Company Setup

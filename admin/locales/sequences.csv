@@ -1,20 +1,20 @@
 key,ko,en
-title.sequenceManagement,캠페인 관리,Campaign Management
-button.newSequence,새 캠페인,New Campaign
-search.placeholder,캠페인명으로 검색...,Search by campaign name...
+title.sequenceManagement,AI 영업 현황,AI Sales Status
+button.newSequence,린다에게 영업 맡기기,Let Rinda Handle Sales
+search.placeholder,영업명으로 검색...,Search by sales name...
 status.selectedCount,개 선택됨,selected
 button.changeStatus,상태 변경,Change Status
 button.bulkStart,일괄 시작,Bulk Start
 button.bulkPause,일괄 일시정지,Bulk Pause
 button.deleteSelected,선택 삭제,Delete Selected
-dialog.createSequence,새 캠페인 생성,Create New Campaign
-dialog.sequenceManagement,캠페인 관리,Campaign Management
-toast.noSequencesSelected,선택된 캠페인이 없습니다.,No campaigns selected
-confirm.deleteSequences,선택한 {{count}}개의 캠페인을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} campaigns? This action cannot be undone.
-form.sequenceName,캠페인명,Campaign Name
-form.sequenceNamePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
+dialog.createSequence,새 영업 시작,Start New Sales
+dialog.sequenceManagement,AI 영업 현황,AI Sales Status
+toast.noSequencesSelected,선택된 영업이 없습니다.,No sales selected
+confirm.deleteSequences,선택한 {{count}}개의 영업을 삭제할까요? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} sales? This action cannot be undone.
+form.sequenceName,영업명,Sales Name
+form.sequenceNamePlaceholder,예: 미국 뷰티샵 바이어,Ex: US Beauty Shop Buyers
 form.description,설명,Description
-form.descriptionPlaceholder,캠페인에 대한 설명을 입력하세요...,Enter description for the campaign...
+form.descriptionPlaceholder,영업에 대한 설명을 입력하세요...,Enter description for the sales...
 form.workspace,워크스페이스,Workspace
 form.workspacePlaceholder,워크스페이스 선택,Select workspace
 form.workspaceSearchPlaceholder,워크스페이스 검색...,Search workspace...
@@ -23,24 +23,24 @@ form.customerGroup,고객그룹,Customer Group
 form.customerGroupPlaceholder,고객그룹 선택 (필수),Select customer group (required)
 form.customerGroupEmptyText,고객그룹이 없습니다.,No customer groups available
 form.customerGroupRequired,먼저 워크스페이스를 선택하세요,Please select workspace first
-form.leadCount,{{name}} ({{count}}개 리드),{{name}} ({{count}} leads)
-form.cannotChangeGroup,이미 실행 이력이 있는 캠페인은 고객그룹을 변경할 수 없습니다,Campaigns with execution history cannot change customer group
+form.leadCount,{{name}} ({{count}}명 바이어),{{name}} ({{count}} buyers)
+form.cannotChangeGroup,이미 실행 이력이 있는 영업은 고객그룹을 변경할 수 없습니다,Sales with execution history cannot change customer group
 form.groupRequired,워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다,Customer group must be selected for workflow execution
 form.emailTarget,이메일 대상 선택 (선택사항),Email Target Selection (Optional)
 form.specificCustomers,특정 고객 선택,Select Specific Customers
 form.collapse,접기,Collapse
-form.defaultAllLeads,기본값: 고객 그룹의 모든 리드에게 이메일 발송,Default: Send emails to all leads in customer group
+form.defaultAllLeads,기본값: 고객 그룹의 모든 바이어에게 이메일 발송,Default: Send emails to all buyers in customer group
 form.currentlySelected,현재 {{count}}명 선택됨,Currently {{count}} selected
 form.selectAll,전체 선택 ({{selected}}/{{total}}),Select All ({{selected}}/{{total}})
 form.deselectAll,선택 해제,Deselect All
-form.noLeadsInGroup,고객 그룹에 리드가 없습니다.,No leads in customer group
+form.noLeadsInGroup,고객 그룹에 바이어가 없습니다.,No buyers in customer group
 form.selectedCustomersOnly,선택된 {{count}}명의 고객에게만 이메일이 발송됩니다.,Emails will be sent only to the selected {{count}} customers
-form.allLeadsIfNotSelected,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다.,If no customers are selected emails will be sent to all leads in customer group
+form.allLeadsIfNotSelected,고객을 선택하지 않으면 고객 그룹의 모든 바이어에게 발송됩니다.,If no customers are selected emails will be sent to all buyers in customer group
 form.cancel,취소,Cancel
 form.save,생성,Create
 form.update,수정 완료,Update Complete
 toast.selectCustomerGroup,워크플로우 실행을 위해 고객그룹을 선택해주세요,Please select a customer group for workflow execution
-table.column.sequenceName,캠페인명,Campaign Name
+table.column.sequenceName,영업명,Sales Name
 table.column.description,설명,Description
 table.column.status,상태,Status
 table.column.workspace,워크스페이스,Workspace
@@ -58,15 +58,15 @@ table.column.replyRate,답변율,Reply Rate
 table.status.draft,초안,Draft
 table.status.generating,생성 중,Generating
 table.status.ready,준비,Ready
-table.status.active,활성,Active
-table.status.paused,일시정지,Paused
+table.status.active,린다가 연락 중,Rinda Contacting
+table.status.paused,대기 중,Waiting
 table.status.archived,보관됨,Archived
-table.status.completed,발송완료,Completed
+table.status.completed,린다가 완료,Rinda Completed
 table.status.noResponse,답변 없음,No Response
 table.button.pause,일시정지,Pause
 table.button.activate,활성화,Activate
 table.button.editNodes,노드 편집,Edit Nodes
-table.button.editSequence,캠페인 편집,Edit Campaign
+table.button.editSequence,영업 편집,Edit Sales
 table.pagination.displaying,{{count}}개 표시,{{count}} displayed
 table.pagination.displayingZero,0개 표시,0 displayed
 table.pagination.first,처음,First
@@ -86,12 +86,12 @@ filter.statusLabel,상태,Status
 filter.clearFilters,필터 초기화,Clear Filters
 launchModal.title,시퀀스 이메일 발송,Sequence Email Launch
 launchModal.selectedCustomerGroup,선택된 고객 그룹,Selected Customer Group
-launchModal.totalLeadsSelected,총 {{total}}명의 리드 중 {{selected}}명을 선택했습니다.,Selected {{selected}} out of {{total}} leads
-launchModal.enrollmentTargetLeads,등록 대상 리드,Target Leads for Enrollment
+launchModal.totalLeadsSelected,총 {{total}}명의 바이어 중 {{selected}}명을 선택했습니다.,Selected {{selected}} out of {{total}} buyers
+launchModal.enrollmentTargetLeads,연락 대상 바이어,Target Buyers for Contact
 launchModal.leadsSelected,{{count}}명 선택,{{count}} selected
 launchModal.selectAllLeads,전체 선택,Select All
 launchModal.deselectAllLeads,전체 해제,Deselect All
-launchModal.noLeadsInGroup,고객그룹에 리드가 없습니다.,No leads in customer group
+launchModal.noLeadsInGroup,고객그룹에 바이어가 없습니다.,No buyers in customer group
 launchModal.companyNameUnknown,회사명 없음,Company name unknown
 launchModal.noEmail,이메일 없음,No email
 launchModal.selectSequence,시퀀스 선택,Select Sequence
@@ -256,20 +256,20 @@ form.customerGroupSelect,고객그룹 선택 (필수),Select Customer Group (Req
 form.selectWorkspaceFirst,먼저 워크스페이스를 선택하세요,Please select workspace first
 form.noCustomerGroups,고객그룹이 없습니다.,No customer groups available.
 form.warning.noCustomerGroupsInWorkspace,⚠️ 선택한 워크스페이스에 고객 그룹이 없습니다,⚠️ No customer groups in selected workspace
-form.warning.createCustomerGroupFirst,캠페인을 생성하려면 먼저 고객 그룹을 만들어야 합니다.,You need to create a customer group first to create a campaign.
+form.warning.createCustomerGroupFirst,영업을 시작하려면 먼저 고객 그룹을 만들어야 합니다.,You need to create a customer group first to start sales.
 form.button.goToCreateCustomerGroup,고객 그룹 생성하러 가기,Go to Create Customer Group
-form.warning.cannotChangeCustomerGroup,⚠️ 이미 실행 이력이 있는 캠페인은 고객그룹을 변경할 수 없습니다,⚠️ Cannot change customer group for campaigns with execution history
+form.warning.cannotChangeCustomerGroup,⚠️ 이미 실행 이력이 있는 영업은 고객그룹을 변경할 수 없습니다,⚠️ Cannot change customer group for sales with execution history
 form.info.customerGroupRequired,💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다,💡 You must select a customer group to run the workflow
 form.leadSelection.title,이메일 대상 선택 (선택사항),Select Email Recipients (Optional)
 form.leadSelection.collapse,접기,Collapse
 form.leadSelection.selectSpecific,특정 고객 선택,Select Specific Customers
-form.leadSelection.defaultNote,기본값: 고객 그룹의 모든 리드에게 이메일 발송,Default: Send email to all leads in customer group
+form.leadSelection.defaultNote,기본값: 고객 그룹의 모든 바이어에게 이메일 발송,Default: Send email to all buyers in customer group
 form.leadSelection.currentlySelected,(현재 {{count}}명 선택됨),({{count}} currently selected)
 form.leadSelection.selectAll,전체 선택 ({{selected}}/{{total}}),Select All ({{selected}}/{{total}})
 form.leadSelection.deselectAll,선택 해제,Deselect All
-form.leadSelection.noLeads,고객 그룹에 리드가 없습니다.,No leads in customer group.
+form.leadSelection.noLeads,고객 그룹에 바이어가 없습니다.,No buyers in customer group.
 form.leadSelection.selectedNote,선택된 {{count}}명의 고객에게만 이메일이 발송됩니다.,Email will be sent only to {{count}} selected customers.
-form.leadSelection.defaultNote2,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다.,"If no customers are selected, email will be sent to all leads in the customer group."
+form.leadSelection.defaultNote2,고객을 선택하지 않으면 고객 그룹의 모든 바이어에게 발송됩니다.,"If no customers are selected, email will be sent to all buyers in the customer group."
 form.status.label,상태,Status
 form.status.draft,초안,Draft
 form.status.ready,준비,Ready
@@ -278,22 +278,22 @@ form.status.stepBasedNote,(스텝 기반은 토글 버튼 사용),(Use toggle bu
 form.status.paused,일시정지,Paused
 form.status.archived,보관됨,Archived
 form.status.completed,발송완료,Completed
-form.info.useToggleButton,💡 스텝 기반 캠페인은 목록의 활성화 토글 버튼을 사용하세요,💡 Use the activation toggle button in the list for step-based campaigns
+form.info.useToggleButton,💡 스텝 기반 영업은 목록의 활성화 토글 버튼을 사용하세요,💡 Use the activation toggle button in the list for step-based sales
 form.button.cancel,취소,Cancel
 form.button.editComplete,수정 완료,Save Changes
 form.button.create,생성,Create
-detail.title,캠페인 상세,Campaign Details
-detail.button.runSequence,캠페인 실행,Run Campaign
-detail.warning.hasCompletedEnrollments,⚠️ 이 캠페인에는 이미 완료된 등록이 있습니다. 중복 실행을 방지하기 위해 실행 버튼이 비활성화되었습니다.,⚠️ This campaign has completed enrollments. The run button is disabled to prevent duplicate execution.
-detail.tabs.steps,캠페인 스텝,Campaign Steps
+detail.title,영업 상세,Sales Details
+detail.button.runSequence,린다에게 맡기기,Let Rinda Handle
+detail.warning.hasCompletedEnrollments,⚠️ 이 영업에는 이미 완료된 연락이 있습니다. 중복 실행을 방지하기 위해 버튼이 비활성화되었습니다.,⚠️ This sales has completed contacts. The button is disabled to prevent duplicate execution.
+detail.tabs.steps,영업 스텝,Sales Steps
 detail.tabs.metrics,성과 지표,Performance Metrics
 detail.tabs.enrollments,등록 현황,Enrollment Status
-detail.fallbackName,캠페인,Campaign
-stepsList.title,캠페인 스텝,Campaign Steps
+detail.fallbackName,영업,Sales
+stepsList.title,영업 스텝,Sales Steps
 stepsList.addStep,스텝 추가,Add Step
-stepsList.createSequenceFirst,캠페인을 생성한 후 스텝을 추가할 수 있습니다.,You can add steps after creating a campaign.
+stepsList.createSequenceFirst,영업을 생성한 후 스텝을 추가할 수 있습니다.,You can add steps after creating sales.
 stepsList.warning.setCustomerGroupFirst,⚠️ 고객 그룹을 먼저 설정해주세요,⚠️ Please set customer group first
-stepsList.warning.customerGroupRequired,스텝을 추가하려면 캠페인에 고객 그룹이 반드시 필요합니다. 위의 캠페인 정보를 수정하여 고객 그룹을 선택해주세요.,Customer group is required to add steps. Please edit the campaign information above to select a customer group.
+stepsList.warning.customerGroupRequired,스텝을 추가하려면 영업에 고객 그룹이 반드시 필요합니다. 위의 영업 정보를 수정하여 고객 그룹을 선택해주세요.,Customer group is required to add steps. Please edit the sales information above to select a customer group.
 stepsList.loading,로딩 중...,Loading...
 stepsList.noSteps,아직 생성된 스텝이 없습니다.,No steps created yet.
 stepsList.addFirstStep,첫 스텝 추가,Add First Step
@@ -471,7 +471,7 @@ enrollments.column.replied,답장,Reply
 enrollments.reply.notReplied,답장 없음,No Reply
 enrollments.reply.replied,답장함,Replied
 metrics.loading,메트릭스 데이터를 불러오는 중...,Loading metrics data...
-metrics.title,캠페인 성과 지표,Campaign Performance Metrics
+metrics.title,영업 성과 지표,Sales Performance Metrics
 metrics.totalSent,총 발송,Total Sent
 metrics.delivered,전달됨,Delivered
 metrics.deliveryRate,전달률,Delivery Rate
@@ -486,7 +486,7 @@ metrics.clicked,클릭,Clicked
 metrics.replyRate,답장률,Reply Rate
 metrics.replied,답장,Replied
 metrics.unsubscribed,구독취소,Unsubscribed
-metrics.progressTitle,캠페인 진행 현황,Campaign Progress Status
+metrics.progressTitle,린다 영업 진행 현황,Rinda Sales Progress Status
 metrics.totalEnrollments,총 등록,Total Enrollments
 metrics.activeEnrollments,진행 중,In Progress
 metrics.completedEnrollments,완료,Completed
@@ -509,7 +509,7 @@ enrollments.filter.delivered,발송완료,Delivered
 enrollments.filter.opened,오픈함,Opened
 enrollments.filter.replied,답장함,Replied
 enrollments.search.placeholder,회사명 검색...,Search by company name...
-edit.title,캠페인 상세,Campaign Details
+edit.title,영업 상세,Sales Details
 edit.backButton,돌아가기,Back
 edit.menu.overview,개요,Overview
 edit.menu.customerSelection,고객 선택,Customer Selection
@@ -517,11 +517,11 @@ edit.menu.scenario,시나리오,Scenario
 edit.menu.enrollment,발송현황,Sending Status
 edit.menu.memo,메모,Memo
 edit.loading,로딩 중...,Loading...
-edit.memo.placeholder,캠페인에 대한 메모를 입력하세요...,Enter memo for campaign...
+edit.memo.placeholder,영업에 대한 메모를 입력하세요...,Enter memo for sales...
 edit.memo.save,저장,Save
 edit.memo.comingSoon,메모 기능은 곧 추가될 예정입니다,Memo feature is coming soon
-create.title,새 캠페인 생성,Create New Campaign
-create.subtitle,3단계로 이메일 캠페인을 생성하세요,Create email campaign in 3 steps
+create.title,린다에게 영업 맡기기,Let Rinda Handle Sales
+create.subtitle,3단계로 린다에게 영업을 맡기세요,Let Rinda handle sales in 3 steps
 create.backButton,돌아가기,Back
 create.nextButton,다음,Next
 create.prevButton,이전,Previous
@@ -535,17 +535,17 @@ create.step1.customerGroupLabel,고객그룹 *,Customer Group *
 create.step1.customerGroupPlaceholder,고객그룹 선택,Select customer group
 create.step1.customerGroupSelectFirst,먼저 워크스페이스를 선택하세요,Please select workspace first
 create.step1.customerGroupEmpty,고객그룹이 없습니다,No customer groups available
-create.step1.leadCountSuffix,개 리드,leads
+create.step1.leadCountSuffix,명 바이어,buyers
 create.step1.recipientsTitle,수신자 선택,Select Recipients
 create.step1.selectedCount,{{count}}명 선택됨,{{count}} selected
 create.step1.selectAll,전체 선택 (기본),Select All (Default)
 create.step1.selectGroup,좌측에서 고객그룹을 선택하세요,Please select customer group from left
-create.step1.noLeads,고객그룹에 리드가 없습니다,No leads in customer group
-create.step1.searchPlaceholder,리드 검색...,Search leads...
+create.step1.noLeads,고객그룹에 바이어가 없습니다,No buyers in customer group
+create.step1.searchPlaceholder,바이어 검색...,Search buyers...
 create.step1.selectAllCheckbox,전체 선택 ({{selected}}/{{total}}),Select All ({{selected}}/{{total}})
 create.step1.deselectAll,선택 해제,Deselect All
 create.step1.specificNote,선택된 {{count}}명의 고객에게만 이메일이 발송됩니다,Emails will be sent only to {{count}} selected customers
-create.step1.defaultNote,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다,If no customers are selected emails will be sent to all leads in the group
+create.step1.defaultNote,고객을 선택하지 않으면 고객 그룹의 모든 바이어에게 발송됩니다,If no customers are selected emails will be sent to all buyers in the group
 create.step2.title,시나리오 생성,Create Scenario
 create.step2.description,이메일 스텝 작성,Create email steps
 create.step2.stepsTitle,이메일 스텝,Email Steps
@@ -580,11 +580,11 @@ create.step2.validation.subjectRequired,이메일 제목을 입력해주세요,P
 create.step2.validation.bodyRequired,이메일 본문을 입력해주세요,Please enter email body
 create.step3.title,검토,Review
 create.step3.description,최종 검토 및 저장,Final review and save
-create.step3.campaignInfoTitle,캠페인 정보,Campaign Information
-create.step3.nameLabel,캠페인 이름 *,Campaign Name *
-create.step3.namePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
+create.step3.campaignInfoTitle,영업 정보,Sales Information
+create.step3.nameLabel,영업 이름 *,Sales Name *
+create.step3.namePlaceholder,예: 미국 뷰티샵 바이어,Ex: US Beauty Shop Buyers
 create.step3.descriptionLabel,설명,Description
-create.step3.descriptionPlaceholder,캠페인에 대한 설명을 입력하세요...,Enter campaign description...
+create.step3.descriptionPlaceholder,영업에 대한 설명을 입력하세요...,Enter sales description...
 create.step3.recipientsSummary,수신자 요약,Recipients Summary
 create.step3.workspaceField,워크스페이스,Workspace
 create.step3.customerGroupField,고객그룹,Customer Group
@@ -593,15 +593,15 @@ create.step3.specificRecipients,특정 고객 {{count}}명에게만 발송됩니
 create.step3.scenarioSummary,시나리오 요약,Scenario Summary
 create.step3.totalSteps,총 {{count}}개의 이메일 스텝,Total {{count}} email steps
 create.step3.memoTitle,메모 (선택사항),Memo (Optional)
-create.step3.memoPlaceholder,캠페인에 대한 추가 메모를 입력하세요...,Enter additional memo for campaign...
+create.step3.memoPlaceholder,영업에 대한 추가 메모를 입력하세요...,Enter additional memo for sales...
 create.step3.saveDraftButton,초안 저장,Save as Draft
 create.step3.saveReadyButton,준비 완료,Ready
 create.step3.saving,저장 중...,Saving...
-create.step3.draftNote,캠페인이 초안 상태로 저장되며 나중에 수정할 수 있습니다,Campaign will be saved as draft and can be modified later
-create.step3.readyNote,캠페인이 준비 상태로 저장되며 바로 활성화할 수 있습니다,Campaign will be saved as ready and can be activated immediately
-create.step3.validation.nameRequired,캠페인 이름을 입력해주세요,Please enter campaign name
+create.step3.draftNote,영업이 초안 상태로 저장되며 나중에 수정할 수 있습니다,Sales will be saved as draft and can be modified later
+create.step3.readyNote,영업이 준비 상태로 저장되며 바로 린다에게 맡길 수 있습니다,Sales will be saved as ready and Rinda can start immediately
+create.step3.validation.nameRequired,영업 이름을 입력해주세요,Please enter sales name
 create.step3.toast.draftSaved,초안이 저장되었습니다,Draft saved successfully
-create.step3.toast.readySaved,캠페인이 준비 상태로 저장되었습니다,Campaign saved as ready
+create.step3.toast.readySaved,영업이 준비 상태로 저장되었습니다,Sales saved as ready
 create.step3.toast.stepError,스텝 생성 오류: {{error}},Step creation error: {{error}}
 create.step3.toast.unknownError,알 수 없는 오류,Unknown error
 stepForm.attachmentsLabel,파일 첨부,Attachments
@@ -639,7 +639,7 @@ campaignOverview.customerGroup,고객그룹,Customer Group
 campaignOverview.recipientCount,수신자 수,Recipient Count
 campaignOverview.peopleCount,명,people
 campaignOverview.stepCount,개,steps
-step2.creationMode,캠페인 생성 방식,Campaign Creation Mode
+step2.creationMode,영업 방식 선택,Sales Creation Mode
 step2.aiMode.title,AI 자동 생성 (6 steps),AI Auto Generation (6 steps)
 step2.aiMode.recommended,추천,Recommended
 step2.aiMode.description,AI가 자동으로 6단계 이메일 시나리오와 개인화된 이메일 초안을 생성합니다,AI automatically generates 6-step email scenario and personalized email drafts
@@ -658,20 +658,20 @@ step2.enterAIPrompt,AI 프롬프트를 입력해주세요,Please enter AI prompt
 step2.aiEmailGenerated,AI 이메일이 생성되었습니다,AI email generated successfully
 step2.aiEmailGenerationFailed,AI 이메일 생성 실패,AI email generation failed
 step2.selectEmailAccount,이메일 계정을 선택해주세요,Please select an email account
-step2.aiGenerationComplete,AI 생성 완료!\n리드 {{leads}}명\n초안 {{drafts}}건\n스텝 {{steps}}개 생성됨,AI generation complete!\n{{leads}} leads\n{{drafts}} drafts\n{{steps}} steps created
+step2.aiGenerationComplete,AI 생성 완료!\n바이어 {{leads}}명\n초안 {{drafts}}건\n스텝 {{steps}}개 생성됨,AI generation complete!\n{{leads}} buyers\n{{drafts}} drafts\n{{steps}} steps created
 step2.aiGenerationFailed,AI 생성 실패\n{{error}},AI generation failed\n{{error}}
 step2.unknownError,알 수 없는 오류,Unknown error
 aiMode.selectEmailAccount,이메일 계정 선택 *,Select Email Account *
 aiMode.selectEmailAccountPlaceholder,이메일 계정을 선택하세요,Select an email account
 aiMode.noEmailAccounts,이메일 계정이 없습니다,No email accounts available
 aiMode.generating,AI 생성 중... (2-5분 소요),Generating with AI... (2-5 minutes)
-aiMode.generateButton,AI로 캠페인 생성하기,Generate Campaign with AI
-aiMode.generatingMessage,AI가 캠페인을 생성하고 있습니다,AI is generating the campaign
-aiMode.generatingDetails,6개의 이메일 스텝과 모든 리드에 대한 개인화된 초안을 생성 중입니다.,Generating 6 email steps and personalized drafts for all leads.
+aiMode.generateButton,린다에게 영업 맡기기,Let Rinda Handle Sales
+aiMode.generatingMessage,린다가 맞춤 이메일을 작성 중이에요,Rinda is creating personalized emails
+aiMode.generatingDetails,각 바이어에게 맞춤 이메일 6통을 자동으로 작성해요. 바이어가 답장하면 자동 발송이 멈춰요.,Creating 6 personalized emails for each buyer. Auto-sending stops when buyer replies.
 step1.recipientNotice,{{count}}명의 고객에게 이메일이 발송됩니다,Email will be sent to {{count}} customers
 step1.selectedCount,{{count}}명이 선택되었습니다,{{count}} selected
-step1.repliedLeadsIncluded,(답장한 리드 {{count}}명 포함),({{count}} replied leads included)
-step1.defaultAllLeads,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다,If no customers are selected emails will be sent to all leads in the customer group
+step1.repliedLeadsIncluded,(답장한 바이어 {{count}}명 포함),({{count}} replied buyers included)
+step1.defaultAllLeads,고객을 선택하지 않으면 고객 그룹의 모든 바이어에게 발송됩니다,If no customers are selected emails will be sent to all buyers in the customer group
 step1.selectCustomerGroup,고객그룹 선택,Select Customer Group
 step1.customerGroupRequired,고객그룹 *,Customer Group *
 step1.customerGroupPlaceholder,고객그룹 선택,Select customer group
@@ -679,38 +679,38 @@ step1.selectWorkspaceFirst,워크스페이스를 선택하세요,Please select w
 step1.noCustomerGroups,고객그룹이 없습니다,No customer groups available
 step1.leadCountFormat,{{name}} ({{count}}명),{{name}} ({{count}} people)
 step1.selectedGroup,선택된 고객그룹,Selected Customer Group
-step1.totalLeads,총 {{count}}명의 리드,Total {{count}} leads
+step1.totalLeads,총 {{count}}명의 바이어,Total {{count}} buyers
 step1.selectRecipients,수신자 선택,Select Recipients
 step1.selectedFormat,{{count}}명 선택됨,{{count}} selected
 step1.selectAllDefault,전체 선택 (기본),Select All (Default)
 step1.selectGroupFromLeft,좌측에서 고객그룹을 선택하세요,Please select customer group from left
-step1.noLeadsInGroup,고객그룹에 리드가 없습니다,No leads in customer group
-step1.searchLeads,리드 검색...,Search leads...
-step1.repliedLeadsWarning,⚠️ 선택한 리드 중 {{count}}명은 이미 답장했습니다. 재등록 시 주의하세요.,⚠️ {{count}} selected leads have already replied. Be careful when re-enrolling.
-step1.repliedLeadsCount,답장한 리드 ({{selected}}/{{total}}),Replied Leads ({{selected}}/{{total}})
+step1.noLeadsInGroup,고객그룹에 바이어가 없습니다,No buyers in customer group
+step1.searchLeads,바이어 검색...,Search buyers...
+step1.repliedLeadsWarning,⚠️ 선택한 바이어 중 {{count}}명은 이미 답장했습니다. 재등록 시 주의하세요.,⚠️ {{count}} selected buyers have already replied. Be careful when re-enrolling.
+step1.repliedLeadsCount,답장한 바이어 ({{selected}}/{{total}}),Replied Buyers ({{selected}}/{{total}})
 step1.selectAll,전체 선택,Select All
 step1.reEnrollWarning,재등록 시 주의 필요,Caution required for re-enrollment
-step1.normalLeadsSelectAll,일반 리드 전체 선택 ({{selected}}/{{total}}),Select All Normal Leads ({{selected}}/{{total}})
+step1.normalLeadsSelectAll,일반 바이어 전체 선택 ({{selected}}/{{total}}),Select All Normal Buyers ({{selected}}/{{total}})
 step1.deselectAll,선택 해제,Deselect All
-step1.leadListHiddenSummary,일반 리드 {{count}}명,Normal leads: {{count}}
+step1.leadListHiddenSummary,일반 바이어 {{count}}명,Normal buyers: {{count}}
 step1.showLeadList,목록 보기,Show list
 step1.hideLeadList,목록 숨기기,Hide list
-step1.leadListHiddenNotice,리드가 많아 목록을 숨겼습니다. 필요하면 '목록 보기'를 눌러 개별 선택을 조정하세요.,The list is hidden because there are many leads. Click 'Show list' to adjust individual selections.
+step1.leadListHiddenNotice,바이어가 많아 목록을 숨겼습니다. 필요하면 '목록 보기'를 눌러 개별 선택을 조정하세요.,The list is hidden because there are many buyers. Click 'Show list' to adjust individual selections.
 step3.noSequenceId,시퀀스 ID가 없습니다,No sequence ID
-step3.enterCampaignName,캠페인 이름을 입력해주세요,Please enter campaign name
+step3.enterCampaignName,영업 이름을 입력해주세요,Please enter sales name
 step3.draftSaved,초안이 저장되었습니다,Draft saved successfully
 step3.stepSaveError,스텝 저장 오류: {{error}},Step save error: {{error}}
 step3.saveError,오류: {{error}},Error: {{error}}
-step3.readySaved,캠페인이 준비 상태로 저장되었습니다,Campaign saved as ready
-step3.preparingCampaign,캠페인을 준비하고 있습니다...,Preparing campaign...
+step3.readySaved,영업이 준비 상태로 저장되었습니다,Sales saved as ready
+step3.preparingCampaign,영업을 준비하고 있습니다...,Preparing sales...
 step3.sendTarget,발송 대상,Send Target
 step3.workspace,워크스페이스,Workspace
 step3.customerGroup,고객그룹,Customer Group
 step3.recipientCount,수신자 수,Recipient Count
 step3.people,명,people
 step3.specificRecipients,💡 특정 고객 {{count}}명에게만 발송됩니다,💡 Will be sent only to {{count}} specific customers
-step3.campaignInfo,캠페인 정보,Campaign Information
-step3.campaignName,캠페인 이름,Campaign Name
+step3.campaignInfo,영업 정보,Sales Information
+step3.campaignName,영업 이름,Sales Name
 step3.noName,(이름 없음),(No name)
 step3.description,설명,Description
 step3.emailScenario,이메일 시나리오,Email Scenario
@@ -719,16 +719,16 @@ step3.sendImmediately,즉시 발송,Send Immediately
 step3.daysLater,{{days}}일 후,{{days}} days later
 step3.attachments,첨부파일 {{count}}개,{{count}} attachments
 step3.memo,메모,Memo
-step3.memoPlaceholder,캠페인에 대한 추가 메모를 입력하세요...,Enter additional memo for campaign...
+step3.memoPlaceholder,영업에 대한 추가 메모를 입력하세요...,Enter additional memo for sales...
 step3.draftNote,초안 저장:,Save as Draft:
-step3.draftNoteDescription,캠페인이 초안 상태로 저장되며\n 나중에 수정할 수 있습니다.,Campaign will be saved as draft and can be modified later.
+step3.draftNoteDescription,영업이 초안 상태로 저장되며\n 나중에 수정할 수 있습니다.,Sales will be saved as draft and can be modified later.
 step3.readyNote,준비 완료:,Ready:
-step3.readyNoteDescription,캠페인이 준비 상태로 저장되며\n 바로 활성화할 수 있습니다.,Campaign will be saved as ready and can be activated immediately.
+step3.readyNoteDescription,영업이 준비 상태로 저장되며\n 바로 린다에게 맡길 수 있습니다.,Sales will be saved as ready and Rinda can start immediately.
 step3.saving,저장 중...,Saving...
 step3.ready,준비 완료,Ready
 step3.saveDraft,초안 저장,Save as Draft
-cardView.noCampaigns,캠페인이 없습니다,No campaigns
-cardView.createFirst,"""새 캠페인"" 버튼을 눌러 첫 캠페인을 만들어보세요","Click ""New Campaign"" button to create your first campaign"
+cardView.noCampaigns,아직 린다에게 맡긴 영업이 없어요,No sales assigned to Rinda yet
+cardView.createFirst,'린다에게 영업 맡기기' 버튼을 눌러 린다가 자동으로 바이어에게 연락하도록 해보세요,Click 'Let Rinda Handle Sales' button to let Rinda contact buyers automatically
 cardView.groupNotAssigned,그룹 미지정,Group not assigned
 cardView.people,명,people
 cardView.steps,스텝,steps
@@ -739,25 +739,25 @@ cardView.replyRate,회신율,Reply Rate
 cardView.pause,일시정지,Pause
 cardView.activate,활성화,Activate
 cardView.edit,편집,Edit
-createPage.newCampaign,새 캠페인,New Campaign
+createPage.newCampaign,린다에게 영업 맡기기,Let Rinda Handle Sales
 createPage.selectWorkspace,워크스페이스를 선택해주세요,Please select workspace
-createPage.draftCreated,초안 캠페인이 생성되었습니다,Draft campaign created
-createPage.creationFailed,캠페인 생성 실패: {{error}},Campaign creation failed: {{error}}
-createPage.notCreated,캠페인이 생성되지 않았습니다,Campaign not created
+createPage.draftCreated,초안 영업이 생성되었습니다,Draft sales created
+createPage.creationFailed,영업 생성 실패: {{error}},Sales creation failed: {{error}}
+createPage.notCreated,영업이 생성되지 않았습니다,Sales not created
 createPage.saved,저장되었습니다,Saved
 createPage.saveFailed,저장 실패,Save failed
 createPage.selectCustomerGroup,고객그룹을 선택해주세요,Please select customer group
 createPage.addAtLeastOneStep,최소 1개 이상의 이메일 스텝을 추가해주세요,Please add at least 1 email step
 createPage.saveDraftSteps,작성 중인 스텝이 있습니다. 모든 스텝을 저장해주세요,There are draft steps. Please save all steps
-createPage.notCreatedTryAgain,캠페인이 생성되지 않았습니다. 잠시 후 다시 시도해주세요,Campaign not created. Please try again later
+createPage.notCreatedTryAgain,영업이 생성되지 않았습니다. 잠시 후 다시 시도해주세요,Sales not created. Please try again later
 createPage.back,돌아가기,Back
 createPage.savingStatus,저장 중...,Saving...
 createPage.savedAt,저장됨,Saved
 createPage.save,저장,Save
-createPage.campaignNameLabel,캠페인 이름 *,Campaign Name *
-createPage.campaignNamePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
-createPage.campaignDescLabel,캠페인 설명,Campaign Description
-createPage.campaignDescPlaceholder,캠페인에 대한 간단한 설명...,Brief description of campaign...
+createPage.campaignNameLabel,영업 이름 *,Sales Name *
+createPage.campaignNamePlaceholder,예: 미국 뷰티샵 바이어,Ex: US Beauty Shop Buyers
+createPage.campaignDescLabel,영업 설명,Sales Description
+createPage.campaignDescPlaceholder,영업에 대한 간단한 설명...,Brief description of sales...
 createPage.step1Title,고객 선택,Customer Selection
 createPage.step1Desc,수신자 선택,Select Recipients
 createPage.step2Title,시나리오 생성,Create Scenario
@@ -769,7 +769,7 @@ createPage.initializing,초기화 중...,Initializing...
 createPage.next,다음,Next
 manualMode.emailSteps,이메일 스텝,Email Steps
 manualMode.howItWorks,동작 방식:,How it works:
-manualMode.howItWorksDesc,각 이메일을 순차적으로 발송합니다. 답장이 오면 캠페인이 즉시 중지되고\n 답장이 없으면 설정한 일수 후 다음 이메일을 발송합니다.,Sends emails sequentially. Campaign stops immediately upon reply. If no reply sends next email after set days.
+manualMode.howItWorksDesc,각 이메일을 순차적으로 발송합니다. 답장이 오면 발송이 즉시 중지되고\n 답장이 없으면 설정한 일수 후 다음 이메일을 발송합니다.,Sends emails sequentially. Sending stops immediately upon reply. If no reply sends next email after set days.
 manualMode.add,추가,Add
 manualMode.addNewStep,새 이메일 스텝 추가 (최대 {{max}}개),Add new email step (max {{max}})
 manualMode.draftStepsWarning,작성 중인 스텝이 있습니다. 모든 스텝을 저장한 후 다음 단계로 진행하세요,There are draft steps. Please save all steps before proceeding
@@ -823,23 +823,23 @@ editPage.sequenceIdMissing,시퀀스 ID가 없습니다,Sequence ID is missing
 editPage.loadFailed,시퀀스를 불러오는데 실패했습니다,Failed to load sequence
 editPage.updated,시퀀스가 업데이트되었습니다,Sequence updated
 editPage.back,돌아가기,Back
-editPage.enterName,캠페인 이름을 입력해주세요,Please enter campaign name
+editPage.enterName,영업 이름을 입력해주세요,Please enter sales name
 editPage.loading,로딩 중...,Loading...
 editPage.customerGroupMenu,고객 그룹,Customer Group
 editPage.scenarioMenu,시나리오,Scenario
 editPage.memoMenu,메모,Memo
-editPage.campaignInfo,캠페인 정보,Campaign Information
-editPage.campaignName,캠페인 이름,Campaign name
-editPage.campaignDescPlaceholder,캠페인 설명 (선택사항),Campaign description (optional)
-editPage.campaignDetail,캠페인 상세,Campaign Details
+editPage.campaignInfo,영업 정보,Sales Information
+editPage.campaignName,영업 이름,Sales name
+editPage.campaignDescPlaceholder,영업 설명 (선택사항),Sales description (optional)
+editPage.campaignDetail,영업 상세,Sales Details
 editPage.edit,수정,Edit
 editPage.overviewMenu,개요,Overview
 editPage.enrollmentMenu,발송현황,Sending Status
-editPage.memoNote,캠페인에 대한 내부 메모를 작성할 수 있습니다. 이 메모는 팀원들과 공유됩니다.,You can write internal notes about the campaign. These notes are shared with team members.
-editPage.memoPlaceholder,캠페인에 대한 메모를 입력하세요...,Enter memo for campaign...
+editPage.memoNote,영업에 대한 내부 메모를 작성할 수 있습니다. 이 메모는 팀원들과 공유됩니다.,You can write internal notes about the sales. These notes are shared with team members.
+editPage.memoPlaceholder,영업에 대한 메모를 입력하세요...,Enter memo for sales...
 editPage.saving,저장 중...,Saving...
 editPage.save,저장,Save
-editPage.readOnlyNotice,ℹ️ 활성화된 캠페인은 읽기 전용입니다. 메모만 수정할 수 있습니다.,ℹ️ Active campaigns are read-only. Only memos can be modified.
+editPage.readOnlyNotice,ℹ️ 린다가 연락 중인 영업은 읽기 전용입니다. 메모만 수정할 수 있습니다.,ℹ️ Sales in progress with Rinda are read-only. Only memos can be modified.
 bulk.statusChangeTitle,시퀀스 상태 일괄 변경,Bulk Change Sequence Status
 bulk.deleteTitle,시퀀스 일괄 삭제,Bulk Delete Sequences
 bulk.bulkAction,일괄 작업,Bulk Action
@@ -934,13 +934,13 @@ table.timeline.future,예정,Future
 table.timeline.past,완료,Past
 table.timeline.present,진행 중,Present
 aiMode.addEmailAccount,이메일 계정 추가,Add Email Account
-aiMode.noEmailAccountsMessage,AI 캠페인 생성을 사용하려면 먼저 이메일 계정을 추가해야 합니다.,You need to add an email account first to use AI campaign generation.
+aiMode.noEmailAccountsMessage,린다에게 영업을 맡기려면 먼저 이메일 계정을 추가해야 합니다.,You need to add an email account first to let Rinda handle sales.
 aiMode.noEmailAccountsWarning,이메일 계정이 없습니다,No email accounts available
 aiMode.loadingGeneratedContent,생성된 콘텐츠를 불러오는 중...,Loading generated content...
-aiMode.noLeadsFound,리드를 찾을 수 없습니다,No leads found
+aiMode.noLeadsFound,바이어를 찾을 수 없습니다,No buyers found
 aiMode.backToGeneration,생성 화면으로 돌아가기,Back to generation
-aiMode.leadList.title,리드 목록,Lead List
-aiMode.leadList.subtitle,총 {{count}}개의 리드,Total {{count}} leads
+aiMode.leadList.title,바이어 목록,Buyer List
+aiMode.leadList.subtitle,총 {{count}}명의 바이어,Total {{count}} buyers
 aiMode.leadList.unknownCompany,알 수 없는 회사,Unknown Company
 aiMode.leadList.emailsGenerated,{{count}}/{{total}} 이메일 생성됨,{{count}}/{{total}} emails generated
 aiMode.status.completed,완료,Completed
@@ -967,7 +967,7 @@ step2.sequenceIdRequired,시퀀스 ID가 필요합니다,Sequence ID is required
 editPage.memoEmpty,메모 없음,No memo
 editPage.memoSaved,메모가 저장되었습니다,Memo saved
 step3.memoEmpty,메모 없음,No memo
-createPage.enterCampaignName,캠페인 이름을 입력해주세요,Please enter campaign name
+createPage.enterCampaignName,영업 이름을 입력해주세요,Please enter sales name
 createPage.loading,로딩 중...,Loading...
 step1.filters,필터,Filters
 step1.filterOptions,필터 옵션,Filter Options
@@ -986,7 +986,7 @@ stepsList.dialog.close,닫기,Close
 stepsList.dialog.noContent,내용이 없습니다.,No content available.
 stepsList.dialog.subject,제목,Subject
 stepsList.inlineEdit.alreadySent,이미 발송됨,Already Sent
-editPage.partialEditNotice,진행 중인 캠페인은 일부 항목만 수정할 수 있습니다,Only some items can be edited for campaigns in progress
+editPage.partialEditNotice,린다가 연락 중인 영업은 일부 항목만 수정할 수 있습니다,Only some items can be edited for sales in progress with Rinda
 step1.hideLeadList,목록 숨기기,Hide List
 step1.leadListHiddenNotice,리드가 많아 목록을 숨겼습니다. '목록 보기'를 클릭하여 확인하세요,The list is hidden due to many leads. Click 'Show List' to view
 step1.showLeadList,목록 보기,Show List
@@ -997,9 +997,17 @@ leads.column.createdAt,등록일,Created At
 leads.column.email,이메일,Email
 leads.column.status,상태,Status
 leads.noLeads,아직 바이어가 없어요,No buyers yet
-leads.noLeadsDescription,캠페인을 시작하면 린다가 바이어를 찾아드릴게요!,Linda will find buyers for you when you start a campaign!
+leads.noLeadsDescription,린다에게 영업을 맡기면 바이어를 찾아드릴게요!,Rinda will find buyers for you when you let her handle sales!
 leads.noSearchResults,검색 결과가 없습니다,No search results
 leads.pagination.page,페이지 {{current}} / {{total}},Page {{current}} / {{total}}
 leads.searchPlaceholder,회사명 이메일 국가로 검색...,Search by company email country...
 leads.title,바이어 목록,Buyer List
 leads.totalCount,총 {{count}}개,Total {{count}}
+dashboard.stats.activeSales,진행 중인 영업,Active Sales
+dashboard.stats.activeSalesDesc,린다가 연락 중 {{active}} · 대기 중 {{paused}},Rinda contacting {{active}} · Waiting {{paused}}
+dashboard.stats.totalSent,총 발송,Total Sent
+dashboard.stats.totalSentDesc,{{count}}건 발송 시도,{{count}} send attempts
+dashboard.stats.totalOpenRate,총 오픈률,Total Open Rate
+dashboard.stats.totalOpenRateDesc,{{count}}명이 오픈,{{count}} opened
+dashboard.stats.totalReplyRate,총 회신률,Total Reply Rate
+dashboard.stats.totalReplyRateDesc,{{count}}건 회신,{{count}} replies

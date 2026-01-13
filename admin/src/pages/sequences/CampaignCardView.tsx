@@ -195,10 +195,10 @@ export function CampaignCardView({
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Mail className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="font-medium text-lg text-muted-foreground">캠페인이 없습니다</p>
-        <p className="text-muted-foreground text-sm">
-          "새 캠페인" 버튼을 눌러 첫 캠페인을 만들어보세요
+        <p className="font-medium text-lg text-muted-foreground">
+          {t("sequences:cardView.noCampaigns")}
         </p>
+        <p className="text-muted-foreground text-sm">{t("sequences:cardView.createFirst")}</p>
       </div>
     )
   }

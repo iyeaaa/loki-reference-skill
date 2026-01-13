@@ -439,9 +439,13 @@ export default function PaymentTestPublic() {
       <div className="mx-auto max-w-4xl px-4">
         {/* Header */}
         <div className="mb-8 text-center">
-          <p className="mb-1 font-medium text-blue-600 text-sm">Rinda AI</p>
-          <h1 className="mb-2 font-bold text-2xl">해외 바이어 발굴 및 글로벌 세일즈 자동화</h1>
-          <p className="text-gray-500 text-sm">PG 결제 심사용 테스트 페이지</p>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5">
+            <span className="font-semibold text-blue-700">Rinda AI</span>
+            <span className="text-blue-400">|</span>
+            <span className="text-blue-600 text-sm">해외 바이어 발굴 · 글로벌 세일즈 자동화</span>
+          </div>
+          <h1 className="mb-2 font-bold text-2xl">PG 결제 테스트</h1>
+          <p className="text-gray-500">토스페이먼츠 / PayPal 결제 심사용 테스트 페이지</p>
           <Badge className="mt-3" variant="outline">
             테스트 모드
           </Badge>

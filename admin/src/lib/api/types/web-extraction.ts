@@ -3,6 +3,44 @@ export type SearchCriteriaResult = {
   reasons: string[] // 3 specific reasons
 }
 
+// 백엔드 상세 에러 응답 타입
+export type WebExtractionErrorResponse = {
+  success: false
+  error: string
+  errorCode?: string
+  detail?: string
+  suggestion?: string
+  fileName?: string
+  currentCount?: number
+  maxAllowed?: number
+  availableColumns?: string[]
+  recommendedAction?: string
+}
+
+// 대용량 파일 경고 타입
+export type LargeBatchWarning = {
+  type: "LARGE_BATCH"
+  message: string
+  estimatedMinutes: number
+}
+
+// Redis 연결 불가 경고 타입
+export type RedisWarning = {
+  type: "REDIS_UNAVAILABLE"
+  message: string
+}
+
+// Init 이벤트 데이터 타입
+export type ExtractionInitData = {
+  type: "init"
+  message: string
+  timestamp: string
+  total: number
+  redisAvailable?: boolean
+  warning?: LargeBatchWarning
+  redisWarning?: RedisWarning
+}
+
 export type ExtractionResult = {
   website_url: string
   final_url?: string | null
@@ -54,6 +92,10 @@ export type ExtractionProgress = {
   jobId?: string
   latestResult?: ExtractionResult // 최신 처리된 결과
   estimatedCost?: number // 예상 GPT API 비용 (USD)
+  // 새로 추가된 필드들
+  redisAvailable?: boolean
+  warning?: LargeBatchWarning
+  redisWarning?: RedisWarning
 }
 
 export type WebExtractionUploadRequest = {

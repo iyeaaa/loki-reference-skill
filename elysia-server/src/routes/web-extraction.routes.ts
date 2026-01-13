@@ -38,8 +38,105 @@ import { createSSEResponse } from "../utils/sse-helper"
 
 // 웹데추 v1.1 Legacy 설정
 const LEGACY_CONFIG = {
-  MAX_BATCH_SIZE: 400, // 배치 크기 제한 (서버 안정성 및 메모리 최적화)
+  MAX_BATCH_SIZE: 2000, // 배치 크기 제한 (Redis 최적화로 2000개까지 지원)
+  RECOMMENDED_BATCH_SIZE: 500, // 권장 배치 크기 (최적 성능)
   MAX_CONCURRENT: 20, // 동시 처리 수 (API 키 개수에 따라 자동 조정)
+  MAX_FILE_SIZE_MB: 50, // 최대 파일 크기 (MB)
+}
+
+// 에러 코드 및 상세 메시지
+const ERROR_CODES = {
+  // 파일 관련 에러 (FILE_xxx)
+  FILE_FORMAT_INVALID: {
+    code: "FILE_FORMAT_INVALID",
+    message: "지원하지 않는 파일 형식입니다",
+    detail: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다.",
+    suggestion: "파일 확장자를 확인하고 올바른 형식으로 다시 업로드해주세요.",
+  },
+  FILE_EMPTY: {
+    code: "FILE_EMPTY",
+    message: "파일에 데이터가 없습니다",
+    detail: "업로드한 파일이 비어있거나 읽을 수 있는 데이터가 없습니다.",
+    suggestion: "파일에 website_url 컬럼과 URL 데이터가 있는지 확인해주세요.",
+  },
+  FILE_SHEET_NOT_FOUND: {
+    code: "FILE_SHEET_NOT_FOUND",
+    message: "시트를 찾을 수 없습니다",
+    detail: "Excel 파일에서 데이터 시트를 찾을 수 없습니다.",
+    suggestion: "파일에 최소 하나의 시트가 있는지 확인해주세요.",
+  },
+  FILE_WORKSHEET_NOT_FOUND: {
+    code: "FILE_WORKSHEET_NOT_FOUND",
+    message: "워크시트를 읽을 수 없습니다",
+    detail: "Excel 파일의 워크시트 데이터를 읽는 중 오류가 발생했습니다.",
+    suggestion: "파일이 손상되지 않았는지 확인하거나 다른 Excel 프로그램으로 다시 저장해주세요.",
+  },
+  FILE_PARSE_ERROR: {
+    code: "FILE_PARSE_ERROR",
+    message: "파일 파싱 실패",
+    detail: "파일 내용을 읽는 중 오류가 발생했습니다.",
+    suggestion: "파일이 손상되지 않았는지 확인해주세요. CSV의 경우 UTF-8 인코딩을 권장합니다.",
+  },
+
+  // URL 관련 에러 (URL_xxx)
+  URL_COLUMN_NOT_FOUND: {
+    code: "URL_COLUMN_NOT_FOUND",
+    message: "URL 컬럼을 찾을 수 없습니다",
+    detail: "파일에서 website_url, websiteUrl, 또는 website 컬럼을 찾을 수 없습니다.",
+    suggestion:
+      "첫 번째 행에 'website_url', 'websiteUrl', 또는 'website' 컬럼명이 있는지 확인해주세요.",
+  },
+  URL_ALL_INVALID: {
+    code: "URL_ALL_INVALID",
+    message: "유효한 URL이 없습니다",
+    detail: "파일의 모든 URL이 비어있거나 유효하지 않습니다.",
+    suggestion: "URL 컬럼에 'https://example.com' 형식의 유효한 URL이 있는지 확인해주세요.",
+  },
+
+  // 배치 크기 관련 에러 (BATCH_xxx)
+  BATCH_SIZE_EXCEEDED: {
+    code: "BATCH_SIZE_EXCEEDED",
+    message: "최대 처리 가능 URL 수 초과",
+    detail: `한 번에 처리 가능한 최대 URL 수는 ${2000}개입니다.`,
+    suggestion: "파일을 분할하여 업로드하거나, 대용량 처리를 위해 v2 API를 사용해주세요.",
+  },
+  BATCH_SIZE_WARNING: {
+    code: "BATCH_SIZE_WARNING",
+    message: "대용량 파일 경고",
+    detail: "500개 이상의 URL은 처리 시간이 오래 걸릴 수 있습니다.",
+    suggestion: "안정적인 네트워크 환경에서 처리하시고, 브라우저 탭을 닫지 마세요.",
+  },
+
+  // 시스템 관련 에러 (SYSTEM_xxx)
+  REDIS_UNAVAILABLE: {
+    code: "REDIS_UNAVAILABLE",
+    message: "Redis 서버 연결 불가",
+    detail:
+      "결과 저장을 위한 Redis 서버에 연결할 수 없습니다. 메모리 모드로 동작하지만 대용량 처리 시 문제가 발생할 수 있습니다.",
+    suggestion: "관리자에게 문의하거나 잠시 후 다시 시도해주세요.",
+  },
+  INTERNAL_ERROR: {
+    code: "INTERNAL_ERROR",
+    message: "내부 서버 오류",
+    detail: "예상치 못한 오류가 발생했습니다.",
+    suggestion: "잠시 후 다시 시도하거나 관리자에게 문의해주세요.",
+  },
+} as const
+
+// 에러 응답 생성 헬퍼
+function createErrorResponse(
+  errorKey: keyof typeof ERROR_CODES,
+  additionalInfo?: Record<string, unknown>,
+) {
+  const errorInfo = ERROR_CODES[errorKey]
+  return {
+    success: false,
+    error: errorInfo.message,
+    errorCode: errorInfo.code,
+    detail: errorInfo.detail,
+    suggestion: errorInfo.suggestion,
+    ...additionalInfo,
+  }
 }
 
 // Redis 기반 결과 저장 - 메모리 사용 최소화
@@ -376,10 +473,10 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
       if (!isCSV && !isExcel) {
         set.status = 400
-        return {
-          success: false,
-          error: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다",
-        }
+        return createErrorResponse("FILE_FORMAT_INVALID", {
+          fileName: file.name,
+          receivedExtension: fileName.split(".").pop() || "unknown",
+        })
       }
 
       try {
@@ -393,20 +490,20 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
         if (!sheetName) {
           set.status = 400
-          return {
-            success: false,
-            error: "시트를 찾을 수 없습니다",
-          }
+          return createErrorResponse("FILE_SHEET_NOT_FOUND", {
+            fileName: file.name,
+            availableSheets: workbook.SheetNames,
+          })
         }
 
         const worksheet = workbook.Sheets[sheetName]
 
         if (!worksheet) {
           set.status = 400
-          return {
-            success: false,
-            error: "워크시트를 찾을 수 없습니다",
-          }
+          return createErrorResponse("FILE_WORKSHEET_NOT_FOUND", {
+            fileName: file.name,
+            sheetName,
+          })
         }
 
         // JSON으로 변환
@@ -414,10 +511,10 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
         if (jsonData.length === 0) {
           set.status = 400
-          return {
-            success: false,
-            error: "파일에 데이터가 없습니다",
-          }
+          return createErrorResponse("FILE_EMPTY", {
+            fileName: file.name,
+            sheetName,
+          })
         }
 
         logger.info({ recordCount: jsonData.length }, "Parsed Excel file")
@@ -430,21 +527,49 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         // 빈 URL 제거
         const validRecords = records.filter((r) => r.websiteUrl && r.websiteUrl.trim().length > 0)
 
-        if (validRecords.length === 0) {
+        // URL 컬럼 존재 여부 확인
+        const firstRow = jsonData[0]
+        const hasUrlColumn =
+          firstRow &&
+          ("website_url" in firstRow || "websiteUrl" in firstRow || "website" in firstRow)
+
+        if (!hasUrlColumn) {
           set.status = 400
-          return {
-            success: false,
-            error: "유효한 website_url이 없습니다. 컬럼명을 확인해주세요.",
-          }
+          return createErrorResponse("URL_COLUMN_NOT_FOUND", {
+            fileName: file.name,
+            availableColumns: firstRow ? Object.keys(firstRow) : [],
+          })
         }
 
-        // 배치 크기 제한 (v1.1 Legacy: 100개로 제한)
+        if (validRecords.length === 0) {
+          set.status = 400
+          return createErrorResponse("URL_ALL_INVALID", {
+            fileName: file.name,
+            totalRows: jsonData.length,
+          })
+        }
+
+        // 배치 크기 제한 (Redis 최적화로 2000개까지 지원)
         if (validRecords.length > LEGACY_CONFIG.MAX_BATCH_SIZE) {
           set.status = 400
-          return {
-            success: false,
-            error: `한 번에 처리 가능한 최대 URL 수는 ${LEGACY_CONFIG.MAX_BATCH_SIZE}개입니다. 현재 ${validRecords.length}개가 포함되어 있습니다. 파일을 분할하여 업로드해주세요.`,
-          }
+          return createErrorResponse("BATCH_SIZE_EXCEEDED", {
+            fileName: file.name,
+            currentCount: validRecords.length,
+            maxAllowed: LEGACY_CONFIG.MAX_BATCH_SIZE,
+            recommendedAction: `파일을 ${Math.ceil(validRecords.length / LEGACY_CONFIG.RECOMMENDED_BATCH_SIZE)}개로 분할하거나 v2 API를 사용하세요.`,
+          })
+        }
+
+        // 대용량 파일 경고 로그 (처리는 계속 진행)
+        if (validRecords.length > LEGACY_CONFIG.RECOMMENDED_BATCH_SIZE) {
+          logger.warn(
+            {
+              fileName: file.name,
+              urlCount: validRecords.length,
+              recommended: LEGACY_CONFIG.RECOMMENDED_BATCH_SIZE,
+            },
+            "[Web Extraction] Large batch detected - processing may take longer",
+          )
         }
 
         // API 키 개수에 따른 동시성 설정 (API 키 1개당 20개씩 병렬 요청)
@@ -496,12 +621,21 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         // Redis에 저장할 jobId 미리 생성
         const jobId = `${workspaceId}-${Date.now()}`
 
+        // Redis 가용성 확인
+        const redisAvailable = isRedisAvailable()
+        if (!redisAvailable) {
+          logger.warn(
+            { jobId, urlCount: finalRecords.length },
+            "[Web Extraction] Redis unavailable - large batches may cause memory issues",
+          )
+        }
+
         logger.info(
           {
             finalRecords: finalRecords.length,
             maxConcurrent: extractionConfig.maxConcurrent,
             jobId,
-            redisAvailable: isRedisAvailable(),
+            redisAvailable,
           },
           "[Web Extraction] Starting SSE stream with Redis storage",
         )
@@ -510,15 +644,36 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         return createSSEResponse(
           async (session) => {
             try {
-              // 초기 연결 이벤트
+              // 초기 연결 이벤트 (Redis 상태 및 대용량 경고 포함)
+              const initData: Record<string, unknown> = {
+                type: "init",
+                message: `${finalRecords.length}개의 웹사이트에서 데이터를 추출합니다`,
+                timestamp: new Date().toISOString(),
+                total: finalRecords.length,
+                redisAvailable,
+              }
+
+              // 대용량 파일 경고 추가
+              if (finalRecords.length > LEGACY_CONFIG.RECOMMENDED_BATCH_SIZE) {
+                initData.warning = {
+                  type: "LARGE_BATCH",
+                  message: `${finalRecords.length}개의 URL을 처리합니다. 완료까지 시간이 걸릴 수 있습니다.`,
+                  estimatedMinutes: Math.ceil((finalRecords.length * 3) / 60), // 약 3초/URL 추정
+                }
+              }
+
+              // Redis 경고 추가
+              if (!redisAvailable && finalRecords.length > 100) {
+                initData.redisWarning = {
+                  type: "REDIS_UNAVAILABLE",
+                  message:
+                    "Redis 서버에 연결할 수 없어 메모리 모드로 동작합니다. 대용량 처리 시 문제가 발생할 수 있습니다.",
+                }
+              }
+
               session.push({
                 event: "connected",
-                data: {
-                  type: "init",
-                  message: `${finalRecords.length}개의 웹사이트에서 데이터를 추출합니다`,
-                  timestamp: new Date().toISOString(),
-                  total: finalRecords.length,
-                },
+                data: initData,
               })
               logger.info("[Web Extraction] Sent init event")
 
@@ -651,10 +806,10 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       } catch (error: unknown) {
         logger.error({ error, fileName: file.name }, "Failed to parse file")
         set.status = 500
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to parse file",
-        }
+        return createErrorResponse("FILE_PARSE_ERROR", {
+          fileName: file.name,
+          errorDetail: error instanceof Error ? error.message : "Unknown error",
+        })
       }
     },
     {

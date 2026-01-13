@@ -2,11 +2,31 @@ import { API_BASE_URL } from "@/lib/api/client"
 import type {
   ExtractionProgress,
   ExtractionResult,
+  WebExtractionErrorResponse,
   WebExtractionProgressCallback,
   WebExtractionUploadRequest,
   WebsiteAnalysisCallbacks,
   WebsiteAnalysisRequest,
 } from "../types/web-extraction"
+
+// 상세 에러 메시지 생성 헬퍼
+function formatDetailedError(errorData: WebExtractionErrorResponse): string {
+  const parts: string[] = [errorData.error]
+
+  if (errorData.detail) {
+    parts.push(errorData.detail)
+  }
+
+  if (errorData.suggestion) {
+    parts.push(`💡 ${errorData.suggestion}`)
+  }
+
+  if (errorData.recommendedAction) {
+    parts.push(`권장 조치: ${errorData.recommendedAction}`)
+  }
+
+  return parts.join("\n\n")
+}
 
 export const webExtractionApi = {
   /**
@@ -35,8 +55,12 @@ export const webExtractionApi = {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `서버 오류 (${response.status})`)
+        const errorData = (await response.json().catch(() => ({}))) as WebExtractionErrorResponse
+        // 상세 에러 메시지 포맷팅
+        const errorMessage = errorData.errorCode
+          ? formatDetailedError(errorData)
+          : errorData.error || `서버 오류 (${response.status})`
+        throw new Error(errorMessage)
       }
 
       const reader = response.body?.getReader()
@@ -83,7 +107,7 @@ export const webExtractionApi = {
                 const type = data.type || eventType
 
                 if (type === "init") {
-                  const initProgress = {
+                  const initProgress: ExtractionProgress = {
                     status: "processing" as const,
                     total: data.total || 0,
                     processed: 0,
@@ -99,6 +123,10 @@ export const webExtractionApi = {
                     estimatedTimeRemaining: 0,
                     itemsPerSecond: 0,
                     message: data.message,
+                    // 새로 추가된 경고 필드들
+                    redisAvailable: data.redisAvailable,
+                    warning: data.warning,
+                    redisWarning: data.redisWarning,
                   }
                   lastProgress = initProgress
                   onProgress(initProgress)

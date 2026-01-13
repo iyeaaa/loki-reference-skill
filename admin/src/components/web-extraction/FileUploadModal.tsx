@@ -97,7 +97,9 @@ export function FileUploadModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>파일 업로드</DialogTitle>
-          <DialogDescription>website_url이 포함된 엑셀 파일을 올려주세요</DialogDescription>
+          <DialogDescription>
+            website_url이 포함된 파일을 올려주세요 (Excel, CSV 지원)
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -252,10 +254,10 @@ export function FileUploadModal({
                   >
                     <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   </motion.div>
-                  <p className="font-semibold text-lg">
-                    website_url이 포함된 엑셀 파일을 올려주세요
+                  <p className="font-semibold text-lg">website_url이 포함된 파일을 올려주세요</p>
+                  <p className="text-muted-foreground text-sm">
+                    Excel(.xlsx, .xls) 또는 CSV 파일 지원 · 드래그하거나 클릭
                   </p>
-                  <p className="text-muted-foreground text-sm">드래그하거나 클릭하면 돼요</p>
                 </motion.div>
               )}
             </AnimatePresence>

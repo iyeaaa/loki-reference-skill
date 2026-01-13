@@ -58,7 +58,16 @@ export function getDefaultPaymentMethod(locale?: LocaleInfo): PaymentMethod {
  */
 export type ExchangeRateInfo = {
   rate: number
-  source: "cache" | "cached" | "naver" | "api" | "realtime" | "manual" | "fallback"
+  source:
+    | "cache"
+    | "cached"
+    | "naver"
+    | "naver-api"
+    | "exchangerate-api"
+    | "api"
+    | "realtime"
+    | "manual"
+    | "fallback"
   fetchedAt: Date
   expiresAt?: Date
 }
@@ -122,13 +131,16 @@ export function convertKRWtoUSD(krwAmount: number, rate?: number): number {
 export function getExchangeRateSourceLabel(source: ExchangeRateInfo["source"]): string {
   switch (source) {
     case "naver":
+    case "naver-api":
       return "네이버 환율 API"
+    case "exchangerate-api":
+      return "ExchangeRate API"
     case "api":
     case "realtime":
       return "실시간 환율"
     case "cache":
     case "cached":
-      return "캐시"
+      return "캐시 (네이버 API)"
     case "manual":
       return "수동 설정"
     case "fallback":

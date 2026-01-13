@@ -79,6 +79,8 @@ const AnalyticsDashboardPage = lazy(() => import("../pages/dashboard/DashboardV2
 
 // Public Pages (No auth required)
 const PaymentTestPublic = lazy(() => import("../pages/PaymentTestPublic"))
+const TermsPage = lazy(() => import("../pages/legal/TermsPage"))
+const PrivacyPage = lazy(() => import("../pages/legal/PrivacyPage"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -149,6 +151,35 @@ export const router = createBrowserRouter([
         }
       >
         <PaymentTestPublic />
+      </Suspense>
+    ),
+  },
+  // Legal Pages (No auth required)
+  {
+    path: "/terms",
+    element: (
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        }
+      >
+        <TermsPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/privacy",
+    element: (
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        }
+      >
+        <PrivacyPage />
       </Suspense>
     ),
   },

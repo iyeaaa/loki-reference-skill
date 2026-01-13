@@ -23,7 +23,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -640,7 +640,16 @@ export default function PaymentTestPublic() {
                             className="cursor-pointer text-sm leading-relaxed"
                             htmlFor={termsId}
                           >
-                            <span className="text-red-500">[필수]</span> 이용약관에 동의합니다
+                            <span className="text-red-500">[필수]</span>{" "}
+                            <Link
+                              className="text-blue-600 underline hover:text-blue-800"
+                              onClick={(e) => e.stopPropagation()}
+                              target="_blank"
+                              to="/terms"
+                            >
+                              이용약관
+                            </Link>
+                            에 동의합니다
                           </Label>
                         </div>
 
@@ -654,8 +663,16 @@ export default function PaymentTestPublic() {
                             className="cursor-pointer text-sm leading-relaxed"
                             htmlFor={privacyId}
                           >
-                            <span className="text-red-500">[필수]</span> 개인정보 처리방침에
-                            동의합니다
+                            <span className="text-red-500">[필수]</span>{" "}
+                            <Link
+                              className="text-blue-600 underline hover:text-blue-800"
+                              onClick={(e) => e.stopPropagation()}
+                              target="_blank"
+                              to="/privacy"
+                            >
+                              개인정보 처리방침
+                            </Link>
+                            에 동의합니다
                           </Label>
                         </div>
                       </div>

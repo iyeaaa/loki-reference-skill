@@ -39,6 +39,7 @@ import {
   useTranslateCompanyName,
   useUserWorkspaces,
 } from "@/lib/api/hooks/workspaces"
+import { getSurveyFromStorage } from "@/store/survey"
 
 type SalesStrategyData = {
   companyName: string
@@ -65,17 +66,20 @@ export function StepCompanyInfo() {
   // Generate unique IDs for form fields
   const websiteUrlId = useId()
 
-  // Form state for editing
-  const [editedData, setEditedData] = useState<SalesStrategyData>({
-    companyName: "",
-    companyNameEn: "",
-    companyDescription: "",
-    industry: "",
-    target: "",
-    country: "",
-    experience: "",
-    websiteUrl: "",
-    includeSignature: true,
+  // Form state for editing - initialize with survey data from localStorage
+  const [editedData, setEditedData] = useState<SalesStrategyData>(() => {
+    const surveyData = getSurveyFromStorage()
+    return {
+      companyName: "",
+      companyNameEn: "",
+      companyDescription: "",
+      industry: surveyData?.industry || "",
+      target: surveyData?.target || "",
+      country: surveyData?.country || "",
+      experience: surveyData?.experience || "",
+      websiteUrl: "",
+      includeSignature: true,
+    }
   })
 
   // Validation error state
@@ -187,6 +191,10 @@ export function StepCompanyInfo() {
 
         console.log("[StepCompanyInfo] 8. ✅ Data fetched:", { strategyData, workspaceData })
 
+        // Load survey data from localStorage to ensure it's always available
+        const surveyData = getSurveyFromStorage()
+        console.log("[StepCompanyInfo] 9. Survey data from localStorage:", surveyData)
+
         if (strategyData) {
           const mergedData: SalesStrategyData = {
             ...strategyData,
@@ -194,12 +202,17 @@ export function StepCompanyInfo() {
             companyNameEn: workspaceData?.companyNameEn || "",
             companyDescription:
               workspaceData?.companyDescription || strategyData.companyDescription || "",
+            // Merge survey data from localStorage to ensure it's not lost
+            industry: strategyData.industry || surveyData?.industry || "",
+            target: strategyData.target || surveyData?.target || "",
+            country: strategyData.country || surveyData?.country || "",
+            experience: strategyData.experience || surveyData?.experience || "",
             websiteUrl: strategyData.websiteUrl || "",
             includeSignature: strategyData.includeSignature ?? true,
           }
           setEditedData(mergedData)
         } else {
-          // 데이터가 없으면 workspace 정보로 초기화
+          // 데이터가 없으면 workspace 정보 + survey 정보로 초기화
           toast.warning(
             isKorean
               ? "전략 정보가 없습니다. 워크스페이스 정보로 초기화합니다."
@@ -210,6 +223,11 @@ export function StepCompanyInfo() {
             companyName: workspaceData?.companyName || "",
             companyNameEn: workspaceData?.companyNameEn || "",
             companyDescription: workspaceData?.companyDescription || "",
+            // Preserve survey data from localStorage
+            industry: surveyData?.industry || prev.industry,
+            target: surveyData?.target || prev.target,
+            country: surveyData?.country || prev.country,
+            experience: surveyData?.experience || prev.experience,
           }))
         }
       } catch (error) {

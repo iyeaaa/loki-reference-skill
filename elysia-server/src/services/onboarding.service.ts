@@ -235,11 +235,11 @@ export async function saveSurveyData(
   // console.log("[OnboardingService] surveyData:", JSON.stringify(surveyData, null, 2))
   // console.log("[OnboardingService] userId:", userId)
 
-  // 필수 필드 검증
-  if (!surveyData.industry || !surveyData.target || !surveyData.country || !surveyData.experience) {
+  // 필수 필드 검증 (industry, country만 필수 - target, experience는 선택적)
+  if (!surveyData.industry || !surveyData.country) {
     console.log("[OnboardingService] ❌ Missing required fields in surveyData")
     throw new OnboardingValidationError(
-      "설문 데이터가 불완전합니다. industry, target, country, experience는 필수입니다.",
+      "설문 데이터가 불완전합니다. industry, country는 필수입니다.",
       "INCOMPLETE_SURVEY_DATA",
     )
   }
@@ -361,21 +361,21 @@ export async function completeStep1CompanyInfo(
   // workspace_sales_strategies 검증
   const salesStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
   if (salesStrategies.length === 0) {
-    // 설문 데이터가 있다면 자동으로 sales strategy 생성
+    // 설문 데이터가 있다면 자동으로 sales strategy 생성 (industry, country만 필수)
     const surveyData = progress.surveyData as OnboardingSurveyData
-    if (surveyData.industry && surveyData.target && surveyData.country && surveyData.experience) {
+    if (surveyData.industry && surveyData.country) {
       try {
         await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
           industry: surveyData.industry as Parameters<
             typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
           >[1]["industry"],
-          target: surveyData.target as Parameters<
+          target: (surveyData.target || "b2b") as Parameters<
             typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
           >[1]["target"],
           country: surveyData.country as Parameters<
             typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
           >[1]["country"],
-          experience: surveyData.experience as Parameters<
+          experience: (surveyData.experience || "none") as Parameters<
             typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
           >[1]["experience"],
         })
@@ -559,24 +559,24 @@ export async function completeOnboarding(
 ): Promise<OnboardingProgressData> {
   const progress = await getOrCreateOnboardingProgress(workspaceId)
 
-  // 설문 데이터가 있는 경우에만 sales strategy 자동 생성 시도
+  // 설문 데이터가 있는 경우에만 sales strategy 자동 생성 시도 (industry, country만 필수)
   if (progress.surveyData) {
     const salesStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
     if (salesStrategies.length === 0) {
       const surveyData = progress.surveyData as OnboardingSurveyData
-      if (surveyData.industry && surveyData.target && surveyData.country && surveyData.experience) {
+      if (surveyData.industry && surveyData.country) {
         try {
           await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
             industry: surveyData.industry as Parameters<
               typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
             >[1]["industry"],
-            target: surveyData.target as Parameters<
+            target: (surveyData.target || "b2b") as Parameters<
               typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
             >[1]["target"],
             country: surveyData.country as Parameters<
               typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
             >[1]["country"],
-            experience: surveyData.experience as Parameters<
+            experience: (surveyData.experience || "none") as Parameters<
               typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
             >[1]["experience"],
           })

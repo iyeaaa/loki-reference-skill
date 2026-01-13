@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 // import { Switch } from "@/components/ui/switch" // Temporarily hidden
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Select 컴포넌트 - 설문 드롭다운 제거로 인해 사용하지 않음
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select"
 import { trackOnboardingStep1Complete } from "@/lib/analytics"
 import { apiFetch } from "@/lib/api/client"
 import {
@@ -40,41 +41,8 @@ type SalesStrategyData = {
   includeSignature: boolean
 }
 
-// Industry options
-const INDUSTRY_OPTIONS = [
-  { value: "manufacturing", ko: "제조 / 부품", en: "Manufacturing / Parts" },
-  { value: "it_saas", ko: "IT / 소프트웨어", en: "IT / Software" },
-  { value: "beauty", ko: "뷰티 / 화장품", en: "Beauty / Cosmetics" },
-  { value: "food", ko: "식품 / 건기식", en: "Food / Health Supple." },
-  { value: "fashion", ko: "패션 / 의류", en: "Fashion / Apparel" },
-  { value: "electronics", ko: "전자제품", en: "Electronics" },
-  { value: "healthcare", ko: "헬스케어", en: "Healthcare" },
-  { value: "guitar", ko: "기타", en: "Other" },
-]
-
-// Target options
-const TARGET_OPTIONS = [
-  { value: "b2b", ko: "기업 대상 (B2B)", en: "Business to Business (B2B)" },
-  { value: "b2c", ko: "소비자 대상 (B2C)", en: "Business to Consumer (B2C)" },
-  { value: "both", ko: "둘 다", en: "Both" },
-]
-
-// Country options
-const COUNTRY_OPTIONS = [
-  { value: "jp", ko: "일본", en: "Japan" },
-  { value: "us", ko: "미국", en: "United States" },
-  { value: "cn", ko: "중국", en: "China" },
-  { value: "sea", ko: "동남아", en: "Southeast Asia" },
-  { value: "eu", ko: "유럽", en: "Europe" },
-  { value: "ae", ko: "중동", en: "Middle East" },
-]
-
-// Experience options
-const EXPERIENCE_OPTIONS = [
-  { value: "none", ko: "처음입니다", en: "First time" },
-  { value: "some", ko: "1~3회 (초기)", en: "1-3 times (Early stage)" },
-  { value: "experienced", ko: "능숙함 (4회 이상)", en: "Experienced (4+ times)" },
-]
+// 설문 드롭다운 옵션들 - 온보딩 플로우 간소화로 회사정보 UI에서 제거됨
+// 설문 데이터는 이제 온보딩 설문 페이지(/trial/survey)에서만 수집
 
 export function StepCompanyInfo() {
   const { i18n } = useTranslation()
@@ -248,7 +216,7 @@ export function StepCompanyInfo() {
       return
     }
 
-    // 필수 필드 검증
+    // 필수 필드 검증 (회사명, 회사 소개만 필수 - 설문 데이터는 온보딩 설문 페이지에서 수집됨)
     const newErrors: { companyName?: boolean; companyDescription?: boolean } = {}
     const missingFields: string[] = []
 
@@ -259,18 +227,6 @@ export function StepCompanyInfo() {
     if (!editedData.companyDescription?.trim()) {
       newErrors.companyDescription = true
       missingFields.push(isKorean ? "회사 소개" : "Company Description")
-    }
-    if (!editedData.industry) {
-      missingFields.push(isKorean ? "산업군" : "Industry")
-    }
-    if (!editedData.target) {
-      missingFields.push(isKorean ? "타겟 고객" : "Target Customer")
-    }
-    if (!editedData.country) {
-      missingFields.push(isKorean ? "희망 진출 국가" : "Target Country")
-    }
-    if (!editedData.experience) {
-      missingFields.push(isKorean ? "수출 경험" : "Export Experience")
     }
 
     // Set error states to highlight fields
@@ -635,110 +591,6 @@ export function StepCompanyInfo() {
               type="url"
               value={editedData.websiteUrl}
             />
-          </div>
-
-          {/* Include Signature Toggle - Temporarily hidden
-          <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-4">
-            <div className="space-y-0.5">
-              <Label className="font-medium text-gray-900 text-sm">
-                {isKorean ? "이메일에 서명 포함" : "Include signature in emails"}
-              </Label>
-              <p className="text-gray-500 text-xs">
-                {isKorean
-                  ? "발송되는 이메일에 서명을 자동으로 추가합니다"
-                  : "Automatically add signature to outgoing emails"}
-              </p>
-            </div>
-            <Switch
-              checked={editedData.includeSignature}
-              onCheckedChange={(checked) =>
-                setEditedData((prev) => ({ ...prev, includeSignature: checked }))
-              }
-            />
-          </div>
-          */}
-
-          {/* 2-Column Grid for 4 dropdowns */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Industry */}
-            <div className="space-y-2">
-              <Label className="text-sm">{isKorean ? "산업 분야" : "Industry"}</Label>
-              <Select
-                onValueChange={(value) => setEditedData((prev) => ({ ...prev, industry: value }))}
-                value={editedData.industry}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "분야 선택" : "Select industry"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDUSTRY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {isKorean ? opt.ko : opt.en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Target Customer */}
-            <div className="space-y-2">
-              <Label className="text-sm">{isKorean ? "판매 대상" : "Target Customer"}</Label>
-              <Select
-                onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
-                value={editedData.target}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "대상 선택" : "Select target"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {TARGET_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {isKorean ? opt.ko : opt.en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Target Country */}
-            <div className="space-y-2">
-              <Label className="text-sm">{isKorean ? "진출 국가" : "Target Country"}</Label>
-              <Select
-                onValueChange={(value) => setEditedData((prev) => ({ ...prev, country: value }))}
-                value={editedData.country}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "국가 선택" : "Select country"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {COUNTRY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {isKorean ? opt.ko : opt.en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Export Experience */}
-            <div className="space-y-2">
-              <Label className="text-sm">{isKorean ? "수출 경험" : "Export Experience"}</Label>
-              <Select
-                onValueChange={(value) => setEditedData((prev) => ({ ...prev, experience: value }))}
-                value={editedData.experience}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isKorean ? "경험 선택" : "Select experience"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXPERIENCE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {isKorean ? opt.ko : opt.en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Next Button */}

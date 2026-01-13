@@ -25,12 +25,12 @@ export type SurveyData = {
   lang?: string
 }
 
-/** 유효성 검증을 통과한 설문 데이터 (모든 필수 필드가 non-null) */
+/** 유효성 검증을 통과한 설문 데이터 (industry, country만 필수) */
 export type ValidSurveyData = {
   industry: string
-  target: string
+  target?: string
   country: string
-  experience: string
+  experience?: string
   lang?: string
 }
 
@@ -155,15 +155,17 @@ export const isSurveyCompleteAtom = atom((get) => {
 // ====================================
 
 /**
- * 설문 데이터 유효성 검사 (모든 필드 완료 여부)
+ * 설문 데이터 유효성 검사 (industry, country 필수)
  * Type guard: 검증 통과 시 ValidSurveyData로 타입 좁힘
  */
 export function isValidSurveyData(data: SurveyData | null): data is ValidSurveyData {
-  return !!(data?.industry && data?.target && data?.country && data?.experience)
+  return !!(data?.industry && data?.country)
 }
 
 /**
- * 특정 스텝까지 완료되었는지 검사
+ * 특정 스텝까지 완료되었는지 검사 (2단계 플로우)
+ * Step 1: 산업군 선택
+ * Step 2: 국가 선택
  */
 export function isSurveyStepComplete(data: SurveyData | null, step: number): boolean {
   if (!data) {
@@ -174,30 +176,20 @@ export function isSurveyStepComplete(data: SurveyData | null, step: number): boo
     case 1:
       return !!data.industry
     case 2:
-      return !!data.industry && !!data.target
-    case 3:
-      return !!data.industry && !!data.target && !!data.country
-    case 4:
-      return isValidSurveyData(data)
+      return !!data.industry && !!data.country
     default:
       return false
   }
 }
 
 /**
- * 완료된 마지막 스텝 번호 반환
+ * 완료된 마지막 스텝 번호 반환 (2단계 플로우)
  */
 export function getLastCompletedStep(data: SurveyData | null): number {
   if (!data) {
     return 0
   }
-  if (data.experience) {
-    return 4
-  }
   if (data.country) {
-    return 3
-  }
-  if (data.target) {
     return 2
   }
   if (data.industry) {

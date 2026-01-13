@@ -2,29 +2,45 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useSetAtom } from "jotai"
 import {
   ArrowLeft,
-  Building2,
   Check,
-  Code2,
+  ExternalLink,
   Globe,
   Globe2,
-  Heart,
-  MoreHorizontal,
-  Rocket,
+  Lightbulb,
+  MessageCircle,
   Shirt,
   Smartphone,
   Sparkles,
-  Users,
   UtensilsCrossed,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
+import { ExitIntentModal } from "@/components/ExitIntentModal"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Progress } from "@/components/ui/progress"
+import { useExitIntent } from "@/hooks/useExitIntent"
 import { useIsMobile } from "@/hooks/use-mobile"
+import type { OnboardingStep } from "@/lib/exit-intent-messages"
 import { trackSurveyStep } from "@/lib/analytics"
 import { slideMobileVariants, slideVariants } from "@/lib/animations"
 import { cn } from "@/lib/utils"
@@ -36,13 +52,11 @@ import {
 } from "@/store/survey"
 import { ValuePropsPanel } from "./components/ValuePropsPanel"
 import {
-  EXPORT_EXPERIENCES,
   type ExportExperience,
   INDUSTRIES,
   type Industry,
   type OnboardingData,
   TARGET_COUNTRIES,
-  TARGET_CUSTOMERS,
   type TargetCountry,
   type TargetCustomer,
   TOTAL_STEPS,
@@ -103,6 +117,12 @@ export default function OnboardingPage() {
 
   const progress = (currentStep / TOTAL_STEPS) * 100
 
+  // 이탈 감지 훅
+  const exitIntent = useExitIntent({ enabled: true, idleTimeout: 30000 })
+
+  // 현재 스텝을 OnboardingStep 타입으로 매핑
+  const currentExitStep: OnboardingStep = currentStep === 1 ? "survey1" : "survey2"
+
   const handleBack = () => {
     if (currentStep > 1) {
       navigate(`/trial/survey/${currentStep - 1}`)
@@ -114,47 +134,27 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, industry }))
     setSurveyData(updated)
     // 📊 Analytics: Survey Step 1 완료
-    trackSurveyStep(1, 4, { industry })
+    trackSurveyStep(1, TOTAL_STEPS, { industry })
+    exitIntent.reset() // 다음 스텝으로 이동 시 이탈 감지 리셋
     navigate("/trial/survey/2")
-  }
-
-  const handleSelectTarget = (target: TargetCustomer) => {
-    const updated = mergeSurveyData({ target, lang: i18n.language })
-    setData((prev) => ({ ...prev, target }))
-    setSurveyData(updated)
-    // 📊 Analytics: Survey Step 2 완료
-    trackSurveyStep(2, 4, { target })
-    navigate("/trial/survey/3")
   }
 
   const handleSelectCountry = (country: TargetCountry) => {
     const updated = mergeSurveyData({ country, lang: i18n.language })
     setData((prev) => ({ ...prev, country }))
     setSurveyData(updated)
-    // 📊 Analytics: Survey Step 3 완료
-    trackSurveyStep(3, 4, { country })
-    navigate("/trial/survey/4")
-  }
-
-  const handleSelectExperience = (experience: ExportExperience) => {
-    const updated = mergeSurveyData({ experience, lang: i18n.language })
-    setData((prev) => ({ ...prev, experience }))
-    setSurveyData(updated)
-    // 📊 Analytics: Survey Step 4 완료 (마지막)
-    trackSurveyStep(4, 4, { experience })
+    // 📊 Analytics: Survey Step 2 완료 (마지막)
+    trackSurveyStep(2, TOTAL_STEPS, { country })
+    exitIntent.reset() // 완료 시 이탈 감지 리셋
     navigate("/trial")
   }
 
-  // Step별 격려 메시지
+  // Step별 격려 메시지 (2단계 플로우)
   const getStepCta = () => {
     switch (currentStep) {
       case 1:
         return isKorean ? "첫 번째 질문이에요!" : "First question!"
       case 2:
-        return isKorean ? "좋아요! 3개 남았어요" : "Great! 3 left"
-      case 3:
-        return isKorean ? "거의 다 왔어요! 2개 남았어요" : "Almost there! 2 left"
-      case 4:
         return isKorean ? "마지막이에요! 곧 AI가 시작해요" : "Last one! AI starts soon"
       default:
         return ""
@@ -168,13 +168,7 @@ export default function OnboardingPage() {
           <Step1 isKorean={isKorean} onSelect={handleSelectIndustry} selected={data.industry} />
         )
       case 2:
-        return <Step2 isKorean={isKorean} onSelect={handleSelectTarget} selected={data.target} />
-      case 3:
         return <Step3 isKorean={isKorean} onSelect={handleSelectCountry} selected={data.country} />
-      case 4:
-        return (
-          <Step4 isKorean={isKorean} onSelect={handleSelectExperience} selected={data.experience} />
-        )
       default:
         return null
     }
@@ -226,7 +220,7 @@ export default function OnboardingPage() {
               </Badge>
             </div>
             <h1 className="mb-2 font-bold text-2xl text-gray-900 tracking-tight">
-              {isKorean ? "간단한 질문 4개만 답해주세요" : "Just 4 quick questions"}
+              {isKorean ? "간단한 질문 2개만 답해주세요" : "Just 2 quick questions"}
             </h1>
             <p className="text-gray-500">
               {isKorean
@@ -303,20 +297,25 @@ export default function OnboardingPage() {
           </div>
         </div>
       </div>
+
+      {/* 이탈 방지 모달 */}
+      <ExitIntentModal
+        isKorean={isKorean}
+        onClose={exitIntent.dismiss}
+        onStay={exitIntent.dismiss}
+        open={exitIntent.isTriggered}
+        step={currentExitStep}
+      />
     </div>
   )
 }
 
-// 산업군별 아이콘 매핑 (lucide로 통일)
+// 산업군별 아이콘 매핑 (소비재만 포함)
 const INDUSTRY_ICONS: Record<Industry, React.ReactNode> = {
-  manufacturing: <Building2 className="h-6 w-6 text-gray-700" />,
-  it_saas: <Code2 className="h-6 w-6 text-gray-700" />,
   beauty: <Sparkles className="h-6 w-6 text-gray-700" />,
   food: <UtensilsCrossed className="h-6 w-6 text-gray-700" />,
   fashion: <Shirt className="h-6 w-6 text-gray-700" />,
   electronics: <Smartphone className="h-6 w-6 text-gray-700" />,
-  healthcare: <Heart className="h-6 w-6 text-gray-700" />,
-  guitar: <MoreHorizontal className="h-6 w-6 text-gray-700" />,
 }
 
 // Step 1: Industry Selection
@@ -329,171 +328,253 @@ function Step1({
   onSelect: (industry: Industry) => void
   isKorean: boolean
 }) {
+  const [showNonConsumerModal, setShowNonConsumerModal] = useState(false)
+  const isMobile = useIsMobile()
+
   const industryLabels: Record<Industry, { ko: string; en: string }> = {
-    manufacturing: { ko: "제조 / 부품", en: "Manufacturing" },
-    it_saas: { ko: "IT / 소프트웨어", en: "IT / Software" },
     beauty: { ko: "뷰티 / 화장품", en: "Beauty / Cosmetics" },
     food: { ko: "식품 / 건기식", en: "Food / Health" },
     fashion: { ko: "패션 / 의류", en: "Fashion / Apparel" },
     electronics: { ko: "전자제품", en: "Electronics" },
-    healthcare: { ko: "헬스케어", en: "Healthcare" },
-    guitar: { ko: "기타", en: "Other" },
   }
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl">
-          {isKorean ? "어떤 제품을 판매하세요?" : "What do you sell?"}
-        </CardTitle>
-        <CardDescription>
-          {isKorean
-            ? "분야에 맞는 바이어를 찾아드릴게요"
-            : "We'll find buyers that match your industry"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
-          {INDUSTRIES.map((industry) => (
-            <Button
-              className={cn(
-                "relative h-auto min-h-[56px] justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[64px] md:p-5",
-                // Touch feedback
-                "active:scale-[0.98] active:brightness-95",
-                // Desktop hover
-                "md:hover:scale-[1.01] md:hover:shadow-md",
-                // Selection states
-                selected === industry
-                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100 shadow-md hover:bg-blue-50"
-                  : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
-              )}
-              key={industry}
-              onClick={() => onSelect(industry)}
-              variant="outline"
-            >
-              <span className="text-gray-600">{INDUSTRY_ICONS[industry]}</span>
-              <span className="font-medium">
-                {isKorean ? industryLabels[industry].ko : industryLabels[industry].en}
-              </span>
-              {selected === industry && (
-                <motion.div
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="absolute top-2 right-2"
-                  initial={{ scale: 0, opacity: 0 }}
-                >
-                  <Check className="h-5 w-5 text-blue-600" />
-                </motion.div>
-              )}
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl">
+            {isKorean ? "어떤 제품을 판매하세요?" : "What do you sell?"}
+          </CardTitle>
+          <CardDescription>
+            {isKorean
+              ? "분야에 맞는 바이어를 찾아드릴게요"
+              : "We'll find buyers that match your industry"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+            {INDUSTRIES.map((industry) => (
+              <Button
+                className={cn(
+                  "relative h-auto min-h-[56px] justify-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[64px] md:p-5",
+                  // Touch feedback
+                  "active:scale-[0.98] active:brightness-95",
+                  // Desktop hover
+                  "md:hover:scale-[1.01] md:hover:shadow-md",
+                  // Selection states
+                  selected === industry
+                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100 shadow-md hover:bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
+                )}
+                key={industry}
+                onClick={() => onSelect(industry)}
+                variant="outline"
+              >
+                <span className="text-gray-600">{INDUSTRY_ICONS[industry]}</span>
+                <span className="font-medium">
+                  {isKorean ? industryLabels[industry].ko : industryLabels[industry].en}
+                </span>
+                {selected === industry && (
+                  <motion.div
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="absolute top-2 right-2"
+                    initial={{ scale: 0, opacity: 0 }}
+                  >
+                    <Check className="h-5 w-5 text-blue-600" />
+                  </motion.div>
+                )}
+              </Button>
+            ))}
+          </div>
+
+          {/* 비소비재 안내 배너 */}
+          <NonConsumerBanner
+            isKorean={isKorean}
+            onCtaClick={() => setShowNonConsumerModal(true)}
+          />
+        </CardContent>
+      </Card>
+
+      {/* 비소비재 가치 제안 모달 */}
+      <NonConsumerModal
+        isMobile={isMobile}
+        isKorean={isKorean}
+        isOpen={showNonConsumerModal}
+        onClose={() => setShowNonConsumerModal(false)}
+      />
+    </>
   )
 }
 
-// Step 2: Target Customer
-function Step2({
-  selected,
-  onSelect,
+/**
+ * 비소비재 기업 안내 배너
+ * 산업군 버튼 아래에 표시되어 딥테크/제조/IT 기업을 상담으로 유도
+ */
+function NonConsumerBanner({
   isKorean,
+  onCtaClick,
 }: {
-  selected: TargetCustomer | null
-  onSelect: (target: TargetCustomer) => void
   isKorean: boolean
+  onCtaClick: () => void
 }) {
-  const targetLabels: Record<
-    TargetCustomer,
-    { ko: string; en: string; descKo: string; descEn: string }
-  > = {
-    b2b: {
-      ko: "기업에 판매해요 (B2B)",
-      en: "Sell to businesses (B2B)",
-      descKo: "도매, 유통사, 바이어 등",
-      descEn: "Wholesale, distributors, buyers",
-    },
-    b2c: {
-      ko: "소비자에게 판매해요 (B2C)",
-      en: "Sell to consumers (B2C)",
-      descKo: "온라인몰, 소매 등",
-      descEn: "Online stores, retail",
-    },
-    both: {
-      ko: "둘 다 해요",
-      en: "Both",
-      descKo: "기업과 소비자 모두",
-      descEn: "Businesses and consumers",
-    },
-  }
-
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl">
-          {isKorean ? "누구에게 판매하세요?" : "Who do you sell to?"}
-        </CardTitle>
-        <CardDescription>
-          {isKorean
-            ? "판매 대상에 맞는 전략을 세워드릴게요"
-            : "We'll create a strategy for your target audience"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-        <div className="space-y-4 md:space-y-5">
-          {TARGET_CUSTOMERS.map((target) => (
-            <Button
-              className={cn(
-                "relative h-auto min-h-[68px] w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all md:min-h-[80px] md:p-5",
-                // Touch feedback
-                "active:scale-[0.98] active:brightness-95",
-                // Desktop hover
-                "md:hover:scale-[1.01] md:hover:shadow-md",
-                // Selection states
-                selected === target
-                  ? "border-blue-500 bg-blue-50 shadow-blue-100 shadow-md hover:bg-blue-50"
-                  : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
-              )}
-              key={target}
-              onClick={() => onSelect(target)}
-              variant="outline"
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span
-                  className={cn(
-                    "font-medium",
-                    selected === target ? "text-blue-700" : "text-gray-900",
-                  )}
-                >
-                  {isKorean ? targetLabels[target].ko : targetLabels[target].en}
-                </span>
-                <span className="text-gray-500 text-sm">
-                  {isKorean ? targetLabels[target].descKo : targetLabels[target].descEn}
-                </span>
-              </div>
-              {selected === target && (
-                <motion.div
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="absolute top-2 right-2"
-                  initial={{ scale: 0, opacity: 0 }}
-                >
-                  <Check className="h-5 w-5 text-blue-600" />
-                </motion.div>
-              )}
-            </Button>
-          ))}
+    <div className="mt-6 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+        {/* 아이콘 + 텍스트 */}
+        <div className="flex flex-1 items-start gap-3">
+          <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:flex">
+            <Lightbulb className="h-4 w-4 text-blue-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-medium text-gray-900 text-sm md:text-base">
+              {isKorean
+                ? "딥테크, 제조/부품, IT/소프트웨어 기업이신가요?"
+                : "In DeepTech, Manufacturing, or IT/Software?"}
+            </h4>
+            <p className="mt-1 text-gray-600 text-xs md:text-sm">
+              {isKorean
+                ? "산업 특성에 맞는 맞춤형 바이어 매칭 서비스를 제공해드려요"
+                : "We offer customized buyer matching tailored to your industry"}
+            </p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* CTA 버튼 */}
+        <Button
+          className="w-full border-blue-200 bg-white hover:bg-blue-50 md:w-auto"
+          onClick={onCtaClick}
+          variant="outline"
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          {isKorean ? "맞춤 솔루션 알아보기" : "Discover Your Solution"}
+        </Button>
+      </div>
+    </div>
   )
 }
 
-// 국가별 아이콘
+/**
+ * 비소비재 기업 가치 제안 모달
+ * 모바일: Drawer (바텀시트), 데스크톱: Dialog (중앙 모달)
+ */
+function NonConsumerModal({
+  isOpen,
+  onClose,
+  isKorean,
+  isMobile,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  isKorean: boolean
+  isMobile: boolean
+}) {
+  const handleConfirm = () => {
+    window.open("https://rinda.ai/contact", "_blank")
+    onClose()
+  }
+
+  const valueProps = [
+    { ko: "전문 컨설턴트의 1:1 상담", en: "1:1 consultation with experts" },
+    { ko: "24시간 내 연락드려요", en: "We'll contact you within 24h" },
+    { ko: "무료 상담, 부담 없이", en: "Free consultation, no obligation" },
+  ]
+
+  // 모바일: Drawer (바텀시트)
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={(o) => !o && onClose()}>
+        <DrawerContent className="max-h-[60vh]">
+          <DrawerHeader className="text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <Sparkles className="h-6 w-6 text-blue-600" />
+            </div>
+            <DrawerTitle className="text-lg">
+              {isKorean ? "전문가가 직접 도와드릴게요" : "Our experts will help you directly"}
+            </DrawerTitle>
+            <DrawerDescription className="mt-2 whitespace-pre-line text-sm">
+              {isKorean
+                ? "딥테크, 제조/부품, IT 산업은\n바이어 특성이 다양해요.\n전문 컨설턴트가 맞춤 바이어를 찾아드릴게요."
+                : "DeepTech, Manufacturing, and IT industries\nhave diverse buyer profiles.\nOur consultants will find the perfect buyers for you."}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          {/* 가치 제안 체크리스트 */}
+          <div className="space-y-3 px-4">
+            {valueProps.map((item, i) => (
+              <div className="flex items-center gap-3" key={i}>
+                <div className="rounded-full bg-green-100 p-1">
+                  <Check className="h-4 w-4 text-green-600" />
+                </div>
+                <span className="text-gray-700 text-sm">{isKorean ? item.ko : item.en}</span>
+              </div>
+            ))}
+          </div>
+
+          <DrawerFooter className="pb-6">
+            <Button className="h-12 w-full bg-blue-600 hover:bg-blue-700" onClick={handleConfirm}>
+              {isKorean ? "전문가와 대화하기" : "Talk to an Expert"}
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </Button>
+            <Button className="h-12 w-full text-gray-500" onClick={onClose} variant="ghost">
+              {isKorean ? "나중에 할게요" : "Maybe later"}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    )
+  }
+
+  // 데스크톱: Dialog (중앙 모달)
+  return (
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+            <Sparkles className="h-6 w-6 text-blue-600" />
+          </div>
+          <DialogTitle className="text-xl">
+            {isKorean ? "전문가가 직접 도와드릴게요" : "Our experts will help you directly"}
+          </DialogTitle>
+          <DialogDescription className="mt-2 whitespace-pre-line">
+            {isKorean
+              ? "딥테크, 제조/부품, IT 산업은\n바이어 특성이 다양해요.\n전문 컨설턴트가 맞춤 바이어를 찾아드릴게요."
+              : "DeepTech, Manufacturing, and IT industries\nhave diverse buyer profiles.\nOur consultants will find the perfect buyers for you."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* 가치 제안 체크리스트 */}
+        <div className="mt-4 space-y-3">
+          {valueProps.map((item, i) => (
+            <div className="flex items-center gap-3" key={i}>
+              <div className="rounded-full bg-green-100 p-1">
+                <Check className="h-4 w-4 text-green-600" />
+              </div>
+              <span className="text-gray-700 text-sm">{isKorean ? item.ko : item.en}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 액션 버튼 */}
+        <DialogFooter className="mt-6 flex-col gap-2 sm:flex-col">
+          <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleConfirm}>
+            {isKorean ? "전문가와 대화하기" : "Talk to an Expert"}
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+          <Button className="w-full text-gray-500" onClick={onClose} variant="ghost">
+            {isKorean ? "나중에 할게요" : "Maybe later"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// 국가별 아이콘 (중국 제외)
 const COUNTRY_ICONS: Record<TargetCountry, React.ReactNode> = {
   jp: <Globe className="h-6 w-6 text-gray-700" />,
   us: <Globe className="h-6 w-6 text-gray-700" />,
   sea: <Globe className="h-6 w-6 text-gray-700" />,
   eu: <Globe className="h-6 w-6 text-gray-700" />,
-  cn: <Globe className="h-6 w-6 text-gray-700" />,
   ae: <Globe className="h-6 w-6 text-gray-700" />,
 }
 
@@ -512,7 +593,6 @@ function Step3({
     us: { ko: "미국", en: "United States" },
     sea: { ko: "동남아시아", en: "Southeast Asia" },
     eu: { ko: "유럽", en: "Europe" },
-    cn: { ko: "중국", en: "China" },
     ae: { ko: "중동", en: "Middle East" },
   }
 
@@ -553,109 +633,6 @@ function Step3({
                 {isKorean ? countryLabels[country].ko : countryLabels[country].en}
               </span>
               {selected === country && (
-                <motion.div
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="absolute top-2 right-2"
-                  initial={{ scale: 0, opacity: 0 }}
-                >
-                  <Check className="h-5 w-5 text-blue-600" />
-                </motion.div>
-              )}
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// Step 4: Export Experience
-function Step4({
-  selected,
-  onSelect,
-  isKorean,
-}: {
-  selected: ExportExperience | null
-  onSelect: (experience: ExportExperience) => void
-  isKorean: boolean
-}) {
-  const experienceLabels: Record<
-    ExportExperience,
-    { ko: string; en: string; descKo: string; descEn: string; icon: React.ReactNode }
-  > = {
-    none: {
-      ko: "처음이에요",
-      en: "First time",
-      descKo: "걱정 마세요, AI가 처음부터 도와드려요",
-      descEn: "Don't worry, AI will help you from the start",
-      icon: <Rocket className="h-5 w-5 text-blue-500" />,
-    },
-    some: {
-      ko: "몇 번 해봤어요",
-      en: "Some experience",
-      descKo: "더 많은 바이어를 찾아드릴게요",
-      descEn: "We'll help you find more buyers",
-      icon: <Users className="h-5 w-5 text-green-500" />,
-    },
-    experienced: {
-      ko: "꾸준히 하고 있어요",
-      en: "Experienced",
-      descKo: "영업을 더 효율적으로 만들어드릴게요",
-      descEn: "We'll make your sales more efficient",
-      icon: <Sparkles className="h-5 w-5 text-purple-500" />,
-    },
-  }
-
-  return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl">
-          {isKorean ? "해외 수출 경험이 있으세요?" : "Any export experience?"}
-        </CardTitle>
-        <CardDescription>
-          {isKorean
-            ? "경험에 맞춰 최적의 도움을 드릴게요"
-            : "We'll customize our help based on your experience"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-        <div className="space-y-4 md:space-y-5">
-          {EXPORT_EXPERIENCES.map((experience) => (
-            <Button
-              className={cn(
-                "relative h-auto min-h-[68px] w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all md:min-h-[80px] md:p-5",
-                // Touch feedback
-                "active:scale-[0.98] active:brightness-95",
-                // Desktop hover
-                "md:hover:scale-[1.01] md:hover:shadow-md",
-                // Selection states
-                selected === experience
-                  ? "border-blue-500 bg-blue-50 shadow-blue-100 shadow-md hover:bg-blue-50"
-                  : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50",
-              )}
-              key={experience}
-              onClick={() => onSelect(experience)}
-              variant="outline"
-            >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                {experienceLabels[experience].icon}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span
-                  className={cn(
-                    "font-medium",
-                    selected === experience ? "text-blue-700" : "text-gray-900",
-                  )}
-                >
-                  {isKorean ? experienceLabels[experience].ko : experienceLabels[experience].en}
-                </span>
-                <span className="text-gray-500 text-sm">
-                  {isKorean
-                    ? experienceLabels[experience].descKo
-                    : experienceLabels[experience].descEn}
-                </span>
-              </div>
-              {selected === experience && (
                 <motion.div
                   animate={{ scale: 1, opacity: 1 }}
                   className="absolute top-2 right-2"

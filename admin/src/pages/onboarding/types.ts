@@ -1,16 +1,9 @@
 /**
  * Industry types for onboarding survey
- * Maps to Spec: IT_SW, MANUFACTURING, BEAUTY, FASHION, FOOD, LIVING, CONTENT, OTHER
+ * 소비재 카테고리만 포함 (제조/부품, IT/소프트웨어, 헬스케어 제외)
+ * 비소비재 기업은 산업군 버튼 아래 안내 섹션에서 상담으로 유도
  */
-export type Industry =
-  | "manufacturing"
-  | "it_saas"
-  | "beauty"
-  | "food"
-  | "fashion"
-  | "electronics"
-  | "healthcare"
-  | "guitar"
+export type Industry = "beauty" | "food" | "fashion" | "electronics"
 
 /**
  * Target customer types
@@ -20,9 +13,9 @@ export type TargetCustomer = "b2b" | "b2c" | "both"
 
 /**
  * Target country types
- * Maps to Spec: JP, US, CN, SEA, EU, ME
+ * 중국(cn) 제외
  */
-export type TargetCountry = "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+export type TargetCountry = "jp" | "us" | "sea" | "eu" | "ae"
 
 /**
  * Export experience types
@@ -37,18 +30,9 @@ export type OnboardingData = {
   experience: ExportExperience | null
 }
 
-export const TOTAL_STEPS = 4
+export const TOTAL_STEPS = 2
 
-export const INDUSTRIES: Industry[] = [
-  "manufacturing",
-  "it_saas",
-  "beauty",
-  "food",
-  "fashion",
-  "electronics",
-  "healthcare",
-  "guitar",
-]
+export const INDUSTRIES: Industry[] = ["beauty", "food", "fashion", "electronics"]
 export const TARGET_CUSTOMERS: TargetCustomer[] = ["b2b", "b2c", "both"]
-export const TARGET_COUNTRIES: TargetCountry[] = ["jp", "us", "sea", "eu", "cn", "ae"]
+export const TARGET_COUNTRIES: TargetCountry[] = ["jp", "us", "sea", "eu", "ae"]
 export const EXPORT_EXPERIENCES: ExportExperience[] = ["none", "some", "experienced"]

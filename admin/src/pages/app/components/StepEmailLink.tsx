@@ -1,4 +1,18 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart2,
+  Bell,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Lock,
+  Mail,
+  Plus,
+  Send,
+  Shield,
+  Trash2,
+} from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -178,11 +192,60 @@ export function StepEmailLink() {
           </h2>
 
           {/* Description */}
-          <p className="mb-4 max-w-sm text-gray-500">
+          <p className="mb-6 max-w-sm text-gray-500">
             {isKorean
               ? "이 계정으로 바이어에게 영업 이메일을 보내드려요"
               : "Sales emails will be sent to buyers from this account"}
           </p>
+
+          {/* 보안 배지 */}
+          <div className="mb-6 flex items-center justify-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5">
+              <Shield className="h-3.5 w-3.5 text-green-600" />
+              <span className="font-medium text-green-700 text-xs">
+                {isKorean ? "OAuth 2.0 보안 연결" : "OAuth 2.0 Secure"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5">
+              <Lock className="h-3.5 w-3.5 text-blue-600" />
+              <span className="font-medium text-blue-700 text-xs">
+                {isKorean ? "비밀번호 저장 안 함" : "No Password Stored"}
+              </span>
+            </div>
+          </div>
+
+          {/* 연동 장점 리스트 */}
+          <div className="mb-6 w-full max-w-sm rounded-lg border border-gray-100 bg-gray-50/50 p-4">
+            <h4 className="mb-3 font-medium text-gray-900 text-sm">
+              {isKorean ? "이메일을 연동하면" : "When you connect"}
+            </h4>
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5 text-gray-600 text-sm">
+                <Send className="h-4 w-4 text-blue-500" />
+                {isKorean
+                  ? "AI가 맞춤 영업 메일을 자동으로 발송해요"
+                  : "AI sends personalized sales emails automatically"}
+              </div>
+              <div className="flex items-center gap-2.5 text-gray-600 text-sm">
+                <Clock className="h-4 w-4 text-blue-500" />
+                {isKorean
+                  ? "바이어 시간대에 맞춰 최적 시간에 발송해요"
+                  : "Emails sent at optimal times for each timezone"}
+              </div>
+              <div className="flex items-center gap-2.5 text-gray-600 text-sm">
+                <Bell className="h-4 w-4 text-blue-500" />
+                {isKorean
+                  ? "바이어가 답장하면 바로 알려드려요"
+                  : "Get notified instantly when buyers reply"}
+              </div>
+              <div className="flex items-center gap-2.5 text-gray-600 text-sm">
+                <BarChart2 className="h-4 w-4 text-blue-500" />
+                {isKorean
+                  ? "이메일 오픈율과 응답률을 실시간으로 확인해요"
+                  : "Track open rates and responses in real-time"}
+              </div>
+            </div>
+          </div>
 
           {/* Current user email info */}
           <div className="mb-6 w-full max-w-sm rounded-lg bg-gradient-to-br from-gray-50 to-slate-50 p-4">

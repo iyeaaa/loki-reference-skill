@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Send, X } from "lucide-react"
+import { ArrowLeft, BarChart2, Bell, Check, Clock, Send, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -74,13 +74,42 @@ export function ExecuteSection({
           </div>
         </div>
 
+        {/* 실행 후 안내 */}
+        <div className="mb-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+          <h4 className="mb-2 font-medium text-gray-900 text-xs">
+            {isKorean ? "영업을 시작하면" : "When you start"}
+          </h4>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-gray-600 text-xs">
+              <Clock className="h-3.5 w-3.5 text-blue-500" />
+              {isKorean
+                ? "바이어 시간대에 맞춰 자동 발송돼요"
+                : "Emails sent at optimal times automatically"}
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-xs">
+              <BarChart2 className="h-3.5 w-3.5 text-blue-500" />
+              {isKorean
+                ? "오픈율과 클릭을 실시간으로 확인해요"
+                : "Track opens and clicks in real-time"}
+            </div>
+            <div className="flex items-center gap-2 text-gray-600 text-xs">
+              <Bell className="h-3.5 w-3.5 text-blue-500" />
+              {isKorean ? "바이어 답장 시 바로 알려드려요" : "Get notified when buyers reply"}
+            </div>
+          </div>
+        </div>
+
         {/* Auto-stop info */}
-        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-2 text-gray-600 text-xs leading-tight">
+        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/50 p-2 text-gray-600 text-xs leading-tight">
           <p className="mb-0.5">
-            {isKorean ? "• 바이어가 답장하면 자동으로 중지" : "• Auto-stops when buyer replies"}
+            {isKorean
+              ? "• 바이어가 답장하면 자동으로 발송 중지"
+              : "• Auto-stops when buyer replies"}
           </p>
           <p>
-            {isKorean ? "• 10회 이상 오픈 시 세일즈팀 상담" : "• Sales consultation at 10+ opens"}
+            {isKorean
+              ? "• 관심 보이는 바이어는 별도로 안내드려요"
+              : "• We'll notify you about interested buyers"}
           </p>
         </div>
 

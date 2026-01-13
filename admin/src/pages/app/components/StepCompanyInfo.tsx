@@ -1,5 +1,15 @@
-import { ArrowRight, Globe, Loader2, Mail, Search, Settings, Users } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import {
+  ArrowRight,
+  CheckCircle,
+  FileText,
+  Globe,
+  Lightbulb,
+  Loader2,
+  Settings,
+  Target,
+  Users,
+} from "lucide-react"
+import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -7,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 // import { Switch } from "@/components/ui/switch" // Temporarily hidden
 // Select 컴포넌트 - 설문 드롭다운 제거로 인해 사용하지 않음
 // import {
@@ -107,6 +118,42 @@ export function StepCompanyInfo() {
 
   // Company name translation hook
   const translateMutation = useTranslateCompanyName()
+
+  // 프로필 완성도 계산
+  const profileCompleteness = useMemo(() => {
+    let score = 0
+    // 회사명 (20점)
+    if (editedData.companyName?.trim().length >= 2) {
+      score += 20
+    }
+    // 회사 설명 (50점 - 길이에 따라)
+    const descLength = editedData.companyDescription?.trim().length || 0
+    if (descLength >= 30) {
+      score += 25
+    }
+    if (descLength >= 80) {
+      score += 15
+    }
+    if (descLength >= 150) {
+      score += 10
+    }
+    // 웹사이트 (30점)
+    if (editedData.websiteUrl?.trim()) {
+      score += 30
+    }
+
+    return Math.min(score, 100)
+  }, [editedData.companyName, editedData.companyDescription, editedData.websiteUrl])
+
+  const completenessLevel = useMemo(() => {
+    if (profileCompleteness >= 80) {
+      return "excellent"
+    }
+    if (profileCompleteness >= 50) {
+      return "good"
+    }
+    return "basic"
+  }, [profileCompleteness])
 
   console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
 
@@ -404,7 +451,7 @@ export function StepCompanyInfo() {
   return (
     <div className="mx-auto max-w-2xl">
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="text-2xl">
             {isKorean ? "RINDA에게 회사를 소개해주세요" : "Tell RINDA about your company"}
           </CardTitle>
@@ -415,39 +462,93 @@ export function StepCompanyInfo() {
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* 가치 체감 안내 섹션 */}
-          <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-            <p className="mb-3 font-medium text-blue-800 text-sm">
-              {isKorean ? "입력하시면 준비해드릴 것들" : "What we'll prepare for you"}
-            </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                  <Search className="h-3 w-3 text-blue-600" />
-                </div>
-                <span className="text-gray-700 text-xs">
-                  {isKorean ? "맞춤 바이어 리스트" : "Matched buyer list"}
-                </span>
+          {/* 가치 제안 배너 - 왜 상세하게 입력해야 하는지 안내 */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                <Lightbulb className="h-4 w-4 text-blue-600" />
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                  <Mail className="h-3 w-3 text-blue-600" />
-                </div>
-                <span className="text-gray-700 text-xs">
-                  {isKorean ? "바이어별 맞춤 이메일" : "Personalized emails per buyer"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                  <Users className="h-3 w-3 text-blue-600" />
-                </div>
-                <span className="text-gray-700 text-xs">
-                  {isKorean ? "발송 대행 + 후속 관리" : "Sending + follow-up management"}
-                </span>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900 text-sm">
+                  {isKorean
+                    ? "상세하게 입력할수록 더 정확한 바이어를 찾아드려요"
+                    : "More details help us find better-matched buyers"}
+                </h4>
+                <ul className="mt-2 space-y-1.5">
+                  <li className="flex items-center gap-2 text-gray-600 text-sm">
+                    <Target className="h-3.5 w-3.5 text-blue-500" />
+                    {isKorean
+                      ? "제품 특성 → 관심 있는 바이어만 선별"
+                      : "Product details → Filter interested buyers only"}
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-600 text-sm">
+                    <FileText className="h-3.5 w-3.5 text-blue-500" />
+                    {isKorean
+                      ? "회사 강점 → AI가 설득력 있는 이메일 작성"
+                      : "Company strengths → AI writes persuasive emails"}
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-600 text-sm">
+                    <Globe className="h-3.5 w-3.5 text-blue-500" />
+                    {isKorean
+                      ? "웹사이트 → 바이어에게 신뢰감 전달"
+                      : "Website → Build trust with buyers"}
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
 
+          {/* 프로필 완성도 표시기 */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2 font-medium text-gray-700 text-sm">
+                <Users className="h-4 w-4" />
+                {isKorean ? "프로필 완성도" : "Profile completeness"}
+              </span>
+              <span
+                className={`font-semibold text-sm ${
+                  completenessLevel === "excellent"
+                    ? "text-green-600"
+                    : completenessLevel === "good"
+                      ? "text-blue-600"
+                      : "text-gray-500"
+                }`}
+              >
+                {profileCompleteness}%
+              </span>
+            </div>
+            <Progress
+              className={`h-2 ${
+                completenessLevel === "excellent"
+                  ? "[&>div]:bg-green-500"
+                  : completenessLevel === "good"
+                    ? "[&>div]:bg-blue-500"
+                    : "[&>div]:bg-gray-400"
+              }`}
+              value={profileCompleteness}
+            />
+            <p className="mt-2 flex items-center gap-1.5 text-gray-500 text-xs">
+              {completenessLevel === "excellent" ? (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  {isKorean
+                    ? "훌륭해요! 최적의 바이어 매칭이 가능해요"
+                    : "Excellent! Best buyer matching available"}
+                </>
+              ) : completenessLevel === "good" ? (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                  {isKorean
+                    ? "좋아요! 웹사이트를 추가하면 더 좋아요"
+                    : "Good! Add your website for better results"}
+                </>
+              ) : isKorean ? (
+                "회사 설명을 더 자세히 적어주세요"
+              ) : (
+                "Add more details about your company"
+              )}
+            </p>
+          </div>
           {/* Company Name - Grid layout with English name */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

@@ -11,7 +11,16 @@
  * - Seamless transition from discovery to email generation
  */
 
-import { ArrowLeft, ArrowRight, CheckCircle2, Mail, Sparkles, Users, XCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Gift,
+  Mail,
+  Sparkles,
+  Users,
+  XCircle,
+} from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -577,6 +586,40 @@ export function StepLeadGeneration() {
               isKorean={isKorean}
               leadCount={leadCount}
             />
+
+            {/* 완료되면 받게 될 것들 - 가치 안내 */}
+            <div className="rounded-lg border border-blue-100 bg-blue-50/30 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                  <Gift className="h-4 w-4 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 text-sm">
+                    {isKorean ? "완료되면 바로 사용할 수 있어요" : "Ready to use when complete"}
+                  </h4>
+                  <ul className="mt-2 space-y-1.5 text-gray-600 text-sm">
+                    <li className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-blue-500" />
+                      {isKorean
+                        ? "회사에 관심있을 해외 바이어 연락처"
+                        : "Contact info of interested international buyers"}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-blue-500" />
+                      {isKorean
+                        ? "각 바이어에게 맞춤 작성된 영업 이메일"
+                        : "Personalized sales emails for each buyer"}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                      {isKorean
+                        ? "발송만 하면 바로 해외 영업 시작"
+                        : "Start global outreach with one click"}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* Real-time Lead Cards */}
             {leads.length > 0 && (

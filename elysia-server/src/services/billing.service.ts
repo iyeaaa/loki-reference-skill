@@ -656,3 +656,97 @@ export async function getSubscriptionHistory(
     .where(eq(subscriptionHistory.subscriptionId, subscriptionId))
     .orderBy(desc(subscriptionHistory.createdAt))
 }
+
+// ============================================================================
+// Trial History Check (체험판 중복 사용 방지)
+// ============================================================================
+
+export interface TrialHistoryInfo {
+  subscriptionId: string
+  workspaceId: string
+  status: SubscriptionStatus
+  trialStart: Date | null
+  trialEnd: Date | null
+  createdAt: Date
+}
+
+/**
+ * 사용자의 Trial 구독 이력 확인
+ * 과거에 Trial을 사용한 적이 있는지 확인
+ *
+ * @param userId - 확인할 사용자 ID
+ * @returns Trial 이력 정보
+ */
+export async function getUserTrialHistory(userId: string): Promise<{
+  hasUsedTrial: boolean
+  trialSubscriptions: TrialHistoryInfo[]
+}> {
+  // 1. 사용자의 billing_customer 조회
+  const customer = await getCustomerByUserId(userId)
+
+  if (!customer) {
+    return { hasUsedTrial: false, trialSubscriptions: [] }
+  }
+
+  // 2. 해당 customer의 모든 Trial subscription 조회
+  const trialHistory = await db
+    .select({
+      subscriptionId: subscriptions.id,
+      workspaceId: subscriptions.workspaceId,
+      status: subscriptions.status,
+      trialStart: subscriptions.trialStart,
+      trialEnd: subscriptions.trialEnd,
+      createdAt: subscriptions.createdAt,
+    })
+    .from(subscriptions)
+    .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(and(eq(subscriptions.customerId, customer.id), eq(billingProducts.tier, "trial")))
+    .orderBy(desc(subscriptions.createdAt))
+
+  return {
+    hasUsedTrial: trialHistory.length > 0,
+    trialSubscriptions: trialHistory,
+  }
+}
+
+/**
+ * 사용자가 과거에 Trial을 사용한 적이 있는지 빠르게 확인
+ *
+ * @param userId - 확인할 사용자 ID
+ * @returns true이면 과거 Trial 이력 있음
+ */
+export async function hasTrialHistory(userId: string): Promise<boolean> {
+  const history = await getUserTrialHistory(userId)
+  return history.hasUsedTrial
+}
+
+/**
+ * 사용자가 유료 구독으로 전환한 적이 있는지 확인
+ * Unipile 해지 시 안전장치로 사용
+ *
+ * @param workspaceId - 확인할 워크스페이스 ID
+ * @returns true이면 유료 전환 이력 있음
+ */
+export async function hasEverBeenPaidSubscriber(workspaceId: string): Promise<boolean> {
+  // subscriptionHistory에서 유료 tier로 전환된 이력 확인
+  const paidHistory = await db
+    .select({ id: subscriptionHistory.id })
+    .from(subscriptionHistory)
+    .innerJoin(subscriptions, eq(subscriptionHistory.subscriptionId, subscriptions.id))
+    .innerJoin(billingPlans, eq(subscriptionHistory.newPlanId, billingPlans.id))
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(
+        eq(subscriptions.workspaceId, workspaceId),
+        or(
+          eq(billingProducts.tier, "basic"),
+          eq(billingProducts.tier, "pro"),
+          eq(billingProducts.tier, "enterprise"),
+        ),
+      ),
+    )
+    .limit(1)
+
+  return paidHistory.length > 0
+}

@@ -159,11 +159,37 @@ export async function countTrialWorkspaces(userId: string): Promise<number> {
  * 워크스페이스에 Trial 구독 생성
  * 새 워크스페이스는 기본적으로 Trial(체험판) 등급으로 시작
  * 데이터베이스에서 동적으로 Trial 요금제 조회
+ *
+ * @throws Error - 이미 Trial을 사용한 적이 있는 경우 (TRIAL_ALREADY_USED)
  */
 async function createTrialSubscription(
   workspaceId: string,
   customerId: string,
 ): Promise<{ id: string }> {
+  // === Trial 중복 사용 방지 체크 ===
+  const customer = await db
+    .select({ userId: billingCustomers.userId })
+    .from(billingCustomers)
+    .where(eq(billingCustomers.id, customerId))
+    .limit(1)
+
+  if (customer[0]) {
+    const { hasTrialHistory } = await import("./billing.service")
+    const hasUsedTrial = await hasTrialHistory(customer[0].userId)
+
+    if (hasUsedTrial) {
+      logger.info(
+        { customerId, userId: customer[0].userId, workspaceId },
+        "[TrialDuplicateCheck] Trial subscription denied - user has previous trial history",
+      )
+      // 친근하고 안내적인 메시지로 변경
+      throw new Error(
+        "TRIAL_ALREADY_USED: 이전에 체험판을 이용해 주셨네요! 더 강력한 기능을 원하시면 유료 플랜을 확인해 보세요.",
+      )
+    }
+  }
+  // === Trial 중복 체크 끝 ===
+
   // 데이터베이스에서 Trial 요금제 동적 조회
   const trialPlan = await getDefaultTrialPlan()
 
@@ -392,12 +418,28 @@ export async function createWorkspace(data: {
         "Workspace created with trial subscription (Level 1)",
       )
     } catch (error) {
-      // Trial 구독 생성 실패해도 워크스페이스 생성은 계속 진행
-      // 나중에 수동으로 구독을 추가할 수 있음
-      logger.warn(
-        { error, workspaceId: newWorkspace.id },
-        "Failed to create trial subscription for workspace, continuing without subscription",
-      )
+      // TRIAL_ALREADY_USED: 워크스페이스는 생성 완료, 결제 페이지로 자연스럽게 안내
+      if (error instanceof Error && error.message.startsWith("TRIAL_ALREADY_USED")) {
+        logger.info(
+          { workspaceId: newWorkspace.id, ownerId: data.ownerId },
+          "[TrialDuplicateCheck] Workspace created - awaiting subscription (previous trial used)",
+        )
+        // 워크스페이스 상태를 'payment_required'로 설정하여 클라이언트에서 자연스럽게 결제 안내
+        await db
+          .update(workspaces)
+          .set({
+            subscriptionStatus: "past_due", // 결제 필요 상태
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaces.id, newWorkspace.id))
+        // 에러를 throw하지 않고 워크스페이스 정상 반환 (클라이언트에서 상태 확인 후 결제 안내)
+      } else {
+        // 다른 에러는 기존 로직대로 처리 (워크스페이스 생성은 계속 진행)
+        logger.warn(
+          { error, workspaceId: newWorkspace.id },
+          "Failed to create trial subscription for workspace, continuing without subscription",
+        )
+      }
     }
   }
 

@@ -679,3 +679,133 @@ export async function setAsDefault(id: string, userId: string, workspaceId: stri
 
   return updatedAccount
 }
+
+// ====================================
+// TRIAL EXPIRATION - UNIPILE DISCONNECT
+// ====================================
+
+/**
+ * 워크스페이스의 모든 Unipile 계정 해지
+ * Trial 만료 후 유예 기간 종료 시 호출
+ *
+ * 참고: suspended 상태의 계정은 유료 플랜 재구독 시 다시 연동 가능합니다.
+ *
+ * @param workspaceId - 대상 워크스페이스 ID
+ * @param reason - 해지 사유 (로그용)
+ * @returns 해지된 계정 수
+ */
+export async function disconnectWorkspaceUnipileAccounts(
+  workspaceId: string,
+  reason: string,
+): Promise<number> {
+  // 1. 해당 워크스페이스의 Unipile 계정 조회 (active 상태만)
+  const unipileAccounts = await db
+    .select({
+      id: userEmailAccounts.id,
+      apiKey: userEmailAccounts.apiKey, // Unipile account_id
+      emailAddress: userEmailAccounts.emailAddress,
+    })
+    .from(userEmailAccounts)
+    .where(
+      and(
+        eq(userEmailAccounts.workspaceId, workspaceId),
+        eq(userEmailAccounts.provider, "unipile"),
+        eq(userEmailAccounts.status, "active"),
+      ),
+    )
+
+  if (unipileAccounts.length === 0) {
+    logger.info({ workspaceId }, "[UnipileDisconnect] No active Unipile accounts to disconnect")
+    return 0
+  }
+
+  let disconnectedCount = 0
+
+  for (const account of unipileAccounts) {
+    try {
+      // 2. Unipile API에서 계정 삭제
+      const { deleteAccount } = await import("./unipile.service")
+      await deleteAccount(account.apiKey)
+
+      // 3. DB에서 계정 상태를 suspended로 변경 (삭제하지 않고 보존 - 재구독 시 복구 가능)
+      // 복구 안내 메시지 포함
+      const suspendReason = `${reason} | 유료 플랜 구독 시 이메일 계정을 다시 연동할 수 있습니다.`
+      await db
+        .update(userEmailAccounts)
+        .set({
+          status: "suspended",
+          lastError: suspendReason,
+          updatedAt: new Date(),
+        })
+        .where(eq(userEmailAccounts.id, account.id))
+
+      disconnectedCount++
+
+      logger.info(
+        { workspaceId, accountId: account.id, email: account.emailAddress },
+        "[UnipileDisconnect] Unipile account suspended (recoverable with paid subscription)",
+      )
+    } catch (error) {
+      // API 실패해도 다른 계정 처리 계속 진행
+      logger.error(
+        { error, workspaceId, accountId: account.id },
+        "[UnipileDisconnect] Failed to disconnect Unipile account",
+      )
+    }
+  }
+
+  return disconnectedCount
+}
+
+/**
+ * Unipile 해지 예정 워크스페이스 조회 (알림용)
+ * Trial 만료 후 4일 경과 ~ 7일 미만인 워크스페이스
+ * 이 함수를 사용하여 해지 3일 전에 고객에게 알림을 보낼 수 있습니다.
+ *
+ * @returns 해지 예정 워크스페이스 목록 (알림 발송용)
+ */
+export async function getUnipileDisconnectWarningTargets(): Promise<
+  Array<{
+    workspaceId: string
+    trialEnd: Date | null
+    daysUntilDisconnect: number
+  }>
+> {
+  const now = new Date()
+  const { subscriptions, billingPlans, billingProducts } = await import("../db/schema/billing")
+  const { lt, and, eq } = await import("drizzle-orm")
+
+  // 4일 전 ~ 7일 전 범위 계산
+  const warningStartCutoff = new Date(now)
+  warningStartCutoff.setDate(warningStartCutoff.getDate() - 7) // 7일 전
+
+  const warningEndCutoff = new Date(now)
+  warningEndCutoff.setDate(warningEndCutoff.getDate() - 4) // 4일 전
+
+  const targets = await db
+    .select({
+      workspaceId: subscriptions.workspaceId,
+      trialEnd: subscriptions.trialEnd,
+    })
+    .from(subscriptions)
+    .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(
+        eq(subscriptions.status, "expired"),
+        lt(subscriptions.trialEnd, warningEndCutoff), // 4일 이상 경과
+        eq(billingProducts.tier, "trial"),
+        eq(subscriptions.isPrimary, true),
+      ),
+    )
+
+  return targets
+    .filter((t) => t.trialEnd && t.trialEnd > warningStartCutoff)
+    .map((t) => ({
+      workspaceId: t.workspaceId,
+      trialEnd: t.trialEnd,
+      daysUntilDisconnect: t.trialEnd
+        ? Math.ceil((7 - (now.getTime() - t.trialEnd.getTime()) / (1000 * 60 * 60 * 24)) * 10) / 10
+        : 0,
+    }))
+}

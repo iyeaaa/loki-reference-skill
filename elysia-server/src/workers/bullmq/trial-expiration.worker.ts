@@ -13,12 +13,17 @@
 import { type Job, Worker } from "bullmq"
 import { and, eq, lt } from "drizzle-orm"
 import { db } from "../../db"
-import { subscriptions } from "../../db/schema/billing"
+import { billingPlans, billingProducts, subscriptions } from "../../db/schema/billing"
 import { sequences } from "../../db/schema/sequences"
 import { recordJobCompleted, recordJobFailed } from "../../lib/health"
 import { createRedisConnection } from "../../lib/redis/connection"
+import { hasEverBeenPaidSubscriber } from "../../services/billing.service"
+import { disconnectWorkspaceUnipileAccounts } from "../../services/email-account.service"
 import * as jobLogService from "../../services/job-log.service"
 import logger from "../../utils/logger"
+
+/** Unipile 해지 유예 기간 (일) */
+const UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS = 7
 
 const QUEUE_NAME = "trial-expiration"
 const WORKER_NAME = "trial-expiration-worker"
@@ -35,6 +40,7 @@ export interface TrialExpirationResult {
   success: boolean
   expiredCount: number
   pausedSequencesCount: number
+  unipileDisconnectedCount: number
   errors: string[]
 }
 
@@ -69,6 +75,7 @@ async function processTrialExpiration(
   const errors: string[] = []
   let expiredCount = 0
   let pausedSequencesCount = 0
+  let unipileDisconnectedCount = 0
 
   try {
     // 1. 만료된 체험판 subscription 찾기
@@ -88,15 +95,6 @@ async function processTrialExpiration(
       { count: expiredSubscriptions.length },
       "[TrialExpirationWorker] Found expired trial subscriptions",
     )
-
-    if (expiredSubscriptions.length === 0) {
-      return {
-        success: true,
-        expiredCount: 0,
-        pausedSequencesCount: 0,
-        errors: [],
-      }
-    }
 
     // 2. 각 만료된 subscription 처리
     for (const subscription of expiredSubscriptions) {
@@ -164,10 +162,80 @@ async function processTrialExpiration(
       }
     }
 
+    // 3. 7일 유예 기간 후 Unipile 계정 해지
+    // - status = 'expired'
+    // - tier = 'trial'
+    // - trialEnd < (now - 7일)
+    const gracePeriodCutoff = new Date(now)
+    gracePeriodCutoff.setDate(gracePeriodCutoff.getDate() - UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS)
+
+    const unipileDisconnectTargets = await db
+      .select({
+        subscriptionId: subscriptions.id,
+        workspaceId: subscriptions.workspaceId,
+        trialEnd: subscriptions.trialEnd,
+      })
+      .from(subscriptions)
+      .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+      .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+      .where(
+        and(
+          eq(subscriptions.status, "expired"),
+          lt(subscriptions.trialEnd, gracePeriodCutoff),
+          eq(billingProducts.tier, "trial"),
+          eq(subscriptions.isPrimary, true),
+        ),
+      )
+
+    logger.info(
+      {
+        count: unipileDisconnectTargets.length,
+        gracePeriodCutoff: gracePeriodCutoff.toISOString(),
+      },
+      "[TrialExpirationWorker] Found expired trial subscriptions for Unipile disconnect",
+    )
+
+    // 3a. 각 대상에 대해 Unipile 계정 해지
+    for (const target of unipileDisconnectTargets) {
+      try {
+        // 안전장치: 유료 전환 이력이 있는 경우 건너뛰기
+        const hasPaidHistory = await hasEverBeenPaidSubscriber(target.workspaceId)
+        if (hasPaidHistory) {
+          logger.info(
+            { workspaceId: target.workspaceId },
+            "[TrialExpirationWorker] Skipping Unipile disconnect - workspace has paid subscription history",
+          )
+          continue
+        }
+
+        const disconnected = await disconnectWorkspaceUnipileAccounts(
+          target.workspaceId,
+          `Trial expired without conversion (${UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS}-day grace period ended)`,
+        )
+        unipileDisconnectedCount += disconnected
+
+        if (disconnected > 0) {
+          logger.info(
+            {
+              workspaceId: target.workspaceId,
+              subscriptionId: target.subscriptionId,
+              disconnectedCount: disconnected,
+            },
+            "[TrialExpirationWorker] Unipile accounts disconnected",
+          )
+        }
+      } catch (error) {
+        const errorMsg = `Failed to disconnect Unipile for workspace ${target.workspaceId}: ${error instanceof Error ? error.message : String(error)}`
+        errors.push(errorMsg)
+        logger.error({ error, workspaceId: target.workspaceId }, errorMsg)
+      }
+    }
+
     logger.info(
       {
         expiredCount,
         pausedSequencesCount,
+        unipileDisconnectedCount,
         errorCount: errors.length,
       },
       "[TrialExpirationWorker] Trial expiration check completed",
@@ -177,6 +245,7 @@ async function processTrialExpiration(
       success: errors.length === 0,
       expiredCount,
       pausedSequencesCount,
+      unipileDisconnectedCount,
       errors,
     }
   } catch (error) {

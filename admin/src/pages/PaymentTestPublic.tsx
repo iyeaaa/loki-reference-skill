@@ -81,14 +81,6 @@ type PaymentResult = {
   paidAt?: string
 }
 
-// 테스트 카드 정보 (PG 심사용)
-const TEST_CARD_INFO = {
-  cardNumber: "4242424242424242",
-  expiry: "12/30",
-  cvc: "123",
-  password: "12",
-}
-
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -827,31 +819,6 @@ export default function PaymentTestPublic() {
                   )}
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Test Card Info - PG 심사용 */}
-            <div className="rounded-lg border border-amber-300 border-dashed bg-amber-50/50 p-4">
-              <p className="mb-3 text-center text-amber-700 text-xs">
-                PG 심사용 테스트 카드 (실제 결제 X)
-              </p>
-              <div className="overflow-hidden rounded-md border border-amber-200 bg-white text-sm">
-                <div className="flex border-amber-100 border-b px-4 py-2">
-                  <span className="w-20 text-gray-500">카드번호</span>
-                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.cardNumber}</code>
-                </div>
-                <div className="flex border-amber-100 border-b px-4 py-2">
-                  <span className="w-20 text-gray-500">유효기간</span>
-                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.expiry}</code>
-                </div>
-                <div className="flex border-amber-100 border-b px-4 py-2">
-                  <span className="w-20 text-gray-500">CVC</span>
-                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.cvc}</code>
-                </div>
-                <div className="flex px-4 py-2">
-                  <span className="w-20 text-gray-500">비밀번호</span>
-                  <code className="font-mono text-gray-900">{TEST_CARD_INFO.password}**</code>
-                </div>
-              </div>
             </div>
           </TabsContent>
 

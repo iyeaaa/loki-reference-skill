@@ -58,7 +58,7 @@ export function getDefaultPaymentMethod(locale?: LocaleInfo): PaymentMethod {
  */
 export type ExchangeRateInfo = {
   rate: number
-  source: "cache" | "cached" | "naver" | "api" | "realtime" | "manual" | "fallback"
+  source: "cache" | "naver" | "api" | "fallback"
   fetchedAt: Date
   expiresAt?: Date
 }
@@ -124,13 +124,9 @@ export function getExchangeRateSourceLabel(source: ExchangeRateInfo["source"]): 
     case "naver":
       return "네이버 환율 API"
     case "api":
-    case "realtime":
-      return "실시간 환율"
+      return "ExchangeRate API"
     case "cache":
-    case "cached":
       return "캐시"
-    case "manual":
-      return "수동 설정"
     case "fallback":
       return "기본값"
     default:

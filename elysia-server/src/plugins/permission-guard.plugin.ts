@@ -52,9 +52,6 @@ const PUBLIC_ROUTES = new Set([
   "GET /swagger/json",
   // Root
   "GET /",
-  // Public Billing (PG 심사용 - 요금제 조회, 환율)
-  "GET /api/v1/billing/pricing/plans",
-  "GET /api/v1/billing/exchange-rates",
 ])
 
 // 인증만 필요한 라우트 (권한 체크 불필요)

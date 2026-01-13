@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   BarChart2,
@@ -8,7 +9,7 @@ import {
   Loader2,
   Lock,
   Mail,
-  Plus,
+  RefreshCw,
   Send,
   Shield,
   Trash2,
@@ -17,6 +18,16 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -331,6 +342,8 @@ function LinkedEmailAccountsView({
   const { t, i18n } = useTranslation()
   const deleteEmailAccountMutation = useDeleteEmailAccount()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showChangeAccountDialog, setShowChangeAccountDialog] = useState(false)
+  const [isChangingAccount, setIsChangingAccount] = useState(false)
 
   const { refetch } = useEmailAccountByWorkspaceAndUser(workspaceId, !!workspaceId)
 
@@ -369,6 +382,34 @@ function LinkedEmailAccountsView({
       toast.error(t("app.onboarding.step1.deleteError", "이메일 계정 삭제에 실패했습니다"))
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  // 계정 변경: 기존 계정 삭제 후 새 계정 연동 플로우 시작
+  const handleChangeAccount = async () => {
+    setIsChangingAccount(true)
+    try {
+      // 1. 기존 Unipile 계정 삭제 시도
+      try {
+        await deleteUnipileAccount(emailAccount.id)
+      } catch (accountError) {
+        console.warn("Failed to delete Unipile account (may already be deleted):", accountError)
+      }
+
+      // 2. DB에서 이메일 계정 삭제
+      await deleteEmailAccountMutation.mutateAsync(emailAccount.id)
+
+      // 3. 삭제 성공 후 새 계정 연동 플로우 시작
+      setShowChangeAccountDialog(false)
+      onAddMore()
+    } catch (error) {
+      console.error("Failed to change email account:", error)
+      toast.error(
+        i18n.language === "ko"
+          ? "계정 변경에 실패했습니다. 다시 시도해주세요."
+          : "Failed to change account. Please try again.",
+      )
+      setIsChangingAccount(false)
     }
   }
 
@@ -440,20 +481,67 @@ function LinkedEmailAccountsView({
           </div>
         </div>
 
-        {/* Add More Button */}
+        {/* Change Account Button */}
         <Button
-          className="mb-4 h-11 w-full border-dashed"
-          disabled={isAddingMore}
-          onClick={onAddMore}
+          className="mb-4 h-11 w-full border-dashed text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+          disabled={isAddingMore || isChangingAccount}
+          onClick={() => setShowChangeAccountDialog(true)}
           variant="outline"
         >
-          {isAddingMore ? (
+          {isAddingMore || isChangingAccount ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Plus className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          {isKorean ? "다른 계정 추가" : "Add another account"}
+          {isKorean ? "다른 계정으로 변경" : "Change to another account"}
         </Button>
+
+        {/* Change Account Confirmation Dialog */}
+        <AlertDialog open={showChangeAccountDialog} onOpenChange={setShowChangeAccountDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              </div>
+              <AlertDialogTitle className="text-center">
+                {isKorean ? "이메일 계정을 변경하시겠어요?" : "Change email account?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center">
+                {isKorean ? (
+                  <>
+                    현재 연동된 <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span> 계정의 연결이 해제되고,
+                    <br />새 계정으로 연동됩니다.
+                  </>
+                ) : (
+                  <>
+                    Your current account <span className="font-medium text-gray-700">{emailAccount.emailAddress}</span> will be disconnected,
+                    <br />and a new account will be connected.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="sm:justify-center">
+              <AlertDialogCancel disabled={isChangingAccount}>
+                {isKorean ? "취소" : "Cancel"}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isChangingAccount}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleChangeAccount()
+                }}
+              >
+                {isChangingAccount ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {isKorean ? "계정 변경하기" : "Change account"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Navigation Buttons */}
         <div className="flex gap-3">

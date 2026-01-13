@@ -38,11 +38,11 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { Progress } from "@/components/ui/progress"
-import { useExitIntent } from "@/hooks/useExitIntent"
 import { useIsMobile } from "@/hooks/use-mobile"
-import type { OnboardingStep } from "@/lib/exit-intent-messages"
+import { useExitIntent } from "@/hooks/useExitIntent"
 import { trackSurveyStep } from "@/lib/analytics"
 import { slideMobileVariants, slideVariants } from "@/lib/animations"
+import type { OnboardingStep } from "@/lib/exit-intent-messages"
 import { cn } from "@/lib/utils"
 import {
   getLastCompletedStep,
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
   const progress = (currentStep / TOTAL_STEPS) * 100
 
   // 이탈 감지 훅
-  const exitIntent = useExitIntent({ enabled: true, idleTimeout: 30000 })
+  const exitIntent = useExitIntent({ enabled: true, idleTimeout: 30_000 })
 
   // 현재 스텝을 OnboardingStep 타입으로 매핑
   const currentExitStep: OnboardingStep = currentStep === 1 ? "survey1" : "survey2"
@@ -388,17 +388,14 @@ function Step1({
           </div>
 
           {/* 비소비재 안내 배너 */}
-          <NonConsumerBanner
-            isKorean={isKorean}
-            onCtaClick={() => setShowNonConsumerModal(true)}
-          />
+          <NonConsumerBanner isKorean={isKorean} onCtaClick={() => setShowNonConsumerModal(true)} />
         </CardContent>
       </Card>
 
       {/* 비소비재 가치 제안 모달 */}
       <NonConsumerModal
-        isMobile={isMobile}
         isKorean={isKorean}
+        isMobile={isMobile}
         isOpen={showNonConsumerModal}
         onClose={() => setShowNonConsumerModal(false)}
       />
@@ -482,7 +479,7 @@ function NonConsumerModal({
   // 모바일: Drawer (바텀시트)
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <Drawer onOpenChange={(o) => !o && onClose()} open={isOpen}>
         <DrawerContent className="max-h-[60vh]">
           <DrawerHeader className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
@@ -526,7 +523,7 @@ function NonConsumerModal({
 
   // 데스크톱: Dialog (중앙 모달)
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+    <Dialog onOpenChange={(o) => !o && onClose()} open={isOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">

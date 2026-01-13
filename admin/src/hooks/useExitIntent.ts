@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 export type ExitTriggerType = "idle" | "popstate" | null
 
-interface UseExitIntentOptions {
+type UseExitIntentOptions = {
   enabled?: boolean
   idleTimeout?: number // 기본 30000ms (30초)
 }
 
-interface UseExitIntentReturn {
+type UseExitIntentReturn = {
   isTriggered: boolean
   triggerType: ExitTriggerType
   dismiss: () => void
@@ -24,7 +24,7 @@ interface UseExitIntentReturn {
  */
 export function useExitIntent({
   enabled = true,
-  idleTimeout = 30000,
+  idleTimeout = 30_000,
 }: UseExitIntentOptions = {}): UseExitIntentReturn {
   const [isTriggered, setIsTriggered] = useState(false)
   const [triggerType, setTriggerType] = useState<ExitTriggerType>(null)
@@ -61,7 +61,9 @@ export function useExitIntent({
 
   // Idle detection
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      return
+    }
 
     const activityEvents = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"]
 
@@ -89,12 +91,14 @@ export function useExitIntent({
 
   // Popstate detection (뒤로가기)
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      return
+    }
 
     // 히스토리에 더미 상태 추가 (뒤로가기 감지용)
     window.history.pushState({ exitIntentGuard: true }, "")
 
-    const handlePopState = (event: PopStateEvent) => {
+    const handlePopState = (_event: PopStateEvent) => {
       // 이미 모달이 표시 중이거나, 이 세션에서 이미 표시했으면 무시
       if (isTriggered || hasShownRef.current) {
         return
@@ -118,7 +122,9 @@ export function useExitIntent({
 
   // Beforeunload (페이지 닫기/새로고침)
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      return
+    }
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // 브라우저 기본 확인창 표시

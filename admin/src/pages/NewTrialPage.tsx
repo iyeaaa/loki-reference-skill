@@ -98,9 +98,13 @@ export default function NewTrialPage() {
 
         if (isValidSurveyData(surveyData)) {
           requestBody.industry = surveyData.industry
-          requestBody.target = surveyData.target
           requestBody.country = surveyData.country
-          requestBody.experience = surveyData.experience
+          if (surveyData.target) {
+            requestBody.target = surveyData.target
+          }
+          if (surveyData.experience) {
+            requestBody.experience = surveyData.experience
+          }
           if (surveyData.lang) {
             requestBody.lang = surveyData.lang
           }

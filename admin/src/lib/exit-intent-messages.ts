@@ -3,16 +3,9 @@
  * 각 단계별 고객 심리 기반 카피라이팅
  */
 
-export type OnboardingStep =
-  | "survey1"
-  | "survey2"
-  | "login"
-  | "step1"
-  | "step2"
-  | "step3"
-  | "step4"
+export type OnboardingStep = "survey1" | "survey2" | "login" | "step1" | "step2" | "step3" | "step4"
 
-export interface ExitIntentMessage {
+export type ExitIntentMessage = {
   title: { ko: string; en: string }
   description: { ko: string; en: string }
   stayButton: { ko: string; en: string }

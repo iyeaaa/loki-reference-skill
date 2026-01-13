@@ -28,9 +28,9 @@ export type SurveyData = {
 /** 유효성 검증을 통과한 설문 데이터 (industry, country만 필수) */
 export type ValidSurveyData = {
   industry: string
-  target?: string
+  target: string | null
   country: string
-  experience?: string
+  experience: string | null
   lang?: string
 }
 

@@ -20,7 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import type { ExitIntentMessage, OnboardingStep } from "@/lib/exit-intent-messages"
 import { getExitIntentMessage } from "@/lib/exit-intent-messages"
 
-interface ExitIntentModalProps {
+type ExitIntentModalProps = {
   open: boolean
   onClose: () => void
   onStay: () => void
@@ -51,7 +51,7 @@ export function ExitIntentModal({
   // 모바일: Drawer (바텀시트)
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <Drawer onOpenChange={(o) => !o && onClose()} open={open}>
         <DrawerContent className="max-h-[60vh]">
           <DrawerHeader className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
@@ -69,7 +69,7 @@ export function ExitIntentModal({
             <Button className="h-12 w-full bg-blue-600 hover:bg-blue-700" onClick={handleStay}>
               {isKorean ? messages.stayButton.ko : messages.stayButton.en}
             </Button>
-            <Button className="h-12 w-full text-gray-500" variant="ghost" onClick={onClose}>
+            <Button className="h-12 w-full text-gray-500" onClick={onClose} variant="ghost">
               {isKorean ? messages.leaveButton.ko : messages.leaveButton.en}
             </Button>
           </DrawerFooter>
@@ -80,7 +80,7 @@ export function ExitIntentModal({
 
   // 데스크톱: Dialog (중앙 모달)
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog onOpenChange={(o) => !o && onClose()} open={open}>
       <DialogContent className="max-w-md">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100">
@@ -98,7 +98,7 @@ export function ExitIntentModal({
           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleStay}>
             {isKorean ? messages.stayButton.ko : messages.stayButton.en}
           </Button>
-          <Button className="w-full text-gray-500" variant="ghost" onClick={onClose}>
+          <Button className="w-full text-gray-500" onClick={onClose} variant="ghost">
             {isKorean ? messages.leaveButton.ko : messages.leaveButton.en}
           </Button>
         </DialogFooter>

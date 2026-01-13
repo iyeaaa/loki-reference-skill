@@ -10,6 +10,7 @@
  */
 
 import * as PortOne from "@portone/browser-sdk/v2"
+import { useMutation } from "@tanstack/react-query"
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,6 +19,7 @@ import {
   Info,
   Loader2,
   RefreshCw,
+  Search,
   XCircle,
 } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
@@ -39,13 +41,15 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { publicApiFetch } from "@/lib/api/client"
+import {
+  type BillingPlan,
+  usePublicBillingPlans,
+  usePublicExchangeRate,
+} from "@/lib/api/hooks/public-payment"
 import { env } from "@/lib/env"
 import {
-  convertKRWtoUSD,
   detectLocale,
-  type ExchangeRateInfo,
-  fetchExchangeRate,
-  formatPrice,
   getDefaultPaymentMethod,
   getExchangeRateSourceLabel,
   PAYMENT_METHODS,
@@ -60,38 +64,12 @@ const PORTONE_STORE_ID = env.VITE_PORTONE_STORE_ID
 const PORTONE_CHANNEL_KEY_TOSS = env.VITE_PORTONE_CHANNEL_KEY_TOSS
 const PORTONE_CHANNEL_KEY_PAYPAL = env.VITE_PORTONE_CHANNEL_KEY_PAYPAL
 
-// API Base URL
-const API_BASE_URL = env.VITE_API_URL || ""
-
 // ============================================================================
 // Types
 // ============================================================================
 
-type PlanPriceInfo = {
-  currency: string
-  amount: number
-  displayAmount: string
-  isCalculated: boolean
-}
-
-type BillingPlan = {
-  id: string
-  productId: string
-  name: string
-  description: string | null
-  amount: number
-  currency: string
-  billingInterval: "day" | "week" | "month" | "year" | null
-  intervalCount: number | null
-  isActive: boolean
-  product?: {
-    id: string
-    name: string
-    tier: string
-    description: string | null
-  }
-  prices?: PlanPriceInfo[]
-}
+// BillingPlan type is imported from public-payment hooks
+// 백엔드에서 amount/amountUSD/displayAmount/displayAmountUSD 직접 제공
 
 type PaymentResult = {
   success: boolean
@@ -112,98 +90,28 @@ const TEST_CARD_INFO = {
 }
 
 // ============================================================================
-// API Helper (No Auth Required)
+// API Functions
 // ============================================================================
 
-// 글로벌 서비스 타임아웃 설정
-const API_TIMEOUT = {
-  DEFAULT: 15_000, // 15초 - 일반 조회
-  PAYMENT: 30_000, // 30초 - 결제 관련 (네트워크 지연 고려)
-} as const
-
-async function publicApiFetch<T>(
-  endpoint: string,
-  options: { timeout?: number } = {},
-): Promise<T | null> {
-  const timeout = options.timeout ?? API_TIMEOUT.DEFAULT
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(timeout),
-    })
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-    return await response.json()
-  } catch (err) {
-    if (err instanceof Error && err.name === "TimeoutError") {
-      console.error("[PublicAPI] Request timeout:", endpoint)
-    } else {
-      console.error("[PublicAPI] Error:", err)
-    }
-    return null
-  }
+type PaymentVerifyData = {
+  id: string
+  status: string
+  amount: { total: number }
+  method?: { type: string }
+  paidAt?: string
 }
 
-// ============================================================================
-// Hooks
-// ============================================================================
+type PaymentVerifyApiResponse = {
+  success: boolean
+  data: PaymentVerifyData
+}
 
-function useBillingPlans() {
-  const [plans, setPlans] = useState<BillingPlan[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+async function verifyPaymentApi(paymentId: string): Promise<PaymentVerifyApiResponse> {
+  return publicApiFetch<PaymentVerifyApiResponse>(`/api/v1/payments/${paymentId}`)
+}
 
-  useEffect(() => {
-    async function fetchPlans() {
-      try {
-        const response = await publicApiFetch<{
-          plans: Array<{
-            id: string
-            productId: string
-            name: string
-            description: string | null
-            billingInterval: "day" | "week" | "month" | "year" | null
-            intervalCount: number | null
-            isActive: boolean
-            product?: {
-              id: string
-              name: string
-              tier: string
-              description: string | null
-            }
-            prices: PlanPriceInfo[]
-          }>
-        }>("/api/v1/billing/pricing/plans?currencies=KRW,USD&activeOnly=true")
-
-        if (response?.plans) {
-          const plansWithPrices: BillingPlan[] = response.plans.map((plan) => {
-            const krwPrice = plan.prices.find((p) => p.currency === "KRW")
-            return {
-              ...plan,
-              amount: krwPrice?.amount || 0,
-              currency: "KRW",
-              prices: plan.prices,
-            }
-          })
-          setPlans(plansWithPrices)
-        }
-      } catch (err) {
-        console.error("[PaymentTest] Failed to fetch plans:", err)
-        setError("요금제를 불러오는데 실패했습니다.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlans()
-  }, [])
-
-  return { plans, isLoading, error }
+async function lookupPaymentApi(paymentId: string): Promise<Record<string, unknown>> {
+  return publicApiFetch<Record<string, unknown>>(`/api/v1/payments/${paymentId}`)
 }
 
 // ============================================================================
@@ -235,8 +143,15 @@ export default function PaymentTestPublic() {
   const privacyId = useId()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Fetch billing plans from DB
-  const { plans, isLoading: isLoadingPlans, error: plansError } = useBillingPlans()
+  // Fetch billing plans from DB (tanstack query)
+  // 백엔드에서 amount/amountUSD 직접 제공 - 변환 불필요
+  const {
+    data: plans = [],
+    isLoading: isLoadingPlans,
+    error: plansQueryError,
+  } = usePublicBillingPlans()
+
+  const plansError = plansQueryError ? "요금제를 불러오는데 실패했습니다." : null
 
   // Locale detection
   const [locale] = useState(() => detectLocale())
@@ -244,13 +159,14 @@ export default function PaymentTestPublic() {
     getDefaultPaymentMethod(locale),
   )
 
-  // Exchange rate
-  const [exchangeRate, setExchangeRate] = useState<ExchangeRateInfo | null>(null)
-
-  // Fetch exchange rate on mount
-  useEffect(() => {
-    fetchExchangeRate("USD", "KRW").then(setExchangeRate)
-  }, [])
+  // Exchange rate (tanstack query)
+  const { data: exchangeRateData } = usePublicExchangeRate("USD", "KRW")
+  const exchangeRate = exchangeRateData
+    ? {
+        rate: exchangeRateData.rate,
+        source: exchangeRateData.source,
+      }
+    : null
 
   // PayPal ref
   const paypalPaymentIdRef = useRef<string>("")
@@ -266,27 +182,28 @@ export default function PaymentTestPublic() {
   // Payment lookup
   const [lookupPaymentId, setLookupPaymentId] = useState("")
   const [lookupResult, setLookupResult] = useState<Record<string, unknown> | null>(null)
-  const [isLookingUp, setIsLookingUp] = useState(false)
 
   // Selected plan
   const selectedPlan = plans.find((p) => p.id === selectedPlanId)
 
-  // USD price (DB 가격 우선, 없으면 환율로 계산)
-  const selectedPlanUSD = selectedPlan
-    ? (selectedPlan.prices?.find((p) => p.currency === "USD")?.amount ??
-      Math.round(convertKRWtoUSD(selectedPlan.amount, exchangeRate?.rate) * 100))
-    : 0
+  // USD price - 백엔드에서 직접 제공 (계산 불필요)
+  const selectedPlanUSD = selectedPlan?.amountUSD || 0
 
-  // Price display helper
-  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") => {
-    const priceInfo = plan.prices?.find((p) => p.currency === currency)
-    if (priceInfo) {
-      return priceInfo.displayAmount
-    }
-    return currency === "KRW"
-      ? formatPrice(plan.amount, "KRW")
-      : formatPrice(convertKRWtoUSD(plan.amount, exchangeRate?.rate), "USD")
-  }
+  // Price display helper - 백엔드에서 직접 제공
+  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") =>
+    currency === "KRW" ? plan.displayAmount : plan.displayAmountUSD
+
+  // Payment lookup mutation
+  const lookupPaymentMutation = useMutation({
+    mutationFn: lookupPaymentApi,
+    onSuccess: (data) => {
+      setLookupResult(data)
+    },
+    onError: (err) => {
+      console.error("[Lookup] Error:", err)
+      setLookupResult({ error: "조회 실패" })
+    },
+  })
 
   // Set default plan
   useEffect(() => {
@@ -304,16 +221,7 @@ export default function PaymentTestPublic() {
       setIsProcessing(true)
       setError(null)
 
-      publicApiFetch<{
-        success: boolean
-        data: {
-          id: string
-          status: string
-          amount: { total: number }
-          method?: { type: string }
-          paidAt?: string
-        }
-      }>(`/api/v1/payments/${redirectPaymentId}`, { timeout: API_TIMEOUT.PAYMENT })
+      verifyPaymentApi(redirectPaymentId)
         .then((verifyResponse) => {
           if (verifyResponse?.success && verifyResponse?.data?.status === "PAID") {
             setPaymentResult({
@@ -397,16 +305,7 @@ export default function PaymentTestPublic() {
         })
       } else if (response?.paymentId) {
         // Verify payment
-        const verifyResponse = await publicApiFetch<{
-          success: boolean
-          data: {
-            id: string
-            status: string
-            amount: { total: number }
-            method?: { type: string }
-            paidAt?: string
-          }
-        }>(`/api/v1/payments/${response.paymentId}`, { timeout: API_TIMEOUT.PAYMENT })
+        const verifyResponse = await verifyPaymentApi(response.paymentId)
 
         if (verifyResponse?.data?.status === "PAID") {
           setPaymentResult({
@@ -471,16 +370,7 @@ export default function PaymentTestPublic() {
         onPaymentSuccess: async () => {
           setIsProcessing(true)
           try {
-            const verifyResponse = await publicApiFetch<{
-              success: boolean
-              data: {
-                id: string
-                status: string
-                amount: { total: number }
-                method?: { type: string }
-                paidAt?: string
-              }
-            }>(`/api/v1/payments/${paypalPaymentIdRef.current}`, { timeout: API_TIMEOUT.PAYMENT })
+            const verifyResponse = await verifyPaymentApi(paypalPaymentIdRef.current)
 
             if (verifyResponse?.data?.status === "PAID") {
               setPaymentResult({
@@ -521,27 +411,17 @@ export default function PaymentTestPublic() {
     }
   }, [paymentMethod, selectedPlan, selectedPlanUSD, agreedTerms, agreedPrivacy, isPaypalConfigured])
 
-  const handleLookupPayment = async () => {
+  const handleLookupPayment = () => {
     if (!lookupPaymentId.trim()) {
       return
     }
 
-    setIsLookingUp(true)
     setLookupResult(null)
-
-    try {
-      const response = await publicApiFetch<Record<string, unknown>>(
-        `/api/v1/payments/${lookupPaymentId.trim()}`,
-        { timeout: API_TIMEOUT.PAYMENT },
-      )
-      setLookupResult(response)
-    } catch (err) {
-      console.error("[Lookup] Error:", err)
-      setLookupResult({ error: "조회 실패" })
-    } finally {
-      setIsLookingUp(false)
-    }
+    lookupPaymentMutation.mutate(lookupPaymentId.trim())
   }
+
+  // Lookup loading state (use mutation isPending)
+  const isLookingUp = lookupPaymentMutation.isPending
 
   const handleReset = () => {
     setPaymentResult(null)
@@ -567,9 +447,15 @@ export default function PaymentTestPublic() {
         </div>
 
         <Tabs className="space-y-6" defaultValue="payment">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="payment">결제 테스트</TabsTrigger>
-            <TabsTrigger value="lookup">결제 조회</TabsTrigger>
+          <TabsList className="h-9 rounded-lg bg-muted p-1">
+            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="payment">
+              <CreditCard className="h-3.5 w-3.5" />
+              결제 테스트
+            </TabsTrigger>
+            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="lookup">
+              <Search className="h-3.5 w-3.5" />
+              결제 조회
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent className="space-y-6" value="payment">
@@ -583,7 +469,7 @@ export default function PaymentTestPublic() {
                   {" → "}
                   {locale.isKorean ? "한국 카드결제 (KRW)" : "PayPal (USD)"} 기본 선택
                 </div>
-                {exchangeRate && (
+                {exchangeRate?.rate && (
                   <div className="mt-1 text-gray-500 text-xs">
                     환율: 1 USD = {exchangeRate.rate.toLocaleString()} KRW
                     <span className="ml-2 rounded bg-blue-100 px-1 text-blue-700">
@@ -714,19 +600,17 @@ export default function PaymentTestPublic() {
                             </Label>
                           </div>
 
-                          {/* PayPal */}
+                          {/* PayPal - PG 심사용이므로 지역 제한 없음 */}
                           <div>
                             <RadioGroupItem
                               className="peer sr-only"
-                              disabled={!isPaypalConfigured || locale.isKorean}
+                              disabled={!isPaypalConfigured}
                               id="payment-paypal"
                               value="PAYPAL"
                             />
                             <Label
                               className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 ${
-                                !isPaypalConfigured || locale.isKorean
-                                  ? "cursor-not-allowed opacity-50"
-                                  : ""
+                                isPaypalConfigured ? "" : "cursor-not-allowed opacity-50"
                               }`}
                               htmlFor="payment-paypal"
                             >
@@ -738,9 +622,6 @@ export default function PaymentTestPublic() {
                                 <p className="text-gray-500 text-xs">
                                   {selectedPlan && getPriceDisplay(selectedPlan, "USD")}
                                 </p>
-                                {locale.isKorean && (
-                                  <p className="mt-1 text-orange-500 text-xs">해외 구매자 전용</p>
-                                )}
                               </div>
                             </Label>
                           </div>

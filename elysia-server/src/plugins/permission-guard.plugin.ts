@@ -37,6 +37,7 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/v1/auth/refresh",
   "POST /api/v1/auth/google",
   "GET /api/v1/auth/google/callback",
+  "POST /api/v1/auth/verify-license", // 라이센스 키 검증 (로그인 전 사용)
   // Webhooks (외부 서비스 콜백)
   "POST /api/v1/webhooks/sendgrid",
   "POST /api/v1/webhooks/nylas",
@@ -51,6 +52,11 @@ const PUBLIC_ROUTES = new Set([
   "GET /swagger/json",
   // Root
   "GET /",
+  // Public Billing (PG 심사용 - 요금제 조회, 환율)
+  "GET /api/v1/billing/pricing/plans",
+  "GET /api/v1/billing/exchange-rates",
+  // Public Payment (PG 심사용 - 결제 검증)
+  "GET /api/v1/payments/:id",
 ])
 
 // 인증만 필요한 라우트 (권한 체크 불필요)

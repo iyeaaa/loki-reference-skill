@@ -6,7 +6,7 @@
  * - DB에 저장된 가격 우선, 없으면 환율 계산
  */
 
-import { and, eq } from "drizzle-orm"
+import { and, eq, notInArray } from "drizzle-orm"
 import { db } from "../db"
 import { billingPlans, billingProducts, planPrices } from "../db/schema/billing"
 import logger from "../utils/logger"
@@ -38,6 +38,11 @@ export interface PlanWithPrices {
     description: string | null
   }
   prices: PlanPriceInfo[]
+  // 프론트엔드 편의용 필드 (변환 불필요하게)
+  amount: number // KRW 금액 (primary)
+  amountUSD: number // USD 금액 (센트 단위)
+  displayAmount: string // "₩9,900"
+  displayAmountUSD: string // "$9.99"
 }
 
 // ============================================================================
@@ -137,25 +142,35 @@ export async function getPlanPrice(
  *
  * @param currencies - 조회할 통화 목록 (기본: ['KRW', 'USD'])
  * @param activeOnly - 활성 요금제만 조회 (기본: true)
+ * @param excludeTiers - 제외할 상품 티어 목록 (예: ['enterprise'])
  */
 export async function getPlansWithPrices(
   currencies: string[] = ["KRW", "USD"],
   activeOnly: boolean = true,
+  excludeTiers: string[] = [],
 ): Promise<PlanWithPrices[]> {
-  // 1. 요금제 + 상품 정보 조회
-  const plansQuery = db
+  // 1. 요금제 + 상품 정보 조회 (SQL 레벨에서 필터링)
+  // WHERE 조건 빌드
+  const conditions = []
+
+  if (activeOnly) {
+    conditions.push(eq(billingPlans.isActive, true))
+  }
+
+  if (excludeTiers.length > 0) {
+    // tier 컬럼이 enum 타입이므로 올바른 타입으로 캐스팅
+    const validTiers = excludeTiers as ("trial" | "basic" | "pro" | "enterprise")[]
+    conditions.push(notInArray(billingProducts.tier, validTiers))
+  }
+
+  const plans = await db
     .select({
       plan: billingPlans,
       product: billingProducts,
     })
     .from(billingPlans)
-    .leftJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
-
-  if (activeOnly) {
-    plansQuery.where(eq(billingPlans.isActive, true))
-  }
-
-  const plans = await plansQuery
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
 
   // 2. 각 요금제별 가격 조회
   const result: PlanWithPrices[] = []
@@ -169,6 +184,10 @@ export async function getPlansWithPrices(
         prices.push(price)
       }
     }
+
+    // 프론트엔드 편의용 필드 추출
+    const krwPrice = prices.find((p) => p.currency === "KRW")
+    const usdPrice = prices.find((p) => p.currency === "USD")
 
     result.push({
       id: plan.id,
@@ -187,14 +206,30 @@ export async function getPlansWithPrices(
           }
         : undefined,
       prices,
+      // 프론트엔드에서 바로 사용 가능한 필드
+      amount: krwPrice?.amount || 0,
+      amountUSD: usdPrice?.amount || 0,
+      displayAmount: krwPrice?.displayAmount || "₩0",
+      displayAmountUSD: usdPrice?.displayAmount || "$0.00",
     })
   }
 
-  // 금액순 정렬 (KRW 기준)
+  // 정렬: tier 우선순위 (basic→pro→trial), 같은 tier 내에서 interval (month→year)
+  const tierOrder: Record<string, number> = { basic: 1, pro: 2, trial: 99 }
+  const intervalOrder: Record<string, number> = { month: 1, year: 2 }
+
   result.sort((a, b) => {
-    const aKrw = a.prices.find((p) => p.currency === "KRW")?.amount || 0
-    const bKrw = b.prices.find((p) => p.currency === "KRW")?.amount || 0
-    return aKrw - bKrw
+    const aTier = tierOrder[a.product?.tier || ""] || 50
+    const bTier = tierOrder[b.product?.tier || ""] || 50
+
+    if (aTier !== bTier) {
+      return aTier - bTier
+    }
+
+    // 같은 tier면 interval로 정렬
+    const aInterval = intervalOrder[a.billingInterval || ""] || 0
+    const bInterval = intervalOrder[b.billingInterval || ""] || 0
+    return aInterval - bInterval
   })
 
   return result

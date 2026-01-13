@@ -715,13 +715,18 @@ export const pricingRoutes = new Elysia({ prefix: "/api/v1/billing/pricing" })
         "USD",
       ]
       const activeOnly = query.activeOnly !== "false"
-      const plans = await pricingService.getPlansWithPrices(currencies, activeOnly)
+      // excludeTiers: 쉼표로 구분된 티어 목록 (예: "enterprise,trial")
+      const excludeTiers = query.excludeTiers
+        ? query.excludeTiers.split(",").map((t) => t.trim().toLowerCase())
+        : ["enterprise"] // 기본적으로 enterprise 제외 (public 결제 페이지용)
+      const plans = await pricingService.getPlansWithPrices(currencies, activeOnly, excludeTiers)
       return { plans }
     },
     {
       query: t.Object({
         currencies: t.Optional(t.String()),
         activeOnly: t.Optional(t.String()),
+        excludeTiers: t.Optional(t.String()),
       }),
     },
   )

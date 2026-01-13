@@ -16,6 +16,7 @@
  */
 
 import * as PortOne from "@portone/browser-sdk/v2"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   AlertCircle,
   CheckCircle2,
@@ -52,9 +53,7 @@ import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { env } from "@/lib/env"
 import {
-  convertKRWtoUSD,
   detectLocale,
-  formatPrice,
   getDefaultPaymentMethod,
   PAYMENT_METHODS,
   type PaymentMethod,
@@ -85,8 +84,6 @@ type BillingPlan = {
   productId: string
   name: string
   description: string | null
-  amount: number
-  currency: string
   billingInterval: "day" | "week" | "month" | "year" | null
   intervalCount: number | null
   isActive: boolean
@@ -96,8 +93,12 @@ type BillingPlan = {
     tier: string
     description: string | null
   }
-  // 다중 통화 가격 (서버에서 조회)
-  prices?: PlanPriceInfo[]
+  prices: PlanPriceInfo[]
+  // 백엔드에서 직접 제공 (변환 불필요)
+  amount: number // KRW
+  amountUSD: number // USD (센트)
+  displayAmount: string // "₩9,900"
+  displayAmountUSD: string // "$9.99"
 }
 
 type PaymentResult = {
@@ -130,65 +131,109 @@ const TEST_CARD_INFO = {
 }
 
 // ============================================================================
+// API Types & Functions
+// ============================================================================
+
+type BillingPlansResponse = {
+  plans: Array<{
+    id: string
+    productId: string
+    name: string
+    description: string | null
+    billingInterval: "day" | "week" | "month" | "year" | null
+    intervalCount: number | null
+    isActive: boolean
+    product?: {
+      id: string
+      name: string
+      tier: string
+      description: string | null
+    }
+    prices: PlanPriceInfo[]
+    // 백엔드에서 직접 제공 (프론트 변환 불필요)
+    amount: number // KRW
+    amountUSD: number // USD (센트)
+    displayAmount: string // "₩9,900"
+    displayAmountUSD: string // "$9.99"
+  }>
+}
+
+type PaymentVerifyResponse = {
+  success: boolean
+  data: {
+    id: string
+    status: string
+    amount: { total: number }
+    method?: { type: string }
+    paidAt?: string
+  }
+}
+
+type PaymentCompleteResponse = {
+  success: boolean
+  data: {
+    subscriptionId: string
+    paymentId: string
+    status: string
+    plan: { id: string; name: string; amount: number }
+    product: { id: string; name: string; tier: string } | null
+    currentPeriodEnd: string
+  }
+}
+
+// API functions
+async function fetchBillingPlans(): Promise<BillingPlansResponse> {
+  // 설정 페이지에서는 모든 플랜 표시 (excludeTiers=none으로 enterprise 포함)
+  return apiFetch<BillingPlansResponse>(
+    "/api/v1/billing/pricing/plans?currencies=KRW,USD&activeOnly=true&excludeTiers=",
+  )
+}
+
+async function verifyPayment(paymentId: string): Promise<PaymentVerifyResponse> {
+  return apiFetch<PaymentVerifyResponse>(`/api/v1/payments/${paymentId}`)
+}
+
+async function completePayment(params: {
+  paymentId: string
+  planId: string
+  workspaceId: string
+  customerId: string
+  currency: "KRW" | "USD"
+  amount: number
+}): Promise<PaymentCompleteResponse> {
+  return apiFetch<PaymentCompleteResponse>("/api/v1/payments/complete", {
+    method: "POST",
+    body: JSON.stringify(params),
+  })
+}
+
+async function lookupPayment(paymentId: string): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(`/api/v1/payments/${paymentId}`)
+}
+
+// ============================================================================
 // Hooks
 // ============================================================================
 
 /**
  * Fetch billing plans with multi-currency prices
+ * 백엔드에서 amount/amountUSD/displayAmount/displayAmountUSD 직접 제공
+ * - 프론트 변환 불필요 (무한 루프 방지)
  */
 function useBillingPlans() {
-  const [plans, setPlans] = useState<BillingPlan[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["billing", "plans"],
+    queryFn: fetchBillingPlans,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    // 백엔드에서 직접 제공하므로 변환 불필요
+    select: (response) => response.plans,
+  })
 
-  useEffect(() => {
-    async function fetchPlans() {
-      try {
-        // Fetch plans with multi-currency prices from pricing API
-        const response = await apiFetch<{
-          plans: Array<{
-            id: string
-            productId: string
-            name: string
-            description: string | null
-            billingInterval: "day" | "week" | "month" | "year" | null
-            intervalCount: number | null
-            isActive: boolean
-            product?: {
-              id: string
-              name: string
-              tier: string
-              description: string | null
-            }
-            prices: PlanPriceInfo[]
-          }>
-        }>("/api/v1/billing/pricing/plans?currencies=KRW,USD&activeOnly=true")
-
-        if (response?.plans) {
-          // Map to BillingPlan format with prices
-          const plansWithPrices: BillingPlan[] = response.plans.map((plan) => {
-            const krwPrice = plan.prices.find((p) => p.currency === "KRW")
-            return {
-              ...plan,
-              amount: krwPrice?.amount || 0,
-              currency: "KRW",
-              prices: plan.prices,
-            }
-          })
-          setPlans(plansWithPrices)
-        }
-      } catch (err) {
-        console.error("[PaymentTest] Failed to fetch plans:", err)
-        setError("요금제를 불러오는데 실패했습니다.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlans()
-  }, [])
-
-  return { plans, isLoading, error }
+  return {
+    plans: data ?? [],
+    isLoading,
+    error: error ? "요금제를 불러오는데 실패했습니다." : null,
+  }
 }
 
 // ============================================================================
@@ -229,28 +274,94 @@ export function PaymentTestPage() {
   // Payment lookup state
   const [lookupPaymentId, setLookupPaymentId] = useState("")
   const [lookupResult, setLookupResult] = useState<Record<string, unknown> | null>(null)
-  const [isLookingUp, setIsLookingUp] = useState(false)
 
-  // Selected plan
+  // ============================================================================
+  // Mutations
+  // ============================================================================
+
+  // Payment verification mutation (for mobile redirect)
+  const verifyPaymentMutation = useMutation({
+    mutationFn: verifyPayment,
+    onSuccess: (verifyResponse, paymentId) => {
+      if (verifyResponse?.success && verifyResponse?.data?.status === "PAID") {
+        setPaymentResult({
+          success: true,
+          paymentId,
+          status: "PAID",
+          message: "결제가 완료되었습니다. 구독 처리는 별도로 확인해주세요.",
+        })
+      } else {
+        setPaymentResult({
+          success: false,
+          paymentId,
+          message: "결제가 완료되지 않았습니다.",
+          status: verifyResponse?.data?.status,
+        })
+      }
+    },
+    onError: (err) => {
+      console.error("[Payment] Mobile redirect error:", err)
+      setError("결제 확인 중 오류가 발생했습니다.")
+    },
+    onSettled: () => {
+      setIsProcessing(false)
+    },
+  })
+
+  // Payment complete mutation
+  const completePaymentMutation = useMutation({
+    mutationFn: completePayment,
+    onSuccess: (completeResponse, variables) => {
+      if (completeResponse?.success && completeResponse?.data) {
+        setPaymentResult({
+          success: true,
+          paymentId: variables.paymentId,
+          status: "PAID",
+          subscriptionId: completeResponse.data.subscriptionId,
+          plan: completeResponse.data.plan,
+          product: completeResponse.data.product,
+          amount: completeResponse.data.plan.amount,
+        })
+      } else {
+        setPaymentResult({
+          success: true,
+          paymentId: variables.paymentId,
+          message: "결제는 완료되었으나 구독 처리 중입니다.",
+        })
+      }
+    },
+    onError: (err, variables) => {
+      console.error("[Payment] Complete API error:", err)
+      setPaymentResult({
+        success: false,
+        paymentId: variables.paymentId,
+        status: "PAID",
+        message: "결제는 완료되었으나 구독 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요.",
+      })
+      setError("구독 처리 중 오류가 발생했습니다. 결제는 완료되었습니다.")
+    },
+  })
+
+  // Payment lookup mutation
+  const lookupPaymentMutation = useMutation({
+    mutationFn: lookupPayment,
+    onSuccess: (response) => {
+      setLookupResult(response)
+    },
+    onError: (err) => {
+      setLookupResult({ error: err instanceof Error ? err.message : "조회 실패" })
+    },
+  })
+
+  // Selected plan - select 패턴으로 plans 참조 안정화됨
   const selectedPlan = plans.find((p) => p.id === selectedPlanId)
 
-  // USD 가격 (서버에서 조회, 없으면 클라이언트 계산)
-  const selectedPlanUSD = selectedPlan
-    ? (selectedPlan.prices?.find((p) => p.currency === "USD")?.amount ??
-      Math.round(convertKRWtoUSD(selectedPlan.amount) * 100))
-    : 0
+  // USD 가격 - 백엔드에서 직접 제공
+  const selectedPlanUSD = selectedPlan?.amountUSD || 0
 
-  // 가격 표시용 헬퍼
-  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") => {
-    const priceInfo = plan.prices?.find((p) => p.currency === currency)
-    if (priceInfo) {
-      return priceInfo.displayAmount
-    }
-    // Fallback
-    return currency === "KRW"
-      ? formatPrice(plan.amount, "KRW")
-      : formatPrice(convertKRWtoUSD(plan.amount), "USD")
-  }
+  // 가격 표시용 헬퍼 - 백엔드에서 직접 제공
+  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") =>
+    currency === "KRW" ? plan.displayAmount : plan.displayAmountUSD
 
   // Set default selected workspace when workspaces are loaded
   useEffect(() => {
@@ -275,46 +386,12 @@ export function PaymentTestPage() {
       // Clear URL params
       setSearchParams({})
 
-      // Process the redirected payment inline
+      // Process the redirected payment using mutation
       setIsProcessing(true)
       setError(null)
-
-      apiFetch<{
-        success: boolean
-        data: {
-          id: string
-          status: string
-          amount: { total: number }
-          method?: { type: string }
-          paidAt?: string
-        }
-      }>(`/api/v1/payments/${redirectPaymentId}`)
-        .then((verifyResponse) => {
-          if (verifyResponse?.success && verifyResponse?.data?.status === "PAID") {
-            setPaymentResult({
-              success: true,
-              paymentId: redirectPaymentId,
-              status: "PAID",
-              message: "결제가 완료되었습니다. 구독 처리는 별도로 확인해주세요.",
-            })
-          } else {
-            setPaymentResult({
-              success: false,
-              paymentId: redirectPaymentId,
-              message: "결제가 완료되지 않았습니다.",
-              status: verifyResponse?.data?.status,
-            })
-          }
-        })
-        .catch((err) => {
-          console.error("[Payment] Mobile redirect error:", err)
-          setError("결제 확인 중 오류가 발생했습니다.")
-        })
-        .finally(() => {
-          setIsProcessing(false)
-        })
+      verifyPaymentMutation.mutate(redirectPaymentId)
     }
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, verifyPaymentMutation])
 
   // 환경변수 설정 여부 (토스는 필수, 페이팔은 선택)
   const isTossConfigured = Boolean(PORTONE_STORE_ID && PORTONE_CHANNEL_KEY_TOSS)
@@ -343,65 +420,22 @@ export function PaymentTestPage() {
         throw new Error("Missing required data for payment completion")
       }
 
-      try {
-        // USD는 이미 센트 단위 (서버에서 조회), KRW는 원 단위
-        // selectedPlanUSD는 prices 배열에서 가져온 센트 단위 값
-        const amountToSend =
-          currency === "USD"
-            ? selectedPlanUSD // 이미 센트 단위
-            : selectedPlan.amount // 원 단위
+      // USD는 이미 센트 단위 (서버에서 조회), KRW는 원 단위
+      const amountToSend =
+        currency === "USD"
+          ? selectedPlanUSD // 이미 센트 단위
+          : selectedPlan.amount // 원 단위
 
-        const completeResponse = await apiFetch<{
-          success: boolean
-          data: {
-            subscriptionId: string
-            paymentId: string
-            status: string
-            plan: { id: string; name: string; amount: number }
-            product: { id: string; name: string; tier: string } | null
-            currentPeriodEnd: string
-          }
-        }>("/api/v1/payments/complete", {
-          method: "POST",
-          body: JSON.stringify({
-            paymentId,
-            planId: selectedPlan.id,
-            workspaceId: currentWorkspace.id,
-            customerId: currentUser.id,
-            currency, // KRW or USD
-            amount: amountToSend,
-          }),
-        })
-
-        if (completeResponse?.success && completeResponse?.data) {
-          setPaymentResult({
-            success: true,
-            paymentId,
-            status: "PAID",
-            subscriptionId: completeResponse.data.subscriptionId,
-            plan: completeResponse.data.plan,
-            product: completeResponse.data.product,
-            amount: completeResponse.data.plan.amount,
-          })
-        } else {
-          setPaymentResult({
-            success: true,
-            paymentId,
-            message: "결제는 완료되었으나 구독 처리 중입니다.",
-          })
-        }
-      } catch (err) {
-        console.error("[Payment] Complete API error:", err)
-        setPaymentResult({
-          success: false,
-          paymentId,
-          status: "PAID",
-          message: "결제는 완료되었으나 구독 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요.",
-        })
-        setError("구독 처리 중 오류가 발생했습니다. 결제는 완료되었습니다.")
-      }
+      completePaymentMutation.mutate({
+        paymentId,
+        planId: selectedPlan.id,
+        workspaceId: currentWorkspace.id,
+        customerId: currentUser.id,
+        currency,
+        amount: amountToSend,
+      })
     },
-    [selectedPlan, selectedPlanUSD, currentWorkspace?.id, currentUser?.id],
+    [selectedPlan, selectedPlanUSD, currentWorkspace?.id, currentUser?.id, completePaymentMutation],
   )
 
   /**
@@ -551,24 +585,13 @@ export function PaymentTestPage() {
   /**
    * 결제 내역 조회
    */
-  const handleLookupPayment = async () => {
+  const handleLookupPayment = () => {
     if (!lookupPaymentId.trim()) {
       return
     }
 
-    setIsLookingUp(true)
     setLookupResult(null)
-
-    try {
-      const response = await apiFetch<Record<string, unknown>>(
-        `/api/v1/payments/${lookupPaymentId.trim()}`,
-      )
-      setLookupResult(response)
-    } catch (err) {
-      setLookupResult({ error: err instanceof Error ? err.message : "조회 실패" })
-    } finally {
-      setIsLookingUp(false)
-    }
+    lookupPaymentMutation.mutate(lookupPaymentId.trim())
   }
 
   /**
@@ -1140,10 +1163,14 @@ export function PaymentTestPage() {
                   value={lookupPaymentId}
                 />
                 <Button
-                  disabled={isLookingUp || !lookupPaymentId.trim()}
+                  disabled={lookupPaymentMutation.isPending || !lookupPaymentId.trim()}
                   onClick={handleLookupPayment}
                 >
-                  {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : "조회"}
+                  {lookupPaymentMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "조회"
+                  )}
                 </Button>
               </div>
 

@@ -22,6 +22,12 @@ import {
   startWebExtraction,
   subscribeToProgress,
 } from "../services/web-extraction-queue.service"
+// Redis 기반 결과 저장 서비스
+import {
+  deleteResults as deleteResultsFromRedis,
+  getAllResults as getResultsFromRedis,
+  isRedisAvailable,
+} from "../services/web-extraction-redis.service"
 import {
   type CompanyRecord,
   DEFAULT_EXTRACTION_CONFIG,
@@ -32,29 +38,12 @@ import { createSSEResponse } from "../utils/sse-helper"
 
 // 웹데추 v1.1 Legacy 설정
 const LEGACY_CONFIG = {
-  MAX_BATCH_SIZE: 10000, // 배치 크기 제한 해제 (실질적으로 무제한)
+  MAX_BATCH_SIZE: 400, // 배치 크기 제한 (서버 안정성 및 메모리 최적화)
   MAX_CONCURRENT: 20, // 동시 처리 수 (API 키 개수에 따라 자동 조정)
 }
 
-// 추출 결과를 저장하는 Map (다운로드용) - TTL 기반 자동 정리
-const resultsMap = new Map<string, CompanyRecord[]>()
-const resultsTimestamps = new Map<string, number>()
-const RESULTS_TTL_MS = 30 * 60 * 1000 // 30분 후 자동 삭제
-
-// 메모리 정리: 오래된 결과 자동 삭제
-function cleanupOldResults() {
-  const now = Date.now()
-  for (const [jobId, timestamp] of resultsTimestamps.entries()) {
-    if (now - timestamp > RESULTS_TTL_MS) {
-      resultsMap.delete(jobId)
-      resultsTimestamps.delete(jobId)
-      logger.info({ jobId }, "[Memory Cleanup] Auto-deleted old extraction results")
-    }
-  }
-}
-
-// 5분마다 정리 실행
-setInterval(cleanupOldResults, 5 * 60 * 1000)
+// Redis 기반 결과 저장 - 메모리 사용 최소화
+// 결과는 Redis List에 저장되고 1시간 후 자동 삭제됨
 
 export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extraction" })
   /**
@@ -504,12 +493,17 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           )
         }
 
+        // Redis에 저장할 jobId 미리 생성
+        const jobId = `${workspaceId}-${Date.now()}`
+
         logger.info(
           {
             finalRecords: finalRecords.length,
             maxConcurrent: extractionConfig.maxConcurrent,
+            jobId,
+            redisAvailable: isRedisAvailable(),
           },
-          "[Web Extraction] Starting SSE stream with better-sse pattern",
+          "[Web Extraction] Starting SSE stream with Redis storage",
         )
 
         // SSE 스트림 생성 (better-sse 패턴 적용)
@@ -528,8 +522,8 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
               })
               logger.info("[Web Extraction] Sent init event")
 
-              // 추출 시작 (v1.1 Legacy 서비스 사용)
-              const results = await processBatchLegacy(
+              // 추출 시작 (v1.1 Legacy 서비스 사용 - Redis에 결과 즉시 저장)
+              await processBatchLegacy(
                 finalRecords,
                 extractionConfig,
                 (progress: ExtractionProgress) => {
@@ -605,33 +599,29 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
                 },
                 workspaceId,
                 searchCriteria,
+                jobId, // Redis 저장용 jobId 전달
               )
 
               if (session.closed) return
 
-              // 결과 저장 (다운로드를 위해) - TTL 타임스탬프와 함께 저장
-              const jobId = `${workspaceId}-${Date.now()}`
-              resultsMap.set(jobId, results)
-              resultsTimestamps.set(jobId, Date.now())
-
-              // 완료 메시지 전송
+              // 완료 메시지 전송 (결과는 Redis에서 조회)
               session.push({
                 event: "complete",
                 data: {
                   type: "complete",
                   timestamp: new Date().toISOString(),
                   jobId,
-                  totalRecords: results.length,
+                  totalRecords: finalRecords.length,
                   message: "웹 데이터 추출이 완료되었습니다",
                 },
               })
 
               logger.info(
                 {
-                  totalRecords: results.length,
+                  totalRecords: finalRecords.length,
                   jobId,
                 },
-                "[Web Extraction] Sent complete message",
+                "[Web Extraction] Sent complete message (results stored in Redis)",
               )
 
               // 클라이언트가 마지막 메시지를 처리할 시간 제공
@@ -698,20 +688,21 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
   /**
    * GET /api/v1/admin/web-extraction/results/:jobId
-   * 추출 결과 다운로드 (Excel)
+   * 추출 결과 다운로드 (Excel) - Redis에서 조회
    */
   .get(
     "/results/:jobId",
     async ({ params, set }) => {
       const { jobId } = params
 
-      const results = resultsMap.get(jobId)
+      // Redis에서 결과 조회
+      const results = await getResultsFromRedis(jobId)
 
-      if (!results) {
+      if (!results || results.length === 0) {
         set.status = 404
         return {
           success: false,
-          error: "결과를 찾을 수 없습니다",
+          error: "결과를 찾을 수 없습니다. Redis에 저장된 결과가 만료되었거나 존재하지 않습니다.",
         }
       }
 
@@ -795,20 +786,21 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
   /**
    * GET /api/v1/admin/web-extraction/results/:jobId/json
-   * 추출 결과 조회 (JSON)
+   * 추출 결과 조회 (JSON) - Redis에서 조회
    */
   .get(
     "/results/:jobId/json",
     async ({ params, set }) => {
       const { jobId } = params
 
-      const results = resultsMap.get(jobId)
+      // Redis에서 결과 조회
+      const results = await getResultsFromRedis(jobId)
 
-      if (!results) {
+      if (!results || results.length === 0) {
         set.status = 404
         return {
           success: false,
-          error: "결과를 찾을 수 없습니다",
+          error: "결과를 찾을 수 없습니다. Redis에 저장된 결과가 만료되었거나 존재하지 않습니다.",
         }
       }
 
@@ -853,17 +845,17 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
 
   /**
    * DELETE /api/v1/admin/web-extraction/cleanup/:jobId
-   * 작업 데이터 정리 (메모리 절약)
+   * 작업 데이터 정리 (Redis에서 삭제)
    */
   .delete(
     "/cleanup/:jobId",
     async ({ params }) => {
       const { jobId } = params
 
-      resultsMap.delete(jobId)
-      resultsTimestamps.delete(jobId)
+      // Redis에서 결과 삭제
+      await deleteResultsFromRedis(jobId)
 
-      logger.info({ jobId }, "Cleaned up web extraction job data")
+      logger.info({ jobId }, "Cleaned up web extraction job data from Redis")
 
       return {
         success: true,

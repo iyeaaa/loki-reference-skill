@@ -63,10 +63,10 @@ export function ExitIntentModal({
     }
 
     return (
-      <div className="space-y-2.5 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 p-4">
+      <div className="space-y-2.5 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
         {messages.benefits.map((benefit, i) => (
           <div className="flex items-center gap-3" key={i}>
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500">
               <Check className="h-3 w-3 text-white" />
             </div>
             <span className="font-medium text-gray-700 text-sm">
@@ -94,9 +94,9 @@ export function ExitIntentModal({
 
         {/* 손실 회피 메시지 */}
         {messages.lossMessage && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span className="text-amber-800 text-xs">
+          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <span className="text-blue-800 text-xs">
               {isKorean ? messages.lossMessage.ko : messages.lossMessage.en}
             </span>
           </div>
@@ -114,14 +114,14 @@ export function ExitIntentModal({
             {/* 🆕 긴급성 배지 */}
             {messages.urgencyBadge && (
               <div className="mb-3 flex justify-center">
-                <Badge className="animate-pulse bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 text-white">
+                <Badge className="bg-blue-600 px-3 py-1 text-white shadow-sm">
                   {isKorean ? messages.urgencyBadge.ko : messages.urgencyBadge.en}
                 </Badge>
               </div>
             )}
 
             {/* 아이콘 */}
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 shadow-lg">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 shadow-md">
               <Gift className="h-7 w-7 text-blue-600" />
             </div>
 
@@ -145,7 +145,7 @@ export function ExitIntentModal({
           <DrawerFooter className="pb-6">
             {/* 🆕 CTA 버튼 강화 */}
             <Button
-              className="group relative h-12 w-full overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg"
+              className="h-12 w-full bg-blue-600 font-semibold shadow-md transition-all hover:bg-blue-700 hover:shadow-lg"
               onClick={handleStay}
             >
               <span className="flex items-center justify-center gap-2">
@@ -170,14 +170,14 @@ export function ExitIntentModal({
           {/* 🆕 긴급성 배지 */}
           {messages.urgencyBadge && (
             <div className="mb-3 flex justify-center">
-              <Badge className="animate-pulse bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-1.5 font-medium text-white">
+              <Badge className="bg-blue-600 px-4 py-1.5 font-medium text-white shadow-sm">
                 {isKorean ? messages.urgencyBadge.ko : messages.urgencyBadge.en}
               </Badge>
             </div>
           )}
 
           {/* 아이콘 - 더 눈에 띄게 */}
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 shadow-lg ring-4 ring-blue-50">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 shadow-md ring-4 ring-blue-50">
             <Gift className="h-8 w-8 text-blue-600" />
           </div>
 
@@ -199,13 +199,13 @@ export function ExitIntentModal({
         </div>
 
         <DialogFooter className="mt-5 flex-col gap-2 sm:flex-col">
-          {/* 🆕 CTA 버튼 강화 - 그라데이션 + 아이콘 */}
+          {/* 🆕 CTA 버튼 강화 */}
           <Button
-            className="group relative h-12 w-full overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold text-base transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg"
+            className="h-12 w-full bg-blue-600 font-semibold text-base shadow-md transition-all hover:bg-blue-700 hover:shadow-lg"
             onClick={handleStay}
           >
             <span className="flex items-center justify-center gap-2">
-              <Sparkles className="h-5 w-5 transition-transform group-hover:scale-110" />
+              <Sparkles className="h-5 w-5" />
               {isKorean ? messages.stayButton.ko : messages.stayButton.en}
             </span>
           </Button>

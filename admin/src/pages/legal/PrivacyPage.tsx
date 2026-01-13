@@ -366,8 +366,8 @@ export default function PrivacyPage() {
                   </li>
                   <li>
                     이메일:{" "}
-                    <a className="text-blue-600 hover:underline" href="mailto:privacy@grinda.ai">
-                      privacy@grinda.ai
+                    <a className="text-blue-600 hover:underline" href="mailto:admin@grinda.ai">
+                      admin@grinda.ai
                     </a>
                   </li>
                 </ul>
@@ -414,8 +414,8 @@ export default function PrivacyPage() {
               010-6326-9009
             </a>{" "}
             | 이메일:{" "}
-            <a className="text-blue-600 hover:underline" href="mailto:sales@grinda.ai">
-              sales@grinda.ai
+            <a className="text-blue-600 hover:underline" href="mailto:admin@grinda.ai">
+              admin@grinda.ai
             </a>
           </p>
         </footer>

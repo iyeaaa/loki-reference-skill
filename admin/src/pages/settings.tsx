@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Upload,
   User,
+  UserCheck,
   UserCog,
   Users,
   X,
@@ -66,6 +67,7 @@ import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { OnboardingEmailTest } from "./settings/OnboardingEmailTest"
 import { OnboardingTest } from "./settings/OnboardingTest"
 import { PaymentTestPage } from "./settings/PaymentTestPage"
+import { TrialManagementPage } from "./settings/trial-management"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
@@ -362,6 +364,12 @@ export default function SettingsPage() {
         id: "campaign-activity-logs",
         label: "캠페인 작업 기록",
         icon: <ScrollText className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
+        id: "trial-management",
+        label: "체험판 관리",
+        icon: <UserCheck className="h-4 w-4" />,
         permission: "admin-only",
       },
       // ───────────────────────────────────────────────────────────────────────
@@ -729,6 +737,8 @@ export default function SettingsPage() {
       // Records Pages
       case "campaign-activity-logs":
         return <JobLogsPage />
+      case "trial-management":
+        return <TrialManagementPage />
       // Billing Pages
       case "billing-products":
         return <ProductsPage />

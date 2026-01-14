@@ -57,6 +57,7 @@ import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sale
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { testRoutes } from "./routes/test.routes"
+import { trialAnalyticsRoutes } from "./routes/trial-analytics.routes"
 import { unipileRoutes } from "./routes/unipile.routes"
 import { uploadRoutes } from "./routes/upload.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
@@ -255,6 +256,8 @@ const app = new Elysia()
   .use(bullmqTestRoutes)
   // Job Logs routes
   .use(jobLogsRoutes)
+  // Trial Analytics routes (Admin)
+  .use(trialAnalyticsRoutes)
   // Test routes
   .use(testRoutes)
 

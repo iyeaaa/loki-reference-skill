@@ -850,3 +850,41 @@ export function useCompanyDescriptionAIEnhance(options: {
     hasAnalyzed: query.isFetched, // AI가 한 번이라도 분석을 완료했는지
   }
 }
+
+// ====================================
+// COMPANY FILE ANALYSIS
+// ====================================
+
+export type CompanyFileAnalysisResult = {
+  companyName: string | null
+  companyNameEn: string | null
+  companyDescription: string | null
+  websiteUrl: string | null
+  industry: string | null
+}
+
+/**
+ * 회사 소개서 파일 AI 분석 mutation hook
+ *
+ * @example
+ * ```tsx
+ * const analyzeFile = useAnalyzeCompanyFile()
+ *
+ * const handleFileUpload = (file: File) => {
+ *   analyzeFile.mutate(file, {
+ *     onSuccess: (result) => {
+ *       setCompanyName(result.companyName || "")
+ *       setCompanyDescription(result.companyDescription || "")
+ *     },
+ *   })
+ * }
+ * ```
+ */
+export function useAnalyzeCompanyFile() {
+  return useMutation<CompanyFileAnalysisResult, Error, File>({
+    mutationFn: async (file: File) => onboardingApi.analyzeCompanyFile(file),
+    onError: (error: Error) => {
+      sonnerToast.error(error.message || "파일 분석에 실패했습니다")
+    },
+  })
+}

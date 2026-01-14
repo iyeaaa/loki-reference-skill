@@ -56,6 +56,14 @@ export type OnboardingStats = {
   avgStepCompleted: number
 }
 
+export type CompanyFileAnalysisResult = {
+  companyName: string | null
+  companyNameEn: string | null
+  companyDescription: string | null
+  websiteUrl: string | null
+  industry: string | null
+}
+
 // ====================================
 // API FUNCTIONS
 // ====================================
@@ -241,4 +249,29 @@ export const onboardingApi = {
       method: "POST",
       body: JSON.stringify({ description, industry, target }),
     }),
+
+  /**
+   * 회사 소개서 파일 AI 분석
+   */
+  analyzeCompanyFile: async (file: File): Promise<CompanyFileAnalysisResult> => {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL || ""}/api/v1/onboarding/analyze-company-file`,
+      {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      },
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || "파일 분석에 실패했습니다.")
+    }
+
+    const result = await response.json()
+    return result.data as CompanyFileAnalysisResult
+  },
 }

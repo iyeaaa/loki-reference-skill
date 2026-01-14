@@ -5,7 +5,9 @@
  * SSE 엔드포인트를 통한 실시간 진행 상황 스트리밍 지원
  */
 
+import { GoogleGenAI } from "@google/genai"
 import { Elysia, t } from "elysia"
+import { config } from "../config"
 import { addOnboardingJob } from "../lib/queue/queues"
 import {
   createOnboardingSubscriber,
@@ -17,6 +19,18 @@ import { getAIDescriptionEnhanceService } from "../services/ai-description-enhan
 import * as onboardingService from "../services/onboarding.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
+
+// ====================================
+// 회사 소개서 분석 타입
+// ====================================
+
+type CompanyFileAnalysisResult = {
+  companyName: string | null
+  companyNameEn: string | null
+  companyDescription: string | null
+  websiteUrl: string | null
+  industry: string | null
+}
 
 export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   // 전역 에러 핸들러
@@ -584,6 +598,221 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
         description: t.String({ minLength: 10, maxLength: 5000 }),
         industry: t.Optional(t.String()),
         target: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // ====================================
+  // 회사 소개서 파일 AI 분석
+  // ====================================
+
+  // 회사 소개서 파일 업로드 및 AI 분석
+  .post(
+    "/analyze-company-file",
+    async ({ body, set }) => {
+      const { file } = body
+
+      // 파일 유효성 검증
+      if (!file || typeof file !== "object" || !file.name) {
+        set.status = 400
+        return errorResponse("유효한 파일을 업로드해주세요.", ResponseCode.BAD_REQUEST)
+      }
+
+      // 파일 타입 검증
+      const fileName = file.name.toLowerCase()
+      const allowedExtensions = [".pdf", ".docx", ".pptx", ".txt"]
+      const allowedMimeTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+      ]
+
+      const hasValidExtension = allowedExtensions.some((ext) => fileName.endsWith(ext))
+      const hasValidMimeType = allowedMimeTypes.includes(file.type)
+
+      if (!hasValidExtension && !hasValidMimeType) {
+        set.status = 400
+        return errorResponse(
+          `지원하지 않는 파일 형식입니다. 지원 형식: PDF, DOCX, PPTX, TXT`,
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+
+      try {
+        logger.info(
+          {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+          },
+          "[Onboarding] Analyzing company file with AI",
+        )
+
+        // 파일을 ArrayBuffer로 변환
+        const fileBuffer = await file.arrayBuffer()
+        const fileBase64 = Buffer.from(fileBuffer).toString("base64")
+
+        // Gemini AI 초기화
+        const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey })
+
+        // MIME 타입 결정
+        let mimeType = file.type
+        if (!mimeType || mimeType === "application/octet-stream") {
+          if (fileName.endsWith(".pdf")) mimeType = "application/pdf"
+          else if (fileName.endsWith(".docx"))
+            mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          else if (fileName.endsWith(".pptx"))
+            mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          else if (fileName.endsWith(".txt")) mimeType = "text/plain"
+        }
+
+        // AI 분석 프롬프트
+        const analysisPrompt = `You are an expert at extracting company information from business documents.
+
+Analyze the uploaded company introduction document and extract the following information.
+
+**CRITICAL RULES:**
+1. ONLY extract information that is EXPLICITLY stated in the document
+2. DO NOT invent, guess, or fabricate any information
+3. If information is not found in the document, use null for that field
+4. For companyDescription, structure it to include (if found in document):
+   - Product/Service names (specific, not generic)
+   - Differentiation points (patents, technology, experience, performance)
+   - Credibility signals (certifications, export records, client list)
+
+**Output Format (JSON only):**
+{
+  "companyName": "회사명 (한글)" or null,
+  "companyNameEn": "Company Name (English)" or null,
+  "companyDescription": "Structured description with product/strength/credentials found in document" or null,
+  "websiteUrl": "https://example.com" or null,
+  "industry": "beauty" | "fashion" | "food" | "it_saas" | "manufacturing" | "retail" | "healthcare" | "education" | "other" or null
+}
+
+**companyDescription Format Example (include only what's found in document):**
+"[Products found] / [Strengths/tech found] / [Certifications/experience found]"
+
+Example outputs:
+- Full info: "K-beauty skincare / Vitamin C serum, HA cream / FDA certified, Vegan / 15 years OEM experience"
+- Partial (no certs found): "Industrial valves manufacturer / 20 years experience"
+- Minimal: "Coffee cat litter products"
+
+**IMPORTANT:** 
+- If the document doesn't mention certifications, DO NOT add fake ones
+- If no website is found, return null for websiteUrl
+- Extract actual product names mentioned, not generic descriptions
+- Return ONLY the JSON object, no additional text`
+
+        // Gemini로 파일 분석
+        const response = await ai.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  inlineData: {
+                    mimeType,
+                    data: fileBase64,
+                  },
+                },
+                {
+                  text: analysisPrompt,
+                },
+              ],
+            },
+          ],
+        })
+
+        const responseText = response.text || ""
+
+        // JSON 추출
+        let jsonStr = responseText.trim()
+        if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "")
+        }
+
+        let analysisResult: CompanyFileAnalysisResult
+
+        try {
+          analysisResult = JSON.parse(jsonStr)
+        } catch (parseError) {
+          logger.error(
+            {
+              responseText,
+              error: parseError instanceof Error ? parseError.message : String(parseError),
+            },
+            "[Onboarding] Failed to parse AI response",
+          )
+          set.status = 500
+          return errorResponse(
+            "AI 응답을 처리할 수 없습니다. 다시 시도해주세요.",
+            ResponseCode.INTERNAL_ERROR,
+          )
+        }
+
+        // 결과 검증 및 정규화
+        const result: CompanyFileAnalysisResult = {
+          companyName: analysisResult.companyName || null,
+          companyNameEn: analysisResult.companyNameEn || null,
+          companyDescription: analysisResult.companyDescription || null,
+          websiteUrl: analysisResult.websiteUrl || null,
+          industry: analysisResult.industry || null,
+        }
+
+        // industry 값 검증
+        const validIndustries = [
+          "beauty",
+          "fashion",
+          "food",
+          "it_saas",
+          "manufacturing",
+          "retail",
+          "healthcare",
+          "education",
+          "other",
+        ]
+        if (result.industry && !validIndustries.includes(result.industry)) {
+          result.industry = "other"
+        }
+
+        logger.info(
+          {
+            fileName: file.name,
+            result: {
+              hasCompanyName: !!result.companyName,
+              hasCompanyNameEn: !!result.companyNameEn,
+              hasDescription: !!result.companyDescription,
+              hasWebsite: !!result.websiteUrl,
+              industry: result.industry,
+            },
+          },
+          "[Onboarding] Company file analysis completed",
+        )
+
+        return successResponse(result, "회사 소개서 분석이 완료되었습니다.")
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            fileName: file.name,
+          },
+          "[Onboarding] Company file analysis failed",
+        )
+
+        set.status = 500
+        return errorResponse(
+          "파일 분석에 실패했습니다. 다시 시도해주세요.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File({
+          maxSize: "20m",
+        }),
       }),
     },
   )

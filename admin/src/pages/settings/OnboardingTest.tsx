@@ -1,5 +1,6 @@
-import { FileText, Loader2, Rocket } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { FileText, Loader2, Rocket, Sparkles, Upload, X } from "lucide-react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,7 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useCompanyDescriptionAIEnhance, useTestOnboarding } from "@/lib/api/hooks/onboarding"
+import {
+  useAnalyzeCompanyFile,
+  useCompanyDescriptionAIEnhance,
+  useTestOnboarding,
+} from "@/lib/api/hooks/onboarding"
 import { useTranslateCompanyName } from "@/lib/api/hooks/workspaces"
 
 const INDUSTRY_OPTIONS = {
@@ -54,6 +59,7 @@ export function OnboardingTest() {
 
   const testOnboarding = useTestOnboarding()
   const translateMutation = useTranslateCompanyName()
+  const analyzeFileMutation = useAnalyzeCompanyFile()
 
   const [companyName, setCompanyName] = useState("주식회사 거목")
   const [companyNameEn, setCompanyNameEn] = useState("")
@@ -63,6 +69,104 @@ export function OnboardingTest() {
   const [industry, setIndustry] = useState("beauty")
   const [target, setTarget] = useState("b2b")
   const [country, setCountry] = useState("jp")
+
+  // File upload state
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+  const [isFilledByAI, setIsFilledByAI] = useState(false)
+
+  // File upload handlers
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      const allowedTypes = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+      ]
+      const allowedExtensions = [".pdf", ".docx", ".pptx", ".txt"]
+      const fileName = file.name.toLowerCase()
+
+      const hasValidExtension = allowedExtensions.some((ext) => fileName.endsWith(ext))
+      const hasValidMimeType = allowedTypes.includes(file.type)
+
+      if (!(hasValidExtension || hasValidMimeType)) {
+        toast.error("지원하지 않는 파일 형식입니다. PDF, DOCX, PPTX, TXT 파일만 가능합니다.")
+        return
+      }
+
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("파일 크기는 20MB를 초과할 수 없습니다.")
+        return
+      }
+
+      setUploadedFileName(file.name)
+
+      analyzeFileMutation.mutate(file, {
+        onSuccess: (result) => {
+          setIsFilledByAI(true)
+          if (result.companyName) {
+            setCompanyName(result.companyName)
+          }
+          if (result.companyNameEn) {
+            setCompanyNameEn(result.companyNameEn)
+          }
+          if (result.companyDescription) {
+            setCompanyDescription(result.companyDescription)
+          }
+          if (result.industry) {
+            setIndustry(result.industry)
+          }
+          toast.success("회사 소개서 분석이 완료되었습니다!")
+        },
+        onError: () => {
+          setUploadedFileName(null)
+        },
+      })
+    },
+    [analyzeFileMutation],
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      const file = e.dataTransfer.files[0]
+      if (file) {
+        handleFileSelect(file)
+      }
+    },
+    [handleFileSelect],
+  )
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        handleFileSelect(file)
+      }
+    },
+    [handleFileSelect],
+  )
+
+  const clearUploadedFile = useCallback(() => {
+    setUploadedFileName(null)
+    setIsFilledByAI(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }, [])
 
   // AI description enhancement hook
   const {
@@ -241,6 +345,94 @@ export function OnboardingTest() {
       </CardHeader>
       <CardContent>
         <form className="max-w-2xl space-y-4" onSubmit={handleTest}>
+          {/* 회사 소개서 파일 업로드 */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              <Label className="font-semibold text-gray-900">회사 소개서로 자동 입력</Label>
+              <span className="rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-700 text-xs">
+                AI
+              </span>
+            </div>
+
+            <input
+              accept=".pdf,.docx,.pptx,.txt"
+              className="hidden"
+              onChange={handleFileInputChange}
+              ref={fileInputRef}
+              type="file"
+            />
+
+            {uploadedFileName ? (
+              <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-3">
+                <div className="flex items-center gap-2">
+                  {analyzeFileMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-purple-600" />
+                  )}
+                  <span className="text-purple-800 text-sm">{uploadedFileName}</span>
+                  {analyzeFileMutation.isPending && (
+                    <span className="text-purple-600 text-xs">AI가 분석 중...</span>
+                  )}
+                  {isFilledByAI && !analyzeFileMutation.isPending && (
+                    <span className="text-green-600 text-xs">✓ 분석 완료</span>
+                  )}
+                </div>
+                <button
+                  className="rounded p-1 text-gray-400 hover:bg-purple-100 hover:text-gray-600"
+                  onClick={clearUploadedFile}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              // biome-ignore lint/a11y/useSemanticElements: Drag and drop zone requires div element
+              <div
+                className={`cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
+                  isDragging
+                    ? "border-purple-400 bg-purple-50"
+                    : "border-gray-300 hover:border-purple-300 hover:bg-purple-50/50"
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    fileInputRef.current?.click()
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <Upload className="mx-auto h-6 w-6 text-gray-400" />
+                <p className="mt-2 text-gray-600 text-sm">
+                  회사 소개서를 드래그하거나 클릭하여 업로드
+                </p>
+                <p className="mt-1 text-gray-400 text-xs">PDF, DOCX, PPTX, TXT (최대 20MB)</p>
+              </div>
+            )}
+
+            {isFilledByAI && (
+              <p className="flex items-center gap-1.5 text-purple-600 text-xs">
+                <Sparkles className="h-3 w-3" />
+                AI가 소개서에서 정보를 추출했어요. 내용을 확인하고 수정해주세요.
+              </p>
+            )}
+          </div>
+
+          {/* 또는 구분선 */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-gray-300 border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">또는 직접 입력</span>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={companyNameId}>회사명 (companyName) *</Label>

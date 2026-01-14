@@ -65,6 +65,7 @@ export interface CohortWorkspacePreview {
   workspaceId: string
   companyName: string | null
   ownerName: string
+  ownerEmail: string
 }
 
 export interface CohortItem {
@@ -642,6 +643,7 @@ async function getCohortData(
     workspace_id: string
     company_name: string | null
     owner_name: string
+    owner_email: string
     has_survey: boolean
     has_company_info: boolean
     has_lead: boolean
@@ -653,6 +655,7 @@ async function getCohortData(
       w.id as workspace_id,
       w.company_name,
       u.username as owner_name,
+      u.email as owner_email,
       (op.survey_data IS NOT NULL) as has_survey,
       (op.company_info_completed_at IS NOT NULL) as has_company_info,
       (op.lead_search_completed_at IS NOT NULL) as has_lead,
@@ -687,6 +690,7 @@ async function getCohortData(
       workspaceId: row.workspace_id,
       companyName: row.company_name,
       ownerName: row.owner_name,
+      ownerEmail: row.owner_email,
     }
 
     if (!workspacesByPeriod.has(row.period_start)) {

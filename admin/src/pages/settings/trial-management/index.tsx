@@ -1577,18 +1577,14 @@ export function TrialManagementPage() {
             {selectedCohortCell?.workspaces.length ? (
               <div className="space-y-2">
                 {selectedCohortCell.workspaces.map((ws) => (
-                  <div
-                    className="flex items-center justify-between rounded-lg border p-3"
-                    key={ws.workspaceId}
-                  >
-                    <div>
-                      <div className="font-medium">
-                        {ws.companyName || (
-                          <span className="text-muted-foreground">회사명 미입력</span>
-                        )}
-                      </div>
-                      <div className="text-muted-foreground text-sm">{ws.ownerName}</div>
+                  <div className="rounded-lg border p-3" key={ws.workspaceId}>
+                    <div className="font-medium">
+                      {ws.companyName || (
+                        <span className="text-muted-foreground">회사명 미입력</span>
+                      )}
                     </div>
+                    <div className="text-sm">{ws.ownerName}</div>
+                    <div className="text-muted-foreground text-xs">{ws.ownerEmail}</div>
                   </div>
                 ))}
               </div>

@@ -58,6 +58,7 @@ export type CohortWorkspacePreview = {
   workspaceId: string
   companyName: string | null
   ownerName: string
+  ownerEmail: string
 }
 
 export type CohortItem = {

@@ -23,7 +23,7 @@ import * as jobLogService from "../../services/job-log.service"
 import logger from "../../utils/logger"
 
 /** Unipile 해지 유예 기간 (일) */
-const UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS = 7
+const UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS = 3
 
 const QUEUE_NAME = "trial-expiration"
 const WORKER_NAME = "trial-expiration-worker"
@@ -162,10 +162,10 @@ async function processTrialExpiration(
       }
     }
 
-    // 3. 7일 유예 기간 후 Unipile 계정 해지
+    // 3. 3일 유예 기간 후 Unipile 계정 해지
     // - status = 'expired'
     // - tier = 'trial'
-    // - trialEnd < (now - 7일)
+    // - trialEnd < (now - 3일)
     const gracePeriodCutoff = new Date(now)
     gracePeriodCutoff.setDate(gracePeriodCutoff.getDate() - UNIPILE_DISCONNECT_GRACE_PERIOD_DAYS)
 

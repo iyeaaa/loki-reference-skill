@@ -759,8 +759,8 @@ export async function disconnectWorkspaceUnipileAccounts(
 
 /**
  * Unipile 해지 예정 워크스페이스 조회 (알림용)
- * Trial 만료 후 4일 경과 ~ 7일 미만인 워크스페이스
- * 이 함수를 사용하여 해지 3일 전에 고객에게 알림을 보낼 수 있습니다.
+ * Trial 만료 후 0일 경과 ~ 3일 미만인 워크스페이스
+ * 이 함수를 사용하여 해지 전에 고객에게 알림을 보낼 수 있습니다.
  *
  * @returns 해지 예정 워크스페이스 목록 (알림 발송용)
  */
@@ -775,12 +775,11 @@ export async function getUnipileDisconnectWarningTargets(): Promise<
   const { subscriptions, billingPlans, billingProducts } = await import("../db/schema/billing")
   const { lt, and, eq } = await import("drizzle-orm")
 
-  // 4일 전 ~ 7일 전 범위 계산
+  // 0일 전 ~ 3일 전 범위 계산 (유예 기간 3일)
   const warningStartCutoff = new Date(now)
-  warningStartCutoff.setDate(warningStartCutoff.getDate() - 7) // 7일 전
+  warningStartCutoff.setDate(warningStartCutoff.getDate() - 3) // 3일 전
 
-  const warningEndCutoff = new Date(now)
-  warningEndCutoff.setDate(warningEndCutoff.getDate() - 4) // 4일 전
+  const warningEndCutoff = new Date(now) // 현재 (만료 직후부터)
 
   const targets = await db
     .select({
@@ -793,7 +792,7 @@ export async function getUnipileDisconnectWarningTargets(): Promise<
     .where(
       and(
         eq(subscriptions.status, "expired"),
-        lt(subscriptions.trialEnd, warningEndCutoff), // 4일 이상 경과
+        lt(subscriptions.trialEnd, warningEndCutoff), // 만료됨
         eq(billingProducts.tier, "trial"),
         eq(subscriptions.isPrimary, true),
       ),
@@ -805,7 +804,7 @@ export async function getUnipileDisconnectWarningTargets(): Promise<
       workspaceId: t.workspaceId,
       trialEnd: t.trialEnd,
       daysUntilDisconnect: t.trialEnd
-        ? Math.ceil((7 - (now.getTime() - t.trialEnd.getTime()) / (1000 * 60 * 60 * 24)) * 10) / 10
+        ? Math.ceil((3 - (now.getTime() - t.trialEnd.getTime()) / (1000 * 60 * 60 * 24)) * 10) / 10
         : 0,
     }))
 }

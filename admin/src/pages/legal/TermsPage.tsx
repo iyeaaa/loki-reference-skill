@@ -173,7 +173,7 @@ export default function TermsPage() {
                   다음 결제 주기부터 적용됩니다.
                 </li>
                 <li>
-                  <strong>무료 체험:</strong> 회사는 신규 이용자에게 7일 무료 체험 기간을 제공할 수
+                  <strong>무료 체험:</strong> 회사는 신규 이용자에게 14일 무료 체험 기간을 제공할 수
                   있으며, 무료 체험 기간 종료 후 유료 구독으로 자동 전환되지 않습니다.
                 </li>
               </ol>

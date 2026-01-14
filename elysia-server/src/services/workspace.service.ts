@@ -202,7 +202,7 @@ async function createTrialSubscription(
 
   const now = new Date()
   const trialEnd = new Date(now)
-  trialEnd.setDate(trialEnd.getDate() + (trialPlan.trialDays || 7))
+  trialEnd.setDate(trialEnd.getDate() + (trialPlan.trialDays || 14))
 
   // 구독 생성
   const [subscription] = await db

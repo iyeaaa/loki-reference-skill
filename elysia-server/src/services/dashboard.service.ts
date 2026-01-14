@@ -745,12 +745,12 @@ async function getUnifiedSubscriptionInfo(workspaceId: string): Promise<UnifiedS
       status: "trialing",
       trialStart: null,
       trialEnd: null,
-      daysRemaining: 7,
-      trialDays: 7,
+      daysRemaining: 14,
+      trialDays: 14,
     }
   }
 
-  let daysRemaining = 7
+  let daysRemaining = 14
   if (subscription.trialEnd) {
     const diffMs = subscription.trialEnd.getTime() - now.getTime()
     daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
@@ -762,7 +762,7 @@ async function getUnifiedSubscriptionInfo(workspaceId: string): Promise<UnifiedS
           (subscription.trialEnd.getTime() - subscription.trialStart.getTime()) /
             (1000 * 60 * 60 * 24),
         )
-      : 7
+      : 14
 
   return {
     status: subscription.status,

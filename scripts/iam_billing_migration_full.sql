@@ -36,7 +36,7 @@ INSERT INTO public.billing_customers VALUES ('d650ff6d-fae4-4924-8087-7e7234f666
 -- Data for Name: billing_products; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-000000000001', NULL, '체험판', '7일 무료 체험. 기본 기능 제한적 이용 가능.', 'trial', '["대시보드 (제한적)", "인박스 (5회 열람)", "설정 (개인정보만)"]', true, 1, '{"level": 1, "paywall": true, "viewLimit": 5}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
+INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-000000000001', NULL, '체험판', '14일 무료 체험. 기본 기능 제한적 이용 가능.', 'trial', '["대시보드 (제한적)", "인박스 (5회 열람)", "설정 (개인정보만)"]', true, 1, '{"level": 1, "paywall": true, "viewLimit": 5}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-000000000002', NULL, 'Basic', '소규모 비즈니스를 위한 기본 플랜. 관리자 대행 서비스 포함.', 'basic', '["대시보드", "인박스 (무제한)", "설정", "관리자 대행 서비스"]', true, 2, '{"level": 2, "managedService": true}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-000000000003', NULL, 'Pro', '직접 캠페인을 운영하는 고객을 위한 프로 플랜.', 'pro', '["대시보드", "고객 탐색", "고객 관리", "캠페인", "인박스", "설정"]', true, 3, '{"level": 3, "selfServing": true}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-000000000004', NULL, 'Enterprise', '대규모 조직을 위한 엔터프라이즈 플랜. AI 기능 포함.', 'enterprise', '["대시보드", "고객 탐색", "고객 관리", "캠페인", "인박스", "Rinda GPT", "설정"]', true, 4, '{"level": 4, "aiFeatures": true, "customSupport": true}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
@@ -46,7 +46,7 @@ INSERT INTO public.billing_products VALUES ('00000000-0000-0000-0001-00000000000
 -- Data for Name: billing_plans; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.billing_plans VALUES ('00000000-0000-0000-0002-000000000001', '00000000-0000-0000-0001-000000000001', NULL, '7일 무료 체험', '신규 가입 시 제공되는 7일 무료 체험', true, true, 'KRW', 0, 'one_time', NULL, NULL, 7, NULL, '{}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
+INSERT INTO public.billing_plans VALUES ('00000000-0000-0000-0002-000000000001', '00000000-0000-0000-0001-000000000001', NULL, '14일 무료 체험', '신규 가입 시 제공되는 14일 무료 체험', true, true, 'KRW', 0, 'one_time', NULL, NULL, 14, NULL, '{}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_plans VALUES ('00000000-0000-0000-0002-000000000002', '00000000-0000-0000-0001-000000000002', NULL, 'Basic 월간', '월 30만원 정기 결제', true, true, 'KRW', 300000, 'recurring', 'month', 1, 0, NULL, '{}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_plans VALUES ('00000000-0000-0000-0002-000000000003', '00000000-0000-0000-0001-000000000002', NULL, 'Basic 연간', '연 300만원 (월 25만원, 17% 할인)', true, false, 'KRW', 3000000, 'recurring', 'year', 1, 0, NULL, '{"discount": 17, "monthlyEquivalent": 250000}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');
 INSERT INTO public.billing_plans VALUES ('00000000-0000-0000-0002-000000000004', '00000000-0000-0000-0001-000000000003', NULL, 'Pro 월간', '월 200만원 정기 결제', true, true, 'KRW', 2000000, 'recurring', 'month', 1, 0, NULL, '{}', '2025-12-12 02:55:28.508949+00', '2025-12-12 02:55:28.508949+00');

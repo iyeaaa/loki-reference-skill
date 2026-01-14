@@ -658,7 +658,7 @@ export function TrialManagementPage() {
           </div>
 
           {/* Performance Table */}
-          <div className="max-h-80 overflow-auto rounded-md border">
+          <div className="overflow-auto rounded-md border">
             <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>

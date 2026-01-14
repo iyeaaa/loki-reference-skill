@@ -67,6 +67,7 @@ export function StepCompanyInfo() {
   const websiteUrlId = useId()
 
   // Form state for editing - initialize with survey data from localStorage
+  // 기본값: target="b2b", experience="none" (설문에서 수집하지 않는 필드)
   const [editedData, setEditedData] = useState<SalesStrategyData>(() => {
     const surveyData = getSurveyFromStorage()
     return {
@@ -74,9 +75,9 @@ export function StepCompanyInfo() {
       companyNameEn: "",
       companyDescription: "",
       industry: surveyData?.industry || "",
-      target: surveyData?.target || "",
+      target: surveyData?.target || "b2b",
       country: surveyData?.country || "",
-      experience: surveyData?.experience || "",
+      experience: surveyData?.experience || "none",
       websiteUrl: "",
       includeSignature: true,
     }
@@ -203,10 +204,11 @@ export function StepCompanyInfo() {
             companyDescription:
               workspaceData?.companyDescription || strategyData.companyDescription || "",
             // Merge survey data from localStorage to ensure it's not lost
+            // 기본값: target="b2b", experience="none" (설문에서 수집하지 않는 필드)
             industry: strategyData.industry || surveyData?.industry || "",
-            target: strategyData.target || surveyData?.target || "",
+            target: strategyData.target || surveyData?.target || "b2b",
             country: strategyData.country || surveyData?.country || "",
-            experience: strategyData.experience || surveyData?.experience || "",
+            experience: strategyData.experience || surveyData?.experience || "none",
             websiteUrl: strategyData.websiteUrl || "",
             includeSignature: strategyData.includeSignature ?? true,
           }
@@ -224,10 +226,11 @@ export function StepCompanyInfo() {
             companyNameEn: workspaceData?.companyNameEn || "",
             companyDescription: workspaceData?.companyDescription || "",
             // Preserve survey data from localStorage
-            industry: surveyData?.industry || prev.industry,
-            target: surveyData?.target || prev.target,
-            country: surveyData?.country || prev.country,
-            experience: surveyData?.experience || prev.experience,
+            // 기본값: target="b2b", experience="none" (설문에서 수집하지 않는 필드)
+            industry: surveyData?.industry || prev.industry || "",
+            target: surveyData?.target || prev.target || "b2b",
+            country: surveyData?.country || prev.country || "",
+            experience: surveyData?.experience || prev.experience || "none",
           }))
         }
       } catch (error) {

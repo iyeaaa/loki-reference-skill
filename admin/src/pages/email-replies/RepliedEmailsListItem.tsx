@@ -102,11 +102,19 @@ export function RepliedEmailsListItem({
           : ""
 
   return (
-    <button
+    // biome-ignore lint/a11y/useSemanticElements: Cannot use <button> because it contains nested <button> elements for checkbox and star
+    <div
       className={`flex w-full cursor-pointer items-start gap-2 px-3 py-2.5 text-left transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isActive ? "border-blue-500 border-l-4 bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}
         ${email.isRead ? "" : "font-semibold"}border-b border-gray-200 dark:border-gray-700`}
       onClick={onSelect}
-      type="button"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       {/* Checkbox */}
       <button
@@ -174,6 +182,6 @@ export function RepliedEmailsListItem({
           </div>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

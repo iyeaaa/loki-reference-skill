@@ -284,25 +284,26 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           })
           console.log("[Auth] ✅ Workspace created:", workspace?.id)
 
-          // Link sales strategy and save survey data if all 4 fields are provided
-          const hasAllOnboardingParams = !!(industry && target && country && experience)
-          console.log("[Auth] Has all onboarding params:", hasAllOnboardingParams)
+          // Link sales strategy and save survey data if required fields are provided
+          // 필수: industry, country / 선택(기본값 적용): target="b2b", experience="none"
+          const hasRequiredOnboardingParams = !!(industry && country)
+          console.log("[Auth] Has required onboarding params:", hasRequiredOnboardingParams)
 
-          if (workspace && hasAllOnboardingParams) {
-            // 1. Save survey data to onboarding_progress
+          if (workspace && hasRequiredOnboardingParams) {
+            // 1. Save survey data to onboarding_progress with defaults
             try {
+              const normalizedSurveyData = {
+                industry,
+                target: target || "b2b",
+                country,
+                experience: experience || "none",
+                lang,
+              }
               console.log("[Auth] Saving survey data to onboarding_progress...")
               console.log("[Auth] workspaceId:", workspace.id)
-              console.log(
-                "[Auth] surveyData:",
-                JSON.stringify({ industry, target, country, experience, lang }, null, 2),
-              )
+              console.log("[Auth] surveyData:", JSON.stringify(normalizedSurveyData, null, 2))
 
-              await onboardingService.saveSurveyData(
-                workspace.id,
-                { industry, target, country, experience, lang },
-                newUser.id,
-              )
+              await onboardingService.saveSurveyData(workspace.id, normalizedSurveyData, newUser.id)
               console.log("[Auth] ✅ Survey data saved to onboarding_progress")
               // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
             } catch (surveyError) {
@@ -314,9 +315,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             console.log("[Auth] ⚠️ Skipping survey data save - missing required fields")
             console.log("[Auth]   workspace:", !!workspace)
             console.log("[Auth]   industry:", industry)
-            console.log("[Auth]   target:", target)
             console.log("[Auth]   country:", country)
-            console.log("[Auth]   experience:", experience)
           }
         } catch (wsError) {
           console.error("[Auth] ❌ Failed to create workspace:", wsError)
@@ -565,22 +564,30 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             onboardingParams: { industry, target, country, experience, lang },
           })
 
-          // For new users with all onboarding params, save to onboarding_progress and auto-generate
-          const hasAllOnboardingParams = !!(industry && target && country && experience)
-          if (user && hasAllOnboardingParams) {
+          // For new users with required onboarding params, save to onboarding_progress
+          // 필수: industry, country / 선택(기본값 적용): target="b2b", experience="none"
+          const hasRequiredOnboardingParams = !!(industry && country)
+          if (user && hasRequiredOnboardingParams) {
             try {
               // Get the workspace created for this user
               const workspaces = await workspaceService.getWorkspacesByOwner(user.id)
               const workspace = workspaces?.[0]
 
               if (workspace) {
-                // Save survey data to onboarding_progress
+                // Save survey data to onboarding_progress with defaults
+                const normalizedSurveyData = {
+                  industry,
+                  target: target || "b2b",
+                  country,
+                  experience: experience || "none",
+                  lang,
+                }
                 console.log("[Auth/Google] Saving survey data to onboarding_progress...")
-                await onboardingService.saveSurveyData(
-                  workspace.id,
-                  { industry, target, country, experience, lang },
-                  user.id,
+                console.log(
+                  "[Auth/Google] surveyData:",
+                  JSON.stringify(normalizedSurveyData, null, 2),
                 )
+                await onboardingService.saveSurveyData(workspace.id, normalizedSurveyData, user.id)
                 console.log("[Auth/Google] ✅ Survey data saved")
                 // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
               }
@@ -772,24 +779,33 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             onboardingParams,
           })
 
-          // For new users with all onboarding params, save to onboarding_progress and auto-generate
-          const hasAllOnboardingParams = !!(
-            onboardingParams.industry &&
-            onboardingParams.target &&
-            onboardingParams.country &&
-            onboardingParams.experience
+          // For new users with required onboarding params, save to onboarding_progress
+          // 필수: industry, country / 선택(기본값 적용): target="b2b", experience="none"
+          const hasRequiredOnboardingParams = !!(
+            onboardingParams.industry && onboardingParams.country
           )
 
-          if (user && hasAllOnboardingParams) {
+          if (user && hasRequiredOnboardingParams) {
             try {
               // Get the workspace created for this user
               const workspaces = await workspaceService.getWorkspacesByOwner(user.id)
               const workspace = workspaces?.[0]
 
               if (workspace) {
-                // Save survey data to onboarding_progress
+                // Save survey data to onboarding_progress with defaults
+                const normalizedSurveyData = {
+                  industry: onboardingParams.industry,
+                  target: onboardingParams.target || "b2b",
+                  country: onboardingParams.country,
+                  experience: onboardingParams.experience || "none",
+                  lang: onboardingParams.lang,
+                }
                 console.log("[Auth/Nylas] Saving survey data to onboarding_progress...")
-                await onboardingService.saveSurveyData(workspace.id, onboardingParams, user.id)
+                console.log(
+                  "[Auth/Nylas] surveyData:",
+                  JSON.stringify(normalizedSurveyData, null, 2),
+                )
+                await onboardingService.saveSurveyData(workspace.id, normalizedSurveyData, user.id)
                 console.log("[Auth/Nylas] ✅ Survey data saved")
                 // Note: Onboarding job will be started when user clicks "바이어 찾아보기" button in Step 1
               }

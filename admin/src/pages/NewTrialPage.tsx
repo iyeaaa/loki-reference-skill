@@ -99,12 +99,9 @@ export default function NewTrialPage() {
         if (isValidSurveyData(surveyData)) {
           requestBody.industry = surveyData.industry
           requestBody.country = surveyData.country
-          if (surveyData.target) {
-            requestBody.target = surveyData.target
-          }
-          if (surveyData.experience) {
-            requestBody.experience = surveyData.experience
-          }
+          // 기본값 적용: 설문에서 수집하지 않는 필드는 기본값 사용
+          requestBody.target = surveyData.target || "b2b"
+          requestBody.experience = surveyData.experience || "none"
           if (surveyData.lang) {
             requestBody.lang = surveyData.lang
           }

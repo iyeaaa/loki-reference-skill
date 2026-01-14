@@ -453,28 +453,34 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
       logger.info({ workspaceId, userId, surveyData }, "[Onboarding] Starting discovery job")
 
       try {
-        // Validate required survey data
-        if (
-          !surveyData.industry ||
-          !surveyData.target ||
-          !surveyData.country ||
-          !surveyData.experience
-        ) {
+        // Validate required survey data (industry, country만 필수)
+        if (!surveyData.industry || !surveyData.country) {
           set.status = 400
-          return errorResponse("필수 설문 데이터가 누락되었습니다.", ResponseCode.BAD_REQUEST)
+          return errorResponse(
+            "필수 설문 데이터(industry, country)가 누락되었습니다.",
+            ResponseCode.BAD_REQUEST,
+          )
         }
+
+        // 기본값 적용: target="b2b", experience="none"
+        const normalizedSurveyData = {
+          industry: surveyData.industry,
+          target: surveyData.target || "b2b",
+          country: surveyData.country,
+          experience: surveyData.experience || "none",
+          lang: surveyData.lang,
+        }
+
+        logger.info(
+          { workspaceId, normalizedSurveyData },
+          "[Onboarding] Starting discovery job with normalized survey data",
+        )
 
         // Queue the onboarding job
         const job = await addOnboardingJob({
           workspaceId,
           userId,
-          surveyData: {
-            industry: surveyData.industry,
-            target: surveyData.target,
-            country: surveyData.country,
-            experience: surveyData.experience,
-            lang: surveyData.lang,
-          },
+          surveyData: normalizedSurveyData,
         })
 
         logger.info({ workspaceId, jobId: job.id }, "[Onboarding] Discovery job queued")

@@ -53,6 +53,13 @@ export type ActivityDistributionItem = {
   [key: string]: string | number
 }
 
+// 워크스페이스 미리보기 (코호트 셀에 표시)
+export type CohortWorkspacePreview = {
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+}
+
 export type CohortItem = {
   period: string // 표시용 (MM/DD 또는 MM/DD (요일))
   periodStart: string
@@ -68,6 +75,15 @@ export type CohortItem = {
   emailConnectedRate: number
   emailSent: number // 이메일 발송
   emailSentRate: number
+  // 워크스페이스 미리보기 (각 단계별)
+  workspaces: {
+    all: CohortWorkspacePreview[]
+    surveyLogin: CohortWorkspacePreview[]
+    companyInfo: CohortWorkspacePreview[]
+    leadCreated: CohortWorkspacePreview[]
+    emailConnected: CohortWorkspacePreview[]
+    emailSent: CohortWorkspacePreview[]
+  }
 }
 
 export type CohortMode = "daily" | "weekly"

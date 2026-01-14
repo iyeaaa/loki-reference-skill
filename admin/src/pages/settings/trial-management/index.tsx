@@ -72,6 +72,7 @@ import {
 } from "@/lib/api/hooks/trial-analytics"
 import type {
   CohortMode,
+  CohortWorkspacePreview,
   OnboardingStep,
   WorkspaceEmailPerformance,
 } from "@/lib/api/services/trial-analytics"
@@ -236,6 +237,53 @@ function SortableTableHead<T extends string>({
   )
 }
 
+// Cohort Cell Component with workspace preview
+function CohortCell({
+  rate,
+  count,
+  workspaces,
+  period,
+  step,
+  onClick,
+}: {
+  rate: number
+  count: number
+  workspaces: CohortWorkspacePreview[]
+  period: string
+  step: string
+  onClick: (period: string, step: string, workspaces: CohortWorkspacePreview[]) => void
+}) {
+  const previewWorkspaces = workspaces.slice(0, 3)
+  const hasMore = workspaces.length > 3
+
+  return (
+    <TableCell
+      className={cn(
+        "cursor-pointer p-1 text-center transition-opacity hover:opacity-80",
+        getHeatmapStyle(rate),
+      )}
+      onClick={() => onClick(period, step, workspaces)}
+    >
+      <div className="font-bold text-sm">{rate}%</div>
+      <div className="text-[10px] opacity-80">({count})</div>
+      {workspaces.length > 0 && (
+        <div className="mt-1 space-y-0.5">
+          {previewWorkspaces.map((ws) => (
+            <div
+              className="truncate text-[9px] opacity-70"
+              key={ws.workspaceId}
+              title={ws.companyName || ws.ownerName}
+            >
+              {ws.companyName || ws.ownerName}
+            </div>
+          ))}
+          {hasMore && <div className="text-[9px] opacity-50">+{workspaces.length - 3}개 더</div>}
+        </div>
+      )}
+    </TableCell>
+  )
+}
+
 export function TrialManagementPage() {
   const [days, setDays] = useState(30)
   const [cohortMode, setCohortMode] = useState<CohortMode>("weekly")
@@ -249,6 +297,14 @@ export function TrialManagementPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [selectedWorkspaceDetail, setSelectedWorkspaceDetail] =
     useState<WorkspaceEmailPerformance | null>(null)
+
+  // Cohort cell detail modal state
+  const [cohortModalOpen, setCohortModalOpen] = useState(false)
+  const [selectedCohortCell, setSelectedCohortCell] = useState<{
+    period: string
+    step: string
+    workspaces: CohortWorkspacePreview[]
+  } | null>(null)
 
   // Exclusion state (now from API)
   const [excludeModalOpen, setExcludeModalOpen] = useState(false)
@@ -358,6 +414,16 @@ export function TrialManagementPage() {
     if (mappedStep) {
       setSelectedStep(mappedStep)
     }
+  }
+
+  // Handle cohort cell click
+  const handleCohortCellClick = (
+    period: string,
+    step: string,
+    workspaces: CohortWorkspacePreview[],
+  ) => {
+    setSelectedCohortCell({ period, step, workspaces })
+    setCohortModalOpen(true)
   }
 
   // Get excluded workspace IDs from API response
@@ -747,31 +813,8 @@ export function TrialManagementPage() {
       {/* Email Performance Section */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle className="text-base">캠페인 이메일 성과</CardTitle>
-              <CardDescription>체험판 워크스페이스별 이메일 발송 및 성과 지표</CardDescription>
-            </div>
-            {/* Search Input */}
-            <div className="relative w-64">
-              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                onChange={(e) => setEmailPerfSearchTerm(e.target.value)}
-                placeholder="회사명, 담당자, 이메일 검색..."
-                value={emailPerfSearchTerm}
-              />
-              {emailPerfSearchTerm && (
-                <button
-                  className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
-                  onClick={() => setEmailPerfSearchTerm("")}
-                  type="button"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
+          <CardTitle className="text-base">캠페인 이메일 성과</CardTitle>
+          <CardDescription>체험판 워크스페이스별 이메일 발송 및 성과 지표</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Summary Cards */}
@@ -800,6 +843,26 @@ export function TrialManagementPage() {
               </div>
               <div className="text-muted-foreground text-xs">발송 워크스페이스</div>
             </div>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-64">
+            <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              onChange={(e) => setEmailPerfSearchTerm(e.target.value)}
+              placeholder="회사명, 담당자, 이메일 검색..."
+              value={emailPerfSearchTerm}
+            />
+            {emailPerfSearchTerm && (
+              <button
+                className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
+                onClick={() => setEmailPerfSearchTerm("")}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Performance Table */}
@@ -839,10 +902,10 @@ export function TrialManagementPage() {
                     onSort={handleEmailPerfSort}
                     sortOrder={emailPerfSortOrder}
                   />
-                  <TableHead className="w-[160px]">퍼널 상태</TableHead>
+                  <TableHead className="w-[180px]">퍼널 상태</TableHead>
                   <SortableTableHead
                     align="right"
-                    className="w-[60px]"
+                    className="w-[70px]"
                     column="emailsSent"
                     currentSortBy={emailPerfSortBy}
                     label="발송"
@@ -851,7 +914,7 @@ export function TrialManagementPage() {
                   />
                   <SortableTableHead
                     align="right"
-                    className="w-[70px]"
+                    className="w-[80px]"
                     column="openRate"
                     currentSortBy={emailPerfSortBy}
                     label="오픈율"
@@ -860,7 +923,7 @@ export function TrialManagementPage() {
                   />
                   <SortableTableHead
                     align="right"
-                    className="w-[70px]"
+                    className="w-[80px]"
                     column="replyRate"
                     currentSortBy={emailPerfSortBy}
                     label="답장율"
@@ -868,14 +931,14 @@ export function TrialManagementPage() {
                     sortOrder={emailPerfSortOrder}
                   />
                   <SortableTableHead
-                    className="w-[50px]"
+                    className="w-[70px]"
                     column="performanceLevel"
                     currentSortBy={emailPerfSortBy}
                     label="성과"
                     onSort={handleEmailPerfSort}
                     sortOrder={emailPerfSortOrder}
                   />
-                  <TableHead className="min-w-[180px]">설문/회사정보</TableHead>
+                  <TableHead className="w-[160px]">설문/회사정보</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -896,10 +959,10 @@ export function TrialManagementPage() {
                         {ws.lastLogin ? format(new Date(ws.lastLogin), "MM/dd HH:mm") : "-"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-0.5">
+                        <div className="flex flex-wrap gap-1">
                           <Badge
                             className={cn(
-                              "px-1 py-0 text-[10px]",
+                              "px-1.5 py-0.5 text-xs",
                               ws.funnelStatus?.survey
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
@@ -910,7 +973,7 @@ export function TrialManagementPage() {
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1 py-0 text-[10px]",
+                              "px-1.5 py-0.5 text-xs",
                               ws.funnelStatus?.companyInfo
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
@@ -921,7 +984,7 @@ export function TrialManagementPage() {
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1 py-0 text-[10px]",
+                              "px-1.5 py-0.5 text-xs",
                               ws.funnelStatus?.leadCreated
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
@@ -932,7 +995,7 @@ export function TrialManagementPage() {
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1 py-0 text-[10px]",
+                              "px-1.5 py-0.5 text-xs",
                               ws.funnelStatus?.emailConnected
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
@@ -943,7 +1006,7 @@ export function TrialManagementPage() {
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1 py-0 text-[10px]",
+                              "px-1.5 py-0.5 text-xs",
                               ws.funnelStatus?.emailSent
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
@@ -960,7 +1023,7 @@ export function TrialManagementPage() {
                       <TableCell>
                         <Badge
                           className={cn(
-                            "text-[10px]",
+                            "px-2 py-0.5 text-xs",
                             ws.performanceLevel === "high" &&
                               "bg-green-100 text-green-700 dark:bg-green-900",
                             ws.performanceLevel === "medium" &&
@@ -978,7 +1041,7 @@ export function TrialManagementPage() {
                           {ws.performanceLevel === "none" && "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell className="max-w-[160px]">
                         {ws.surveyData || ws.companyDescription ? (
                           <button
                             className="w-full cursor-pointer rounded p-1 text-left transition-colors hover:bg-muted/50"
@@ -1107,42 +1170,58 @@ export function TrialManagementPage() {
                   analytics.cohortData.map((cohort) => (
                     <TableRow className="hover:bg-transparent" key={cohort.periodStart}>
                       <TableCell className="bg-muted/30 font-medium">{cohort.period}</TableCell>
-                      <TableCell className="bg-muted/30 text-center font-semibold">
+                      <TableCell
+                        className="cursor-pointer bg-muted/30 text-center font-semibold transition-opacity hover:opacity-80"
+                        onClick={() =>
+                          handleCohortCellClick(
+                            cohort.period,
+                            "전체 가입",
+                            cohort.workspaces?.all || [],
+                          )
+                        }
+                      >
                         {cohort.total}
                       </TableCell>
-                      <TableCell
-                        className={cn("p-1 text-center", getHeatmapStyle(cohort.surveyLoginRate))}
-                      >
-                        <div className="font-bold text-sm">{cohort.surveyLoginRate}%</div>
-                        <div className="text-[10px] opacity-80">({cohort.surveyLogin})</div>
-                      </TableCell>
-                      <TableCell
-                        className={cn("p-1 text-center", getHeatmapStyle(cohort.companyInfoRate))}
-                      >
-                        <div className="font-bold text-sm">{cohort.companyInfoRate}%</div>
-                        <div className="text-[10px] opacity-80">({cohort.companyInfo})</div>
-                      </TableCell>
-                      <TableCell
-                        className={cn("p-1 text-center", getHeatmapStyle(cohort.leadCreatedRate))}
-                      >
-                        <div className="font-bold text-sm">{cohort.leadCreatedRate}%</div>
-                        <div className="text-[10px] opacity-80">({cohort.leadCreated})</div>
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "p-1 text-center",
-                          getHeatmapStyle(cohort.emailConnectedRate),
-                        )}
-                      >
-                        <div className="font-bold text-sm">{cohort.emailConnectedRate}%</div>
-                        <div className="text-[10px] opacity-80">({cohort.emailConnected})</div>
-                      </TableCell>
-                      <TableCell
-                        className={cn("p-1 text-center", getHeatmapStyle(cohort.emailSentRate))}
-                      >
-                        <div className="font-bold text-sm">{cohort.emailSentRate}%</div>
-                        <div className="text-[10px] opacity-80">({cohort.emailSent})</div>
-                      </TableCell>
+                      <CohortCell
+                        count={cohort.surveyLogin}
+                        onClick={handleCohortCellClick}
+                        period={cohort.period}
+                        rate={cohort.surveyLoginRate}
+                        step="설문+로그인"
+                        workspaces={cohort.workspaces?.surveyLogin || []}
+                      />
+                      <CohortCell
+                        count={cohort.companyInfo}
+                        onClick={handleCohortCellClick}
+                        period={cohort.period}
+                        rate={cohort.companyInfoRate}
+                        step="회사정보"
+                        workspaces={cohort.workspaces?.companyInfo || []}
+                      />
+                      <CohortCell
+                        count={cohort.leadCreated}
+                        onClick={handleCohortCellClick}
+                        period={cohort.period}
+                        rate={cohort.leadCreatedRate}
+                        step="리드 생성"
+                        workspaces={cohort.workspaces?.leadCreated || []}
+                      />
+                      <CohortCell
+                        count={cohort.emailConnected}
+                        onClick={handleCohortCellClick}
+                        period={cohort.period}
+                        rate={cohort.emailConnectedRate}
+                        step="이메일 연동"
+                        workspaces={cohort.workspaces?.emailConnected || []}
+                      />
+                      <CohortCell
+                        count={cohort.emailSent}
+                        onClick={handleCohortCellClick}
+                        period={cohort.period}
+                        rate={cohort.emailSentRate}
+                        step="이메일 발송"
+                        workspaces={cohort.workspaces?.emailSent || []}
+                      />
                     </TableRow>
                   ))
                 ) : (
@@ -1501,6 +1580,46 @@ export function TrialManagementPage() {
               selectedWorkspaceDetail?.surveyData || selectedWorkspaceDetail?.companyDescription
             ) && (
               <div className="py-8 text-center text-muted-foreground">등록된 정보가 없습니다</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cohort Cell Detail Modal */}
+      <Dialog onOpenChange={setCohortModalOpen} open={cohortModalOpen}>
+        <DialogContent className="max-h-[85vh] max-w-lg overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCohortCell?.period} - {selectedCohortCell?.step}
+            </DialogTitle>
+            <DialogDescription>
+              해당 기간 {selectedCohortCell?.step} 완료 워크스페이스 (
+              {selectedCohortCell?.workspaces.length ?? 0}개)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {selectedCohortCell?.workspaces.length ? (
+              <div className="space-y-2">
+                {selectedCohortCell.workspaces.map((ws) => (
+                  <div
+                    className="flex items-center justify-between rounded-lg border p-3"
+                    key={ws.workspaceId}
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {ws.companyName || (
+                          <span className="text-muted-foreground">회사명 미입력</span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground text-sm">{ws.ownerName}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                해당 단계를 완료한 워크스페이스가 없습니다
+              </div>
             )}
           </div>
         </DialogContent>

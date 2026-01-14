@@ -60,6 +60,13 @@ export interface ActivityDistributionItem {
   count: number
 }
 
+// 워크스페이스 미리보기 (코호트 셀에 표시)
+export interface CohortWorkspacePreview {
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+}
+
 export interface CohortItem {
   period: string // 표시용 (MM/DD 또는 MM/DD (요일))
   periodStart: string // ISO date for sorting
@@ -75,6 +82,15 @@ export interface CohortItem {
   emailConnectedRate: number
   emailSent: number // 이메일 발송
   emailSentRate: number
+  // 워크스페이스 미리보기 (각 단계별 최대 3개)
+  workspaces: {
+    all: CohortWorkspacePreview[] // 전체 가입자
+    surveyLogin: CohortWorkspacePreview[]
+    companyInfo: CohortWorkspacePreview[]
+    leadCreated: CohortWorkspacePreview[]
+    emailConnected: CohortWorkspacePreview[]
+    emailSent: CohortWorkspacePreview[]
+  }
 }
 
 export type CohortMode = "daily" | "weekly"
@@ -564,8 +580,11 @@ async function getCohortData(
 ): Promise<CohortItem[]> {
   const isDaily = mode === "daily"
   const exclusion = buildExclusionClause(excludeIds)
+  const dateTrunc = isDaily ? "day" : "week"
+  const limit = isDaily ? 14 : 8
 
-  const result = await db.execute<{
+  // 집계 쿼리
+  const aggregateResult = await db.execute<{
     period_label: string
     period_start: string
     total: number
@@ -574,96 +593,144 @@ async function getCohortData(
     lead_created: number
     email_connected: number
     email_sent: number
-  }>(
-    isDaily
-      ? sql`
-      WITH cohorts AS (
-        SELECT
-          DATE_TRUNC('day', w.created_at) as cohort_period,
-          w.id as workspace_id,
-          CASE WHEN op.survey_data IS NOT NULL THEN 1 ELSE 0 END as has_survey,
-          CASE WHEN op.company_info_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_company_info,
-          CASE WHEN op.lead_search_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_lead,
-          CASE WHEN uea.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_connected,
-          CASE WHEN sent.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_sent
-        FROM workspaces w
-        JOIN users u ON w.owner_id = u.id
-        LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
-        LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
-        LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
-        WHERE w.subscription_tier = 'trial'
-          AND u.user_role != 'admin'
-          ${sql.raw(exclusion)}
-      )
+  }>(sql`
+    WITH cohorts AS (
       SELECT
-        TO_CHAR(cohort_period, 'MM/DD') || ' (' ||
-        CASE EXTRACT(DOW FROM cohort_period)
-          WHEN 0 THEN '일'
-          WHEN 1 THEN '월'
-          WHEN 2 THEN '화'
-          WHEN 3 THEN '수'
-          WHEN 4 THEN '목'
-          WHEN 5 THEN '금'
-          WHEN 6 THEN '토'
-        END || ')' as period_label,
-        TO_CHAR(cohort_period, 'YYYY-MM-DD') as period_start,
-        COUNT(*)::int as total,
-        SUM(has_survey)::int as survey_login,
-        SUM(has_company_info)::int as company_info,
-        SUM(has_lead)::int as lead_created,
-        SUM(has_email_connected)::int as email_connected,
-        SUM(has_email_sent)::int as email_sent
-      FROM cohorts
-      GROUP BY cohort_period
-      ORDER BY cohort_period DESC
-      LIMIT 14
-    `
-      : sql`
-      WITH cohorts AS (
-        SELECT
-          DATE_TRUNC('week', w.created_at) as cohort_period,
-          w.id as workspace_id,
-          CASE WHEN op.survey_data IS NOT NULL THEN 1 ELSE 0 END as has_survey,
-          CASE WHEN op.company_info_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_company_info,
-          CASE WHEN op.lead_search_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_lead,
-          CASE WHEN uea.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_connected,
-          CASE WHEN sent.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_sent
-        FROM workspaces w
-        JOIN users u ON w.owner_id = u.id
-        LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
-        LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
-        LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
-        WHERE w.subscription_tier = 'trial'
-          AND u.user_role != 'admin'
-          ${sql.raw(exclusion)}
-      )
-      SELECT
-        TO_CHAR(cohort_period, 'MM/DD') || ' (' ||
-        CASE EXTRACT(DOW FROM cohort_period)
-          WHEN 0 THEN '일'
-          WHEN 1 THEN '월'
-          WHEN 2 THEN '화'
-          WHEN 3 THEN '수'
-          WHEN 4 THEN '목'
-          WHEN 5 THEN '금'
-          WHEN 6 THEN '토'
-        END || ')' as period_label,
-        TO_CHAR(cohort_period, 'YYYY-MM-DD') as period_start,
-        COUNT(*)::int as total,
-        SUM(has_survey)::int as survey_login,
-        SUM(has_company_info)::int as company_info,
-        SUM(has_lead)::int as lead_created,
-        SUM(has_email_connected)::int as email_connected,
-        SUM(has_email_sent)::int as email_sent
-      FROM cohorts
-      GROUP BY cohort_period
-      ORDER BY cohort_period DESC
-      LIMIT 8
-    `,
-  )
+        DATE_TRUNC(${dateTrunc}, w.created_at) as cohort_period,
+        w.id as workspace_id,
+        CASE WHEN op.survey_data IS NOT NULL THEN 1 ELSE 0 END as has_survey,
+        CASE WHEN op.company_info_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_company_info,
+        CASE WHEN op.lead_search_completed_at IS NOT NULL THEN 1 ELSE 0 END as has_lead,
+        CASE WHEN uea.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_connected,
+        CASE WHEN sent.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_sent
+      FROM workspaces w
+      JOIN users u ON w.owner_id = u.id
+      LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
+      LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
+      LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
+      WHERE w.subscription_tier = 'trial'
+        AND u.user_role != 'admin'
+        ${sql.raw(exclusion)}
+    )
+    SELECT
+      TO_CHAR(cohort_period, 'MM/DD') || ' (' ||
+      CASE EXTRACT(DOW FROM cohort_period)
+        WHEN 0 THEN '일'
+        WHEN 1 THEN '월'
+        WHEN 2 THEN '화'
+        WHEN 3 THEN '수'
+        WHEN 4 THEN '목'
+        WHEN 5 THEN '금'
+        WHEN 6 THEN '토'
+      END || ')' as period_label,
+      TO_CHAR(cohort_period, 'YYYY-MM-DD') as period_start,
+      COUNT(*)::int as total,
+      SUM(has_survey)::int as survey_login,
+      SUM(has_company_info)::int as company_info,
+      SUM(has_lead)::int as lead_created,
+      SUM(has_email_connected)::int as email_connected,
+      SUM(has_email_sent)::int as email_sent
+    FROM cohorts
+    GROUP BY cohort_period
+    ORDER BY cohort_period DESC
+    LIMIT ${limit}
+  `)
 
-  return result.rows.map((row) => {
+  // 워크스페이스 상세 쿼리
+  const detailResult = await db.execute<{
+    period_start: string
+    workspace_id: string
+    company_name: string | null
+    owner_name: string
+    has_survey: boolean
+    has_company_info: boolean
+    has_lead: boolean
+    has_email_connected: boolean
+    has_email_sent: boolean
+  }>(sql`
+    SELECT
+      TO_CHAR(DATE_TRUNC(${dateTrunc}, w.created_at), 'YYYY-MM-DD') as period_start,
+      w.id as workspace_id,
+      w.company_name,
+      u.username as owner_name,
+      (op.survey_data IS NOT NULL) as has_survey,
+      (op.company_info_completed_at IS NOT NULL) as has_company_info,
+      (op.lead_search_completed_at IS NOT NULL) as has_lead,
+      (uea.workspace_id IS NOT NULL) as has_email_connected,
+      (sent.workspace_id IS NOT NULL) as has_email_sent
+    FROM workspaces w
+    JOIN users u ON w.owner_id = u.id
+    LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
+    LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
+    LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
+    WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
+    ORDER BY w.created_at DESC
+  `)
+
+  // 기간별로 워크스페이스 그룹화
+  const workspacesByPeriod = new Map<
+    string,
+    {
+      all: CohortWorkspacePreview[]
+      surveyLogin: CohortWorkspacePreview[]
+      companyInfo: CohortWorkspacePreview[]
+      leadCreated: CohortWorkspacePreview[]
+      emailConnected: CohortWorkspacePreview[]
+      emailSent: CohortWorkspacePreview[]
+    }
+  >()
+
+  for (const row of detailResult.rows) {
+    const preview: CohortWorkspacePreview = {
+      workspaceId: row.workspace_id,
+      companyName: row.company_name,
+      ownerName: row.owner_name,
+    }
+
+    if (!workspacesByPeriod.has(row.period_start)) {
+      workspacesByPeriod.set(row.period_start, {
+        all: [],
+        surveyLogin: [],
+        companyInfo: [],
+        leadCreated: [],
+        emailConnected: [],
+        emailSent: [],
+      })
+    }
+
+    const periodData = workspacesByPeriod.get(row.period_start)
+    if (!periodData) continue
+    periodData.all.push(preview)
+    if (row.has_survey) {
+      periodData.surveyLogin.push(preview)
+    }
+    if (row.has_company_info) {
+      periodData.companyInfo.push(preview)
+    }
+    if (row.has_lead) {
+      periodData.leadCreated.push(preview)
+    }
+    if (row.has_email_connected) {
+      periodData.emailConnected.push(preview)
+    }
+    if (row.has_email_sent) {
+      periodData.emailSent.push(preview)
+    }
+  }
+
+  return aggregateResult.rows.map((row) => {
     const total = row.total || 1
+    const periodWorkspaces = workspacesByPeriod.get(row.period_start) || {
+      all: [],
+      surveyLogin: [],
+      companyInfo: [],
+      leadCreated: [],
+      emailConnected: [],
+      emailSent: [],
+    }
+
     return {
       period: row.period_label,
       periodStart: row.period_start,
@@ -678,6 +745,7 @@ async function getCohortData(
       emailConnectedRate: Math.round((row.email_connected / total) * 100),
       emailSent: row.email_sent,
       emailSentRate: Math.round((row.email_sent / total) * 100),
+      workspaces: periodWorkspaces,
     }
   })
 }

@@ -4,16 +4,17 @@
  */
 
 import { format } from "date-fns"
-import { AlertTriangle, ArrowDown, ArrowUp, RefreshCw } from "lucide-react"
+import { AlertTriangle, ArrowDown, ArrowUp, RefreshCw, Settings2, X } from "lucide-react"
 import { useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -24,13 +25,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -47,7 +51,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useOnboardingStepWorkspaces, useTrialAnalytics } from "@/lib/api/hooks/trial-analytics"
+import { useCurrentUser } from "@/lib/api/hooks/auth"
+import {
+  useBulkAddExclusionsMutation,
+  useClearAllExclusionsMutation,
+  useExclusions,
+  useOnboardingStepWorkspaces,
+  useRemoveExclusionMutation,
+  useTrialAnalytics,
+} from "@/lib/api/hooks/trial-analytics"
 import type {
   CohortMode,
   OnboardingStep,
@@ -163,6 +175,22 @@ export function TrialManagementPage() {
     useState<keyof WorkspaceEmailPerformance>("emailsSent")
   const [emailPerfSortOrder, setEmailPerfSortOrder] = useState<"asc" | "desc">("desc")
 
+  // Exclusion state (now from API)
+  const [excludeModalOpen, setExcludeModalOpen] = useState(false)
+  const [excludeSearchTerm, setExcludeSearchTerm] = useState("")
+  const [pendingExclusions, setPendingExclusions] = useState<Set<string>>(new Set())
+
+  // Get current user for excludedBy field
+  const { data: currentUser } = useCurrentUser()
+
+  // Get exclusions from DB
+  const { data: exclusions = [] } = useExclusions()
+
+  // Exclusion mutations
+  const bulkAddExclusionsMutation = useBulkAddExclusionsMutation()
+  const removeExclusionMutation = useRemoveExclusionMutation()
+  const clearAllExclusionsMutation = useClearAllExclusionsMutation()
+
   const {
     data: analytics,
     isLoading: analyticsLoading,
@@ -212,6 +240,95 @@ export function TrialManagementPage() {
     }
   }
 
+  // Get excluded workspace IDs from API response
+  const excludedIds = useMemo(() => exclusions.map((e) => e.workspaceId), [exclusions])
+
+  // Open exclusion modal and initialize pending exclusions
+  const handleOpenExcludeModal = () => {
+    setPendingExclusions(new Set(excludedIds))
+    setExcludeSearchTerm("")
+    setExcludeModalOpen(true)
+  }
+
+  // Toggle workspace exclusion in pending state
+  const togglePendingExclusion = (workspace: WorkspaceEmailPerformance) => {
+    const newPending = new Set(pendingExclusions)
+    if (newPending.has(workspace.workspaceId)) {
+      newPending.delete(workspace.workspaceId)
+    } else {
+      newPending.add(workspace.workspaceId)
+    }
+    setPendingExclusions(newPending)
+  }
+
+  // Apply exclusions via API
+  const handleApplyExclusions = async () => {
+    if (!currentUser?.id) {
+      toast.error("사용자 정보를 불러올 수 없습니다")
+      return
+    }
+
+    // Find workspaces to add (in pending but not in current exclusions)
+    const toAdd = [...pendingExclusions].filter((id) => !excludedIds.includes(id))
+    // Find workspaces to remove (in current exclusions but not in pending)
+    const toRemove = excludedIds.filter((id) => !pendingExclusions.has(id))
+
+    try {
+      // Add new exclusions
+      if (toAdd.length > 0) {
+        await bulkAddExclusionsMutation.mutateAsync({
+          workspaceIds: toAdd,
+          excludedBy: currentUser.id,
+        })
+      }
+
+      // Remove exclusions
+      for (const id of toRemove) {
+        await removeExclusionMutation.mutateAsync(id)
+      }
+
+      toast.success("제외 설정이 저장되었습니다")
+      setExcludeModalOpen(false)
+    } catch {
+      toast.error("제외 설정 저장에 실패했습니다")
+    }
+  }
+
+  // Remove a single workspace from exclusion list
+  const handleRemoveExclusion = async (id: string) => {
+    try {
+      await removeExclusionMutation.mutateAsync(id)
+      toast.success("제외가 해제되었습니다")
+    } catch {
+      toast.error("제외 해제에 실패했습니다")
+    }
+  }
+
+  // Clear all exclusions
+  const handleClearAllExclusions = async () => {
+    try {
+      await clearAllExclusionsMutation.mutateAsync()
+      toast.success("모든 제외 설정이 초기화되었습니다")
+    } catch {
+      toast.error("제외 초기화에 실패했습니다")
+    }
+  }
+
+  // Filter workspaces for exclusion modal
+  const filteredWorkspacesForExclusion = useMemo(() => {
+    const workspaces = analytics?.emailPerformance?.workspaces ?? []
+    if (!excludeSearchTerm.trim()) {
+      return workspaces
+    }
+    const term = excludeSearchTerm.toLowerCase()
+    return workspaces.filter(
+      (ws) =>
+        ws.companyName?.toLowerCase().includes(term) ||
+        ws.ownerName.toLowerCase().includes(term) ||
+        ws.ownerEmail.toLowerCase().includes(term),
+    )
+  }, [analytics?.emailPerformance?.workspaces, excludeSearchTerm])
+
   if (analyticsLoading) {
     return (
       <div className="space-y-6">
@@ -248,22 +365,80 @@ export function TrialManagementPage() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex items-center justify-end gap-2">
-        <Select onValueChange={(v) => setDays(Number(v))} value={String(days)}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">최근 7일</SelectItem>
-            <SelectItem value="14">최근 14일</SelectItem>
-            <SelectItem value="30">최근 30일</SelectItem>
-            <SelectItem value="90">최근 90일</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={() => refetchAnalytics()} size="icon" variant="outline">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Button onClick={handleOpenExcludeModal} size="sm" variant="outline">
+            <Settings2 className="mr-2 h-4 w-4" />
+            체험판 통계 제외 설정
+            {exclusions.length > 0 && (
+              <Badge className="ml-2" variant="secondary">
+                {exclusions.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select onValueChange={(v) => setDays(Number(v))} value={String(days)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">최근 7일</SelectItem>
+              <SelectItem value="14">최근 14일</SelectItem>
+              <SelectItem value="30">최근 30일</SelectItem>
+              <SelectItem value="90">최근 90일</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => refetchAnalytics()} size="icon" variant="outline">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Excluded Workspaces Info Banner */}
+      {exclusions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+          <span className="text-amber-700 text-sm dark:text-amber-300">
+            통계에서 제외된 워크스페이스 ({exclusions.length}개):
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {exclusions.slice(0, 5).map((ws) => (
+              <Badge
+                className="flex items-center gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-200"
+                key={ws.workspaceId}
+                variant="secondary"
+              >
+                {ws.companyName || ws.ownerName}
+                <button
+                  className="ml-1 rounded-full p-0.5 hover:bg-amber-300 dark:hover:bg-amber-700"
+                  disabled={removeExclusionMutation.isPending}
+                  onClick={() => handleRemoveExclusion(ws.workspaceId)}
+                  type="button"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            {exclusions.length > 5 && (
+              <Badge
+                className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                variant="secondary"
+              >
+                +{exclusions.length - 5}개 더
+              </Badge>
+            )}
+          </div>
+          <Button
+            className="ml-auto text-amber-700 dark:text-amber-300"
+            disabled={clearAllExclusionsMutation.isPending}
+            onClick={handleClearAllExclusions}
+            size="sm"
+            variant="ghost"
+          >
+            전체 해제
+          </Button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -301,25 +476,19 @@ export function TrialManagementPage() {
 
       {/* Charts Row 1 */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Signup Trend Chart */}
+        {/* Signup Trend Chart - Multi-line */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">가입 추이</CardTitle>
-            <CardDescription>일별 체험판 가입 현황</CardDescription>
+            <CardDescription>일별 체험판 가입 현황 (전체 / 활성 / 만료)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
               <ResponsiveContainer height="100%" width="100%">
-                <AreaChart
+                <LineChart
                   data={analytics?.signupTrend || []}
                   margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                 >
-                  <defs>
-                    <linearGradient id="signupGradient" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.2} />
-                      <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid
                     stroke={CHART_COLORS.grid}
                     strokeDasharray="3 3"
@@ -341,16 +510,44 @@ export function TrialManagementPage() {
                     tickMargin={8}
                   />
                   <Tooltip content={<CustomTooltip formatter={(value) => `${value}명`} />} />
-                  <Area
+                  <Legend
+                    iconSize={10}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }}
+                  />
+                  <Line
+                    activeDot={{ r: 5 }}
                     animationDuration={300}
                     dataKey="signups"
-                    fill="url(#signupGradient)"
-                    name="가입"
+                    dot={{ r: 3 }}
+                    name="전체 가입"
                     stroke={CHART_COLORS.primary}
                     strokeWidth={2}
                     type="monotone"
                   />
-                </AreaChart>
+                  <Line
+                    activeDot={{ r: 4 }}
+                    animationDuration={300}
+                    dataKey="trialing"
+                    dot={{ r: 2 }}
+                    name="활성 (체험중)"
+                    stroke={CHART_COLORS.secondary}
+                    strokeDasharray="0"
+                    strokeWidth={2}
+                    type="monotone"
+                  />
+                  <Line
+                    activeDot={{ r: 4 }}
+                    animationDuration={300}
+                    dataKey="pastDue"
+                    dot={{ r: 2 }}
+                    name="만료"
+                    stroke="#ef4444"
+                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    type="monotone"
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -774,22 +971,48 @@ export function TrialManagementPage() {
       {/* Activity Distribution - Donut Chart */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">활성도 분포</CardTitle>
-          <CardDescription>마지막 접속 기준</CardDescription>
+          <CardTitle className="text-lg">활성도 분포</CardTitle>
+          <CardDescription className="text-sm">마지막 접속 기준</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-60">
+          <div className="h-72">
             <ResponsiveContainer height="100%" width="100%">
               <PieChart>
                 <Pie
                   animationDuration={300}
-                  cx="50%"
+                  cx="40%"
                   cy="50%"
                   data={analytics?.activityDistribution || []}
                   dataKey="count"
-                  innerRadius={50}
+                  innerRadius={60}
+                  label={({ cx, cy, midAngle, outerRadius, value, name }) => {
+                    if (!(value && midAngle && name)) {
+                      return null
+                    }
+                    const RADIAN = Math.PI / 180
+                    const radius = (outerRadius as number) + 25
+                    const x = (cx as number) + radius * Math.cos(-midAngle * RADIAN)
+                    const y = (cy as number) + radius * Math.sin(-midAngle * RADIAN)
+                    return (
+                      <text
+                        dominantBaseline="central"
+                        fill={ACTIVITY_COLORS[name as string] || "#64748b"}
+                        fontSize={12}
+                        fontWeight={600}
+                        textAnchor={x > (cx as number) ? "start" : "end"}
+                        x={x}
+                        y={y}
+                      >
+                        {name} {value}명
+                      </text>
+                    )
+                  }}
+                  labelLine={{
+                    stroke: "#94a3b8",
+                    strokeWidth: 1,
+                  }}
                   nameKey="period"
-                  outerRadius={75}
+                  outerRadius={85}
                   paddingAngle={2}
                   strokeWidth={0}
                 >
@@ -798,14 +1021,6 @@ export function TrialManagementPage() {
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip formatter={(value) => `${value}명`} />} />
-                <Legend
-                  align="right"
-                  iconSize={8}
-                  iconType="circle"
-                  layout="vertical"
-                  verticalAlign="middle"
-                  wrapperStyle={{ fontSize: "11px", paddingLeft: "16px" }}
-                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -917,6 +1132,96 @@ export function TrialManagementPage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exclusion Settings Modal */}
+      <Dialog onOpenChange={setExcludeModalOpen} open={excludeModalOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>체험판 통계 제외 설정</DialogTitle>
+            <DialogDescription>
+              선택한 워크스페이스는 모든 체험판 통계에서 제외됩니다. 테스트 계정이나 내부 사용자를
+              제외할 때 유용합니다. 모든 관리자에게 동일하게 적용됩니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Search */}
+          <div className="py-2">
+            <Input
+              onChange={(e) => setExcludeSearchTerm(e.target.value)}
+              placeholder="회사명, 담당자명, 이메일로 검색..."
+              value={excludeSearchTerm}
+            />
+          </div>
+
+          {/* Workspace List with Checkboxes */}
+          <div className="max-h-[50vh] overflow-y-auto rounded-md border">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background">
+                <TableRow>
+                  <TableHead className="w-[50px]">제외</TableHead>
+                  <TableHead>회사명</TableHead>
+                  <TableHead>담당자</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredWorkspacesForExclusion.length > 0 ? (
+                  filteredWorkspacesForExclusion.map((ws) => (
+                    <TableRow
+                      className="cursor-pointer hover:bg-muted/50"
+                      key={ws.workspaceId}
+                      onClick={() => togglePendingExclusion(ws)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={pendingExclusions.has(ws.workspaceId)}
+                          onCheckedChange={() => togglePendingExclusion(ws)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {ws.companyName || <span className="text-muted-foreground">미입력</span>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{ws.ownerName}</div>
+                        <div className="text-muted-foreground text-xs">{ws.ownerEmail}</div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell className="text-center text-muted-foreground" colSpan={3}>
+                      {excludeSearchTerm ? "검색 결과가 없습니다" : "워크스페이스가 없습니다"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Selected Count */}
+          <div className="text-muted-foreground text-sm">
+            {pendingExclusions.size}개 선택됨
+            {pendingExclusions.size !== exclusions.length && (
+              <span className="ml-2 text-amber-600">
+                (현재 저장된 제외 목록: {exclusions.length}개)
+              </span>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setExcludeModalOpen(false)} variant="outline">
+              취소
+            </Button>
+            <Button
+              disabled={bulkAddExclusionsMutation.isPending || removeExclusionMutation.isPending}
+              onClick={handleApplyExclusions}
+            >
+              {bulkAddExclusionsMutation.isPending || removeExclusionMutation.isPending
+                ? "저장 중..."
+                : "적용하기"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

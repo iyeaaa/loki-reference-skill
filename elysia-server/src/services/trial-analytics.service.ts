@@ -10,7 +10,7 @@
 
 import { eq, sql } from "drizzle-orm"
 import { db } from "../db"
-import { workspaces } from "../db/schema"
+import { trialStatExclusions, workspaces } from "../db/schema"
 import logger from "../utils/logger"
 
 // ============================================================================
@@ -163,7 +163,19 @@ export interface TrialUsersResponse {
 // ============================================================================
 
 /**
+ * Build SQL exclusion clause for workspace IDs
+ * Returns empty string if no exclusions, otherwise returns "AND w.id NOT IN (...)"
+ */
+function buildExclusionClause(excludeIds?: string[]): string {
+  if (!excludeIds || excludeIds.length === 0) return ""
+  // Escape single quotes and wrap in quotes
+  const escaped = excludeIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(", ")
+  return `AND w.id NOT IN (${escaped})`
+}
+
+/**
  * Get trial analytics summary and charts data
+ * DB에서 제외 목록을 자동으로 가져와서 적용
  */
 export async function getTrialAnalytics(
   days: number = 30,
@@ -171,6 +183,9 @@ export async function getTrialAnalytics(
 ): Promise<TrialAnalyticsResponse> {
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
+
+  // Get exclusions from DB
+  const excludeWorkspaceIds = await getExcludedWorkspaceIds()
 
   // Execute all queries in parallel for performance
   const [
@@ -183,14 +198,14 @@ export async function getTrialAnalytics(
     cohortData,
     emailPerformance,
   ] = await Promise.all([
-    getTrialSummary(),
-    getSignupTrend(days),
-    getOnboardingFunnel(),
-    getEmailDistribution(),
-    getSourcePerformance(),
-    getActivityDistribution(),
-    getCohortData(cohortMode),
-    getEmailPerformance(),
+    getTrialSummary(excludeWorkspaceIds),
+    getSignupTrend(days, excludeWorkspaceIds),
+    getOnboardingFunnel(excludeWorkspaceIds),
+    getEmailDistribution(excludeWorkspaceIds),
+    getSourcePerformance(excludeWorkspaceIds),
+    getActivityDistribution(excludeWorkspaceIds),
+    getCohortData(cohortMode, excludeWorkspaceIds),
+    getEmailPerformance(excludeWorkspaceIds),
   ])
 
   return {
@@ -207,8 +222,10 @@ export async function getTrialAnalytics(
 
 /**
  * Get trial summary statistics
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getTrialSummary(): Promise<TrialSummary> {
+async function getTrialSummary(excludeIds?: string[]): Promise<TrialSummary> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     total: number
     trialing: number
@@ -229,6 +246,7 @@ async function getTrialSummary(): Promise<TrialSummary> {
       COUNT(CASE WHEN sent_count > 0 THEN 1 END)::int as has_sent_email,
       COUNT(CASE WHEN reply_count > 0 THEN 1 END)::int as has_reply
     FROM workspaces w
+    JOIN users u ON w.owner_id = u.id
     LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
     LEFT JOIN (
       SELECT workspace_id, COUNT(*) as seq_count
@@ -251,6 +269,8 @@ async function getTrialSummary(): Promise<TrialSummary> {
       GROUP BY workspace_id
     ) r ON r.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
   `)
 
   const row = result.rows[0]
@@ -268,8 +288,10 @@ async function getTrialSummary(): Promise<TrialSummary> {
 
 /**
  * Get daily signup trend
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getSignupTrend(days: number): Promise<SignupTrendItem[]> {
+async function getSignupTrend(days: number, excludeIds?: string[]): Promise<SignupTrendItem[]> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     date: string
     signups: number
@@ -277,14 +299,17 @@ async function getSignupTrend(days: number): Promise<SignupTrendItem[]> {
     past_due: number
   }>(sql`
     SELECT
-      TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+      TO_CHAR(w.created_at, 'YYYY-MM-DD') as date,
       COUNT(*)::int as signups,
-      COUNT(CASE WHEN subscription_status = 'trialing' THEN 1 END)::int as trialing,
-      COUNT(CASE WHEN subscription_status = 'past_due' THEN 1 END)::int as past_due
-    FROM workspaces
-    WHERE subscription_tier = 'trial'
-      AND created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
-    GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+      COUNT(CASE WHEN w.subscription_status = 'trialing' THEN 1 END)::int as trialing,
+      COUNT(CASE WHEN w.subscription_status = 'past_due' THEN 1 END)::int as past_due
+    FROM workspaces w
+    JOIN users u ON w.owner_id = u.id
+    WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
+    GROUP BY TO_CHAR(w.created_at, 'YYYY-MM-DD')
     ORDER BY date
   `)
 
@@ -306,8 +331,10 @@ async function getSignupTrend(days: number): Promise<SignupTrendItem[]> {
  * 4. 리드 생성 - 회사정보 입력 + 리드 검색/생성 완료
  * 5. 이메일 연동 - 리드 생성 + 이메일 계정 연결됨
  * 6. 이메일 발송 - 이메일 연동 + 실제 이메일 발송함
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getOnboardingFunnel(): Promise<OnboardingFunnelItem[]> {
+async function getOnboardingFunnel(excludeIds?: string[]): Promise<OnboardingFunnelItem[]> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     total_workspaces: number
     onboarding_started: number
@@ -326,6 +353,7 @@ async function getOnboardingFunnel(): Promise<OnboardingFunnelItem[]> {
         CASE WHEN uea.workspace_id IS NOT NULL THEN true ELSE false END as email_connected,
         CASE WHEN sent.workspace_id IS NOT NULL THEN true ELSE false END as has_sent_email
       FROM workspaces w
+      JOIN users u ON w.owner_id = u.id
       LEFT JOIN onboarding_progress op ON w.id = op.workspace_id
       LEFT JOIN (
         SELECT DISTINCT workspace_id FROM user_email_accounts
@@ -336,6 +364,8 @@ async function getOnboardingFunnel(): Promise<OnboardingFunnelItem[]> {
         WHERE direction = 'outbound' AND sent_at IS NOT NULL
       ) sent ON w.id = sent.workspace_id
       WHERE w.subscription_tier = 'trial'
+        AND u.user_role != 'admin'
+        ${sql.raw(exclusion)}
     )
     SELECT
       COUNT(*)::int as total_workspaces,
@@ -387,8 +417,10 @@ async function getOnboardingFunnel(): Promise<OnboardingFunnelItem[]> {
 
 /**
  * Get email sending distribution
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getEmailDistribution(): Promise<EmailDistributionItem[]> {
+async function getEmailDistribution(excludeIds?: string[]): Promise<EmailDistributionItem[]> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     range: string
     count: number
@@ -398,6 +430,7 @@ async function getEmailDistribution(): Promise<EmailDistributionItem[]> {
         w.id,
         COALESCE(e.sent_count, 0) as sent_count
       FROM workspaces w
+      JOIN users u ON w.owner_id = u.id
       LEFT JOIN (
         SELECT workspace_id, COUNT(*) as sent_count
         FROM emails
@@ -405,6 +438,8 @@ async function getEmailDistribution(): Promise<EmailDistributionItem[]> {
         GROUP BY workspace_id
       ) e ON e.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
+        AND u.user_role != 'admin'
+        ${sql.raw(exclusion)}
     )
     SELECT
       CASE
@@ -426,8 +461,10 @@ async function getEmailDistribution(): Promise<EmailDistributionItem[]> {
 
 /**
  * Get performance by signup source
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getSourcePerformance(): Promise<SourcePerformanceItem[]> {
+async function getSourcePerformance(excludeIds?: string[]): Promise<SourcePerformanceItem[]> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     source: string
     workspaces: number
@@ -460,6 +497,8 @@ async function getSourcePerformance(): Promise<SourcePerformanceItem[]> {
       GROUP BY workspace_id
     ) e ON e.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
     GROUP BY u.auth_provider
   `)
 
@@ -475,8 +514,10 @@ async function getSourcePerformance(): Promise<SourcePerformanceItem[]> {
 
 /**
  * Get activity distribution (last login)
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getActivityDistribution(): Promise<ActivityDistributionItem[]> {
+async function getActivityDistribution(excludeIds?: string[]): Promise<ActivityDistributionItem[]> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     period: string
     count: number
@@ -494,6 +535,8 @@ async function getActivityDistribution(): Promise<ActivityDistributionItem[]> {
     FROM workspaces w
     JOIN users u ON w.owner_id = u.id
     WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
     GROUP BY 1
     ORDER BY MIN(COALESCE(last_login_at, '1970-01-01'::timestamp)) DESC
   `)
@@ -504,9 +547,14 @@ async function getActivityDistribution(): Promise<ActivityDistributionItem[]> {
 /**
  * Get cohort data with funnel metrics
  * 일별/주별 퍼널 단계 전환율 분석
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getCohortData(mode: CohortMode = "weekly"): Promise<CohortItem[]> {
+async function getCohortData(
+  mode: CohortMode = "weekly",
+  excludeIds?: string[],
+): Promise<CohortItem[]> {
   const isDaily = mode === "daily"
+  const exclusion = buildExclusionClause(excludeIds)
 
   const result = await db.execute<{
     period_label: string
@@ -530,10 +578,13 @@ async function getCohortData(mode: CohortMode = "weekly"): Promise<CohortItem[]>
           CASE WHEN uea.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_connected,
           CASE WHEN sent.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_sent
         FROM workspaces w
+        JOIN users u ON w.owner_id = u.id
         LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
         LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
         LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
         WHERE w.subscription_tier = 'trial'
+          AND u.user_role != 'admin'
+          ${sql.raw(exclusion)}
       )
       SELECT
         TO_CHAR(cohort_period, 'MM/DD') || ' (' ||
@@ -569,10 +620,13 @@ async function getCohortData(mode: CohortMode = "weekly"): Promise<CohortItem[]>
           CASE WHEN uea.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_connected,
           CASE WHEN sent.workspace_id IS NOT NULL THEN 1 ELSE 0 END as has_email_sent
         FROM workspaces w
+        JOIN users u ON w.owner_id = u.id
         LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
         LEFT JOIN (SELECT DISTINCT workspace_id FROM user_email_accounts) uea ON uea.workspace_id = w.id
         LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
         WHERE w.subscription_tier = 'trial'
+          AND u.user_role != 'admin'
+          ${sql.raw(exclusion)}
       )
       SELECT
         TO_CHAR(cohort_period, 'MM/DD') || ' (' ||
@@ -623,8 +677,10 @@ async function getCohortData(mode: CohortMode = "weekly"): Promise<CohortItem[]>
  * Get email performance summary and per-workspace breakdown
  * 이메일 성과 요약 및 워크스페이스별 상세
  * 단일 쿼리로 모든 데이터 조회 (성능 최적화)
+ * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getEmailPerformance(): Promise<EmailPerformanceResponse> {
+async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerformanceResponse> {
+  const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     workspace_id: string
     company_name: string | null
@@ -678,6 +734,8 @@ async function getEmailPerformance(): Promise<EmailPerformanceResponse> {
       GROUP BY workspace_id
     ) e ON e.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+      ${sql.raw(exclusion)}
     ORDER BY COALESCE(e.sent_count, 0) DESC, w.created_at DESC
   `)
 
@@ -757,6 +815,7 @@ async function getEmailPerformance(): Promise<EmailPerformanceResponse> {
 
 /**
  * Get trial users list with pagination
+ * 어드민 사용자 소유 워크스페이스 제외
  */
 export async function getTrialUsers(
   page: number = 1,
@@ -832,6 +891,7 @@ export async function getTrialUsers(
         GROUP BY workspace_id
       ) e ON e.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
+        AND u.user_role != 'admin'
     )
     SELECT * FROM trial_data
     ORDER BY ${sql.raw(sortColumn)} ${sql.raw(sortOrder.toUpperCase())} NULLS LAST
@@ -927,6 +987,7 @@ export async function getWorkspacesByOnboardingStep(
   step: OnboardingStepType,
 ): Promise<OnboardingStepWorkspace[]> {
   // 공통 쿼리: 모든 퍼널 상태를 함께 조회
+  // 어드민 사용자 소유 워크스페이스 제외
   const stepConditions: Record<OnboardingStepType, string> = {
     signup: "true", // 전체
     onboarding: "has_survey", // 로그인+설문완료 (survey_data가 있으면)
@@ -997,6 +1058,7 @@ export async function getWorkspacesByOnboardingStep(
         GROUP BY workspace_id
       ) sent ON sent.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
+        AND u.user_role != 'admin'
     )
     SELECT
       workspace_id,
@@ -1069,5 +1131,195 @@ export async function extendTrialPeriod(
   } catch (error) {
     logger.error({ error, workspaceId }, "[TrialAnalytics] Failed to extend trial")
     return { success: false, newExpiryDate: null }
+  }
+}
+
+// ============================================================================
+// Exclusion Management (통계 제외 관리)
+// ============================================================================
+
+export interface ExclusionInfo {
+  id: string
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+  ownerEmail: string
+  excludedBy: string
+  excludedByName: string
+  excludedAt: string
+  reason: string | null
+}
+
+/**
+ * Get all excluded workspace IDs from database
+ * DB에서 제외된 워크스페이스 ID 목록 조회
+ */
+export async function getExcludedWorkspaceIds(): Promise<string[]> {
+  const result = await db.execute<{ workspace_id: string }>(sql`
+    SELECT workspace_id FROM trial_stat_exclusions
+  `)
+  return result.rows.map((r) => r.workspace_id)
+}
+
+/**
+ * Get all exclusions with details
+ * 제외 목록 상세 조회 (워크스페이스 정보 포함)
+ */
+export async function getExclusions(): Promise<ExclusionInfo[]> {
+  const result = await db.execute<{
+    id: string
+    workspace_id: string
+    company_name: string | null
+    owner_name: string
+    owner_email: string
+    excluded_by: string
+    excluded_by_name: string
+    excluded_at: string
+    reason: string | null
+  }>(sql`
+    SELECT
+      tse.id,
+      tse.workspace_id,
+      w.company_name,
+      u.username as owner_name,
+      u.email as owner_email,
+      tse.excluded_by,
+      eu.username as excluded_by_name,
+      tse.excluded_at,
+      tse.reason
+    FROM trial_stat_exclusions tse
+    JOIN workspaces w ON w.id = tse.workspace_id
+    JOIN users u ON u.id = w.owner_id
+    JOIN users eu ON eu.id = tse.excluded_by
+    ORDER BY tse.excluded_at DESC
+  `)
+
+  return result.rows.map((r) => ({
+    id: r.id,
+    workspaceId: r.workspace_id,
+    companyName: r.company_name,
+    ownerName: r.owner_name,
+    ownerEmail: r.owner_email,
+    excludedBy: r.excluded_by,
+    excludedByName: r.excluded_by_name,
+    excludedAt: r.excluded_at,
+    reason: r.reason,
+  }))
+}
+
+/**
+ * Add workspace to exclusion list
+ * 워크스페이스를 통계 제외 목록에 추가
+ */
+export async function addExclusion(
+  workspaceId: string,
+  excludedBy: string,
+  reason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(trialStatExclusions).values({
+      workspaceId,
+      excludedBy,
+      reason: reason || null,
+    })
+
+    logger.info(
+      { workspaceId, excludedBy, reason },
+      "[TrialAnalytics] Workspace excluded from stats",
+    )
+    return { success: true }
+  } catch (error) {
+    // Check for unique constraint violation
+    if ((error as { code?: string }).code === "23505") {
+      return { success: false, error: "이미 제외된 워크스페이스입니다" }
+    }
+    logger.error({ error, workspaceId }, "[TrialAnalytics] Failed to add exclusion")
+    return { success: false, error: "제외 추가 실패" }
+  }
+}
+
+/**
+ * Bulk add workspaces to exclusion list
+ * 여러 워크스페이스를 통계 제외 목록에 일괄 추가
+ */
+export async function bulkAddExclusions(
+  workspaceIds: string[],
+  excludedBy: string,
+  reason?: string,
+): Promise<{ successCount: number; failCount: number }> {
+  let successCount = 0
+  let failCount = 0
+
+  for (const workspaceId of workspaceIds) {
+    const result = await addExclusion(workspaceId, excludedBy, reason)
+    if (result.success) {
+      successCount++
+    } else {
+      failCount++
+    }
+  }
+
+  return { successCount, failCount }
+}
+
+/**
+ * Remove workspace from exclusion list
+ * 워크스페이스를 통계 제외 목록에서 제거
+ */
+export async function removeExclusion(
+  workspaceId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await db
+      .delete(trialStatExclusions)
+      .where(eq(trialStatExclusions.workspaceId, workspaceId))
+      .returning()
+
+    if (result.length === 0) {
+      return { success: false, error: "제외 목록에 없는 워크스페이스입니다" }
+    }
+
+    logger.info({ workspaceId }, "[TrialAnalytics] Workspace removed from exclusion")
+    return { success: true }
+  } catch (error) {
+    logger.error({ error, workspaceId }, "[TrialAnalytics] Failed to remove exclusion")
+    return { success: false, error: "제외 해제 실패" }
+  }
+}
+
+/**
+ * Bulk remove workspaces from exclusion list
+ * 여러 워크스페이스를 통계 제외 목록에서 일괄 제거
+ */
+export async function bulkRemoveExclusions(
+  workspaceIds: string[],
+): Promise<{ successCount: number; failCount: number }> {
+  let successCount = 0
+  let failCount = 0
+
+  for (const workspaceId of workspaceIds) {
+    const result = await removeExclusion(workspaceId)
+    if (result.success) {
+      successCount++
+    } else {
+      failCount++
+    }
+  }
+
+  return { successCount, failCount }
+}
+
+/**
+ * Clear all exclusions
+ * 모든 제외 설정 초기화
+ */
+export async function clearAllExclusions(): Promise<{ success: boolean; count: number }> {
+  try {
+    const result = await db.delete(trialStatExclusions).returning()
+    logger.info({ count: result.length }, "[TrialAnalytics] All exclusions cleared")
+    return { success: true, count: result.length }
+  } catch (error) {
+    logger.error({ error }, "[TrialAnalytics] Failed to clear exclusions")
+    return { success: false, count: 0 }
   }
 }

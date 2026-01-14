@@ -153,7 +153,6 @@ export type TrialUsersResponse = {
 export type TrialAnalyticsParams = {
   days?: number
   cohortMode?: CohortMode
-  excludeWorkspaceIds?: string[]
 }
 
 export type TrialUsersParams = {
@@ -200,6 +199,31 @@ export type OnboardingStepWorkspace = {
   }
 }
 
+// 제외 목록 타입
+export type ExclusionInfo = {
+  id: string
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+  ownerEmail: string
+  excludedBy: string
+  excludedByName: string
+  excludedAt: string
+  reason: string | null
+}
+
+export type AddExclusionParams = {
+  workspaceId: string
+  excludedBy: string
+  reason?: string
+}
+
+export type BulkAddExclusionParams = {
+  workspaceIds: string[]
+  excludedBy: string
+  reason?: string
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -207,6 +231,7 @@ export type OnboardingStepWorkspace = {
 export const trialAnalyticsApi = {
   /**
    * Get trial analytics dashboard data
+   * 제외 목록은 DB에서 자동으로 적용됨
    */
   async getAnalytics(params?: TrialAnalyticsParams): Promise<TrialAnalyticsResponse> {
     const searchParams = new URLSearchParams()
@@ -215,9 +240,6 @@ export const trialAnalyticsApi = {
     }
     if (params?.cohortMode) {
       searchParams.set("cohortMode", params.cohortMode)
-    }
-    if (params?.excludeWorkspaceIds?.length) {
-      searchParams.set("excludeWorkspaceIds", params.excludeWorkspaceIds.join(","))
     }
 
     const query = searchParams.toString()
@@ -290,5 +312,64 @@ export const trialAnalyticsApi = {
    */
   async getWorkspacesByStep(step: OnboardingStep): Promise<OnboardingStepWorkspace[]> {
     return apiFetch<OnboardingStepWorkspace[]>(`/api/v1/admin/trial-analytics/onboarding/${step}`)
+  },
+
+  // =========================================================================
+  // Exclusion Management (통계 제외 관리)
+  // =========================================================================
+
+  /**
+   * Get all exclusions
+   * 제외 목록 조회
+   */
+  async getExclusions(): Promise<ExclusionInfo[]> {
+    return apiFetch<ExclusionInfo[]>("/api/v1/admin/trial-analytics/exclusions")
+  },
+
+  /**
+   * Add exclusion
+   * 워크스페이스를 통계에서 제외
+   */
+  async addExclusion(params: AddExclusionParams): Promise<void> {
+    return apiFetch<void>("/api/v1/admin/trial-analytics/exclusions", {
+      method: "POST",
+      body: JSON.stringify(params),
+    })
+  },
+
+  /**
+   * Bulk add exclusions
+   * 여러 워크스페이스 일괄 제외
+   */
+  async bulkAddExclusions(
+    params: BulkAddExclusionParams,
+  ): Promise<{ successCount: number; failCount: number }> {
+    return apiFetch<{ successCount: number; failCount: number }>(
+      "/api/v1/admin/trial-analytics/exclusions/bulk",
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      },
+    )
+  },
+
+  /**
+   * Remove exclusion
+   * 워크스페이스를 통계에 다시 포함
+   */
+  async removeExclusion(workspaceId: string): Promise<void> {
+    return apiFetch<void>(`/api/v1/admin/trial-analytics/exclusions/${workspaceId}`, {
+      method: "DELETE",
+    })
+  },
+
+  /**
+   * Clear all exclusions
+   * 모든 제외 설정 초기화
+   */
+  async clearAllExclusions(): Promise<{ count: number }> {
+    return apiFetch<{ count: number }>("/api/v1/admin/trial-analytics/exclusions", {
+      method: "DELETE",
+    })
   },
 }

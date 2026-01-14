@@ -42,6 +42,10 @@ export * from "./schema/onboarding"
 export * from "./schema/openai-api-keys"
 export * from "./schema/sales-strategies"
 export * from "./schema/sequences"
+// ============================================================================
+// Trial Analytics (체험판 분석)
+// ============================================================================
+export * from "./schema/trial-stat-exclusions"
 export * from "./schema/user-signature-preferences"
 // ============================================================================
 // Core (핵심 엔티티)

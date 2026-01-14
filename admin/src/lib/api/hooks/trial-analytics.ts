@@ -5,6 +5,8 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  type AddExclusionParams,
+  type BulkAddExclusionParams,
   type BulkExtendTrialParams,
   type ExtendTrialParams,
   type OnboardingStep,
@@ -24,6 +26,7 @@ export const trialAnalyticsKeys = {
   users: (params?: TrialUsersParams) => [...trialAnalyticsKeys.all, "users", params] as const,
   onboardingStep: (step: OnboardingStep) =>
     [...trialAnalyticsKeys.all, "onboarding", step] as const,
+  exclusions: () => [...trialAnalyticsKeys.all, "exclusions"] as const,
 }
 
 // ============================================================================
@@ -105,6 +108,85 @@ export function useBulkExtendTrialMutation() {
     mutationFn: (params: BulkExtendTrialParams) => trialAnalyticsApi.bulkExtendTrial(params),
     onSuccess: () => {
       // Invalidate all trial analytics queries
+      queryClient.invalidateQueries({ queryKey: trialAnalyticsKeys.all })
+    },
+  })
+}
+
+// ============================================================================
+// Exclusion Management Hooks (통계 제외 관리)
+// ============================================================================
+
+/**
+ * Get all exclusions
+ * 제외 목록 조회
+ */
+export function useExclusions(enabled = true) {
+  return useQuery({
+    queryKey: trialAnalyticsKeys.exclusions(),
+    queryFn: () => trialAnalyticsApi.getExclusions(),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
+/**
+ * Add exclusion mutation
+ * 워크스페이스를 통계에서 제외
+ */
+export function useAddExclusionMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (params: AddExclusionParams) => trialAnalyticsApi.addExclusion(params),
+    onSuccess: () => {
+      // Invalidate exclusions and analytics queries
+      queryClient.invalidateQueries({ queryKey: trialAnalyticsKeys.all })
+    },
+  })
+}
+
+/**
+ * Bulk add exclusions mutation
+ * 여러 워크스페이스 일괄 제외
+ */
+export function useBulkAddExclusionsMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (params: BulkAddExclusionParams) => trialAnalyticsApi.bulkAddExclusions(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trialAnalyticsKeys.all })
+    },
+  })
+}
+
+/**
+ * Remove exclusion mutation
+ * 워크스페이스를 통계에 다시 포함
+ */
+export function useRemoveExclusionMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (workspaceId: string) => trialAnalyticsApi.removeExclusion(workspaceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trialAnalyticsKeys.all })
+    },
+  })
+}
+
+/**
+ * Clear all exclusions mutation
+ * 모든 제외 설정 초기화
+ */
+export function useClearAllExclusionsMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => trialAnalyticsApi.clearAllExclusions(),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trialAnalyticsKeys.all })
     },
   })

@@ -14,6 +14,7 @@ export const trialAnalyticsRoutes = new Elysia({ prefix: "/api/v1/admin/trial-an
   /**
    * Get trial analytics dashboard data
    * 체험판 대시보드 차트 데이터 조회
+   * 제외 목록은 DB에서 자동으로 가져옴
    */
   .get(
     "/",
@@ -21,10 +22,6 @@ export const trialAnalyticsRoutes = new Elysia({ prefix: "/api/v1/admin/trial-an
       try {
         const days = query.days ? parseInt(query.days, 10) : 30
         const cohortMode = (query.cohortMode as "daily" | "weekly") || "weekly"
-        // TODO: excludeWorkspaceIds 기능 구현 예정
-        const _excludeIds = query.excludeWorkspaceIds
-          ? query.excludeWorkspaceIds.split(",").filter(Boolean)
-          : []
 
         const analytics = await trialAnalyticsService.getTrialAnalytics(days, cohortMode)
 
@@ -38,14 +35,12 @@ export const trialAnalyticsRoutes = new Elysia({ prefix: "/api/v1/admin/trial-an
       query: t.Object({
         days: t.Optional(t.String({ description: "조회 기간 (일)" })),
         cohortMode: t.Optional(t.String({ description: "코호트 모드: daily | weekly" })),
-        excludeWorkspaceIds: t.Optional(
-          t.String({ description: "제외할 워크스페이스 ID (쉼표 구분)" }),
-        ),
       }),
       detail: {
         tags: ["admin", "trial-analytics"],
         summary: "체험판 분석 대시보드 데이터",
-        description: "KPI 요약, 가입 추이, 온보딩 퍼널, 성과 분포 등 차트 데이터 조회",
+        description:
+          "KPI 요약, 가입 추이, 온보딩 퍼널, 성과 분포 등 차트 데이터 조회. 제외 목록은 DB에서 자동 적용",
       },
     },
   )
@@ -221,6 +216,168 @@ export const trialAnalyticsRoutes = new Elysia({ prefix: "/api/v1/admin/trial-an
         tags: ["admin", "trial-analytics"],
         summary: "체험판 일괄 연장",
         description: "여러 워크스페이스의 체험판 기간을 일괄 연장합니다",
+      },
+    },
+  )
+
+  // =========================================================================
+  // Exclusion Management (통계 제외 관리)
+  // =========================================================================
+
+  /**
+   * Get all exclusions
+   * 제외 목록 조회
+   */
+  .get(
+    "/exclusions",
+    async () => {
+      try {
+        const exclusions = await trialAnalyticsService.getExclusions()
+        return successResponse(exclusions, "제외 목록 조회 성공")
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to get exclusions")
+        return errorResponse("제외 목록 조회 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "제외 목록 조회",
+        description: "통계에서 제외된 워크스페이스 목록 조회",
+      },
+    },
+  )
+
+  /**
+   * Add exclusion
+   * 통계 제외 추가
+   */
+  .post(
+    "/exclusions",
+    async ({ body }) => {
+      try {
+        const result = await trialAnalyticsService.addExclusion(
+          body.workspaceId,
+          body.excludedBy,
+          body.reason,
+        )
+
+        if (!result.success) {
+          return errorResponse(result.error || "제외 추가 실패", ResponseCode.BAD_REQUEST)
+        }
+
+        return successResponse(null, "워크스페이스가 통계에서 제외되었습니다")
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to add exclusion")
+        return errorResponse("제외 추가 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+        excludedBy: t.String({ format: "uuid", description: "제외 처리한 관리자 ID" }),
+        reason: t.Optional(t.String({ description: "제외 사유" })),
+      }),
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "제외 추가",
+        description: "워크스페이스를 통계에서 제외",
+      },
+    },
+  )
+
+  /**
+   * Bulk add exclusions
+   * 여러 워크스페이스 일괄 제외
+   */
+  .post(
+    "/exclusions/bulk",
+    async ({ body }) => {
+      try {
+        const result = await trialAnalyticsService.bulkAddExclusions(
+          body.workspaceIds,
+          body.excludedBy,
+          body.reason,
+        )
+
+        return successResponse(
+          result,
+          `${result.successCount}개 워크스페이스 제외 완료 (실패: ${result.failCount}개)`,
+        )
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to bulk add exclusions")
+        return errorResponse("일괄 제외 추가 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: t.Object({
+        workspaceIds: t.Array(t.String({ format: "uuid" })),
+        excludedBy: t.String({ format: "uuid" }),
+        reason: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "일괄 제외",
+        description: "여러 워크스페이스를 통계에서 일괄 제외",
+      },
+    },
+  )
+
+  /**
+   * Remove exclusion
+   * 제외 해제
+   */
+  .delete(
+    "/exclusions/:workspaceId",
+    async ({ params }) => {
+      try {
+        const result = await trialAnalyticsService.removeExclusion(params.workspaceId)
+
+        if (!result.success) {
+          return errorResponse(result.error || "제외 해제 실패", ResponseCode.NOT_FOUND)
+        }
+
+        return successResponse(null, "워크스페이스가 통계에 다시 포함됩니다")
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to remove exclusion")
+        return errorResponse("제외 해제 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "제외 해제",
+        description: "워크스페이스를 통계에 다시 포함",
+      },
+    },
+  )
+
+  /**
+   * Clear all exclusions
+   * 모든 제외 초기화
+   */
+  .delete(
+    "/exclusions",
+    async () => {
+      try {
+        const result = await trialAnalyticsService.clearAllExclusions()
+        return successResponse(
+          { count: result.count },
+          `${result.count}개 제외 설정이 초기화되었습니다`,
+        )
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to clear exclusions")
+        return errorResponse("제외 초기화 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "모든 제외 초기화",
+        description: "모든 워크스페이스 제외 설정을 초기화",
       },
     },
   )

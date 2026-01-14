@@ -9,6 +9,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Eye,
   RefreshCw,
   Search,
   Settings2,
@@ -226,6 +227,11 @@ export function TrialManagementPage() {
     useState<keyof WorkspaceEmailPerformance>("emailsSent")
   const [emailPerfSortOrder, setEmailPerfSortOrder] = useState<"asc" | "desc">("desc")
   const [emailPerfSearchTerm, setEmailPerfSearchTerm] = useState("")
+
+  // Detail modal state for survey/company info
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedWorkspaceDetail, setSelectedWorkspaceDetail] =
+    useState<WorkspaceEmailPerformance | null>(null)
 
   // Exclusion state (now from API)
   const [excludeModalOpen, setExcludeModalOpen] = useState(false)
@@ -816,11 +822,10 @@ export function TrialManagementPage() {
                     onSort={handleEmailPerfSort}
                     sortOrder={emailPerfSortOrder}
                   />
-                  <TableHead className="min-w-[200px]">퍼널 상태</TableHead>
-                  <TableHead className="min-w-[200px]">설문/회사정보</TableHead>
+                  <TableHead className="w-[160px]">퍼널 상태</TableHead>
                   <SortableTableHead
                     align="right"
-                    className="w-[70px]"
+                    className="w-[60px]"
                     column="emailsSent"
                     currentSortBy={emailPerfSortBy}
                     label="발송"
@@ -829,7 +834,7 @@ export function TrialManagementPage() {
                   />
                   <SortableTableHead
                     align="right"
-                    className="w-[80px]"
+                    className="w-[70px]"
                     column="openRate"
                     currentSortBy={emailPerfSortBy}
                     label="오픈율"
@@ -838,7 +843,7 @@ export function TrialManagementPage() {
                   />
                   <SortableTableHead
                     align="right"
-                    className="w-[80px]"
+                    className="w-[70px]"
                     column="replyRate"
                     currentSortBy={emailPerfSortBy}
                     label="답장율"
@@ -846,13 +851,14 @@ export function TrialManagementPage() {
                     sortOrder={emailPerfSortOrder}
                   />
                   <SortableTableHead
-                    className="w-[60px]"
+                    className="w-[50px]"
                     column="performanceLevel"
                     currentSortBy={emailPerfSortBy}
                     label="성과"
                     onSort={handleEmailPerfSort}
                     sortOrder={emailPerfSortOrder}
                   />
+                  <TableHead className="min-w-[180px]">설문/회사정보</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -873,92 +879,63 @@ export function TrialManagementPage() {
                         {ws.lastLogin ? format(new Date(ws.lastLogin), "MM/dd HH:mm") : "-"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-0.5">
                           <Badge
                             className={cn(
-                              "px-1.5 py-0.5 text-xs",
+                              "px-1 py-0 text-[10px]",
                               ws.funnelStatus?.survey
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
                             )}
                             variant="secondary"
                           >
-                            설문+로그인
+                            설문
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1.5 py-0.5 text-xs",
+                              "px-1 py-0 text-[10px]",
                               ws.funnelStatus?.companyInfo
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
                             )}
                             variant="secondary"
                           >
-                            회사정보 입력
+                            회사
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1.5 py-0.5 text-xs",
+                              "px-1 py-0 text-[10px]",
                               ws.funnelStatus?.leadCreated
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
                             )}
                             variant="secondary"
                           >
-                            리드 생성
+                            리드
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1.5 py-0.5 text-xs",
+                              "px-1 py-0 text-[10px]",
                               ws.funnelStatus?.emailConnected
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
                             )}
                             variant="secondary"
                           >
-                            이메일 연동
+                            연동
                           </Badge>
                           <Badge
                             className={cn(
-                              "px-1.5 py-0.5 text-xs",
+                              "px-1 py-0 text-[10px]",
                               ws.funnelStatus?.emailSent
                                 ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800",
                             )}
                             variant="secondary"
                           >
-                            이메일 발송
+                            발송
                           </Badge>
                         </div>
-                      </TableCell>
-                      <TableCell className="max-w-[250px]">
-                        {ws.surveyData || ws.companyDescription ? (
-                          <div className="space-y-1 text-xs">
-                            {ws.surveyData && (
-                              <div className="rounded bg-blue-50 px-1.5 py-1 dark:bg-blue-950">
-                                <span className="text-blue-600 dark:text-blue-400">
-                                  {[
-                                    ws.surveyData.industry,
-                                    ws.surveyData.target,
-                                    ws.surveyData.country,
-                                    ws.surveyData.experience,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </span>
-                              </div>
-                            )}
-                            {ws.companyDescription && (
-                              <div className="line-clamp-2 rounded bg-gray-50 px-1.5 py-1 dark:bg-gray-900">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  {ws.companyDescription}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium">{ws.emailsSent}</TableCell>
                       <TableCell className="text-right">{ws.openRate}%</TableCell>
@@ -966,6 +943,7 @@ export function TrialManagementPage() {
                       <TableCell>
                         <Badge
                           className={cn(
+                            "text-[10px]",
                             ws.performanceLevel === "high" &&
                               "bg-green-100 text-green-700 dark:bg-green-900",
                             ws.performanceLevel === "medium" &&
@@ -982,6 +960,44 @@ export function TrialManagementPage() {
                           {ws.performanceLevel === "low" && "낮음"}
                           {ws.performanceLevel === "none" && "-"}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {ws.surveyData || ws.companyDescription ? (
+                          <button
+                            className="w-full cursor-pointer rounded p-1 text-left transition-colors hover:bg-muted/50"
+                            onClick={() => {
+                              setSelectedWorkspaceDetail(ws)
+                              setDetailModalOpen(true)
+                            }}
+                            type="button"
+                          >
+                            <div className="line-clamp-3 space-y-0.5 text-xs">
+                              {ws.surveyData && (
+                                <div className="text-blue-600 dark:text-blue-400">
+                                  <span className="font-medium">업종:</span>{" "}
+                                  {ws.surveyData.industry}
+                                  {ws.surveyData.target && (
+                                    <span className="ml-1">
+                                      <span className="font-medium">타겟:</span>{" "}
+                                      {ws.surveyData.target}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {ws.companyDescription && (
+                                <div className="text-gray-600 dark:text-gray-400">
+                                  {ws.companyDescription}
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Eye className="h-3 w-3" />
+                              상세보기
+                            </div>
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -1403,6 +1419,97 @@ export function TrialManagementPage() {
                 : "적용하기"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Survey/Company Info Detail Modal */}
+      <Dialog onOpenChange={setDetailModalOpen} open={detailModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedWorkspaceDetail?.companyName || "회사명 미입력"} - 설문/회사정보
+            </DialogTitle>
+            <DialogDescription>
+              {selectedWorkspaceDetail?.ownerName} ({selectedWorkspaceDetail?.ownerEmail})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* 설문 데이터 */}
+            {selectedWorkspaceDetail?.surveyData && (
+              <div className="rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
+                <h4 className="mb-3 font-semibold text-blue-800 dark:text-blue-200">설문 응답</h4>
+                <div className="space-y-2 text-sm">
+                  {selectedWorkspaceDetail.surveyData.industry && (
+                    <div className="flex gap-2">
+                      <span className="w-16 font-medium text-blue-700 dark:text-blue-300">
+                        업종:
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedWorkspaceDetail.surveyData.industry}
+                      </span>
+                    </div>
+                  )}
+                  {selectedWorkspaceDetail.surveyData.target && (
+                    <div className="flex gap-2">
+                      <span className="w-16 font-medium text-blue-700 dark:text-blue-300">
+                        타겟:
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedWorkspaceDetail.surveyData.target}
+                      </span>
+                    </div>
+                  )}
+                  {selectedWorkspaceDetail.surveyData.country && (
+                    <div className="flex gap-2">
+                      <span className="w-16 font-medium text-blue-700 dark:text-blue-300">
+                        국가:
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedWorkspaceDetail.surveyData.country}
+                      </span>
+                    </div>
+                  )}
+                  {selectedWorkspaceDetail.surveyData.experience && (
+                    <div className="flex gap-2">
+                      <span className="w-16 font-medium text-blue-700 dark:text-blue-300">
+                        경험:
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedWorkspaceDetail.surveyData.experience}
+                      </span>
+                    </div>
+                  )}
+                  {selectedWorkspaceDetail.surveyData.lang && (
+                    <div className="flex gap-2">
+                      <span className="w-16 font-medium text-blue-700 dark:text-blue-300">
+                        언어:
+                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">
+                        {selectedWorkspaceDetail.surveyData.lang}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 회사 소개 */}
+            {selectedWorkspaceDetail?.companyDescription && (
+              <div className="rounded-lg border bg-gray-50 p-4 dark:bg-gray-900">
+                <h4 className="mb-3 font-semibold text-gray-800 dark:text-gray-200">회사 소개</h4>
+                <p className="whitespace-pre-wrap text-gray-600 text-sm dark:text-gray-400">
+                  {selectedWorkspaceDetail.companyDescription}
+                </p>
+              </div>
+            )}
+
+            {/* 데이터 없음 */}
+            {!(
+              selectedWorkspaceDetail?.surveyData || selectedWorkspaceDetail?.companyDescription
+            ) && (
+              <div className="py-8 text-center text-muted-foreground">등록된 정보가 없습니다</div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

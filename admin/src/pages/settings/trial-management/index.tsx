@@ -264,19 +264,19 @@ function CohortCell({
       onClick={() => onClick(period, step, workspaces)}
     >
       <div className="font-bold text-sm">{rate}%</div>
-      <div className="text-xs opacity-80">({count})</div>
+      <div className="text-sm opacity-80">({count})</div>
       {workspaces.length > 0 && (
         <div className="mt-1 space-y-0.5">
           {previewWorkspaces.map((ws) => (
             <div
-              className="truncate text-[9px] opacity-70"
+              className="truncate text-xs opacity-70"
               key={ws.workspaceId}
               title={ws.companyName || ws.ownerName}
             >
               {ws.companyName || ws.ownerName}
             </div>
           ))}
-          {hasMore && <div className="text-[9px] opacity-50">+{workspaces.length - 3}개 더</div>}
+          {hasMore && <div className="text-xs opacity-50">+{workspaces.length - 3}개 더</div>}
         </div>
       )}
     </TableCell>

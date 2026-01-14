@@ -181,18 +181,18 @@ const STEP_NAMES: Record<OnboardingStep, string> = {
 // Heatmap color helper for cohort analysis
 function getHeatmapStyle(rate: number): string {
   if (rate >= 80) {
-    return "bg-green-500 text-white dark:bg-green-600"
+    return "bg-green-500 text-black dark:bg-green-600"
   }
   if (rate >= 50) {
-    return "bg-green-300 text-green-900 dark:bg-green-700 dark:text-green-100"
+    return "bg-green-300 text-black dark:bg-green-700"
   }
   if (rate >= 30) {
-    return "bg-yellow-300 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-100"
+    return "bg-yellow-300 text-black dark:bg-yellow-600"
   }
   if (rate > 0) {
-    return "bg-orange-300 text-orange-900 dark:bg-orange-600 dark:text-orange-100"
+    return "bg-orange-300 text-black dark:bg-orange-600"
   }
-  return "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+  return "bg-gray-200 text-black dark:bg-gray-700"
 }
 
 // Sortable Table Header Component
@@ -265,7 +265,7 @@ function CohortCell({
       onClick={() => onClick(period, step, workspaces)}
     >
       <div className="font-bold text-sm">{rate}%</div>
-      <div className="text-[10px] opacity-80">({count})</div>
+      <div className="text-xs opacity-80">({count})</div>
       {workspaces.length > 0 && (
         <div className="mt-1 space-y-0.5">
           {previewWorkspaces.map((ws) => (
@@ -969,7 +969,7 @@ export function TrialManagementPage() {
                             )}
                             variant="secondary"
                           >
-                            설문
+                            설문+로그인
                           </Badge>
                           <Badge
                             className={cn(
@@ -1051,7 +1051,7 @@ export function TrialManagementPage() {
                             }}
                             type="button"
                           >
-                            <div className="line-clamp-3 space-y-0.5 text-xs">
+                            <div className="line-clamp-3 space-y-0.5 text-sm">
                               {ws.surveyData && (
                                 <div className="text-blue-600 dark:text-blue-400">
                                   <span className="font-medium">업종:</span>{" "}
@@ -1120,13 +1120,13 @@ export function TrialManagementPage() {
             </div>
             <div className="flex items-center gap-4">
               {/* Legend */}
-              <div className="hidden items-center gap-2 text-xs md:flex">
+              <div className="hidden items-center gap-2 text-sm md:flex">
                 <span className="text-muted-foreground">전환율:</span>
-                <span className="rounded bg-green-500 px-1.5 py-0.5 text-white">80%+</span>
-                <span className="rounded bg-green-300 px-1.5 py-0.5 text-green-900">50-79%</span>
-                <span className="rounded bg-yellow-300 px-1.5 py-0.5 text-yellow-900">30-49%</span>
-                <span className="rounded bg-orange-300 px-1.5 py-0.5 text-orange-900">1-29%</span>
-                <span className="rounded bg-gray-200 px-1.5 py-0.5 text-gray-500">0%</span>
+                <span className="rounded bg-green-500 px-1.5 py-0.5 text-black">80%+</span>
+                <span className="rounded bg-green-300 px-1.5 py-0.5 text-black">50-79%</span>
+                <span className="rounded bg-yellow-300 px-1.5 py-0.5 text-black">30-49%</span>
+                <span className="rounded bg-orange-300 px-1.5 py-0.5 text-black">1-29%</span>
+                <span className="rounded bg-gray-200 px-1.5 py-0.5 text-black">0%</span>
               </div>
               <div className="flex gap-1 rounded-lg border p-1">
                 <Button

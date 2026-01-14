@@ -22,7 +22,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Line,
   LineChart,
   Pie,
@@ -662,13 +661,11 @@ export function TrialManagementPage() {
 
       {/* Charts Row 1 */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Signup Trend Chart - Multi-line */}
+        {/* Signup Trend Chart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">가입 추이</CardTitle>
-            <CardDescription>
-              일별 체험판 가입 현황 (전체 / 활성 / 만료) · 체험 기간: 14일
-            </CardDescription>
+            <CardDescription>일별 신규 가입자 수 · 체험 기간: 14일</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -686,7 +683,13 @@ export function TrialManagementPage() {
                     axisLine={false}
                     dataKey="date"
                     tick={AXIS_STYLE}
-                    tickFormatter={(v) => v.slice(5)}
+                    tickFormatter={(v) => {
+                      const date = new Date(v)
+                      const days = ["일", "월", "화", "수", "목", "금", "토"]
+                      const mm = v.slice(5, 7)
+                      const dd = v.slice(8, 10)
+                      return `${mm}.${dd}(${days[date.getDay()]})`
+                    }}
                     tickLine={false}
                     tickMargin={8}
                   />
@@ -698,40 +701,13 @@ export function TrialManagementPage() {
                     tickMargin={8}
                   />
                   <Tooltip content={<CustomTooltip formatter={(value) => `${value}명`} />} />
-                  <Legend
-                    iconSize={10}
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }}
-                  />
                   <Line
-                    activeDot={{ r: 5 }}
+                    activeDot={{ r: 6 }}
                     animationDuration={300}
                     dataKey="signups"
-                    dot={{ r: 3 }}
-                    name="전체 가입"
+                    dot={{ r: 4 }}
+                    name="가입자 수"
                     stroke={CHART_COLORS.primary}
-                    strokeWidth={2}
-                    type="monotone"
-                  />
-                  <Line
-                    activeDot={{ r: 4 }}
-                    animationDuration={300}
-                    dataKey="trialing"
-                    dot={{ r: 2 }}
-                    name="활성 (체험중)"
-                    stroke={CHART_COLORS.secondary}
-                    strokeDasharray="0"
-                    strokeWidth={2}
-                    type="monotone"
-                  />
-                  <Line
-                    activeDot={{ r: 4 }}
-                    animationDuration={300}
-                    dataKey="pastDue"
-                    dot={{ r: 2 }}
-                    name="만료"
-                    stroke="#ef4444"
-                    strokeDasharray="5 5"
                     strokeWidth={2}
                     type="monotone"
                   />

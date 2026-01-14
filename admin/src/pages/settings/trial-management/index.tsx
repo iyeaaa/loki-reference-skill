@@ -177,6 +177,23 @@ const STEP_NAMES: Record<OnboardingStep, string> = {
   email_sent: "이메일 발송",
 }
 
+// Heatmap color helper for cohort analysis
+function getHeatmapStyle(rate: number): string {
+  if (rate >= 80) {
+    return "bg-green-500 text-white dark:bg-green-600"
+  }
+  if (rate >= 50) {
+    return "bg-green-300 text-green-900 dark:bg-green-700 dark:text-green-100"
+  }
+  if (rate >= 30) {
+    return "bg-yellow-300 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-100"
+  }
+  if (rate > 0) {
+    return "bg-orange-300 text-orange-900 dark:bg-orange-600 dark:text-orange-100"
+  }
+  return "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+}
+
 // Sortable Table Header Component
 function SortableTableHead<T extends string>({
   column,
@@ -1028,7 +1045,7 @@ export function TrialManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Cohort Analysis Table */}
+      {/* Cohort Analysis Table - Heatmap Style */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -1038,23 +1055,34 @@ export function TrialManagementPage() {
                 {cohortMode === "daily" ? "일별" : "주별"} 가입자 퍼널 전환율
               </CardDescription>
             </div>
-            <div className="flex gap-1 rounded-lg border p-1">
-              <Button
-                className="h-7 px-3 text-xs"
-                onClick={() => setCohortMode("daily")}
-                size="sm"
-                variant={cohortMode === "daily" ? "default" : "ghost"}
-              >
-                일별
-              </Button>
-              <Button
-                className="h-7 px-3 text-xs"
-                onClick={() => setCohortMode("weekly")}
-                size="sm"
-                variant={cohortMode === "weekly" ? "default" : "ghost"}
-              >
-                주별
-              </Button>
+            <div className="flex items-center gap-4">
+              {/* Legend */}
+              <div className="hidden items-center gap-2 text-xs md:flex">
+                <span className="text-muted-foreground">전환율:</span>
+                <span className="rounded bg-green-500 px-1.5 py-0.5 text-white">80%+</span>
+                <span className="rounded bg-green-300 px-1.5 py-0.5 text-green-900">50-79%</span>
+                <span className="rounded bg-yellow-300 px-1.5 py-0.5 text-yellow-900">30-49%</span>
+                <span className="rounded bg-orange-300 px-1.5 py-0.5 text-orange-900">1-29%</span>
+                <span className="rounded bg-gray-200 px-1.5 py-0.5 text-gray-500">0%</span>
+              </div>
+              <div className="flex gap-1 rounded-lg border p-1">
+                <Button
+                  className="h-7 px-3 text-xs"
+                  onClick={() => setCohortMode("daily")}
+                  size="sm"
+                  variant={cohortMode === "daily" ? "default" : "ghost"}
+                >
+                  일별
+                </Button>
+                <Button
+                  className="h-7 px-3 text-xs"
+                  onClick={() => setCohortMode("weekly")}
+                  size="sm"
+                  variant={cohortMode === "weekly" ? "default" : "ghost"}
+                >
+                  주별
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -1063,92 +1091,57 @@ export function TrialManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">
+                  <TableHead className="w-[100px] bg-muted/50">
                     {cohortMode === "daily" ? "일자" : "주차"}
                   </TableHead>
-                  <TableHead className="w-[60px] text-center">가입</TableHead>
-                  <TableHead className="text-center">설문+로그인</TableHead>
-                  <TableHead className="text-center">회사정보 입력</TableHead>
-                  <TableHead className="text-center">리드 생성</TableHead>
-                  <TableHead className="text-center">이메일 연동</TableHead>
-                  <TableHead className="text-center">이메일 발송</TableHead>
+                  <TableHead className="w-[50px] bg-muted/50 text-center">가입</TableHead>
+                  <TableHead className="w-[90px] bg-muted/50 text-center">설문</TableHead>
+                  <TableHead className="w-[90px] bg-muted/50 text-center">회사</TableHead>
+                  <TableHead className="w-[90px] bg-muted/50 text-center">리드</TableHead>
+                  <TableHead className="w-[90px] bg-muted/50 text-center">연동</TableHead>
+                  <TableHead className="w-[90px] bg-muted/50 text-center">발송</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {analytics?.cohortData?.length ? (
                   analytics.cohortData.map((cohort) => (
-                    <TableRow key={cohort.periodStart}>
-                      <TableCell className="font-medium">{cohort.period}</TableCell>
-                      <TableCell className="text-center">{cohort.total}명</TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "inline-block min-w-[50px] rounded px-2 py-0.5 font-medium text-xs",
-                            cohort.surveyLoginRate >= 50
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              : cohort.surveyLoginRate >= 25
-                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {cohort.surveyLoginRate}% ({cohort.surveyLogin})
-                        </span>
+                    <TableRow className="hover:bg-transparent" key={cohort.periodStart}>
+                      <TableCell className="bg-muted/30 font-medium">{cohort.period}</TableCell>
+                      <TableCell className="bg-muted/30 text-center font-semibold">
+                        {cohort.total}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "inline-block min-w-[50px] rounded px-2 py-0.5 font-medium text-xs",
-                            cohort.companyInfoRate >= 50
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              : cohort.companyInfoRate >= 25
-                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {cohort.companyInfoRate}% ({cohort.companyInfo})
-                        </span>
+                      <TableCell
+                        className={cn("p-1 text-center", getHeatmapStyle(cohort.surveyLoginRate))}
+                      >
+                        <div className="font-bold text-sm">{cohort.surveyLoginRate}%</div>
+                        <div className="text-[10px] opacity-80">({cohort.surveyLogin})</div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "inline-block min-w-[50px] rounded px-2 py-0.5 font-medium text-xs",
-                            cohort.leadCreatedRate >= 50
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              : cohort.leadCreatedRate >= 25
-                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {cohort.leadCreatedRate}% ({cohort.leadCreated})
-                        </span>
+                      <TableCell
+                        className={cn("p-1 text-center", getHeatmapStyle(cohort.companyInfoRate))}
+                      >
+                        <div className="font-bold text-sm">{cohort.companyInfoRate}%</div>
+                        <div className="text-[10px] opacity-80">({cohort.companyInfo})</div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "inline-block min-w-[50px] rounded px-2 py-0.5 font-medium text-xs",
-                            cohort.emailConnectedRate >= 50
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              : cohort.emailConnectedRate >= 25
-                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {cohort.emailConnectedRate}% ({cohort.emailConnected})
-                        </span>
+                      <TableCell
+                        className={cn("p-1 text-center", getHeatmapStyle(cohort.leadCreatedRate))}
+                      >
+                        <div className="font-bold text-sm">{cohort.leadCreatedRate}%</div>
+                        <div className="text-[10px] opacity-80">({cohort.leadCreated})</div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={cn(
-                            "inline-block min-w-[50px] rounded px-2 py-0.5 font-medium text-xs",
-                            cohort.emailSentRate >= 50
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                              : cohort.emailSentRate >= 25
-                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                          )}
-                        >
-                          {cohort.emailSentRate}% ({cohort.emailSent})
-                        </span>
+                      <TableCell
+                        className={cn(
+                          "p-1 text-center",
+                          getHeatmapStyle(cohort.emailConnectedRate),
+                        )}
+                      >
+                        <div className="font-bold text-sm">{cohort.emailConnectedRate}%</div>
+                        <div className="text-[10px] opacity-80">({cohort.emailConnected})</div>
+                      </TableCell>
+                      <TableCell
+                        className={cn("p-1 text-center", getHeatmapStyle(cohort.emailSentRate))}
+                      >
+                        <div className="font-bold text-sm">{cohort.emailSentRate}%</div>
+                        <div className="text-[10px] opacity-80">({cohort.emailSent})</div>
                       </TableCell>
                     </TableRow>
                   ))

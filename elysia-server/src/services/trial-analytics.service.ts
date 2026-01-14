@@ -111,6 +111,15 @@ export interface WorkspaceEmailPerformance {
     emailConnected: boolean
     emailSent: boolean
   }
+  // 사용자 입력 데이터
+  surveyData: {
+    industry?: string
+    target?: string
+    country?: string
+    experience?: string
+    lang?: string
+  } | null
+  companyDescription: string | null
 }
 
 export interface EmailPerformanceResponse {
@@ -684,6 +693,7 @@ async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerforma
   const result = await db.execute<{
     workspace_id: string
     company_name: string | null
+    company_description: string | null
     owner_email: string
     owner_name: string
     signup_date: string
@@ -698,10 +708,18 @@ async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerforma
     has_lead_search: boolean
     has_email_connected: boolean
     has_email_sent: boolean
+    survey_data: {
+      industry?: string
+      target?: string
+      country?: string
+      experience?: string
+      lang?: string
+    } | null
   }>(sql`
     SELECT
       w.id as workspace_id,
       w.company_name,
+      w.company_description,
       u.email as owner_email,
       u.username as owner_name,
       w.created_at as signup_date,
@@ -716,7 +734,9 @@ async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerforma
       (op.company_info_completed_at IS NOT NULL) as has_company_info,
       (op.lead_search_completed_at IS NOT NULL) as has_lead_search,
       (uea.workspace_id IS NOT NULL) as has_email_connected,
-      (e.sent_count > 0) as has_email_sent
+      (e.sent_count > 0) as has_email_sent,
+      -- 사용자 입력 데이터
+      op.survey_data
     FROM workspaces w
     JOIN users u ON w.owner_id = u.id
     LEFT JOIN onboarding_progress op ON op.workspace_id = w.id
@@ -773,6 +793,8 @@ async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerforma
         emailConnected: row.has_email_connected ?? false,
         emailSent: row.has_email_sent ?? false,
       },
+      surveyData: row.survey_data ?? null,
+      companyDescription: row.company_description ?? null,
     }
   })
 
@@ -986,8 +1008,12 @@ export type OnboardingStepType =
 export async function getWorkspacesByOnboardingStep(
   step: OnboardingStepType,
 ): Promise<OnboardingStepWorkspace[]> {
+  // Get exclusions from DB
+  const excludeIds = await getExcludedWorkspaceIds()
+  const exclusion = buildExclusionClause(excludeIds)
+
   // 공통 쿼리: 모든 퍼널 상태를 함께 조회
-  // 어드민 사용자 소유 워크스페이스 제외
+  // 어드민 사용자 소유 워크스페이스 및 제외 목록 적용
   const stepConditions: Record<OnboardingStepType, string> = {
     signup: "true", // 전체
     onboarding: "has_survey", // 로그인+설문완료 (survey_data가 있으면)
@@ -1059,6 +1085,7 @@ export async function getWorkspacesByOnboardingStep(
       ) sent ON sent.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
         AND u.user_role != 'admin'
+        ${sql.raw(exclusion)}
     )
     SELECT
       workspace_id,

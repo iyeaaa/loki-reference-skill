@@ -4,7 +4,16 @@
  */
 
 import { format } from "date-fns"
-import { AlertTriangle, ArrowDown, ArrowUp, RefreshCw, Settings2, X } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  RefreshCw,
+  Search,
+  Settings2,
+  X,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import {
@@ -167,6 +176,48 @@ const STEP_NAMES: Record<OnboardingStep, string> = {
   email_sent: "이메일 발송",
 }
 
+// Sortable Table Header Component
+function SortableTableHead<T extends string>({
+  column,
+  label,
+  currentSortBy,
+  sortOrder,
+  onSort,
+  className,
+  align = "left",
+}: {
+  column: T
+  label: string
+  currentSortBy: T
+  sortOrder: "asc" | "desc"
+  onSort: (column: T) => void
+  className?: string
+  align?: "left" | "right" | "center"
+}) {
+  const isActive = currentSortBy === column
+  const alignClass = align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""
+
+  return (
+    <TableHead
+      className={cn("cursor-pointer select-none transition-colors hover:bg-muted/50", className)}
+      onClick={() => onSort(column)}
+    >
+      <span className={cn("flex items-center gap-1", alignClass)}>
+        {label}
+        {isActive ? (
+          sortOrder === "desc" ? (
+            <ArrowDown className="h-3 w-3 text-primary" />
+          ) : (
+            <ArrowUp className="h-3 w-3 text-primary" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />
+        )}
+      </span>
+    </TableHead>
+  )
+}
+
 export function TrialManagementPage() {
   const [days, setDays] = useState(30)
   const [cohortMode, setCohortMode] = useState<CohortMode>("weekly")
@@ -174,6 +225,7 @@ export function TrialManagementPage() {
   const [emailPerfSortBy, setEmailPerfSortBy] =
     useState<keyof WorkspaceEmailPerformance>("emailsSent")
   const [emailPerfSortOrder, setEmailPerfSortOrder] = useState<"asc" | "desc">("desc")
+  const [emailPerfSearchTerm, setEmailPerfSearchTerm] = useState("")
 
   // Exclusion state (now from API)
   const [excludeModalOpen, setExcludeModalOpen] = useState(false)
@@ -201,18 +253,63 @@ export function TrialManagementPage() {
   const { data: stepWorkspaces, isLoading: stepWorkspacesLoading } =
     useOnboardingStepWorkspaces(selectedStep)
 
-  // Sort email performance workspaces
+  // Sort and filter email performance workspaces
   const sortedEmailPerf = useMemo(() => {
-    const workspaces = analytics?.emailPerformance?.workspaces ?? []
+    let workspaces = analytics?.emailPerformance?.workspaces ?? []
+
+    // Apply text search filter
+    if (emailPerfSearchTerm.trim()) {
+      const term = emailPerfSearchTerm.toLowerCase()
+      workspaces = workspaces.filter(
+        (ws) =>
+          ws.companyName?.toLowerCase().includes(term) ||
+          ws.ownerName.toLowerCase().includes(term) ||
+          ws.ownerEmail.toLowerCase().includes(term),
+      )
+    }
+
+    // Apply sorting
     return [...workspaces].sort((a, b) => {
-      const aVal = a[emailPerfSortBy] ?? 0
-      const bVal = b[emailPerfSortBy] ?? 0
+      const aVal = a[emailPerfSortBy]
+      const bVal = b[emailPerfSortBy]
+
+      // Handle null/undefined
+      if ((aVal === null || aVal === undefined) && (bVal === null || bVal === undefined)) {
+        return 0
+      }
+      if (aVal === null || aVal === undefined) {
+        return emailPerfSortOrder === "desc" ? 1 : -1
+      }
+      if (bVal === null || bVal === undefined) {
+        return emailPerfSortOrder === "desc" ? -1 : 1
+      }
+
+      // Number comparison
       if (typeof aVal === "number" && typeof bVal === "number") {
         return emailPerfSortOrder === "desc" ? bVal - aVal : aVal - bVal
       }
+
+      // String comparison
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "ko")
+        return emailPerfSortOrder === "desc" ? -comparison : comparison
+      }
+
+      // Date comparison for signupDate and lastLogin
+      if (emailPerfSortBy === "signupDate" || emailPerfSortBy === "lastLogin") {
+        const aDate = aVal ? new Date(aVal as string).getTime() : 0
+        const bDate = bVal ? new Date(bVal as string).getTime() : 0
+        return emailPerfSortOrder === "desc" ? bDate - aDate : aDate - bDate
+      }
+
       return 0
     })
-  }, [analytics?.emailPerformance?.workspaces, emailPerfSortBy, emailPerfSortOrder])
+  }, [
+    analytics?.emailPerformance?.workspaces,
+    emailPerfSortBy,
+    emailPerfSortOrder,
+    emailPerfSearchTerm,
+  ])
 
   // Toggle sort for email performance table
   const handleEmailPerfSort = (column: keyof WorkspaceEmailPerformance) => {
@@ -480,7 +577,9 @@ export function TrialManagementPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">가입 추이</CardTitle>
-            <CardDescription>일별 체험판 가입 현황 (전체 / 활성 / 만료)</CardDescription>
+            <CardDescription>
+              일별 체험판 가입 현황 (전체 / 활성 / 만료) · 체험 기간: 14일
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -625,8 +724,31 @@ export function TrialManagementPage() {
       {/* Email Performance Section */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">캠페인 이메일 성과</CardTitle>
-          <CardDescription>체험판 워크스페이스별 이메일 발송 및 성과 지표</CardDescription>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">캠페인 이메일 성과</CardTitle>
+              <CardDescription>체험판 워크스페이스별 이메일 발송 및 성과 지표</CardDescription>
+            </div>
+            {/* Search Input */}
+            <div className="relative w-64">
+              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                onChange={(e) => setEmailPerfSearchTerm(e.target.value)}
+                placeholder="회사명, 담당자, 이메일 검색..."
+                value={emailPerfSearchTerm}
+              />
+              {emailPerfSearchTerm && (
+                <button
+                  className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => setEmailPerfSearchTerm("")}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Summary Cards */}
@@ -660,61 +782,77 @@ export function TrialManagementPage() {
           {/* Performance Table */}
           <div className="overflow-auto rounded-md border">
             <Table>
-              <TableHeader className="sticky top-0 bg-background">
+              <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow>
-                  <TableHead className="w-[120px]">회사명</TableHead>
-                  <TableHead className="w-[140px]">담당자</TableHead>
-                  <TableHead className="w-[80px]">가입일</TableHead>
-                  <TableHead className="w-[100px]">최근접속</TableHead>
-                  <TableHead className="w-[200px]">퍼널 상태</TableHead>
-                  <TableHead
-                    className="w-[70px] cursor-pointer text-right hover:bg-muted/50"
-                    onClick={() => handleEmailPerfSort("emailsSent")}
-                  >
-                    <span className="flex items-center justify-end gap-1">
-                      발송
-                      {emailPerfSortBy === "emailsSent" &&
-                        (emailPerfSortOrder === "desc" ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        ))}
-                    </span>
-                  </TableHead>
-                  <TableHead
-                    className="w-[80px] cursor-pointer text-right hover:bg-muted/50"
-                    onClick={() => handleEmailPerfSort("openRate")}
-                  >
-                    <span className="flex items-center justify-end gap-1">
-                      오픈율
-                      {emailPerfSortBy === "openRate" &&
-                        (emailPerfSortOrder === "desc" ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        ))}
-                    </span>
-                  </TableHead>
-                  <TableHead
-                    className="w-[80px] cursor-pointer text-right hover:bg-muted/50"
-                    onClick={() => handleEmailPerfSort("replyRate")}
-                  >
-                    <span className="flex items-center justify-end gap-1">
-                      답장율
-                      {emailPerfSortBy === "replyRate" &&
-                        (emailPerfSortOrder === "desc" ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        ))}
-                    </span>
-                  </TableHead>
-                  <TableHead
+                  <SortableTableHead
+                    className="w-[120px]"
+                    column="companyName"
+                    currentSortBy={emailPerfSortBy}
+                    label="회사명"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
+                    className="w-[140px]"
+                    column="ownerName"
+                    currentSortBy={emailPerfSortBy}
+                    label="담당자"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
+                    className="w-[80px]"
+                    column="signupDate"
+                    currentSortBy={emailPerfSortBy}
+                    label="가입일"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
+                    className="w-[100px]"
+                    column="lastLogin"
+                    currentSortBy={emailPerfSortBy}
+                    label="최근접속"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <TableHead className="min-w-[200px]">퍼널 상태</TableHead>
+                  <TableHead className="min-w-[200px]">설문/회사정보</TableHead>
+                  <SortableTableHead
+                    align="right"
+                    className="w-[70px]"
+                    column="emailsSent"
+                    currentSortBy={emailPerfSortBy}
+                    label="발송"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
+                    align="right"
+                    className="w-[80px]"
+                    column="openRate"
+                    currentSortBy={emailPerfSortBy}
+                    label="오픈율"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
+                    align="right"
+                    className="w-[80px]"
+                    column="replyRate"
+                    currentSortBy={emailPerfSortBy}
+                    label="답장율"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
+                  <SortableTableHead
                     className="w-[60px]"
-                    title="오픈율 기준: 좋음(≥30%), 보통(15-30%), 낮음(<15%)"
-                  >
-                    성과
-                  </TableHead>
+                    column="performanceLevel"
+                    currentSortBy={emailPerfSortBy}
+                    label="성과"
+                    onSort={handleEmailPerfSort}
+                    sortOrder={emailPerfSortOrder}
+                  />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -793,6 +931,35 @@ export function TrialManagementPage() {
                           </Badge>
                         </div>
                       </TableCell>
+                      <TableCell className="max-w-[250px]">
+                        {ws.surveyData || ws.companyDescription ? (
+                          <div className="space-y-1 text-xs">
+                            {ws.surveyData && (
+                              <div className="rounded bg-blue-50 px-1.5 py-1 dark:bg-blue-950">
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {[
+                                    ws.surveyData.industry,
+                                    ws.surveyData.target,
+                                    ws.surveyData.country,
+                                    ws.surveyData.experience,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              </div>
+                            )}
+                            {ws.companyDescription && (
+                              <div className="line-clamp-2 rounded bg-gray-50 px-1.5 py-1 dark:bg-gray-900">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {ws.companyDescription}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-medium">{ws.emailsSent}</TableCell>
                       <TableCell className="text-right">{ws.openRate}%</TableCell>
                       <TableCell className="text-right">{ws.replyRate}%</TableCell>
@@ -820,14 +987,28 @@ export function TrialManagementPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell className="text-center text-muted-foreground" colSpan={9}>
-                      데이터가 없습니다
+                    <TableCell className="text-center text-muted-foreground" colSpan={10}>
+                      {emailPerfSearchTerm ? "검색 결과가 없습니다" : "데이터가 없습니다"}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Results count */}
+          {(analytics?.emailPerformance?.workspaces?.length ?? 0) > 0 && (
+            <div className="text-muted-foreground text-xs">
+              {emailPerfSearchTerm ? (
+                <>
+                  검색 결과: {sortedEmailPerf.length}개 /{" "}
+                  {analytics?.emailPerformance?.workspaces?.length}개
+                </>
+              ) : (
+                <>총 {analytics?.emailPerformance?.workspaces?.length}개</>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

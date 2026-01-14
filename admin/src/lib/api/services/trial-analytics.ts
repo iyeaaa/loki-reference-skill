@@ -103,6 +103,15 @@ export type WorkspaceEmailPerformance = {
     emailConnected: boolean
     emailSent: boolean
   }
+  // 사용자 입력 데이터
+  surveyData: {
+    industry?: string
+    target?: string
+    country?: string
+    experience?: string
+    lang?: string
+  } | null
+  companyDescription: string | null
 }
 
 export type EmailPerformanceResponse = {

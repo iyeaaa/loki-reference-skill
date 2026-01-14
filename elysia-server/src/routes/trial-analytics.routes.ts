@@ -225,6 +225,33 @@ export const trialAnalyticsRoutes = new Elysia({ prefix: "/api/v1/admin/trial-an
   // =========================================================================
 
   /**
+   * Get workspaces for exclusion modal
+   * 제외 설정 모달용 워크스페이스 목록 조회
+   * - 비제외 워크스페이스: 최신 가입일 순 (상단)
+   * - 제외된 워크스페이스: 맨 아래 (isExcluded: true)
+   */
+  .get(
+    "/workspaces-for-exclusion",
+    async () => {
+      try {
+        const workspaces = await trialAnalyticsService.getWorkspacesForExclusion()
+        return successResponse(workspaces, "워크스페이스 목록 조회 성공")
+      } catch (error) {
+        logger.error({ error }, "[TrialAnalytics] Failed to get workspaces for exclusion")
+        return errorResponse("워크스페이스 목록 조회 실패", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      detail: {
+        tags: ["admin", "trial-analytics"],
+        summary: "제외 설정용 워크스페이스 목록",
+        description:
+          "제외 설정 모달에서 사용할 워크스페이스 목록. 비제외 항목은 최신 가입순, 제외 항목은 맨 아래 표시",
+      },
+    },
+  )
+
+  /**
    * Get all exclusions
    * 제외 목록 조회
    */

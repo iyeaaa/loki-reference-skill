@@ -68,6 +68,7 @@ import {
   useOnboardingStepWorkspaces,
   useRemoveExclusionMutation,
   useTrialAnalytics,
+  useWorkspacesForExclusion,
 } from "@/lib/api/hooks/trial-analytics"
 import type {
   CohortMode,
@@ -316,6 +317,10 @@ export function TrialManagementPage() {
   // Get exclusions from DB
   const { data: exclusions = [] } = useExclusions()
 
+  // Get workspaces for exclusion modal (only when modal is open)
+  const { data: workspacesForExclusion = [], refetch: refetchWorkspacesForExclusion } =
+    useWorkspacesForExclusion(excludeModalOpen)
+
   // Exclusion mutations
   const bulkAddExclusionsMutation = useBulkAddExclusionsMutation()
   const removeExclusionMutation = useRemoveExclusionMutation()
@@ -428,20 +433,25 @@ export function TrialManagementPage() {
   // Get excluded workspace IDs from API response
   const excludedIds = useMemo(() => exclusions.map((e) => e.workspaceId), [exclusions])
 
-  // Open exclusion modal and initialize pending exclusions
+  // Open exclusion modal and initialize pending exclusions from workspacesForExclusion
   const handleOpenExcludeModal = () => {
-    setPendingExclusions(new Set(excludedIds))
+    // Initialize pendingExclusions from workspacesForExclusion data (isExcluded: true items)
+    const excludedFromData = workspacesForExclusion
+      .filter((ws) => ws.isExcluded)
+      .map((ws) => ws.workspaceId)
+    setPendingExclusions(new Set(excludedFromData.length > 0 ? excludedFromData : excludedIds))
     setExcludeSearchTerm("")
     setExcludeModalOpen(true)
+    refetchWorkspacesForExclusion()
   }
 
   // Toggle workspace exclusion in pending state
-  const togglePendingExclusion = (workspace: WorkspaceEmailPerformance) => {
+  const togglePendingExclusion = (workspaceId: string) => {
     const newPending = new Set(pendingExclusions)
-    if (newPending.has(workspace.workspaceId)) {
-      newPending.delete(workspace.workspaceId)
+    if (newPending.has(workspaceId)) {
+      newPending.delete(workspaceId)
     } else {
-      newPending.add(workspace.workspaceId)
+      newPending.add(workspaceId)
     }
     setPendingExclusions(newPending)
   }
@@ -499,20 +509,19 @@ export function TrialManagementPage() {
     }
   }
 
-  // Filter workspaces for exclusion modal
+  // Filter workspaces for exclusion modal (using new API)
   const filteredWorkspacesForExclusion = useMemo(() => {
-    const workspaces = analytics?.emailPerformance?.workspaces ?? []
     if (!excludeSearchTerm.trim()) {
-      return workspaces
+      return workspacesForExclusion
     }
     const term = excludeSearchTerm.toLowerCase()
-    return workspaces.filter(
+    return workspacesForExclusion.filter(
       (ws) =>
         ws.companyName?.toLowerCase().includes(term) ||
         ws.ownerName.toLowerCase().includes(term) ||
         ws.ownerEmail.toLowerCase().includes(term),
     )
-  }, [analytics?.emailPerformance?.workspaces, excludeSearchTerm])
+  }, [workspacesForExclusion, excludeSearchTerm])
 
   if (analyticsLoading) {
     return (
@@ -1410,18 +1419,26 @@ export function TrialManagementPage() {
                 {filteredWorkspacesForExclusion.length > 0 ? (
                   filteredWorkspacesForExclusion.map((ws) => (
                     <TableRow
-                      className="cursor-pointer hover:bg-muted/50"
+                      className={cn(
+                        "cursor-pointer hover:bg-muted/50",
+                        ws.isExcluded && "bg-muted/30",
+                      )}
                       key={ws.workspaceId}
-                      onClick={() => togglePendingExclusion(ws)}
+                      onClick={() => togglePendingExclusion(ws.workspaceId)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={pendingExclusions.has(ws.workspaceId)}
-                          onCheckedChange={() => togglePendingExclusion(ws)}
+                          onCheckedChange={() => togglePendingExclusion(ws.workspaceId)}
                         />
                       </TableCell>
                       <TableCell className="font-medium">
                         {ws.companyName || <span className="text-muted-foreground">미입력</span>}
+                        {ws.isExcluded && (
+                          <Badge className="ml-2" variant="secondary">
+                            기존 제외
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{ws.ownerName}</div>

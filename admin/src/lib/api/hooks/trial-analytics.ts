@@ -27,6 +27,7 @@ export const trialAnalyticsKeys = {
   onboardingStep: (step: OnboardingStep) =>
     [...trialAnalyticsKeys.all, "onboarding", step] as const,
   exclusions: () => [...trialAnalyticsKeys.all, "exclusions"] as const,
+  workspacesForExclusion: () => [...trialAnalyticsKeys.all, "workspaces-for-exclusion"] as const,
 }
 
 // ============================================================================
@@ -116,6 +117,22 @@ export function useBulkExtendTrialMutation() {
 // ============================================================================
 // Exclusion Management Hooks (통계 제외 관리)
 // ============================================================================
+
+/**
+ * Get workspaces for exclusion modal
+ * 제외 설정 모달용 워크스페이스 목록 조회
+ * - 비제외 워크스페이스: 최신 가입일 순 (상단)
+ * - 제외된 워크스페이스: 맨 아래 (isExcluded: true)
+ */
+export function useWorkspacesForExclusion(enabled = true) {
+  return useQuery({
+    queryKey: trialAnalyticsKeys.workspacesForExclusion(),
+    queryFn: () => trialAnalyticsApi.getWorkspacesForExclusion(),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
 
 /**
  * Get all exclusions

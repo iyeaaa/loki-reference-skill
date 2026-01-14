@@ -250,6 +250,16 @@ export type BulkAddExclusionParams = {
   reason?: string
 }
 
+// 제외 설정 모달용 워크스페이스
+export type WorkspaceForExclusion = {
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+  ownerEmail: string
+  signupDate: string
+  isExcluded: boolean
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -343,6 +353,18 @@ export const trialAnalyticsApi = {
   // =========================================================================
   // Exclusion Management (통계 제외 관리)
   // =========================================================================
+
+  /**
+   * Get workspaces for exclusion modal
+   * 제외 설정 모달용 워크스페이스 목록 조회
+   * - 비제외 워크스페이스: 최신 가입일 순 (상단)
+   * - 제외된 워크스페이스: 맨 아래 (isExcluded: true)
+   */
+  async getWorkspacesForExclusion(): Promise<WorkspaceForExclusion[]> {
+    return apiFetch<WorkspaceForExclusion[]>(
+      "/api/v1/admin/trial-analytics/workspaces-for-exclusion",
+    )
+  },
 
   /**
    * Get all exclusions

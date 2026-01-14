@@ -1446,3 +1446,61 @@ export async function clearAllExclusions(): Promise<{ success: boolean; count: n
     return { success: false, count: 0 }
   }
 }
+
+// ============================================================================
+// Workspaces for Exclusion Modal
+// ============================================================================
+
+export interface WorkspaceForExclusion {
+  workspaceId: string
+  companyName: string | null
+  ownerName: string
+  ownerEmail: string
+  signupDate: string
+  isExcluded: boolean
+}
+
+/**
+ * Get all workspaces for exclusion modal
+ * 제외 설정 모달용 워크스페이스 목록 조회
+ * - 비제외 워크스페이스: 최신 가입일 순 (상단)
+ * - 제외된 워크스페이스: 맨 아래 (isExcluded: true)
+ */
+export async function getWorkspacesForExclusion(): Promise<WorkspaceForExclusion[]> {
+  // Single query to get all workspaces with exclusion status
+  const result = await db.execute<{
+    workspace_id: string
+    company_name: string | null
+    owner_name: string
+    owner_email: string
+    signup_date: string
+    is_excluded: boolean
+  }>(sql`
+    SELECT
+      w.id as workspace_id,
+      w.company_name,
+      u.username as owner_name,
+      u.email as owner_email,
+      w.created_at as signup_date,
+      (tse.workspace_id IS NOT NULL) as is_excluded
+    FROM workspaces w
+    JOIN users u ON w.owner_id = u.id
+    LEFT JOIN trial_stat_exclusions tse ON tse.workspace_id = w.id
+    WHERE w.subscription_tier = 'trial'
+      AND u.user_role != 'admin'
+    ORDER BY
+      -- 제외된 항목은 맨 아래로
+      (tse.workspace_id IS NOT NULL) ASC,
+      -- 비제외 항목은 최신 가입일 순
+      w.created_at DESC
+  `)
+
+  return result.rows.map((r) => ({
+    workspaceId: r.workspace_id,
+    companyName: r.company_name,
+    ownerName: r.owner_name,
+    ownerEmail: r.owner_email,
+    signupDate: r.signup_date,
+    isExcluded: r.is_excluded,
+  }))
+}

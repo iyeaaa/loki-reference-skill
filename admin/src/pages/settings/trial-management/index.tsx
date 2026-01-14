@@ -550,34 +550,30 @@ export function TrialManagementPage() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button onClick={handleOpenExcludeModal} size="sm" variant="outline">
-            <Settings2 className="mr-2 h-4 w-4" />
-            체험판 통계 제외 설정
-            {exclusions.length > 0 && (
-              <Badge className="ml-2" variant="secondary">
-                {exclusions.length}
-              </Badge>
-            )}
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select onValueChange={(v) => setDays(Number(v))} value={String(days)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">최근 7일</SelectItem>
-              <SelectItem value="14">최근 14일</SelectItem>
-              <SelectItem value="30">최근 30일</SelectItem>
-              <SelectItem value="90">최근 90일</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => refetchAnalytics()} size="icon" variant="outline">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="flex items-center gap-2">
+        <Button onClick={handleOpenExcludeModal} size="sm" variant="outline">
+          <Settings2 className="mr-2 h-4 w-4" />
+          체험판 통계 제외 설정
+          {exclusions.length > 0 && (
+            <Badge className="ml-2" variant="secondary">
+              {exclusions.length}
+            </Badge>
+          )}
+        </Button>
+        <Select onValueChange={(v) => setDays(Number(v))} value={String(days)}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">최근 7일</SelectItem>
+            <SelectItem value="14">최근 14일</SelectItem>
+            <SelectItem value="30">최근 30일</SelectItem>
+            <SelectItem value="90">최근 90일</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => refetchAnalytics()} size="icon" variant="outline">
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Excluded Workspaces Info Banner */}

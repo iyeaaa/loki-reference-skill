@@ -224,14 +224,14 @@ export async function getTrialAnalytics(
     cohortData,
     emailPerformance,
   ] = await Promise.all([
-    getTrialSummary(excludeWorkspaceIds),
+    getTrialSummary(days, excludeWorkspaceIds),
     getSignupTrend(days, excludeWorkspaceIds),
-    getOnboardingFunnel(excludeWorkspaceIds),
-    getEmailDistribution(excludeWorkspaceIds),
-    getSourcePerformance(excludeWorkspaceIds),
-    getActivityDistribution(excludeWorkspaceIds),
-    getCohortData(cohortMode, excludeWorkspaceIds),
-    getEmailPerformance(excludeWorkspaceIds),
+    getOnboardingFunnel(days, excludeWorkspaceIds),
+    getEmailDistribution(days, excludeWorkspaceIds),
+    getSourcePerformance(days, excludeWorkspaceIds),
+    getActivityDistribution(days, excludeWorkspaceIds),
+    getCohortData(days, cohortMode, excludeWorkspaceIds),
+    getEmailPerformance(days, excludeWorkspaceIds),
   ])
 
   return {
@@ -250,7 +250,7 @@ export async function getTrialAnalytics(
  * Get trial summary statistics
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getTrialSummary(excludeIds?: string[]): Promise<TrialSummary> {
+async function getTrialSummary(days: number, excludeIds?: string[]): Promise<TrialSummary> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     total: number
@@ -296,6 +296,7 @@ async function getTrialSummary(excludeIds?: string[]): Promise<TrialSummary> {
     ) r ON r.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
       AND u.user_role != 'admin'
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
       ${sql.raw(exclusion)}
   `)
 
@@ -359,7 +360,10 @@ async function getSignupTrend(days: number, excludeIds?: string[]): Promise<Sign
  * 6. 이메일 발송 - 이메일 연동 + 실제 이메일 발송함
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getOnboardingFunnel(excludeIds?: string[]): Promise<OnboardingFunnelItem[]> {
+async function getOnboardingFunnel(
+  days: number,
+  excludeIds?: string[],
+): Promise<OnboardingFunnelItem[]> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     total_workspaces: number
@@ -391,6 +395,7 @@ async function getOnboardingFunnel(excludeIds?: string[]): Promise<OnboardingFun
       ) sent ON w.id = sent.workspace_id
       WHERE w.subscription_tier = 'trial'
         AND u.user_role != 'admin'
+        AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
         ${sql.raw(exclusion)}
     )
     SELECT
@@ -445,7 +450,10 @@ async function getOnboardingFunnel(excludeIds?: string[]): Promise<OnboardingFun
  * Get email sending distribution
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getEmailDistribution(excludeIds?: string[]): Promise<EmailDistributionItem[]> {
+async function getEmailDistribution(
+  days: number,
+  excludeIds?: string[],
+): Promise<EmailDistributionItem[]> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     range: string
@@ -465,6 +473,7 @@ async function getEmailDistribution(excludeIds?: string[]): Promise<EmailDistrib
       ) e ON e.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
         AND u.user_role != 'admin'
+        AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
         ${sql.raw(exclusion)}
     )
     SELECT
@@ -489,7 +498,10 @@ async function getEmailDistribution(excludeIds?: string[]): Promise<EmailDistrib
  * Get performance by signup source
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getSourcePerformance(excludeIds?: string[]): Promise<SourcePerformanceItem[]> {
+async function getSourcePerformance(
+  days: number,
+  excludeIds?: string[],
+): Promise<SourcePerformanceItem[]> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     source: string
@@ -524,6 +536,7 @@ async function getSourcePerformance(excludeIds?: string[]): Promise<SourcePerfor
     ) e ON e.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
       AND u.user_role != 'admin'
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
       ${sql.raw(exclusion)}
     GROUP BY u.auth_provider
   `)
@@ -542,7 +555,10 @@ async function getSourcePerformance(excludeIds?: string[]): Promise<SourcePerfor
  * Get activity distribution (last login)
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getActivityDistribution(excludeIds?: string[]): Promise<ActivityDistributionItem[]> {
+async function getActivityDistribution(
+  days: number,
+  excludeIds?: string[],
+): Promise<ActivityDistributionItem[]> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     period: string
@@ -562,6 +578,7 @@ async function getActivityDistribution(excludeIds?: string[]): Promise<ActivityD
     JOIN users u ON w.owner_id = u.id
     WHERE w.subscription_tier = 'trial'
       AND u.user_role != 'admin'
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
       ${sql.raw(exclusion)}
     GROUP BY 1
     ORDER BY MIN(COALESCE(last_login_at, '1970-01-01'::timestamp)) DESC
@@ -576,6 +593,7 @@ async function getActivityDistribution(excludeIds?: string[]): Promise<ActivityD
  * 어드민 사용자 소유 워크스페이스 제외
  */
 async function getCohortData(
+  days: number,
   mode: CohortMode = "weekly",
   excludeIds?: string[],
 ): Promise<CohortItem[]> {
@@ -611,6 +629,7 @@ async function getCohortData(
       LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
       WHERE w.subscription_tier = 'trial'
         AND u.user_role != 'admin'
+        AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
         ${sql.raw(exclusion)}
     )
     SELECT
@@ -668,6 +687,7 @@ async function getCohortData(
     LEFT JOIN (SELECT DISTINCT workspace_id FROM emails WHERE direction = 'outbound' AND sent_at IS NOT NULL) sent ON sent.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
       AND u.user_role != 'admin'
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
       ${sql.raw(exclusion)}
     ORDER BY w.created_at DESC
   `)
@@ -760,7 +780,10 @@ async function getCohortData(
  * 단일 쿼리로 모든 데이터 조회 (성능 최적화)
  * 어드민 사용자 소유 워크스페이스 제외
  */
-async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerformanceResponse> {
+async function getEmailPerformance(
+  days: number,
+  excludeIds?: string[],
+): Promise<EmailPerformanceResponse> {
   const exclusion = buildExclusionClause(excludeIds)
   const result = await db.execute<{
     workspace_id: string
@@ -827,6 +850,7 @@ async function getEmailPerformance(excludeIds?: string[]): Promise<EmailPerforma
     ) e ON e.workspace_id = w.id
     WHERE w.subscription_tier = 'trial'
       AND u.user_role != 'admin'
+      AND w.created_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
       ${sql.raw(exclusion)}
     ORDER BY COALESCE(e.sent_count, 0) DESC, w.created_at DESC
   `)

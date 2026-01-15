@@ -66,7 +66,9 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-muted-foreground">{t("email-replies.details.readStatus")}:</span>
+            <span className="text-muted-foreground">
+              {t("email-replies.details.readStatus.label")}:
+            </span>
             <span className="ml-2 font-medium">
               {reply.isRead
                 ? t("email-replies.details.readStatus.read")

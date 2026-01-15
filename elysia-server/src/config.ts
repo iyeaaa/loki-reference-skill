@@ -264,6 +264,11 @@ export const config = {
     phoneNumber: getEnvOrDefault("CS_PHONE_NUMBER", ""),
   },
 
+  // Snitcher (IP to Company API)
+  snitcher: {
+    apiKey: getEnvOrDefault("SNITCHER_API_KEY", ""),
+  },
+
   // PortOne (Payment Gateway Integration)
   // All keys must be set in environment variables
   portone: {

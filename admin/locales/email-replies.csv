@@ -188,7 +188,7 @@ confirm.ok,확인,Confirm
 confirm.cancel,취소,Cancel
 filters.sentiment.pending,분석 전,Pending Analysis
 details.title,답장 정보,Reply Information
-details.readStatus,읽음 상태,Read Status
+details.readStatus.label,읽음 상태,Read Status
 details.readStatus.read,읽음,Read
 details.readStatus.unread,읽지 않음,Unread
 details.receivedAt,받은 날짜,Received Date

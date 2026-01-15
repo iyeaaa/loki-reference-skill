@@ -379,7 +379,7 @@ export default function PaymentTestPublic() {
             setIsProcessing(false)
           }
         },
-        onPaymentFail: (error) => {
+        onPaymentFail: (error: unknown) => {
           console.error("[Payment] PayPal error:", error)
           const errorMessage =
             typeof error === "object" && error !== null && "message" in error

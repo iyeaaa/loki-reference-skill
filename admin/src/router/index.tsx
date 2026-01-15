@@ -79,6 +79,7 @@ const AnalyticsDashboardPage = lazy(() => import("../pages/dashboard/DashboardV2
 
 // Public Pages (No auth required)
 const PaymentTestPublic = lazy(() => import("../pages/PaymentTestPublic"))
+const SnitcherTestPage = lazy(() => import("../pages/SnitcherTestPage"))
 const TermsPage = lazy(() => import("../pages/legal/TermsPage"))
 const PrivacyPage = lazy(() => import("../pages/legal/PrivacyPage"))
 
@@ -151,6 +152,21 @@ export const router = createBrowserRouter([
         }
       >
         <PaymentTestPublic />
+      </Suspense>
+    ),
+  },
+  // Snitcher API Test Page (No auth required)
+  {
+    path: "/snitcher-test",
+    element: (
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        }
+      >
+        <SnitcherTestPage />
       </Suspense>
     ),
   },

@@ -46,7 +46,7 @@ import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { formatFileSize, validateAndCountUrls } from "@/utils/web-extraction.utils"
 
 export function WebDataExtraction() {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation()
   const keyNameId = useId()
   const apiKeyId = useId()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)

@@ -40,7 +40,7 @@ export function RepliesTableWithPagination({
   onToggleAll,
   onViewReply,
 }: RepliesTableWithPaginationProps) {
-  const { t } = useTranslation("email-replies")
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const limit = 10

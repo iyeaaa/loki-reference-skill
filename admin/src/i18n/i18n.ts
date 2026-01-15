@@ -40,6 +40,9 @@ i18n
       escapeValue: false, // React는 자동으로 XSS 방어
     },
 
+    // 네임스페이스 구분자 비활성화 (키 이름에 콜론 포함 허용)
+    nsSeparator: false,
+
     pluralSeparator: "_",
 
     // 디버그 모드 (개발 환경에서만 활성화)

@@ -24,7 +24,7 @@ import type { ApiKey } from "@/lib/api/types/openai-api-keys"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 export function OpenAIApiKeyManagement() {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation()
   const keyNameId = useId()
   const apiKeyId = useId()
   const [isDialogOpen, setIsDialogOpen] = useState(false)

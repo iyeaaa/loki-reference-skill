@@ -25,7 +25,7 @@ export function MessageDetailView({
   email,
   loading = false,
 }: MessageDetailViewProps) {
-  const { t } = useTranslation("email-replies")
+  const { t } = useTranslation()
   const replyContentId = useId()
   const [replyContent, setReplyContent] = useState("")
   const [isSending, setIsSending] = useState(false)

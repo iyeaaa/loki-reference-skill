@@ -350,10 +350,10 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                                 }
                               >
                                 {summary.sentiment === "positive"
-                                  ? "긍정"
+                                  ? t("sequences.campaignOverview.sentiment.positive")
                                   : summary.sentiment === "negative"
-                                    ? "부정"
-                                    : "중립"}
+                                    ? t("sequences.campaignOverview.sentiment.negative")
+                                    : t("sequences.campaignOverview.sentiment.neutral")}
                               </Badge>
                             )}
                           </div>
@@ -363,7 +363,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                                 className="bg-background/50 font-medium text-xs"
                                 variant="outline"
                               >
-                                의도: {summary.intent}
+                                {t("sequences.campaignOverview.intent")}: {summary.intent}
                               </Badge>
                             </div>
                           )}

@@ -1,6 +1,7 @@
 import { Loader2, Maximize2, Minimize2, Send, X } from "lucide-react"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { FileAttachment } from "@/components/FileAttachment"
 import { RecipientInput } from "@/components/RecipientInput"
 import { SimpleTextEditor } from "@/components/SimpleTextEditor"
@@ -38,6 +39,7 @@ export function InlineComposeBox({
   onClose,
   onSent,
 }: InlineComposeBoxProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const sendEmail = useSendEmail()
 
@@ -54,14 +56,14 @@ export function InlineComposeBox({
 
   const handleSend = async () => {
     if (!user) {
-      toast.error("로그인이 필요합니다")
+      toast.error(t("email-replies.auth.loginRequired"))
       return
     }
 
     const effectiveWorkspaceId = originalEmail.workspaceId || workspaceId
 
     if (!effectiveWorkspaceId || effectiveWorkspaceId === "" || effectiveWorkspaceId === "all") {
-      toast.error("워크스페이스가 선택되지 않았습니다")
+      toast.error(t("email-replies.workspace.notSelected"))
       console.error("❌ workspaceId is invalid:", {
         workspaceId,
         originalEmailWorkspaceId: originalEmail.workspaceId,
@@ -73,12 +75,12 @@ export function InlineComposeBox({
     // 이메일 주소 검증
     const recipients = parseEmailList(to)
     if (recipients.length === 0) {
-      toast.error("유효한 받는사람 이메일 주소를 입력하세요")
+      toast.error(t("email-replies.email.invalidRecipient"))
       return
     }
 
     if (!subject.trim()) {
-      toast.error("제목을 입력하세요")
+      toast.error(t("email-replies.compose.subject"))
       return
     }
 
@@ -157,7 +159,7 @@ export function InlineComposeBox({
       <div className={`space-y-2 border-b px-4 py-2 ${fullscreen ? "flex-shrink-0" : ""}`}>
         <RecipientInput
           disabled={true}
-          label="받는사람"
+          label={t("email-replies.compose.to")}
           onChange={setTo}
           onShowBcc={showBcc ? undefined : () => setShowBcc(true)}
           onShowCc={showCc ? undefined : () => setShowCc(true)}
@@ -165,16 +167,22 @@ export function InlineComposeBox({
           value={to}
         />
 
-        {showCc && <RecipientInput label="참조" onChange={setCc} value={cc} />}
+        {showCc && (
+          <RecipientInput label={t("email-replies.compose.cc")} onChange={setCc} value={cc} />
+        )}
 
-        {showBcc && <RecipientInput label="숨은참조" onChange={setBcc} value={bcc} />}
+        {showBcc && (
+          <RecipientInput label={t("email-replies.compose.bcc")} onChange={setBcc} value={bcc} />
+        )}
 
         <div className="flex items-center gap-2">
-          <span className="w-16 flex-shrink-0 text-gray-600 text-sm">제목</span>
+          <span className="w-16 flex-shrink-0 text-gray-600 text-sm">
+            {t("email-replies.compose.subject")}
+          </span>
           <Input
             className="h-8 flex-1 border-0 px-2 focus-visible:ring-0 focus-visible:ring-offset-0"
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="제목"
+            placeholder={t("email-replies.compose.subject")}
             type="text"
             value={subject}
           />
@@ -182,7 +190,9 @@ export function InlineComposeBox({
 
         {/* 첨부 파일 */}
         <div className="flex items-start gap-2">
-          <span className="w-16 flex-shrink-0 pt-1 text-gray-600 text-sm">첨부</span>
+          <span className="w-16 flex-shrink-0 pt-1 text-gray-600 text-sm">
+            {t("email-replies.compose.attachment")}
+          </span>
           <div className="flex-1">
             <FileAttachment files={files} maxSize={20 * 1024 * 1024} onFilesChange={setFiles} />
           </div>

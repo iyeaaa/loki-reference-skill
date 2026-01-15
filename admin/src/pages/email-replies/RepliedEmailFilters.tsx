@@ -1,4 +1,5 @@
 import { X } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -13,13 +14,14 @@ export function RepliedEmailFilters({
   onStatusChange,
   onClearFilters,
 }: RepliedEmailFiltersProps) {
+  const { t } = useTranslation()
   const statuses = [
-    { value: "delivered", label: "전달됨" },
-    { value: "opened", label: "열림" },
-    { value: "clicked", label: "클릭됨" },
-    { value: "replied", label: "답장됨" },
-    { value: "bounced", label: "반송됨" },
-    { value: "failed", label: "실패" },
+    { value: "delivered", label: t("email-replies.filters.status.delivered") },
+    { value: "opened", label: t("email-replies.filters.status.opened") },
+    { value: "clicked", label: t("email-replies.filters.status.clicked") },
+    { value: "replied", label: t("email-replies.filters.status.replied") },
+    { value: "bounced", label: t("email-replies.filters.status.bounced") },
+    { value: "failed", label: t("email-replies.filters.status.failed") },
   ]
 
   const toggleStatus = (status: string) => {
@@ -70,7 +72,7 @@ export function RepliedEmailFilters({
                     className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-green-800 text-xs dark:bg-green-900/30 dark:text-green-300"
                     key={status}
                   >
-                    상태: {statusLabel}
+                    {t("email-replies.filters.status.label")}: {statusLabel}
                     <button
                       className="ml-1 hover:text-green-600 dark:hover:text-green-200"
                       onClick={() => toggleStatus(status)}
@@ -90,7 +92,7 @@ export function RepliedEmailFilters({
           <div className="mt-3 border-gray-200 border-t pt-3 dark:border-gray-700">
             <Button className="text-xs" onClick={onClearFilters} size="sm" variant="ghost">
               <X className="mr-1 h-3 w-3" />
-              필터 초기화
+              {t("email-replies.filters.clearFilters")}
             </Button>
           </div>
         )}

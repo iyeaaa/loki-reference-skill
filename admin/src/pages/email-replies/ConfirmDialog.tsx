@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,10 +27,13 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmText = "확인",
-  cancelText = "취소",
+  confirmText,
+  cancelText,
   variant = "default",
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
+  const finalConfirmText = confirmText ?? t("email-replies.confirm.ok")
+  const finalCancelText = cancelText ?? t("email-replies.confirm.cancel")
   const handleConfirm = () => {
     onConfirm()
     onClose()
@@ -54,13 +58,13 @@ export function ConfirmDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button onClick={onClose} variant="outline">
-            {cancelText}
+            {finalCancelText}
           </Button>
           <Button
             onClick={handleConfirm}
             variant={variant === "destructive" ? "destructive" : "default"}
           >
-            {confirmText}
+            {finalConfirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

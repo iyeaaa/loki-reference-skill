@@ -79,17 +79,17 @@ export function SequenceLeadsTable({ sequenceId }: SequenceLeadsTableProps) {
 
     const statusConfig: Record<
       string,
-      { label: string; variant: "default" | "secondary" | "outline" }
+      { labelKey: string; variant: "default" | "secondary" | "outline" }
     > = {
-      new: { label: "신규", variant: "default" },
-      contacted: { label: "연락함", variant: "secondary" },
-      qualified: { label: "적합", variant: "default" },
-      unqualified: { label: "부적합", variant: "outline" },
-      converted: { label: "전환", variant: "default" },
+      new: { labelKey: "sequences.leads.status.new", variant: "default" },
+      contacted: { labelKey: "sequences.leads.status.contacted", variant: "secondary" },
+      qualified: { labelKey: "sequences.leads.status.qualified", variant: "default" },
+      unqualified: { labelKey: "sequences.leads.status.unqualified", variant: "outline" },
+      converted: { labelKey: "sequences.leads.status.converted", variant: "default" },
     }
 
-    const config = statusConfig[status] || { label: status, variant: "outline" as const }
-    return <Badge variant={config.variant}>{config.label}</Badge>
+    const config = statusConfig[status] || { labelKey: status, variant: "outline" as const }
+    return <Badge variant={config.variant}>{t(config.labelKey, status)}</Badge>
   }
 
   return (

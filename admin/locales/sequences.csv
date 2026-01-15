@@ -1011,3 +1011,18 @@ dashboard.stats.totalOpenRate,총 오픈률,Total Open Rate
 dashboard.stats.totalOpenRateDesc,{{count}}명이 오픈,{{count}} opened
 dashboard.stats.totalReplyRate,총 회신률,Total Reply Rate
 dashboard.stats.totalReplyRateDesc,{{count}}건 회신,{{count}} replies
+leads.status.new,신규,New
+leads.status.contacted,연락함,Contacted
+leads.status.qualified,적합,Qualified
+leads.status.unqualified,부적합,Unqualified
+leads.status.converted,전환,Converted
+manualMode.variableInsert,변수 삽입,Insert Variable
+manualMode.variableTarget.subject,제목,Subject
+manualMode.variableTarget.body,본문,Body
+manualMode.attachments,첨부파일,Attachments
+campaignOverview.sentiment.positive,긍정,Positive
+campaignOverview.sentiment.negative,부정,Negative
+campaignOverview.sentiment.neutral,중립,Neutral
+campaignOverview.intent,의도,Intent
+viewMode.cardViewAria,카드 뷰,Card View
+viewMode.listViewAria,리스트 뷰,List View

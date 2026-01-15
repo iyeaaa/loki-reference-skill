@@ -1,6 +1,9 @@
 key,ko,en
-stats.activeSales,[NO TRANSLATION] sequences:dashboard.stats.activeSales,[NO TRANSLATION] sequences:dashboard.stats.activeSales
-stats.activeSalesDesc,[NO TRANSLATION] sequences:dashboard.stats.activeSalesDesc,[NO TRANSLATION] sequences:dashboard.stats.activeSalesDesc
-stats.totalOpenRate,[NO TRANSLATION] sequences:dashboard.stats.totalOpenRate,[NO TRANSLATION] sequences:dashboard.stats.totalOpenRate
-stats.totalReplyRate,[NO TRANSLATION] sequences:dashboard.stats.totalReplyRate,[NO TRANSLATION] sequences:dashboard.stats.totalReplyRate
-stats.totalSent,[NO TRANSLATION] sequences:dashboard.stats.totalSent,[NO TRANSLATION] sequences:dashboard.stats.totalSent
+stats.activeSales,진행 중인 영업,Active Sales
+stats.activeSalesDesc,린다가 연락 중 {{active}} · 대기 중 {{paused}},Rinda contacting {{active}} · Waiting {{paused}}
+stats.totalSent,총 발송,Total Sent
+stats.totalSentDesc,{{count}}건 발송 시도,{{count}} send attempts
+stats.totalOpenRate,총 오픈률,Total Open Rate
+stats.totalOpenRateDesc,{{count}}명이 오픈,{{count}} opened
+stats.totalReplyRate,총 회신률,Total Reply Rate
+stats.totalReplyRateDesc,{{count}}건 회신,{{count}} replies

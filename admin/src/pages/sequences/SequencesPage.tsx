@@ -158,10 +158,10 @@ export default function SequencesPage() {
               type="single"
               value={viewMode}
             >
-              <ToggleGroupItem aria-label="카드 뷰" value="card">
+              <ToggleGroupItem aria-label={t("sequences.viewMode.cardViewAria")} value="card">
                 <LayoutGrid className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem aria-label="리스트 뷰" value="list">
+              <ToggleGroupItem aria-label={t("sequences.viewMode.listViewAria")} value="list">
                 <LayoutList className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>

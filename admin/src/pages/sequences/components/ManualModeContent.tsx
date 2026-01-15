@@ -1113,9 +1113,15 @@ export function ManualModeContent({
               {/* Variables */}
               <div className="rounded-lg border bg-muted/20 p-3">
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="font-medium text-sm">변수 삽입</span>
+                  <span className="font-medium text-sm">
+                    {t("sequences.manualMode.variableInsert")}
+                  </span>
                   <span className="text-muted-foreground text-xs">
-                    ({variableInsertTarget === "subject" ? "제목" : "본문"})
+                    (
+                    {variableInsertTarget === "subject"
+                      ? t("sequences.manualMode.variableTarget.subject")
+                      : t("sequences.manualMode.variableTarget.body")}
+                    )
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -1138,7 +1144,9 @@ export function ManualModeContent({
               <div className="rounded-lg border bg-muted/20 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <Paperclip className="h-4 w-4" />
-                  <span className="font-medium text-sm">첨부파일</span>
+                  <span className="font-medium text-sm">
+                    {t("sequences.manualMode.attachments")}
+                  </span>
                   {currentStep?.files && currentStep.files.length > 0 && (
                     <Badge className="h-5 px-1.5 text-xs" variant="secondary">
                       {currentStep.files.length}

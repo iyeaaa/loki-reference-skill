@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -10,22 +11,42 @@ type EmailReplyDetailsDialogProps = {
 }
 
 export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDialogProps) {
+  const { t } = useTranslation()
+
   const getSentimentBadge = (sentiment: string | null) => {
     if (!sentiment) {
-      return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+      return {
+        label: t("email-replies.filters.sentiment.pending"),
+        color: "bg-gray-100 text-gray-800",
+      }
     }
 
     switch (sentiment) {
       case "positive":
-        return { label: "긍정적", color: "bg-green-100 text-green-800" }
+        return {
+          label: t("email-replies.filters.sentiment.positive"),
+          color: "bg-green-100 text-green-800",
+        }
       case "neutral":
-        return { label: "중립", color: "bg-gray-100 text-gray-800" }
+        return {
+          label: t("email-replies.filters.sentiment.neutral"),
+          color: "bg-gray-100 text-gray-800",
+        }
       case "negative":
-        return { label: "부정적", color: "bg-red-100 text-red-800" }
+        return {
+          label: t("email-replies.filters.sentiment.negative"),
+          color: "bg-red-100 text-red-800",
+        }
       case "interested":
-        return { label: "관심있음", color: "bg-blue-100 text-blue-800" }
+        return {
+          label: t("email-replies.filters.sentiment.interested"),
+          color: "bg-blue-100 text-blue-800",
+        }
       case "not_interested":
-        return { label: "관심없음", color: "bg-orange-100 text-orange-800" }
+        return {
+          label: t("email-replies.filters.sentiment.notInterested"),
+          color: "bg-orange-100 text-orange-800",
+        }
       default:
         return { label: sentiment, color: "bg-gray-100 text-gray-800" }
     }
@@ -38,18 +59,22 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
       {/* Header Info */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">답장 정보</h3>
+          <h3 className="font-semibold text-lg">{t("email-replies.details.title")}</h3>
           <Badge className={sentimentBadge.color} variant="outline">
             {sentimentBadge.label}
           </Badge>
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-muted-foreground">읽음 상태:</span>
-            <span className="ml-2 font-medium">{reply.isRead ? "읽음" : "읽지 않음"}</span>
+            <span className="text-muted-foreground">{t("email-replies.details.readStatus")}:</span>
+            <span className="ml-2 font-medium">
+              {reply.isRead
+                ? t("email-replies.details.readStatus.read")
+                : t("email-replies.details.readStatus.unread")}
+            </span>
           </div>
           <div>
-            <span className="text-muted-foreground">받은 날짜:</span>
+            <span className="text-muted-foreground">{t("email-replies.details.receivedAt")}:</span>
             <span className="ml-2 font-medium">
               {reply.createdAt ? formatRelativeTime(new Date(reply.createdAt)) : "-"}
             </span>
@@ -61,24 +86,34 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
 
       {/* Original Email */}
       <div className="space-y-3">
-        <h4 className="font-semibold text-md">원본 이메일</h4>
+        <h4 className="font-semibold text-md">{t("email-replies.details.originalEmail")}</h4>
         {reply.originalEmail ? (
           <div className="space-y-2 rounded-lg bg-muted p-4">
             <div className="grid grid-cols-1 gap-2 text-sm">
               <div>
-                <span className="font-medium text-muted-foreground">제목:</span>
-                <span className="ml-2">{reply.originalEmail.subject || "(제목 없음)"}</span>
+                <span className="font-medium text-muted-foreground">
+                  {t("email-replies.details.subject")}:
+                </span>
+                <span className="ml-2">
+                  {reply.originalEmail.subject || t("email-replies.details.noSubject")}
+                </span>
               </div>
               <div>
-                <span className="font-medium text-muted-foreground">발신자:</span>
+                <span className="font-medium text-muted-foreground">
+                  {t("email-replies.details.from")}:
+                </span>
                 <span className="ml-2">{reply.originalEmail.fromEmail}</span>
               </div>
               <div>
-                <span className="font-medium text-muted-foreground">수신자:</span>
+                <span className="font-medium text-muted-foreground">
+                  {t("email-replies.details.to")}:
+                </span>
                 <span className="ml-2">{reply.originalEmail.toEmail}</span>
               </div>
               <div>
-                <span className="font-medium text-muted-foreground">발송일:</span>
+                <span className="font-medium text-muted-foreground">
+                  {t("email-replies.details.sentAt")}:
+                </span>
                 <span className="ml-2">
                   {reply.originalEmail.sentAt
                     ? formatRelativeTime(new Date(reply.originalEmail.sentAt))
@@ -88,7 +123,9 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
             </div>
           </div>
         ) : (
-          <div className="text-muted-foreground text-sm">원본 이메일 정보가 없습니다.</div>
+          <div className="text-muted-foreground text-sm">
+            {t("email-replies.details.noOriginalEmail")}
+          </div>
         )}
       </div>
 
@@ -96,25 +133,35 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
 
       {/* Reply Email */}
       <div className="space-y-3">
-        <h4 className="font-semibold text-md">받은 답장</h4>
+        <h4 className="font-semibold text-md">{t("email-replies.details.replyEmail")}</h4>
         {reply.replyEmail ? (
           <div className="space-y-3">
             <div className="space-y-2 rounded-lg bg-muted p-4">
               <div className="grid grid-cols-1 gap-2 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">제목:</span>
-                  <span className="ml-2">{reply.replyEmail.subject || "(제목 없음)"}</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("email-replies.details.subject")}:
+                  </span>
+                  <span className="ml-2">
+                    {reply.replyEmail.subject || t("email-replies.details.noSubject")}
+                  </span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">발신자:</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("email-replies.details.from")}:
+                  </span>
                   <span className="ml-2">{reply.replyEmail.fromEmail}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">수신자:</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("email-replies.details.to")}:
+                  </span>
                   <span className="ml-2">{reply.replyEmail.toEmail}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">수신일:</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("email-replies.details.receivedDate")}:
+                  </span>
                   <span className="ml-2">
                     {reply.replyEmail.sentAt
                       ? formatRelativeTime(new Date(reply.replyEmail.sentAt))
@@ -136,12 +183,16 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
                   {reply.replyEmail.bodyText}
                 </pre>
               ) : (
-                <div className="text-muted-foreground text-sm">내용이 없습니다.</div>
+                <div className="text-muted-foreground text-sm">
+                  {t("email-replies.details.noContent")}
+                </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="text-muted-foreground text-sm">답장 이메일 정보가 없습니다.</div>
+          <div className="text-muted-foreground text-sm">
+            {t("email-replies.details.noReplyEmail")}
+          </div>
         )}
       </div>
 
@@ -150,7 +201,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
         <>
           <Separator />
           <div className="space-y-3">
-            <h4 className="font-semibold text-md">AI 요약</h4>
+            <h4 className="font-semibold text-md">{t("email-replies.details.aiSummary")}</h4>
             <div className="rounded-lg bg-blue-50 p-4 text-sm">{reply.aiSummary}</div>
           </div>
         </>
@@ -161,7 +212,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
         <>
           <Separator />
           <div className="space-y-3">
-            <h4 className="font-semibold text-md">의도 분석</h4>
+            <h4 className="font-semibold text-md">{t("email-replies.details.intentAnalysis")}</h4>
             <div className="rounded-lg bg-purple-50 p-4 text-sm">{reply.intent}</div>
           </div>
         </>
@@ -169,7 +220,7 @@ export function EmailReplyDetailsDialog({ reply, onClose }: EmailReplyDetailsDia
 
       {/* Close Button */}
       <div className="flex justify-end pt-4">
-        <Button onClick={onClose}>닫기</Button>
+        <Button onClick={onClose}>{t("email-replies.details.close")}</Button>
       </div>
     </div>
   )

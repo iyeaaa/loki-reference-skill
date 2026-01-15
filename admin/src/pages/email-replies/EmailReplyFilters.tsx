@@ -1,4 +1,5 @@
 import { Filter, X } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,14 +23,6 @@ type EmailReplyFiltersProps = {
   onClearFilters: () => void
 }
 
-const sentimentOptions = [
-  { value: "positive", label: "긍정적", color: "bg-green-100 text-green-800" },
-  { value: "neutral", label: "중립", color: "bg-gray-100 text-gray-800" },
-  { value: "negative", label: "부정적", color: "bg-red-100 text-red-800" },
-  { value: "interested", label: "관심있음", color: "bg-blue-100 text-blue-800" },
-  { value: "not_interested", label: "관심없음", color: "bg-orange-100 text-orange-800" },
-]
-
 export function EmailReplyFilters({
   selectedReadStatus,
   selectedSentiments,
@@ -40,7 +33,36 @@ export function EmailReplyFilters({
   onEmailAccountChange,
   onClearFilters,
 }: EmailReplyFiltersProps) {
+  const { t } = useTranslation()
   const { data: emailAccounts } = useEmailAccountsByWorkspace(workspaceId || "", !!workspaceId)
+
+  const sentimentOptions = [
+    {
+      value: "positive",
+      label: t("email-replies.filters.sentiment.positive"),
+      color: "bg-green-100 text-green-800",
+    },
+    {
+      value: "neutral",
+      label: t("email-replies.filters.sentiment.neutral"),
+      color: "bg-gray-100 text-gray-800",
+    },
+    {
+      value: "negative",
+      label: t("email-replies.filters.sentiment.negative"),
+      color: "bg-red-100 text-red-800",
+    },
+    {
+      value: "interested",
+      label: t("email-replies.filters.sentiment.interested"),
+      color: "bg-blue-100 text-blue-800",
+    },
+    {
+      value: "not_interested",
+      label: t("email-replies.filters.sentiment.notInterested"),
+      color: "bg-orange-100 text-orange-800",
+    },
+  ]
 
   const hasActiveFilters =
     selectedReadStatus !== undefined || selectedSentiments.length > 0 || !!selectedEmailAccountId
@@ -59,12 +81,12 @@ export function EmailReplyFilters({
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-sm">필터</span>
+            <span className="font-medium text-sm">{t("email-replies.filters.label")}</span>
           </div>
           {hasActiveFilters && (
             <Button onClick={onClearFilters} size="sm" variant="ghost">
               <X className="mr-1 h-4 w-4" />
-              필터 초기화
+              {t("email-replies.filters.clearFilters")}
             </Button>
           )}
         </div>
@@ -72,7 +94,9 @@ export function EmailReplyFilters({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Read Status Filter */}
           <div>
-            <div className="mb-2 font-medium text-sm">읽음 상태</div>
+            <div className="mb-2 font-medium text-sm">
+              {t("email-replies.filters.readStatus.label")}
+            </div>
             <Select
               onValueChange={(value) => {
                 if (value === "all") {
@@ -86,19 +110,23 @@ export function EmailReplyFilters({
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="전체" />
+                <SelectValue placeholder={t("email-replies.filters.readStatus.all")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="unread">읽지 않음</SelectItem>
-                <SelectItem value="read">읽음</SelectItem>
+                <SelectItem value="all">{t("email-replies.filters.readStatus.all")}</SelectItem>
+                <SelectItem value="unread">
+                  {t("email-replies.filters.readStatus.unread")}
+                </SelectItem>
+                <SelectItem value="read">{t("email-replies.filters.readStatus.read")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Email Account Filter */}
           <div>
-            <div className="mb-2 font-medium text-sm">이메일 계정</div>
+            <div className="mb-2 font-medium text-sm">
+              {t("email-replies.filters.emailAccount.label")}
+            </div>
             <Select
               onValueChange={(value) => {
                 onEmailAccountChange(value === "all" ? undefined : value)
@@ -106,10 +134,10 @@ export function EmailReplyFilters({
               value={selectedEmailAccountId || "all"}
             >
               <SelectTrigger>
-                <SelectValue placeholder="전체" />
+                <SelectValue placeholder={t("email-replies.filters.readStatus.all")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="all">{t("email-replies.filters.readStatus.all")}</SelectItem>
                 {emailAccounts?.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.emailAddress}
@@ -121,7 +149,9 @@ export function EmailReplyFilters({
 
           {/* Sentiment Filter */}
           <div>
-            <div className="mb-2 font-medium text-sm">감정 분석</div>
+            <div className="mb-2 font-medium text-sm">
+              {t("email-replies.filters.sentiment.label")}
+            </div>
             <div className="flex flex-wrap gap-2">
               {sentimentOptions.map((option) => (
                 <Badge

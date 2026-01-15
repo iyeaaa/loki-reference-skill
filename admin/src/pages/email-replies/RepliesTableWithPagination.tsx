@@ -69,20 +69,26 @@ export function RepliesTableWithPagination({
 
   const getSentimentBadge = (sentiment: string | null) => {
     if (!sentiment) {
-      return { label: "분석 전", color: "bg-gray-100 text-gray-800" }
+      return {
+        label: t("filters.sentiment.pending", "분석 전"),
+        color: "bg-gray-100 text-gray-800",
+      }
     }
 
     switch (sentiment) {
       case "positive":
-        return { label: "긍정적", color: "bg-green-100 text-green-800" }
+        return { label: t("filters.sentiment.positive"), color: "bg-green-100 text-green-800" }
       case "neutral":
-        return { label: "중립", color: "bg-gray-100 text-gray-800" }
+        return { label: t("filters.sentiment.neutral"), color: "bg-gray-100 text-gray-800" }
       case "negative":
-        return { label: "부정적", color: "bg-red-100 text-red-800" }
+        return { label: t("filters.sentiment.negative"), color: "bg-red-100 text-red-800" }
       case "interested":
-        return { label: "관심있음", color: "bg-blue-100 text-blue-800" }
+        return { label: t("filters.sentiment.interested"), color: "bg-blue-100 text-blue-800" }
       case "not_interested":
-        return { label: "관심없음", color: "bg-orange-100 text-orange-800" }
+        return {
+          label: t("filters.sentiment.notInterested"),
+          color: "bg-orange-100 text-orange-800",
+        }
       default:
         return { label: sentiment, color: "bg-gray-100 text-gray-800" }
     }

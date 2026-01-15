@@ -135,16 +135,16 @@ intentSelector.change,변경,Change
 intentSelector.addTag,태그 추가,Add Tag
 intentSelector.selectIntent,Intent 선택,Select Intent
 intentSelector.removeTag,태그 제거,Remove Tag
-overallSummary.button.generate,[NO TRANSLATION] email-replies.overallSummary.button.generate,[NO TRANSLATION] email-replies.overallSummary.button.generate
-overallSummary.button.regenerate,[NO TRANSLATION] email-replies.overallSummary.button.regenerate,[NO TRANSLATION] email-replies.overallSummary.button.regenerate
-overallSummary.button.tryAgain,[NO TRANSLATION] email-replies.overallSummary.button.tryAgain,[NO TRANSLATION] email-replies.overallSummary.button.tryAgain
-overallSummary.description,[NO TRANSLATION] email-replies.overallSummary.description,[NO TRANSLATION] email-replies.overallSummary.description
-overallSummary.error.message,[NO TRANSLATION] email-replies.overallSummary.error.message,[NO TRANSLATION] email-replies.overallSummary.error.message
-overallSummary.loading,[NO TRANSLATION] email-replies.overallSummary.loading,[NO TRANSLATION] email-replies.overallSummary.loading
-overallSummary.prompt,[NO TRANSLATION] email-replies.overallSummary.prompt,[NO TRANSLATION] email-replies.overallSummary.prompt
-overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount,[NO TRANSLATION] email-replies.overallSummary.stats.emailCount
-overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title,[NO TRANSLATION] email-replies.overallSummary.title
-overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open,[NO TRANSLATION] email-replies.overallSummary.button.open
+overallSummary.button.generate,AI 요약 생성,Generate AI Summary
+overallSummary.button.regenerate,다시 요약하기,Generate Again
+overallSummary.button.tryAgain,다시 시도,Try Again
+overallSummary.description,AI가 답장 이메일들을 분석하여 핵심 내용을 요약해드립니다.,AI analyzes reply emails and summarizes key points.
+overallSummary.error.message,AI 요약 생성에 실패했습니다,Failed to generate AI summary
+overallSummary.loading,AI 요약 생성 중...,Generating AI summary...
+overallSummary.prompt,요약 프롬프트,Summary Prompt
+overallSummary.stats.emailCount,분석된 이메일 수,Analyzed Emails
+overallSummary.title,AI 전체 요약,AI Overall Summary
+overallSummary.button.open,AI 전체 요약,AI Summary
 empty.title,아직 도착한 답장이 없어요,No replies yet
 empty.description,캠페인을 시작하면 바이어 답장이 여기에 모여요. 보통 첫 답장은 3~5일 내에 도착해요!,Buyer replies will appear here after starting your campaign. First replies usually arrive within 3-5 days!
 empty.action,캠페인 현황 보기,View Campaign Status
@@ -159,3 +159,50 @@ onboarding.auto.title,자동 응답,Auto Replies
 onboarding.auto.desc,부재중 메시지는 따로 모아둬요,Out-of-office messages are organized separately
 onboarding.button.gotIt,알겠어요,Got it
 onboarding.tip,캠페인 시작 후 보통 3~5일 내에 첫 답장이 도착해요,First replies usually arrive within 3-5 days after starting your campaign
+filters.status.delivered,전달됨,Delivered
+filters.status.opened,열림,Opened
+filters.status.clicked,클릭됨,Clicked
+filters.status.replied,답장됨,Replied
+filters.status.bounced,반송됨,Bounced
+filters.status.failed,실패,Failed
+filters.status.label,상태,Status
+filters.clearFilters,필터 초기화,Clear Filters
+filters.label,필터,Filter
+filters.readStatus.label,읽음 상태,Read Status
+filters.readStatus.all,전체,All
+filters.readStatus.read,읽음,Read
+filters.readStatus.unread,읽지 않음,Unread
+filters.emailAccount.label,이메일 계정,Email Account
+filters.sentiment.label,감정 분석,Sentiment Analysis
+filters.sentiment.positive,긍정적,Positive
+filters.sentiment.neutral,중립,Neutral
+filters.sentiment.negative,부정적,Negative
+filters.sentiment.interested,관심있음,Interested
+filters.sentiment.notInterested,관심없음,Not Interested
+compose.to,받는사람,To
+compose.cc,참조,Cc
+compose.bcc,숨은참조,Bcc
+compose.subject,제목,Subject
+compose.attachment,첨부,Attachment
+confirm.ok,확인,Confirm
+confirm.cancel,취소,Cancel
+filters.sentiment.pending,분석 전,Pending Analysis
+details.title,답장 정보,Reply Information
+details.readStatus,읽음 상태,Read Status
+details.readStatus.read,읽음,Read
+details.readStatus.unread,읽지 않음,Unread
+details.receivedAt,받은 날짜,Received Date
+details.originalEmail,원본 이메일,Original Email
+details.subject,제목,Subject
+details.from,발신자,From
+details.to,수신자,To
+details.sentAt,발송일,Sent Date
+details.receivedDate,수신일,Received Date
+details.noOriginalEmail,원본 이메일 정보가 없습니다.,No original email information.
+details.replyEmail,받은 답장,Received Reply
+details.noContent,내용이 없습니다.,No content.
+details.noReplyEmail,답장 이메일 정보가 없습니다.,No reply email information.
+details.aiSummary,AI 요약,AI Summary
+details.intentAnalysis,의도 분석,Intent Analysis
+details.close,닫기,Close
+details.noSubject,(제목 없음),(No Subject)

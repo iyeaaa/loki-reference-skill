@@ -2,6 +2,7 @@
  * Visitor Analytics API Hooks
  *
  * Hooks for fetching and managing visitor IP tracking data
+ * B2B Intelligence features included
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -11,6 +12,15 @@ import { apiFetch } from "@/lib/api/client"
 // Types
 // ============================================================================
 
+export type VisitorType =
+  | "isp"
+  | "hosting"
+  | "business"
+  | "education"
+  | "government"
+  | "residential"
+  | "unknown"
+
 export type VisitorSession = {
   id: string
   workspaceId: string
@@ -19,6 +29,13 @@ export type VisitorSession = {
   referrer: string | null
   landingPage: string | null
   ipapiData: Record<string, unknown> | null
+
+  // B2B Intelligence fields
+  visitorType: VisitorType | null
+  isB2bLead: boolean
+  leadScore: number | null
+
+  // Location fields
   country: string | null
   countryCode: string | null
   city: string | null
@@ -27,12 +44,35 @@ export type VisitorSession = {
   longitude: number | null
   timezone: string | null
   continent: string | null
+  zip: string | null
+  isEuMember: boolean
+  callingCode: string | null
+  currencyCode: string | null
+
+  // Company fields
   companyName: string | null
   companyDomain: string | null
   companyType: string | null
+  companyNetwork: string | null
+  companyAbuserScore: string | null
+
+  // ASN fields
   asnNumber: number | null
   asnOrg: string | null
   asnType: string | null
+  asnRoute: string | null
+  asnDescr: string | null
+  asnDomain: string | null
+  asnCountry: string | null
+  asnAbuseEmail: string | null
+  asnAbuserScore: string | null
+
+  // Datacenter fields
+  datacenterName: string | null
+  datacenterDomain: string | null
+  datacenterNetwork: string | null
+
+  // Security flags
   isVpn: boolean
   isProxy: boolean
   isTor: boolean
@@ -40,6 +80,10 @@ export type VisitorSession = {
   isCrawler: boolean
   isMobile: boolean
   isAbuser: boolean
+  isBogon: boolean
+  isSatellite: boolean
+
+  // Metrics
   visitCount: number
   firstVisitAt: string
   lastVisitAt: string
@@ -52,6 +96,10 @@ export type VisitorStats = {
   uniqueCountries: number
   companyVisitors: number
   vpnVisitors: number
+  // B2B Intelligence stats
+  b2bLeads: number
+  avgLeadScore: number
+  visitorTypeDistribution: { type: VisitorType; count: number }[]
   topCountries: { country: string; count: number }[]
   topCompanies: { company: string; count: number }[]
   recentVisitors: VisitorSession[]
@@ -64,8 +112,14 @@ export type VisitorFilters = {
   securityFlags?: ("vpn" | "proxy" | "tor" | "datacenter" | "mobile" | "crawler" | "abuser")[]
   dateFrom?: string
   dateTo?: string
-  sortBy?: "lastVisitAt" | "firstVisitAt" | "visitCount" | "country" | "companyName"
+  sortBy?: "lastVisitAt" | "firstVisitAt" | "visitCount" | "country" | "companyName" | "leadScore"
   sortOrder?: "asc" | "desc"
+  // B2B filters
+  visitorTypes?: VisitorType[]
+  isB2bLead?: boolean
+  minLeadScore?: number
+  // ISP filter (default: true = exclude ISP traffic)
+  excludeIsp?: boolean
 }
 
 export type VisitorCountry = {
@@ -155,6 +209,10 @@ export function useVisitorSessions(
         }
         if (filters.sortOrder) {
           params.set("sortOrder", filters.sortOrder)
+        }
+        // ISP exclusion filter (default: true on backend if not provided)
+        if (filters.excludeIsp !== undefined) {
+          params.set("excludeIsp", filters.excludeIsp.toString())
         }
       }
 

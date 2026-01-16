@@ -18,12 +18,13 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Clock,
   Code2,
   ExternalLink,
   Eye,
   Filter,
   Globe,
+  GraduationCap,
+  Landmark,
   Loader2,
   MapPin,
   Network,
@@ -32,8 +33,11 @@ import {
   Server,
   Shield,
   Smartphone,
+  Star,
+  Target,
   Trash2,
   Users,
+  Wifi,
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -66,6 +70,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -82,6 +87,7 @@ import {
   useVisitorStats,
   type VisitorFilters,
   type VisitorSession,
+  type VisitorType,
 } from "@/lib/api/hooks/visitor-analytics"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
@@ -105,6 +111,16 @@ const SECURITY_FLAGS = [
 
 type SecurityFlag = (typeof SECURITY_FLAGS)[number]["id"]
 
+const VISITOR_TYPES = [
+  { id: "business" as VisitorType, label: "기업", icon: Building2, color: "bg-blue-500" },
+  { id: "education" as VisitorType, label: "교육", icon: GraduationCap, color: "bg-green-500" },
+  { id: "government" as VisitorType, label: "정부", icon: Landmark, color: "bg-purple-500" },
+  { id: "hosting" as VisitorType, label: "호스팅", icon: Server, color: "bg-orange-500" },
+  { id: "isp" as VisitorType, label: "ISP", icon: Wifi, color: "bg-gray-400" },
+  { id: "residential" as VisitorType, label: "개인", icon: Users, color: "bg-gray-400" },
+  { id: "unknown" as VisitorType, label: "미분류", icon: Globe, color: "bg-gray-300" },
+] as const
+
 // ============================================================================
 // Components
 // ============================================================================
@@ -125,6 +141,69 @@ function SecurityBadge({
     <Badge className="text-xs" variant={variant}>
       {label}
     </Badge>
+  )
+}
+
+function VisitorTypeBadge({ type }: { type: VisitorType | null }) {
+  const typeInfo = VISITOR_TYPES.find((t) => t.id === type) || VISITOR_TYPES[6] // unknown
+  const Icon = typeInfo.icon
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          className={cn(
+            "gap-1 text-white text-xs",
+            type === "business" && "bg-blue-500 hover:bg-blue-600",
+            type === "education" && "bg-green-500 hover:bg-green-600",
+            type === "government" && "bg-purple-500 hover:bg-purple-600",
+            type === "hosting" && "bg-orange-500 hover:bg-orange-600",
+            (type === "isp" || type === "residential") && "bg-gray-400 hover:bg-gray-500",
+            (!type || type === "unknown") && "bg-gray-300 hover:bg-gray-400",
+          )}
+        >
+          <Icon className="h-3 w-3" />
+          {typeInfo.label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>방문자 유형: {typeInfo.label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function LeadScoreBadge({ score, isB2bLead }: { score: number | null; isB2bLead: boolean }) {
+  if (score === null) {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  const getScoreColor = (s: number) => {
+    if (s >= 70) {
+      return "bg-green-500 text-white"
+    }
+    if (s >= 50) {
+      return "bg-blue-500 text-white"
+    }
+    if (s >= 30) {
+      return "bg-yellow-500 text-white"
+    }
+    return "bg-gray-300 text-gray-700"
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1">
+          <Badge className={cn("text-xs", getScoreColor(score))}>{score}</Badge>
+          {isB2bLead && <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="space-y-1">
+          <div>리드 스코어: {score}/100</div>
+          {isB2bLead && <div className="text-yellow-400">B2B 리드</div>}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -664,6 +743,7 @@ export function VisitorAnalyticsPage() {
   const [statsDays, setStatsDays] = useState(30)
   const [showFilters, setShowFilters] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(false)
+  const [excludeIsp, setExcludeIsp] = useState(true) // Default: exclude ISP traffic
 
   // Get workspace from sidebar selection (localStorage)
   const { selectedWorkspace } = useWorkspace()
@@ -679,13 +759,14 @@ export function VisitorAnalyticsPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Merged filters with search
+  // Merged filters with search and ISP exclusion
   const mergedFilters = useMemo<VisitorFilters>(
     () => ({
       ...filters,
       search: debouncedSearch || undefined,
+      excludeIsp,
     }),
-    [filters, debouncedSearch],
+    [filters, debouncedSearch, excludeIsp],
   )
 
   const {
@@ -787,24 +868,20 @@ export function VisitorAnalyticsPage() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Badge className="text-xs" variant="outline">
-                {selectedWorkspace?.name}
-              </Badge>
-            </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="font-semibold text-lg">{selectedWorkspace?.name}</h2>
             <p className="text-muted-foreground text-sm">
               IP Intelligence 기반 방문자 추적 및 분석
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setIsGuideOpen(true)} variant="outline">
-              <Code2 className="mr-2 h-4 w-4" />
+          <div className="flex shrink-0 items-center gap-2">
+            <Button onClick={() => setIsGuideOpen(true)} size="sm" variant="outline">
+              <Code2 className="mr-1.5 h-4 w-4" />
               연동 가이드
             </Button>
             <Select onValueChange={(v) => setStatsDays(Number(v))} value={String(statsDays)}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="h-8 w-[110px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -814,18 +891,37 @@ export function VisitorAnalyticsPage() {
                 <SelectItem value="365">최근 1년</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleRefresh} size="icon" variant="outline">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5">
+                  <Switch checked={excludeIsp} id="exclude-isp" onCheckedChange={setExcludeIsp} />
+                  <Label className="cursor-pointer whitespace-nowrap text-xs" htmlFor="exclude-isp">
+                    ISP 제외
+                  </Label>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>ISP(KT, SKT, LG U+) 트래픽 제외</p>
+              </TooltipContent>
+            </Tooltip>
+            <Button className="h-8 w-8" onClick={handleRefresh} size="icon" variant="ghost">
               <RefreshCw className={cn("h-4 w-4", isFetchingSessions && "animate-spin")} />
             </Button>
-            <Button disabled={cleanupMutation.isPending} onClick={handleCleanup} variant="outline">
-              <Trash2 className="mr-2 h-4 w-4" />
+            <Button
+              className="h-8"
+              disabled={cleanupMutation.isPending}
+              onClick={handleCleanup}
+              size="sm"
+              variant="ghost"
+            >
+              <Trash2 className="mr-1.5 h-4 w-4" />
               정리
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Cards - Row 1 */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           <StatCard
             description={`최근 ${statsDays}일`}
             icon={Users}
@@ -834,11 +930,18 @@ export function VisitorAnalyticsPage() {
             value={statsData?.totalVisitors || 0}
           />
           <StatCard
-            description="고유 국가 수"
-            icon={Globe}
+            description="잠재 고객"
+            icon={Target}
             isLoading={isLoadingStats}
-            title="국가"
-            value={statsData?.uniqueCountries || 0}
+            title="B2B 리드"
+            value={statsData?.b2bLeads || 0}
+          />
+          <StatCard
+            description="평균 점수"
+            icon={Star}
+            isLoading={isLoadingStats}
+            title="리드 스코어"
+            value={statsData?.avgLeadScore || 0}
           />
           <StatCard
             description="회사 식별됨"
@@ -846,6 +949,13 @@ export function VisitorAnalyticsPage() {
             isLoading={isLoadingStats}
             title="회사 방문자"
             value={statsData?.companyVisitors || 0}
+          />
+          <StatCard
+            description="고유 국가 수"
+            icon={Globe}
+            isLoading={isLoadingStats}
+            title="국가"
+            value={statsData?.uniqueCountries || 0}
           />
           <StatCard
             description="VPN/Proxy 감지"
@@ -1071,13 +1181,23 @@ export function VisitorAnalyticsPage() {
               </div>
             ) : (
               <>
-                <div className="rounded-md border">
-                  <Table>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-[1100px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[140px]">IP 주소</TableHead>
+                        <TableHead className="w-[130px]">IP 주소</TableHead>
+                        <TableHead className="w-[80px]">유형</TableHead>
                         <TableHead
-                          className="cursor-pointer"
+                          className="w-[70px] cursor-pointer text-center"
+                          onClick={() => handleSortChange("leadScore")}
+                        >
+                          점수
+                          {filters.sortBy === "leadScore" && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </TableHead>
+                        <TableHead
+                          className="w-[100px] cursor-pointer"
                           onClick={() => handleSortChange("country")}
                         >
                           위치
@@ -1086,18 +1206,18 @@ export function VisitorAnalyticsPage() {
                           )}
                         </TableHead>
                         <TableHead
-                          className="cursor-pointer"
+                          className="w-[180px] cursor-pointer"
                           onClick={() => handleSortChange("companyName")}
                         >
-                          회사
+                          회사/조직
                           {filters.sortBy === "companyName" && (
                             <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </TableHead>
-                        <TableHead>웹사이트</TableHead>
-                        <TableHead>보안</TableHead>
+                        <TableHead className="w-[150px]">웹사이트</TableHead>
+                        <TableHead className="w-[70px]">보안</TableHead>
                         <TableHead
-                          className="cursor-pointer text-right"
+                          className="w-[50px] cursor-pointer text-center"
                           onClick={() => handleSortChange("visitCount")}
                         >
                           방문
@@ -1106,50 +1226,71 @@ export function VisitorAnalyticsPage() {
                           )}
                         </TableHead>
                         <TableHead
-                          className="cursor-pointer"
+                          className="w-[90px] cursor-pointer"
                           onClick={() => handleSortChange("lastVisitAt")}
                         >
-                          마지막 방문
+                          마지막
                           {(filters.sortBy === "lastVisitAt" || !filters.sortBy) && (
                             <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </TableHead>
-                        <TableHead className="w-[60px]" />
+                        <TableHead className="w-[40px]" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sessions.length === 0 ? (
                         <TableRow>
-                          <TableCell className="py-8 text-center text-muted-foreground" colSpan={8}>
+                          <TableCell
+                            className="py-8 text-center text-muted-foreground"
+                            colSpan={10}
+                          >
                             방문자 데이터가 없습니다.
                           </TableCell>
                         </TableRow>
                       ) : (
                         sessions.map((visitor) => (
                           <TableRow key={visitor.id}>
-                            <TableCell className="font-mono text-sm">{visitor.ipAddress}</TableCell>
+                            <TableCell className="font-mono text-xs">{visitor.ipAddress}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                {visitor.countryCode ? (
-                                  <span className="text-lg">
+                              <VisitorTypeBadge type={visitor.visitorType} />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <LeadScoreBadge
+                                isB2bLead={visitor.isB2bLead}
+                                score={visitor.leadScore}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                {visitor.countryCode && (
+                                  <span className="text-base">
                                     {getFlagEmoji(visitor.countryCode)}
                                   </span>
-                                ) : null}
-                                <span>{visitor.city || visitor.country || "-"}</span>
+                                )}
+                                <span className="truncate text-sm">
+                                  {visitor.city || visitor.country || "-"}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell>
-                              {visitor.companyName ? (
+                              {visitor.companyName || visitor.asnOrg ? (
                                 <Tooltip>
-                                  <TooltipTrigger className="flex items-center gap-1">
-                                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                                    <span className="max-w-[150px] truncate">
-                                      {visitor.companyName}
+                                  <TooltipTrigger className="flex items-center gap-1.5 text-left">
+                                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span className="truncate text-sm">
+                                      {visitor.companyName || visitor.asnOrg}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    {visitor.companyName}
-                                    {visitor.companyDomain ? ` (${visitor.companyDomain})` : ""}
+                                    <div className="space-y-1">
+                                      {visitor.companyName && (
+                                        <div>회사: {visitor.companyName}</div>
+                                      )}
+                                      {visitor.asnOrg && <div>ASN: {visitor.asnOrg}</div>}
+                                      {visitor.companyDomain && (
+                                        <div>도메인: {visitor.companyDomain}</div>
+                                      )}
+                                    </div>
                                   </TooltipContent>
                                 </Tooltip>
                               ) : (
@@ -1157,15 +1298,15 @@ export function VisitorAnalyticsPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {visitor.companyDomain ? (
+                              {visitor.companyDomain || visitor.asnDomain ? (
                                 <a
-                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                                  href={`https://${visitor.companyDomain}`}
+                                  className="inline-flex items-center gap-1 text-blue-600 text-sm hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  href={`https://${visitor.companyDomain || visitor.asnDomain}`}
                                   rel="noopener noreferrer"
                                   target="_blank"
                                 >
-                                  <span className="max-w-[120px] truncate text-sm">
-                                    {visitor.companyDomain}
+                                  <span className="truncate">
+                                    {visitor.companyDomain || visitor.asnDomain}
                                   </span>
                                   <ExternalLink className="h-3 w-3 shrink-0" />
                                 </a>
@@ -1224,17 +1365,17 @@ export function VisitorAnalyticsPage() {
                                 ) && <span className="text-muted-foreground">-</span>}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="outline">{visitor.visitCount}</Badge>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{visitor.visitCount}</Badge>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                                <Clock className="h-3 w-3" />
+                              <span className="whitespace-nowrap text-muted-foreground text-xs">
                                 {new Date(visitor.lastVisitAt).toLocaleDateString("ko-KR")}
-                              </div>
+                              </span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="p-1">
                               <Button
+                                className="h-7 w-7"
                                 onClick={() => handleViewDetails(visitor)}
                                 size="icon"
                                 variant="ghost"

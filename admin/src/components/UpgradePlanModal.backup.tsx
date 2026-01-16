@@ -24,39 +24,55 @@ type Plan = {
 
 const PLANS: Plan[] = [
   {
-    id: "basic",
-    name: "Basic",
+    id: "starter",
+    name: "Starter",
     badge: "Send-Only",
-    description: "월 150개 기업에 맞춤 메일 발송",
-    monthlyPrice: 99_000,
-    yearlyPrice: 990_000,
-    yearlyMonthlyPrice: 82_500,
+    description: "이메일 자동화 발송 대행",
+    monthlyPrice: 290_000,
+    yearlyPrice: 2_900_000,
+    yearlyMonthlyPrice: 242_000,
     discount: 17,
     features: [
-      "월 150개 기업에 맞춤 메일 발송",
-      "관심 답장 자동 분류",
-      "스팸 방지 관리",
-      "월간 결과 리포트",
+      "월 최대 1,200개 메일 자동 발송",
+      "기업당 시퀀스 최대 4회 발송",
+      "기업 맞춤형 보고서 제공",
+      "전용 대시보드 및 인박스",
+      "답장 실시간 알림",
     ],
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: "growth",
+    name: "Growth",
     badge: "Full-Service",
-    description: "전담 매니저와 함께 대량 바이어 컨택",
-    monthlyPrice: 299_000,
-    yearlyPrice: 2_990_000,
-    yearlyMonthlyPrice: 249_167,
+    description: "프리미엄 세일즈 매니징",
+    monthlyPrice: 1_990_000,
+    yearlyPrice: 19_900_000,
+    yearlyMonthlyPrice: 1_660_000,
     discount: 17,
     features: [
-      "Basic의 모든 기능 포함",
-      "대량 바이어 컨택 (월 1,500개)",
-      "전담 매니저 배정",
-      "바이어 답장에 1차 대응",
-      "미팅 일정 조율 (화상/대면)",
-      "경영진 성과 리포트",
+      "무제한 이메일 자동 발송",
+      "기업당 시퀀스 다회 발송",
+      "모든 진행 상황 실시간 확인",
+      "전담 매니저 배치",
+      "매니저가 답장 확인 및 팔로업",
     ],
     isRecommended: true,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    description: "대규모 조직을 위한 맞춤형",
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    yearlyMonthlyPrice: 0,
+    features: [
+      "Growth의 모든 기능",
+      "맞춤형 계약 조건",
+      "전담 어카운트 매니저",
+      "SLA 보장",
+      "API 연동 지원",
+    ],
+    isEnterprise: true,
   },
 ]
 
@@ -120,7 +136,7 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
           </div>
 
           {/* Plans Grid */}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
             {PLANS.map((plan) => (
               <div
                 className={cn(

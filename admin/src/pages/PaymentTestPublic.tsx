@@ -13,10 +13,10 @@ import { useMutation } from "@tanstack/react-query"
 import { loadTossPayments } from "@tosspayments/tosspayments-sdk"
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   CreditCard,
   DollarSign,
-  Globe,
   Info,
   Loader2,
   RefreshCw,
@@ -33,7 +33,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Select,
   SelectContent,
@@ -56,8 +55,6 @@ const TOSS_CLIENT_KEY = env.VITE_TOSS_CLIENT_KEY
 // ============================================================================
 // Types
 // ============================================================================
-
-type PaymentMethod = "KRW" | "PAYPAL"
 
 type BillingResult = {
   success: boolean
@@ -140,6 +137,28 @@ async function reactivateBillingKeyApi(billingKey: string): Promise<Record<strin
 }
 
 // ============================================================================
+// Plan Features (tier별 기능 설명)
+// ============================================================================
+
+const PLAN_FEATURES: Record<string, string[]> = {
+  basic: [
+    "월 150개 기업에 맞춤 메일 발송",
+    "관심 답장 자동 분류",
+    "스팸 방지 관리",
+    "월간 결과 리포트",
+  ],
+  pro: [
+    "Basic의 모든 기능 포함",
+    "대량 바이어 컨택 (월 1,500개)",
+    "전담 매니저 배정",
+    "바이어 답장에 1차 대응",
+    "미팅 일정 조율 (화상/대면)",
+    "경영진 성과 리포트",
+  ],
+  trial: ["14일 무료 체험", "Basic 플랜의 모든 기능", "신용카드 불필요"],
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -181,7 +200,6 @@ export default function PaymentTestPublic() {
 
   // State
   const [selectedPlanId, setSelectedPlanId] = useState<string>("")
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("KRW")
   const [isProcessing, setIsProcessing] = useState(false)
   const [billingResult, setBillingResult] = useState<BillingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -218,12 +236,7 @@ export default function PaymentTestPublic() {
 
   // Can register check - 약관 동의 포함
   const canRegister =
-    !isProcessing &&
-    selectedPlan &&
-    isTossConfigured &&
-    paymentMethod === "KRW" &&
-    agreedTerms &&
-    agreedPrivacy
+    !isProcessing && selectedPlan && isTossConfigured && agreedTerms && agreedPrivacy
 
   // Billing key lookup mutation
   const lookupBillingMutation = useMutation({
@@ -356,11 +369,6 @@ export default function PaymentTestPublic() {
   // ============================================================================
   // Handlers
   // ============================================================================
-
-  const handlePaymentMethodChange = (value: string) => {
-    setPaymentMethod(value as PaymentMethod)
-    setError(null)
-  }
 
   const handleRegisterCard = async () => {
     if (!(canRegister && selectedPlan)) {
@@ -591,6 +599,28 @@ export default function PaymentTestPublic() {
                                 </p>
                               </div>
                             </div>
+                            {/* Plan Features */}
+                            {selectedPlan.product?.tier &&
+                              PLAN_FEATURES[selectedPlan.product.tier.toLowerCase()] && (
+                                <div className="mt-4 border-gray-200 border-t pt-4">
+                                  <p className="mb-2 font-medium text-gray-700 text-sm">
+                                    포함된 기능
+                                  </p>
+                                  <ul className="space-y-1.5">
+                                    {PLAN_FEATURES[selectedPlan.product.tier.toLowerCase()].map(
+                                      (feature, index) => (
+                                        <li
+                                          className="flex items-center gap-2 text-gray-600 text-sm"
+                                          key={index}
+                                        >
+                                          <Check className="h-4 w-4 shrink-0 text-green-500" />
+                                          <span>{feature}</span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
                           </div>
                         )}
                       </>
@@ -599,58 +629,18 @@ export default function PaymentTestPublic() {
 
                   <Separator />
 
-                  {/* Payment Method Selection */}
+                  {/* Payment Method Info */}
                   <div className="space-y-3">
-                    <Label className="font-medium text-sm">결제 방식</Label>
-                    <RadioGroup
-                      className="grid grid-cols-2 gap-3"
-                      onValueChange={handlePaymentMethodChange}
-                      value={paymentMethod}
-                    >
-                      {/* 국내 카드 결제 (KRW) */}
+                    <Label className="font-medium text-sm">결제 수단</Label>
+                    <div className="flex items-center gap-3 rounded-lg border-2 border-blue-500 bg-blue-50/50 p-4">
+                      <CreditCard className="h-6 w-6 text-blue-600" />
                       <div>
-                        <RadioGroupItem
-                          className="peer sr-only"
-                          disabled={!isTossConfigured}
-                          id="payment-krw"
-                          value="KRW"
-                        />
-                        <Label
-                          className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 ${
-                            isTossConfigured ? "" : "cursor-not-allowed opacity-50"
-                          }`}
-                          htmlFor="payment-krw"
-                        >
-                          <CreditCard className="mb-2 h-6 w-6" />
-                          <div className="text-center">
-                            <p className="font-medium text-sm">국내 카드</p>
-                            <p className="text-gray-500 text-xs">
-                              {selectedPlan && getPriceDisplay(selectedPlan)}
-                            </p>
-                          </div>
-                        </Label>
+                        <p className="font-medium text-sm">토스페이먼츠 카드 결제</p>
+                        <p className="text-gray-500 text-xs">
+                          신용카드, 체크카드, 간편결제(토스페이, 네이버페이 등)
+                        </p>
                       </div>
-
-                      {/* PayPal - Disabled (정기결제 미지원) */}
-                      <div>
-                        <RadioGroupItem
-                          className="peer sr-only"
-                          disabled={true}
-                          id="payment-paypal"
-                          value="PAYPAL"
-                        />
-                        <Label
-                          className="flex cursor-not-allowed flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 opacity-50"
-                          htmlFor="payment-paypal"
-                        >
-                          <Globe className="mb-2 h-6 w-6" />
-                          <div className="text-center">
-                            <p className="font-medium text-sm">PayPal</p>
-                            <p className="text-orange-500 text-xs">추후 지원</p>
-                          </div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                    </div>
                   </div>
 
                   <Separator />
@@ -742,13 +732,7 @@ export default function PaymentTestPublic() {
                     )}
                   </Button>
 
-                  {paymentMethod === "PAYPAL" && (
-                    <p className="text-center text-orange-500 text-xs">
-                      PayPal은 정기결제를 지원하지 않습니다. 국내 카드를 선택해주세요.
-                    </p>
-                  )}
-
-                  {paymentMethod === "KRW" && !(agreedTerms && agreedPrivacy) && (
+                  {!(agreedTerms && agreedPrivacy) && (
                     <p className="text-center text-gray-500 text-xs">
                       카드 등록을 진행하려면 약관에 동의해주세요.
                     </p>

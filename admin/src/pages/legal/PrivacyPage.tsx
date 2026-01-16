@@ -120,8 +120,8 @@ export default function PrivacyPage() {
               <div className="rounded-lg bg-blue-50 p-4">
                 <p className="text-blue-800 text-sm">
                   <strong>결제 정보 보안 안내:</strong> 신용카드 번호, CVC 등 민감한 결제 정보는
-                  회사가 직접 저장하지 않습니다. 모든 결제는 PCI-DSS 인증을 받은 PortOne(포트원)
-                  결제 대행 서비스를 통해 안전하게 처리됩니다.
+                  회사가 직접 저장하지 않습니다. 모든 결제는 PCI-DSS 인증을 받은 토스페이먼츠 결제
+                  서비스를 통해 안전하게 처리됩니다.
                 </p>
               </div>
             </section>
@@ -232,18 +232,8 @@ export default function PrivacyPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     <tr>
-                      <td className="px-4 py-3 text-gray-700 text-sm">주식회사 포트원</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">결제 처리 및 대행</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">위탁 계약 종료 시</td>
-                    </tr>
-                    <tr>
                       <td className="px-4 py-3 text-gray-700 text-sm">토스페이먼츠㈜</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">카드 결제 처리</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">위탁 계약 종료 시</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-gray-700 text-sm">PayPal Pte. Ltd.</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">해외 결제 처리</td>
+                      <td className="px-4 py-3 text-gray-700 text-sm">결제 처리 및 대행</td>
                       <td className="px-4 py-3 text-gray-700 text-sm">위탁 계약 종료 시</td>
                     </tr>
                     <tr>

@@ -132,24 +132,23 @@ export default function TermsPage() {
               </h2>
               <ol className="list-decimal space-y-2 pl-5 text-gray-700">
                 <li>
-                  <strong>요금제:</strong> 회사는 Basic, Pro, Enterprise 등 다양한 요금제를
-                  제공하며, 각 요금제의 가격과 기능은 서비스 내에서 확인할 수 있습니다.
+                  <strong>요금제:</strong> 회사는 Basic, Pro 등 다양한 요금제를 제공하며, 각
+                  요금제의 가격과 기능은 서비스 내에서 확인할 수 있습니다.
                 </li>
                 <li>
                   <strong>결제 수단:</strong> 이용자는 신용카드, 체크카드, 간편결제(토스페이,
-                  카카오페이 등), PayPal 등 회사가 지원하는 결제 수단을 이용할 수 있습니다.
+                  네이버페이 등) 등 회사가 지원하는 결제 수단을 이용할 수 있습니다.
                 </li>
                 <li>
                   <strong>결제 시기:</strong> 월간 구독은 매월 결제일에, 연간 구독은 매년 결제일에
                   자동으로 결제됩니다.
                 </li>
                 <li>
-                  <strong>결제 통화:</strong> 결제는 원화(KRW) 또는 미국 달러(USD)로 진행할 수
-                  있으며, 환율은 결제 시점의 실시간 환율이 적용됩니다.
+                  <strong>결제 통화:</strong> 결제는 원화(KRW)로 진행됩니다.
                 </li>
                 <li>
-                  <strong>결제 대행:</strong> 결제는 PortOne(포트원) 결제 대행 서비스를 통해
-                  안전하게 처리됩니다.
+                  <strong>결제 대행:</strong> 결제는 토스페이먼츠 결제 서비스를 통해 안전하게
+                  처리됩니다.
                 </li>
               </ol>
             </section>

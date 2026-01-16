@@ -229,6 +229,18 @@ export default function AppDashboardPage() {
   const { data: sequenceSteps } = useSequenceSteps(firstSequenceId || "", !!firstSequenceId)
   const stepsCount = sequenceSteps?.length || sequences?.[0]?.stepsCount || 0
 
+  // 체험판 진행 일수 계산
+  const trialDay = useMemo(() => {
+    if (!onboardingProgress?.completedAt) {
+      return 1
+    }
+    const startDate = new Date(onboardingProgress.completedAt)
+    const today = new Date()
+    const diffTime = today.getTime() - startDate.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1: 시작일을 Day 1로
+    return Math.min(Math.max(diffDays, 1), 14) // 1~14 범위로 제한
+  }, [onboardingProgress?.completedAt])
+
   // 워크스페이스 전체/선택에 따라 데이터 조회
   const {
     data: stats,
@@ -532,11 +544,17 @@ export default function AppDashboardPage() {
           <div className="space-y-4">
             {/* 헤더 */}
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <h2 className="font-bold text-2xl">RINDA 체험판 여정</h2>
                 <p className="mt-1 text-muted-foreground text-sm">
-                  Day 1 of 14 · 진행 중인 캠페인의 단계별 현황을 확인하세요
+                  진행 중인 캠페인의 단계별 현황을 확인하세요
                 </p>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="font-semibold text-blue-600 text-xl">
+                  체험판 Day {trialDay} of 14
+                </div>
+                <p className="mt-1 text-muted-foreground text-xs">남은 기간: {14 - trialDay}일</p>
               </div>
             </div>
 

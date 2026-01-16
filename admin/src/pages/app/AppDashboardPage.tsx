@@ -115,63 +115,12 @@ type JourneyStage = "setup" | "sending" | "open" | "reply" | "meeting" | "deal"
 
 type UpgradeFeature = "meeting" | "deal" | null
 
-type DealStatus = "none" | "in_progress" | "closed" | "failed"
-
-type RepliedLead = {
-  id: string
-  companyName: string
-  email: string
-  repliedAt: string
-  replyContent: string
-  hasMeeting: boolean
-  meetingDate?: string
-  meetingTime?: string
-  meetingNote?: string
-  dealStatus: DealStatus
-  dealAmount?: string
-  dealDate?: string
-  dealNote?: string
-  dealFailReason?: string
-}
-
 export default function AppDashboardPage() {
   const [activeTab, setActiveTab] = useState("journey")
   const [selectedStage, setSelectedStage] = useState<JourneyStage>("setup")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature>(null)
 
-  // 답장 온 회사 목록 (더미 데이터)
-  const [repliedLeads, _setRepliedLeads] = useState<RepliedLead[]>([
-    {
-      id: "1",
-      companyName: "ABC Trading Co.",
-      email: "buyer@abctrading.com",
-      repliedAt: "2026-01-15 14:30",
-      replyContent: "안녕하세요, 제품에 관심이 있습니다. 더 자세한 정보를 받을 수 있을까요?",
-      hasMeeting: false,
-      dealStatus: "none",
-    },
-    {
-      id: "2",
-      companyName: "XYZ International",
-      email: "contact@xyzintl.com",
-      repliedAt: "2026-01-15 16:45",
-      replyContent: "귀사의 제품 라인에 대해 논의하고 싶습니다. 미팅 가능할까요?",
-      hasMeeting: false,
-      dealStatus: "none",
-    },
-    {
-      id: "3",
-      companyName: "Global Ventures Ltd",
-      email: "info@globalventures.com",
-      repliedAt: "2026-01-16 09:20",
-      replyContent: "가격과 납기에 대해 문의드립니다.",
-      hasMeeting: false,
-      dealStatus: "none",
-    },
-  ])
-
-  const [_selectedLeadForMeeting, _setSelectedLeadForMeeting] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date()
     const thirtyDaysAgo = new Date()
@@ -366,33 +315,6 @@ export default function AppDashboardPage() {
     const opened = stats?.funnel?.opened || 0
     const clicked = stats?.funnel?.clicked || 0
     const replied = stats?.funnel?.replied || 0
-
-    // 더미 데이터: 발송이 진행 중인 것처럼 시뮬레이션
-    const useDummyData = leadsCount > 0 && sent === 0 && scheduled === 0
-
-    if (useDummyData) {
-      // 더미 데이터: 19명 중 10명 발송, 5명 오픈, 2명 클릭, 3명 답장
-      const dummySent = 10
-      const dummyScheduled = leadsCount - dummySent // 9명 발송 예정
-      const dummyOpened = 5
-      const dummyClicked = 2
-      const dummyReplied = 3 // 3개 회사에서 답장
-      const dummyTotal = dummyScheduled + dummySent
-
-      return {
-        scheduled: dummyScheduled,
-        sent: dummySent,
-        total: dummyTotal,
-        opened: dummyOpened,
-        clicked: dummyClicked,
-        replied: dummyReplied,
-        openRate: (dummyOpened / dummyTotal) * 100, // 26.3%
-        clickRate: (dummyClicked / dummyTotal) * 100, // 10.5%
-        replyRate: (dummyReplied / dummyTotal) * 100, // 5.3%
-        ctr: (dummyClicked / dummyOpened) * 100, // 40%
-        sendingProgress: (dummySent / dummyTotal) * 100, // 52.6%
-      }
-    }
 
     // 실제 데이터
     const effectiveScheduled =
@@ -937,36 +859,23 @@ export default function AppDashboardPage() {
                           </div>
                         </div>
 
-                        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                          <p className="font-medium text-sm">
-                            💬 받은 답장 ({repliedLeads.length}개 회사)
-                          </p>
-                          <div className="mt-2 space-y-2">
-                            {repliedLeads.map((lead) => (
-                              <div className="rounded bg-white p-3 text-sm" key={lead.id}>
-                                <div className="flex items-center justify-between">
-                                  <div className="font-medium">{lead.companyName}</div>
-                                  <span className="text-muted-foreground text-xs">
-                                    {lead.repliedAt}
-                                  </span>
-                                </div>
-                                <p className="mt-1 line-clamp-2 text-muted-foreground text-xs">
-                                  "{lead.replyContent}"
-                                </p>
-                              </div>
-                            ))}
+                        {totalStats.replied > 0 && (
+                          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <p className="font-medium text-sm">
+                              💬 받은 답장 ({totalStats.replied}건)
+                            </p>
+                            <Button
+                              className="mt-3 w-full"
+                              onClick={() => {
+                                setActiveTab("emails")
+                              }}
+                              size="sm"
+                              variant="outline"
+                            >
+                              받은 답장 전체 보기
+                            </Button>
                           </div>
-                          <Button
-                            className="mt-3 w-full"
-                            onClick={() => {
-                              setActiveTab("emails")
-                            }}
-                            size="sm"
-                            variant="outline"
-                          >
-                            받은 답장 전체 보기
-                          </Button>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </Card>

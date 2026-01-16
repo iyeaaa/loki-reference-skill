@@ -29,21 +29,23 @@ type IpExtractionResult = {
 /**
  * Extract client IP from request headers
  *
- * Architecture: rinda.ai (Vercel) → app.rinda.ai (AWS EC2 + Nginx + Docker)
- * Nginx sets X-Real-IP from $remote_addr (actual visitor IP)
+ * Architecture: rinda.ai → Cloudflare → AWS EC2 (Nginx + Docker)
  *
- * Priority: X-Real-IP > X-Forwarded-For > CF-Connecting-IP
+ * Priority (for Cloudflare environment):
+ * 1. CF-Connecting-IP: Cloudflare sets this to the actual client IP
+ * 2. X-Forwarded-For: First IP in the chain (client IP)
+ * 3. X-Real-IP: Nginx sets this to $remote_addr (which is Cloudflare's IP when behind CF)
  */
 function getClientIp(request: Request): IpExtractionResult {
   const headers = request.headers
 
-  // 1. X-Real-IP (Nginx - 최적, $remote_addr에서 직접 설정됨)
-  const xRealIp = headers.get("x-real-ip")
-  if (xRealIp) {
-    return { ip: xRealIp.trim(), source: "x-real-ip" }
+  // 1. CF-Connecting-IP (Cloudflare - 실제 클라이언트 IP, 가장 신뢰할 수 있음)
+  const cfIp = headers.get("cf-connecting-ip")
+  if (cfIp) {
+    return { ip: cfIp.trim(), source: "cf-connecting-ip" }
   }
 
-  // 2. X-Forwarded-For (fallback, 첫번째 IP 사용)
+  // 2. X-Forwarded-For (첫번째 IP = 원본 클라이언트 IP)
   const xForwardedFor = headers.get("x-forwarded-for")
   if (xForwardedFor) {
     const firstIp = xForwardedFor.split(",")[0]?.trim()
@@ -52,10 +54,10 @@ function getClientIp(request: Request): IpExtractionResult {
     }
   }
 
-  // 3. CF-Connecting-IP (Cloudflare 사용시)
-  const cfIp = headers.get("cf-connecting-ip")
-  if (cfIp) {
-    return { ip: cfIp.trim(), source: "cf-connecting-ip" }
+  // 3. X-Real-IP (Nginx - Cloudflare 뒤에서는 Cloudflare IP일 수 있음)
+  const xRealIp = headers.get("x-real-ip")
+  if (xRealIp) {
+    return { ip: xRealIp.trim(), source: "x-real-ip" }
   }
 
   return { ip: null, source: null }

@@ -3,9 +3,15 @@
  *
  * Public endpoints for landing page visitor analytics.
  * Integrates with ipapi.is for IP intelligence.
+ *
+ * Security:
+ * - visitorFirewall plugin for bot/DDoS protection
+ * - Rate limiting (30 req/min normal, 5 req/min for suspicious)
+ * - Payload validation
  */
 
 import { Elysia, t } from "elysia"
+import { visitorFirewall } from "../plugins/visitor-firewall.plugin"
 import {
   deleteOldSessions,
   getVisitorCountries,
@@ -66,8 +72,12 @@ function getClientIp(request: Request): IpExtractionResult {
 /**
  * Public visitor tracking routes (no auth required)
  * Designed for landing page integration
+ *
+ * Security: visitorFirewall applied for bot/DDoS protection
  */
 export const visitorPublicRoutes = new Elysia({ prefix: "/api/v1/visitors" })
+  // Apply firewall protection (bot detection, rate limiting, payload validation)
+  .use(visitorFirewall)
   /**
    * Track a visitor
    * POST /api/v1/visitors/track

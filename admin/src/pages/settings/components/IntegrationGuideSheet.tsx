@@ -7,8 +7,18 @@
  * - 복사 기능
  */
 
-import { Check, Code2, Copy, ExternalLink } from "lucide-react"
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Code2,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Play,
+} from "lucide-react"
 import { useState } from "react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -1130,6 +1140,28 @@ function CodeBlock({ code, onCopy }: { code: string; onCopy: () => void }) {
   )
 }
 
+// API 테스트 결과 타입
+type ApiTestResult = {
+  success: boolean
+  data?: {
+    tracked: boolean
+    isNewVisitor: boolean
+    visitorId?: string
+    skipped?: boolean
+    skipReason?: string
+    visitor?: {
+      ipAddress: string
+      country: string
+      countryCode: string
+      city: string
+      companyName?: string
+      companyDomain?: string
+    }
+  }
+  error?: string
+  responseTime?: number
+}
+
 export function IntegrationGuideSheet({
   open,
   onOpenChange,
@@ -1140,10 +1172,62 @@ export function IntegrationGuideSheet({
   const [selectedLanguage, setSelectedLanguage] = useState("html")
   const [copiedCount, setCopiedCount] = useState(0)
 
+  // API 테스트 상태
+  const [isTestLoading, setIsTestLoading] = useState(false)
+  const [testResult, setTestResult] = useState<ApiTestResult | null>(null)
+
   const codeExamples = generateCodeExamples(workspaceId, apiBaseUrl)
 
   const handleCopy = () => {
     setCopiedCount((prev) => prev + 1)
+  }
+
+  // 라이브 API 테스트 실행
+  const handleApiTest = async () => {
+    setIsTestLoading(true)
+    setTestResult(null)
+
+    const startTime = performance.now()
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/visitors/track`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId,
+          landingPage: window.location.href,
+          referrer: document.referrer || null,
+        }),
+      })
+
+      const responseTime = Math.round(performance.now() - startTime)
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setTestResult({
+          success: true,
+          data: data.data,
+          responseTime,
+        })
+      } else {
+        setTestResult({
+          success: false,
+          error: data.message || `HTTP ${response.status}`,
+          responseTime,
+        })
+      }
+    } catch (error) {
+      const responseTime = Math.round(performance.now() - startTime)
+      setTestResult({
+        success: false,
+        error: error instanceof Error ? error.message : "네트워크 오류",
+        responseTime,
+      })
+    } finally {
+      setIsTestLoading(false)
+    }
   }
 
   return (
@@ -1169,6 +1253,100 @@ export function IntegrationGuideSheet({
                   <p className="text-muted-foreground text-xs">{workspaceName}</p>
                 </div>
                 <Badge variant="outline">{workspaceId.slice(0, 8)}...</Badge>
+              </div>
+            </div>
+
+            {/* 라이브 API 테스트 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">연동 테스트</h3>
+                {testResult?.responseTime && (
+                  <span className="text-muted-foreground text-xs">
+                    응답시간: {testResult.responseTime}ms
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Button
+                    className="flex-shrink-0"
+                    disabled={isTestLoading}
+                    onClick={handleApiTest}
+                    size="sm"
+                  >
+                    {isTestLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        테스트 중...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        API 테스트 실행
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-muted-foreground text-xs">
+                    현재 브라우저 IP로 실제 API를 호출합니다
+                  </p>
+                </div>
+
+                {/* 테스트 결과 */}
+                {testResult && (
+                  <div className="mt-4 space-y-3">
+                    {testResult.success ? (
+                      <>
+                        <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-700 dark:text-green-300">
+                            {testResult.data?.skipped
+                              ? `ISP 트래픽으로 필터링됨: ${testResult.data.skipReason}`
+                              : testResult.data?.isNewVisitor
+                                ? "새 방문자로 성공적으로 추적되었습니다"
+                                : "기존 방문자 - 방문 기록이 업데이트되었습니다"}
+                          </AlertDescription>
+                        </Alert>
+
+                        {testResult.data?.visitor && !testResult.data.skipped && (
+                          <div className="rounded-lg border bg-slate-950 p-3">
+                            <p className="mb-2 font-medium text-slate-400 text-xs">응답 데이터</p>
+                            <div className="grid grid-cols-2 gap-2 text-slate-50 text-sm">
+                              <div>
+                                <span className="text-slate-400">IP:</span>{" "}
+                                {testResult.data.visitor.ipAddress}
+                              </div>
+                              <div>
+                                <span className="text-slate-400">국가:</span>{" "}
+                                {testResult.data.visitor.country} (
+                                {testResult.data.visitor.countryCode})
+                              </div>
+                              <div>
+                                <span className="text-slate-400">도시:</span>{" "}
+                                {testResult.data.visitor.city || "-"}
+                              </div>
+                              <div>
+                                <span className="text-slate-400">회사:</span>{" "}
+                                {testResult.data.visitor.companyName || "-"}
+                              </div>
+                              {testResult.data.visitorId && (
+                                <div className="col-span-2">
+                                  <span className="text-slate-400">Visitor ID:</span>{" "}
+                                  <code className="text-xs">{testResult.data.visitorId}</code>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>테스트 실패: {testResult.error}</AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

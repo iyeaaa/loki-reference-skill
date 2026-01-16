@@ -1,7 +1,6 @@
 import { Check, ExternalLink, Sparkles } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -69,21 +68,13 @@ type UpgradePlanModalProps = {
 
 export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [isYearly, setIsYearly] = useState(true)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("ko-KR").format(price)
 
-  const handleUpgrade = (plan: Plan) => {
-    // Enterprise는 문의 페이지로
-    if (plan.isEnterprise) {
-      window.open(CONTACT_URL, "_blank")
-      return
-    }
-    // 다른 플랜은 공개 결제 테스트 페이지로 이동 (tier, interval 파라미터 전달)
-    const interval = isYearly ? "year" : "month"
-    onOpenChange(false)
-    navigate(`/payment-test?tier=${plan.id}&interval=${interval}`)
+  const handleUpgrade = () => {
+    // 모든 플랜 문의 페이지로 이동 (테스트 결제 페이지 대신)
+    window.open(CONTACT_URL, "_blank")
   }
 
   return (
@@ -184,7 +175,7 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
 
                 <Button
                   className={cn("w-full", plan.isRecommended && "bg-blue-600 hover:bg-blue-700")}
-                  onClick={() => handleUpgrade(plan)}
+                  onClick={handleUpgrade}
                   variant={plan.isRecommended ? "default" : "outline"}
                 >
                   {plan.isEnterprise ? t("upgrade.modal.contactUs") : t("upgrade.modal.upgrade")}

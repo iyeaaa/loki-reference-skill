@@ -57,6 +57,17 @@ export interface VisitorFilters {
 }
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * ISP exclusion condition for queries
+ * ISP traffic is saved but excluded from list/stats (Snitcher-style filtering)
+ * Condition: asnType != 'isp' AND (companyType IS NULL OR companyType != 'isp')
+ */
+const ISP_EXCLUSION_CONDITION = sql`(${visitorSessions.asnType} IS NULL OR ${visitorSessions.asnType} != 'isp') AND (${visitorSessions.companyType} IS NULL OR ${visitorSessions.companyType} != 'isp')`
+
+// ============================================================================
 // Core Functions
 // ============================================================================
 
@@ -115,28 +126,6 @@ export async function trackVisitor(input: TrackVisitorInput): Promise<TrackVisit
     // New visitor - enrich with ipapi.is
     const apiKey = config.ipapi.apiKey || undefined
     const ipapiResult = await lookupIp(ipAddress, apiKey)
-
-    // Skip ISP traffic (Snitcher-style filtering)
-    // ISP traffic cannot be attributed to specific companies
-    if (ipapiResult.success && ipapiResult.data) {
-      const data = ipapiResult.data
-      const isIsp = data.asn?.type === "isp" || data.company?.type === "isp"
-
-      if (isIsp) {
-        const ispName = data.company?.name || data.asn?.org || "Unknown ISP"
-        logger.info(
-          { workspaceId, ipAddress, ispName, asnType: data.asn?.type },
-          "[Visitor] Skipped ISP traffic (cannot identify company)",
-        )
-
-        return {
-          success: true,
-          isNewVisitor: false,
-          skipped: true,
-          skipReason: `ISP traffic from ${ispName} - cannot identify specific company`,
-        }
-      }
-    }
 
     // Prepare session data
     const sessionData: NewVisitorSession = {
@@ -235,7 +224,8 @@ export async function listVisitorSessions(
   filters?: VisitorFilters,
 ): Promise<{ sessions: VisitorSession[]; total: number }> {
   // Build where conditions
-  const conditions = [eq(visitorSessions.workspaceId, workspaceId)]
+  // ISP traffic is excluded from list view (Snitcher-style filtering)
+  const conditions = [eq(visitorSessions.workspaceId, workspaceId), ISP_EXCLUSION_CONDITION]
 
   if (filters) {
     // Search filter (IP, company name, domain)
@@ -349,6 +339,7 @@ export async function getVisitorCountries(
       and(
         eq(visitorSessions.workspaceId, workspaceId),
         sql`${visitorSessions.countryCode} IS NOT NULL`,
+        ISP_EXCLUSION_CONDITION,
       ),
     )
     .groupBy(visitorSessions.countryCode, visitorSessions.country)
@@ -369,6 +360,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   // Run optimized queries in parallel (7 → 4 queries)
+  // ISP traffic is excluded from all stats (Snitcher-style filtering)
   const [aggregatedStats, topCountriesResult, topCompaniesResult, recentVisitors] =
     await Promise.all([
       // Single query for all counts using FILTER (PostgreSQL)
@@ -384,6 +376,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           and(
             eq(visitorSessions.workspaceId, workspaceId),
             gte(visitorSessions.firstVisitAt, startDate),
+            ISP_EXCLUSION_CONDITION,
           ),
         ),
 
@@ -399,6 +392,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
             eq(visitorSessions.workspaceId, workspaceId),
             gte(visitorSessions.firstVisitAt, startDate),
             sql`${visitorSessions.country} is not null`,
+            ISP_EXCLUSION_CONDITION,
           ),
         )
         .groupBy(visitorSessions.country)
@@ -417,17 +411,18 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
             eq(visitorSessions.workspaceId, workspaceId),
             gte(visitorSessions.firstVisitAt, startDate),
             sql`${visitorSessions.companyName} is not null`,
+            ISP_EXCLUSION_CONDITION,
           ),
         )
         .groupBy(visitorSessions.companyName)
         .orderBy(sql`count(*) desc`)
         .limit(10),
 
-      // Recent visitors
+      // Recent visitors (also exclude ISP)
       db
         .select()
         .from(visitorSessions)
-        .where(eq(visitorSessions.workspaceId, workspaceId))
+        .where(and(eq(visitorSessions.workspaceId, workspaceId), ISP_EXCLUSION_CONDITION))
         .orderBy(desc(visitorSessions.lastVisitAt))
         .limit(10),
     ])

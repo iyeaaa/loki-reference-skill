@@ -190,7 +190,8 @@ async function processBillingPayment(
         }
 
         // length === 0 체크 후이므로 activeBillingKey[0]는 항상 존재함
-        const billingKeyRecord = activeBillingKey[0]!
+        const billingKeyRecord = activeBillingKey[0]
+        if (!billingKeyRecord) continue
 
         // 2b. 결제 요청
         const orderId = `sub-${sub.subscriptionId}-${Date.now()}`

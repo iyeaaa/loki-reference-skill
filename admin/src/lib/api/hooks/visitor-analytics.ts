@@ -74,42 +74,19 @@ export type VisitorCountry = {
   count: number
 }
 
-type ListVisitorsResponse = {
-  success: boolean
-  code: string
-  message: string
-  data: {
-    sessions: VisitorSession[]
-    total: number
-    totalPages: number
-    limit: number
-    offset: number
-    page: number
-  }
+// Note: apiFetch auto-unwraps { success, data } responses, so we define the inner data type
+type ListVisitorsData = {
+  sessions: VisitorSession[]
+  total: number
+  totalPages: number
+  limit: number
+  offset: number
+  page: number
 }
 
-type VisitorStatsResponse = {
-  success: boolean
-  code: string
-  message: string
-  data: VisitorStats
-}
-
-type CountriesResponse = {
-  success: boolean
-  code: string
-  message: string
-  data: VisitorCountry[]
-}
-
-type CleanupResponse = {
-  success: boolean
-  code: string
-  message: string
-  data: {
-    deletedCount: number
-    daysOld: number
-  }
+type CleanupData = {
+  deletedCount: number
+  daysOld: number
 }
 
 // ============================================================================
@@ -181,10 +158,10 @@ export function useVisitorSessions(
         }
       }
 
-      const res = await apiFetch<ListVisitorsResponse>(
+      // apiFetch auto-unwraps { success, data } responses
+      return apiFetch<ListVisitorsData>(
         `/api/v1/workspaces/${workspaceId}/visitors?${params.toString()}`,
       )
-      return res.data
     },
     enabled: enabled && !!workspaceId,
     staleTime: 30 * 1000, // 30 seconds
@@ -203,10 +180,8 @@ export function useVisitorStats(
   return useQuery({
     queryKey: visitorQueryKeys.stats(workspaceId || "", days),
     queryFn: async () => {
-      const res = await apiFetch<VisitorStatsResponse>(
-        `/api/v1/workspaces/${workspaceId}/visitors/stats?days=${days}`,
-      )
-      return res.data
+      // apiFetch auto-unwraps { success, data } responses
+      return apiFetch<VisitorStats>(`/api/v1/workspaces/${workspaceId}/visitors/stats?days=${days}`)
     },
     enabled: enabled && !!workspaceId,
     staleTime: 60 * 1000, // 1 minute
@@ -220,10 +195,8 @@ export function useVisitorCountries(workspaceId: string | undefined, enabled = t
   return useQuery({
     queryKey: visitorQueryKeys.countries(workspaceId || ""),
     queryFn: async () => {
-      const res = await apiFetch<CountriesResponse>(
-        `/api/v1/workspaces/${workspaceId}/visitors/countries`,
-      )
-      return res.data
+      // apiFetch auto-unwraps { success, data } responses
+      return apiFetch<VisitorCountry[]>(`/api/v1/workspaces/${workspaceId}/visitors/countries`)
     },
     enabled: enabled && !!workspaceId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -237,10 +210,8 @@ export function useVisitorSession(workspaceId: string | undefined, visitorId: st
   return useQuery({
     queryKey: visitorQueryKeys.detail(workspaceId || "", visitorId || ""),
     queryFn: async () => {
-      const res = await apiFetch<{ success: boolean; data: VisitorSession }>(
-        `/api/v1/workspaces/${workspaceId}/visitors/${visitorId}`,
-      )
-      return res.data
+      // apiFetch auto-unwraps { success, data } responses
+      return apiFetch<VisitorSession>(`/api/v1/workspaces/${workspaceId}/visitors/${visitorId}`)
     },
     enabled: !!workspaceId && !!visitorId,
   })
@@ -254,11 +225,11 @@ export function useCleanupVisitorSessions(workspaceId: string | undefined) {
 
   return useMutation({
     mutationFn: async (daysOld: number) => {
-      const res = await apiFetch<CleanupResponse>(
+      // apiFetch auto-unwraps { success, data } responses
+      return apiFetch<CleanupData>(
         `/api/v1/workspaces/${workspaceId}/visitors/cleanup?daysOld=${daysOld}`,
         { method: "DELETE" },
       )
-      return res.data
     },
     onSuccess: () => {
       // Invalidate visitor queries to refetch data

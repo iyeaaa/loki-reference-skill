@@ -296,12 +296,26 @@ export default function PaymentTestPublic() {
     onSettled: () => setIsProcessing(false),
   })
 
-  // Set default plan
+  // Set selected plan when plans are loaded (check tier param first)
   useEffect(() => {
     if (plans.length > 0 && !selectedPlanId) {
+      const tierParam = searchParams.get("tier")
+      if (tierParam) {
+        // tier 파라미터와 매칭되는 플랜 찾기 (product.tier 또는 plan name으로 매칭)
+        const matchingPlan = plans.find(
+          (p) =>
+            p.product?.tier?.toLowerCase() === tierParam.toLowerCase() ||
+            p.name.toLowerCase().includes(tierParam.toLowerCase()),
+        )
+        if (matchingPlan) {
+          setSelectedPlanId(matchingPlan.id)
+          return
+        }
+      }
+      // tier 파라미터가 없거나 매칭되는 플랜이 없으면 첫 번째 플랜 선택
       setSelectedPlanId(plans[0].id)
     }
-  }, [plans, selectedPlanId])
+  }, [plans, selectedPlanId, searchParams])
 
   // Handle redirect from TossPayments (billing auth)
   useEffect(() => {

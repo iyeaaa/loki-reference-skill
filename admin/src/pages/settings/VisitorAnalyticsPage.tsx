@@ -4,18 +4,23 @@
  * IP Intelligence 기반 방문자 분석 페이지
  * - 워크스페이스별 방문자 목록 조회
  * - 방문자 통계 (국가별, 회사별)
- * - 보안 플래그 (VPN, Proxy, Tor 등)
+ * - 다중 필터, 검색, 페이지네이션
  *
- * 경로: /app/settings/visitor-analytics
+ * 경로: /settings?tab=visitor-analytics
  */
 
 import {
   AlertTriangle,
   Building2,
+  Check,
   ChevronDown,
-  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Clock,
   Eye,
+  Filter,
   Globe,
   Loader2,
   MapPin,
@@ -27,12 +32,21 @@ import {
   Smartphone,
   Trash2,
   Users,
+  X,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import {
   Dialog,
   DialogContent,
@@ -41,6 +55,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -59,11 +75,32 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   useCleanupVisitorSessions,
+  useVisitorCountries,
   useVisitorSessions,
   useVisitorStats,
+  type VisitorFilters,
   type VisitorSession,
 } from "@/lib/api/hooks/visitor-analytics"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { cn } from "@/lib/utils"
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const PAGE_SIZE = 50
+
+const SECURITY_FLAGS = [
+  { id: "vpn", label: "VPN", color: "yellow" },
+  { id: "proxy", label: "Proxy", color: "yellow" },
+  { id: "tor", label: "Tor", color: "red" },
+  { id: "datacenter", label: "Datacenter", color: "blue" },
+  { id: "mobile", label: "Mobile", color: "gray" },
+  { id: "crawler", label: "Crawler", color: "orange" },
+  { id: "abuser", label: "Abuser", color: "red" },
+] as const
+
+type SecurityFlag = (typeof SECURITY_FLAGS)[number]["id"]
 
 // ============================================================================
 // Components
@@ -81,7 +118,6 @@ function SecurityBadge({
   if (!active) {
     return null
   }
-
   return (
     <Badge className="text-xs" variant={variant}>
       {label}
@@ -94,11 +130,13 @@ function StatCard({
   value,
   icon: Icon,
   description,
+  isLoading,
 }: {
   title: string
   value: string | number
   icon: React.ElementType
   description?: string
+  isLoading?: boolean
 }) {
   return (
     <Card>
@@ -107,8 +145,14 @@ function StatCard({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="font-bold text-2xl">{value}</div>
-        {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
+        {isLoading ? (
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        ) : (
+          <>
+            <div className="font-bold text-2xl">{value}</div>
+            {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
+          </>
+        )}
       </CardContent>
     </Card>
   )
@@ -268,24 +312,337 @@ function VisitorDetailModal({
   )
 }
 
-type SortField = "lastVisitAt" | "visitCount" | "country"
-
-function SortIcon({
-  field,
-  sortField,
-  sortDirection,
+function CountryMultiSelect({
+  selectedCountries,
+  onChange,
+  countries,
+  isLoading,
 }: {
-  field: SortField
-  sortField: SortField
-  sortDirection: "asc" | "desc"
+  selectedCountries: string[]
+  onChange: (countries: string[]) => void
+  countries: { countryCode: string; country: string; count: number }[]
+  isLoading: boolean
 }) {
-  if (sortField !== field) {
+  const [open, setOpen] = useState(false)
+
+  const toggleCountry = (countryCode: string) => {
+    if (selectedCountries.includes(countryCode)) {
+      onChange(selectedCountries.filter((c) => c !== countryCode))
+    } else {
+      onChange([...selectedCountries, countryCode])
+    }
+  }
+
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger asChild>
+        <Button
+          className="h-9 justify-between"
+          disabled={isLoading}
+          role="combobox"
+          variant="outline"
+        >
+          {selectedCountries.length > 0
+            ? `${selectedCountries.length}개 국가 선택`
+            : "국가 선택..."}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[250px] p-0">
+        <Command>
+          <CommandInput placeholder="국가 검색..." />
+          <CommandList>
+            <CommandEmpty>국가를 찾을 수 없습니다.</CommandEmpty>
+            <CommandGroup>
+              {countries.map((c) => (
+                <CommandItem
+                  key={c.countryCode}
+                  onSelect={() => toggleCountry(c.countryCode)}
+                  value={c.country}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedCountries.includes(c.countryCode) ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="mr-2">{getFlagEmoji(c.countryCode)}</span>
+                  <span className="flex-1 truncate">{c.country}</span>
+                  <Badge className="ml-2" variant="secondary">
+                    {c.count}
+                  </Badge>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function SecurityFlagMultiSelect({
+  selectedFlags,
+  onChange,
+}: {
+  selectedFlags: SecurityFlag[]
+  onChange: (flags: SecurityFlag[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const toggleFlag = (flag: SecurityFlag) => {
+    if (selectedFlags.includes(flag)) {
+      onChange(selectedFlags.filter((f) => f !== flag))
+    } else {
+      onChange([...selectedFlags, flag])
+    }
+  }
+
+  return (
+    <Popover onOpenChange={setOpen} open={open}>
+      <PopoverTrigger asChild>
+        <Button className="h-9 justify-between" role="combobox" variant="outline">
+          {selectedFlags.length > 0 ? `${selectedFlags.length}개 플래그 선택` : "보안 플래그..."}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[200px] p-0">
+        <Command>
+          <CommandList>
+            <CommandGroup>
+              {SECURITY_FLAGS.map((flag) => (
+                <CommandItem key={flag.id} onSelect={() => toggleFlag(flag.id)} value={flag.id}>
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedFlags.includes(flag.id) ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  {flag.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+  total,
+  pageSize,
+  onPageChange,
+  isLoading,
+}: {
+  currentPage: number
+  totalPages: number
+  total: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  isLoading: boolean
+}) {
+  const [pageInputValue, setPageInputValue] = useState(String(currentPage))
+
+  useEffect(() => {
+    setPageInputValue(String(currentPage))
+  }, [currentPage])
+
+  const getPageNumbers = useCallback(() => {
+    const maxVisiblePages = 5
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1)
+    }
+
+    const pages = []
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i)
+    }
+    return pages
+  }, [currentPage, totalPages])
+
+  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const page = Number.parseInt(pageInputValue, 10)
+      if (page >= 1 && page <= totalPages) {
+        onPageChange(page)
+      } else {
+        setPageInputValue(String(currentPage))
+      }
+    }
+  }
+
+  const handlePageInputBlur = () => {
+    const page = Number.parseInt(pageInputValue, 10)
+    if (page >= 1 && page <= totalPages) {
+      onPageChange(page)
+    } else {
+      setPageInputValue(String(currentPage))
+    }
+  }
+
+  if (totalPages <= 1) {
     return null
   }
-  return sortDirection === "asc" ? (
-    <ChevronUp className="ml-1 inline h-4 w-4" />
-  ) : (
-    <ChevronDown className="ml-1 inline h-4 w-4" />
+
+  const startItem = (currentPage - 1) * pageSize + 1
+  const endItem = Math.min(currentPage * pageSize, total)
+
+  return (
+    <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p className="text-muted-foreground text-sm">
+        {startItem} - {endItem} / {total}명
+      </p>
+
+      <div className="flex items-center gap-1">
+        <Button
+          disabled={currentPage === 1 || isLoading}
+          onClick={() => onPageChange(1)}
+          size="icon"
+          variant="outline"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          disabled={currentPage === 1 || isLoading}
+          onClick={() => onPageChange(currentPage - 1)}
+          size="icon"
+          variant="outline"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {getPageNumbers().map((page) => (
+          <Button
+            disabled={isLoading}
+            key={page}
+            onClick={() => onPageChange(page)}
+            size="icon"
+            variant={page === currentPage ? "default" : "outline"}
+          >
+            {page}
+          </Button>
+        ))}
+
+        <Button
+          disabled={currentPage === totalPages || isLoading}
+          onClick={() => onPageChange(currentPage + 1)}
+          size="icon"
+          variant="outline"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          disabled={currentPage === totalPages || isLoading}
+          onClick={() => onPageChange(totalPages)}
+          size="icon"
+          variant="outline"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+
+        <div className="ml-2 flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">페이지</span>
+          <Input
+            className="h-8 w-16 text-center text-sm"
+            max={totalPages || 1}
+            min="1"
+            onBlur={handlePageInputBlur}
+            onChange={(e) => setPageInputValue(e.target.value)}
+            onKeyDown={handlePageInputKeyDown}
+            type="number"
+            value={pageInputValue}
+          />
+          <span className="text-muted-foreground text-sm">/ {totalPages}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ActiveFilters({
+  filters,
+  countries,
+  onRemoveFilter,
+  onClearAll,
+}: {
+  filters: VisitorFilters
+  countries: { countryCode: string; country: string }[]
+  onRemoveFilter: (key: keyof VisitorFilters, value?: string) => void
+  onClearAll: () => void
+}) {
+  const hasFilters =
+    filters.search ||
+    (filters.countries && filters.countries.length > 0) ||
+    filters.hasCompany !== undefined ||
+    (filters.securityFlags && filters.securityFlags.length > 0) ||
+    filters.dateFrom ||
+    filters.dateTo
+
+  if (!hasFilters) {
+    return null
+  }
+
+  const getCountryName = (code: string) =>
+    countries.find((c) => c.countryCode === code)?.country || code
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-muted-foreground text-sm">필터:</span>
+
+      {filters.search && (
+        <Badge className="gap-1" variant="secondary">
+          검색: {filters.search}
+          <X className="h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter("search")} />
+        </Badge>
+      )}
+
+      {filters.countries?.map((code) => (
+        <Badge className="gap-1" key={code} variant="secondary">
+          {getFlagEmoji(code)} {getCountryName(code)}
+          <X className="h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter("countries", code)} />
+        </Badge>
+      ))}
+
+      {filters.hasCompany !== undefined && (
+        <Badge className="gap-1" variant="secondary">
+          회사: {filters.hasCompany ? "있음" : "없음"}
+          <X className="h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter("hasCompany")} />
+        </Badge>
+      )}
+
+      {filters.securityFlags?.map((flag) => (
+        <Badge className="gap-1" key={flag} variant="secondary">
+          {SECURITY_FLAGS.find((f) => f.id === flag)?.label}
+          <X
+            className="h-3 w-3 cursor-pointer"
+            onClick={() => onRemoveFilter("securityFlags", flag)}
+          />
+        </Badge>
+      ))}
+
+      {(filters.dateFrom || filters.dateTo) && (
+        <Badge className="gap-1" variant="secondary">
+          기간: {filters.dateFrom || "~"} ~ {filters.dateTo || "~"}
+          <X
+            className="h-3 w-3 cursor-pointer"
+            onClick={() => {
+              onRemoveFilter("dateFrom")
+              onRemoveFilter("dateTo")
+            }}
+          />
+        </Badge>
+      )}
+
+      <Button className="h-6 px-2 text-xs" onClick={onClearAll} variant="ghost">
+        모두 지우기
+      </Button>
+    </div>
   )
 }
 
@@ -295,26 +652,64 @@ function SortIcon({
 
 export function VisitorAnalyticsPage() {
   // State
-  const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchInput, setSearchInput] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [filters, setFilters] = useState<VisitorFilters>({})
   const [selectedVisitor, setSelectedVisitor] = useState<VisitorSession | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [page, setPage] = useState(0)
-  const [pageSize] = useState(50)
-  const [sortField, setSortField] = useState<SortField>("lastVisitAt")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [statsDays, setStatsDays] = useState(30)
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | undefined>(undefined)
 
   // Data fetching
-  const { data: userWorkspaces } = useUserWorkspaces()
-  const workspaceId = userWorkspaces?.[0]?.id
+  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces()
+
+  // Set initial workspace when workspaces are loaded
+  useEffect(() => {
+    if (userWorkspaces && userWorkspaces.length > 0 && !selectedWorkspaceId) {
+      setSelectedWorkspaceId(userWorkspaces[0].id)
+    }
+  }, [userWorkspaces, selectedWorkspaceId])
+
+  const workspaceId = selectedWorkspaceId
+
+  // Reset page and filters when workspace changes
+  const handleWorkspaceChange = (newWorkspaceId: string) => {
+    setSelectedWorkspaceId(newWorkspaceId)
+    setCurrentPage(1)
+    setFilters({})
+    setSearchInput("")
+    setDebouncedSearch("")
+  }
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput)
+      setCurrentPage(1) // Reset to first page on search
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  // Merged filters with search
+  const mergedFilters = useMemo<VisitorFilters>(
+    () => ({
+      ...filters,
+      search: debouncedSearch || undefined,
+    }),
+    [filters, debouncedSearch],
+  )
 
   const {
     data: sessionsData,
     isLoading: isLoadingSessions,
+    isFetching: isFetchingSessions,
     refetch: refetchSessions,
   } = useVisitorSessions(workspaceId, {
-    limit: pageSize,
-    offset: page * pageSize,
+    limit: PAGE_SIZE,
+    offset: (currentPage - 1) * PAGE_SIZE,
+    filters: mergedFilters,
   })
 
   const {
@@ -323,78 +718,14 @@ export function VisitorAnalyticsPage() {
     refetch: refetchStats,
   } = useVisitorStats(workspaceId, { days: statsDays })
 
+  const { data: countriesData, isLoading: isLoadingCountries } = useVisitorCountries(workspaceId)
+
   const cleanupMutation = useCleanupVisitorSessions(workspaceId)
-
-  // Filtered and sorted data
-  const filteredSessions = useMemo(() => {
-    if (!sessionsData?.sessions) {
-      return []
-    }
-
-    let filtered = sessionsData.sessions
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (s) =>
-          s.ipAddress.toLowerCase().includes(query) ||
-          s.country?.toLowerCase().includes(query) ||
-          s.city?.toLowerCase().includes(query) ||
-          s.companyName?.toLowerCase().includes(query),
-      )
-    }
-
-    // Sort
-    filtered = [...filtered].sort((a, b) => {
-      let aVal: string | number | null
-      let bVal: string | number | null
-
-      switch (sortField) {
-        case "visitCount":
-          aVal = a.visitCount
-          bVal = b.visitCount
-          break
-        case "country":
-          aVal = a.country
-          bVal = b.country
-          break
-        default:
-          aVal = a.lastVisitAt
-          bVal = b.lastVisitAt
-      }
-
-      if (aVal === null) {
-        return 1
-      }
-      if (bVal === null) {
-        return -1
-      }
-      if (aVal < bVal) {
-        return sortDirection === "asc" ? -1 : 1
-      }
-      if (aVal > bVal) {
-        return sortDirection === "asc" ? 1 : -1
-      }
-      return 0
-    })
-
-    return filtered
-  }, [sessionsData?.sessions, searchQuery, sortField, sortDirection])
 
   // Handlers
   const handleRefresh = () => {
     refetchSessions()
     refetchStats()
-  }
-
-  const handleSort = (field: typeof sortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
-    } else {
-      setSortField(field)
-      setSortDirection("desc")
-    }
   }
 
   const handleViewDetails = (visitor: VisitorSession) => {
@@ -408,10 +739,48 @@ export function VisitorAnalyticsPage() {
     }
   }
 
+  const handleRemoveFilter = (key: keyof VisitorFilters, value?: string) => {
+    setFilters((prev) => {
+      const updated = { ...prev }
+      if (key === "countries" && value) {
+        updated.countries = prev.countries?.filter((c) => c !== value)
+        if (updated.countries?.length === 0) {
+          delete updated.countries
+        }
+      } else if (key === "securityFlags" && value) {
+        updated.securityFlags = prev.securityFlags?.filter(
+          (f) => f !== value,
+        ) as typeof prev.securityFlags
+        if (updated.securityFlags?.length === 0) {
+          delete updated.securityFlags
+        }
+      } else {
+        delete updated[key]
+      }
+      return updated
+    })
+    setCurrentPage(1)
+  }
+
+  const handleClearAllFilters = () => {
+    setFilters({})
+    setSearchInput("")
+    setCurrentPage(1)
+  }
+
+  const handleSortChange = (sortBy: VisitorFilters["sortBy"]) => {
+    setFilters((prev) => ({
+      ...prev,
+      sortBy,
+      sortOrder: prev.sortBy === sortBy && prev.sortOrder === "desc" ? "asc" : "desc",
+    }))
+    setCurrentPage(1)
+  }
+
   // No workspace selected
   if (!workspaceId) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="p-6">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>워크스페이스를 선택해주세요.</AlertDescription>
@@ -420,18 +789,58 @@ export function VisitorAnalyticsPage() {
     )
   }
 
+  const sessions = sessionsData?.sessions || []
+  const total = sessionsData?.total || 0
+  const totalPages = sessionsData?.totalPages || 1
+
   return (
     <TooltipProvider>
-      <div className="container mx-auto space-y-6 p-6">
+      <div className="space-y-6">
+        {/* Workspace Selector */}
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm">워크스페이스</span>
+          </div>
+          <Select
+            disabled={isLoadingWorkspaces || !userWorkspaces?.length}
+            onValueChange={handleWorkspaceChange}
+            value={selectedWorkspaceId ?? ""}
+          >
+            <SelectTrigger className="w-[280px]">
+              {isLoadingWorkspaces ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>로딩 중...</span>
+                </div>
+              ) : (
+                <SelectValue placeholder="워크스페이스 선택" />
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              {userWorkspaces?.map((ws) => (
+                <SelectItem key={ws.id} value={ws.id}>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    <span>{ws.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-bold text-2xl">방문자 분석</h1>
-            <p className="text-muted-foreground">IP Intelligence 기반 방문자 추적 및 분석</p>
+            <p className="text-muted-foreground text-sm">
+              IP Intelligence 기반 방문자 추적 및 분석
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select onValueChange={(v) => setStatsDays(Number(v))} value={String(statsDays)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -442,7 +851,7 @@ export function VisitorAnalyticsPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleRefresh} size="icon" variant="outline">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={cn("h-4 w-4", isFetchingSessions && "animate-spin")} />
             </Button>
             <Button disabled={cleanupMutation.isPending} onClick={handleCleanup} variant="outline">
               <Trash2 className="mr-2 h-4 w-4" />
@@ -456,33 +865,37 @@ export function VisitorAnalyticsPage() {
           <StatCard
             description={`최근 ${statsDays}일`}
             icon={Users}
+            isLoading={isLoadingStats}
             title="총 방문자"
-            value={isLoadingStats ? "-" : statsData?.totalVisitors || 0}
+            value={statsData?.totalVisitors || 0}
           />
           <StatCard
             description="고유 국가 수"
             icon={Globe}
+            isLoading={isLoadingStats}
             title="국가"
-            value={isLoadingStats ? "-" : statsData?.uniqueCountries || 0}
+            value={statsData?.uniqueCountries || 0}
           />
           <StatCard
             description="회사 식별됨"
             icon={Building2}
+            isLoading={isLoadingStats}
             title="회사 방문자"
-            value={isLoadingStats ? "-" : statsData?.companyVisitors || 0}
+            value={statsData?.companyVisitors || 0}
           />
           <StatCard
             description="VPN/Proxy 감지"
             icon={Shield}
+            isLoading={isLoadingStats}
             title="VPN 사용자"
-            value={isLoadingStats ? "-" : statsData?.vpnVisitors || 0}
+            value={statsData?.vpnVisitors || 0}
           />
         </div>
 
         {/* Top Countries & Companies */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-base">상위 국가</CardTitle>
               <CardDescription>방문자가 많은 국가</CardDescription>
             </CardHeader>
@@ -511,7 +924,7 @@ export function VisitorAnalyticsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-base">상위 회사</CardTitle>
               <CardDescription>방문자가 많은 회사</CardDescription>
             </CardHeader>
@@ -542,19 +955,147 @@ export function VisitorAnalyticsPage() {
 
         {/* Visitors Table */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>방문자 목록</CardTitle>
-                <CardDescription>총 {sessionsData?.total || 0}명의 방문자</CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>방문자 목록</CardTitle>
+                  <CardDescription>총 {total}명의 방문자</CardDescription>
+                </div>
               </div>
-              <div className="relative w-64">
-                <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="IP, 국가, 도시, 회사 검색..."
-                  value={searchQuery}
+
+              {/* Search and Filters */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Search */}
+                  <div className="relative flex-1 sm:max-w-xs">
+                    <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="h-9 pl-8"
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="IP, 회사, 도시 검색..."
+                      value={searchInput}
+                    />
+                  </div>
+
+                  {/* Filter Toggle */}
+                  <Button
+                    onClick={() => setShowFilters(!showFilters)}
+                    size="sm"
+                    variant={showFilters ? "secondary" : "outline"}
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    필터
+                    {Object.keys(filters).length > 0 && (
+                      <Badge className="ml-2" variant="default">
+                        {Object.keys(filters).length}
+                      </Badge>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Filter Panel */}
+                {showFilters && (
+                  <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/50 p-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">국가</Label>
+                      <CountryMultiSelect
+                        countries={countriesData || []}
+                        isLoading={isLoadingCountries}
+                        onChange={(countries) => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            countries: countries.length > 0 ? countries : undefined,
+                          }))
+                          setCurrentPage(1)
+                        }}
+                        selectedCountries={filters.countries || []}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">보안 플래그</Label>
+                      <SecurityFlagMultiSelect
+                        onChange={(flags) => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            securityFlags: flags.length > 0 ? flags : undefined,
+                          }))
+                          setCurrentPage(1)
+                        }}
+                        selectedFlags={filters.securityFlags || []}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">회사 식별</Label>
+                      <Select
+                        onValueChange={(v) => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            hasCompany: v === "all" ? undefined : v === "true",
+                          }))
+                          setCurrentPage(1)
+                        }}
+                        value={
+                          filters.hasCompany === undefined
+                            ? "all"
+                            : filters.hasCompany
+                              ? "true"
+                              : "false"
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-[130px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">전체</SelectItem>
+                          <SelectItem value="true">회사 있음</SelectItem>
+                          <SelectItem value="false">회사 없음</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">시작일</Label>
+                      <Input
+                        className="h-9 w-[140px]"
+                        onChange={(e) => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateFrom: e.target.value || undefined,
+                          }))
+                          setCurrentPage(1)
+                        }}
+                        type="date"
+                        value={filters.dateFrom || ""}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">종료일</Label>
+                      <Input
+                        className="h-9 w-[140px]"
+                        onChange={(e) => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateTo: e.target.value || undefined,
+                          }))
+                          setCurrentPage(1)
+                        }}
+                        type="date"
+                        value={filters.dateTo || ""}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Filters */}
+                <ActiveFilters
+                  countries={countriesData || []}
+                  filters={mergedFilters}
+                  onClearAll={handleClearAllFilters}
+                  onRemoveFilter={handleRemoveFilter}
                 />
               </div>
             </div>
@@ -571,50 +1112,55 @@ export function VisitorAnalyticsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[140px]">IP 주소</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort("country")}>
-                          위치
-                          <SortIcon
-                            field="country"
-                            sortDirection={sortDirection}
-                            sortField={sortField}
-                          />
-                        </TableHead>
-                        <TableHead>회사</TableHead>
-                        <TableHead>보안</TableHead>
                         <TableHead
-                          className="cursor-pointer text-right"
-                          onClick={() => handleSort("visitCount")}
+                          className="cursor-pointer"
+                          onClick={() => handleSortChange("country")}
                         >
-                          방문
-                          <SortIcon
-                            field="visitCount"
-                            sortDirection={sortDirection}
-                            sortField={sortField}
-                          />
+                          위치
+                          {filters.sortBy === "country" && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
                         </TableHead>
                         <TableHead
                           className="cursor-pointer"
-                          onClick={() => handleSort("lastVisitAt")}
+                          onClick={() => handleSortChange("companyName")}
+                        >
+                          회사
+                          {filters.sortBy === "companyName" && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </TableHead>
+                        <TableHead>보안</TableHead>
+                        <TableHead
+                          className="cursor-pointer text-right"
+                          onClick={() => handleSortChange("visitCount")}
+                        >
+                          방문
+                          {filters.sortBy === "visitCount" && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer"
+                          onClick={() => handleSortChange("lastVisitAt")}
                         >
                           마지막 방문
-                          <SortIcon
-                            field="lastVisitAt"
-                            sortDirection={sortDirection}
-                            sortField={sortField}
-                          />
+                          {(filters.sortBy === "lastVisitAt" || !filters.sortBy) && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
                         </TableHead>
                         <TableHead className="w-[60px]" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSessions.length === 0 ? (
+                      {sessions.length === 0 ? (
                         <TableRow>
                           <TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>
                             방문자 데이터가 없습니다.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredSessions.map((visitor) => (
+                        sessions.map((visitor) => (
                           <TableRow key={visitor.id}>
                             <TableCell className="font-mono text-sm">{visitor.ipAddress}</TableCell>
                             <TableCell>
@@ -722,32 +1268,16 @@ export function VisitorAnalyticsPage() {
                 </div>
 
                 {/* Pagination */}
-                {sessionsData && sessionsData.total > pageSize && (
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="text-muted-foreground text-sm">
-                      {page * pageSize + 1} - {Math.min((page + 1) * pageSize, sessionsData.total)}{" "}
-                      of {sessionsData.total}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        disabled={page === 0}
-                        onClick={() => setPage((p) => p - 1)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        이전
-                      </Button>
-                      <Button
-                        disabled={(page + 1) * pageSize >= sessionsData.total}
-                        onClick={() => setPage((p) => p + 1)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        다음
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <div className="mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    isLoading={isFetchingSessions}
+                    onPageChange={setCurrentPage}
+                    pageSize={PAGE_SIZE}
+                    total={total}
+                    totalPages={totalPages}
+                  />
+                </div>
               </>
             )}
           </CardContent>

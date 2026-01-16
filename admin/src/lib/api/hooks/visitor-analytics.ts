@@ -57,6 +57,23 @@ export type VisitorStats = {
   recentVisitors: VisitorSession[]
 }
 
+export type VisitorFilters = {
+  search?: string
+  countries?: string[]
+  hasCompany?: boolean
+  securityFlags?: ("vpn" | "proxy" | "tor" | "datacenter" | "mobile" | "crawler" | "abuser")[]
+  dateFrom?: string
+  dateTo?: string
+  sortBy?: "lastVisitAt" | "firstVisitAt" | "visitCount" | "country" | "companyName"
+  sortOrder?: "asc" | "desc"
+}
+
+export type VisitorCountry = {
+  countryCode: string
+  country: string
+  count: number
+}
+
 type ListVisitorsResponse = {
   success: boolean
   code: string
@@ -64,8 +81,10 @@ type ListVisitorsResponse = {
   data: {
     sessions: VisitorSession[]
     total: number
+    totalPages: number
     limit: number
     offset: number
+    page: number
   }
 }
 
@@ -74,6 +93,13 @@ type VisitorStatsResponse = {
   code: string
   message: string
   data: VisitorStats
+}
+
+type CountriesResponse = {
+  success: boolean
+  code: string
+  message: string
+  data: VisitorCountry[]
 }
 
 type CleanupResponse = {
@@ -92,10 +118,13 @@ type CleanupResponse = {
 
 export const visitorQueryKeys = {
   all: ["visitors"] as const,
-  list: (workspaceId: string, limit?: number, offset?: number) =>
-    [...visitorQueryKeys.all, "list", workspaceId, { limit, offset }] as const,
+  list: (
+    workspaceId: string,
+    params?: { limit?: number; offset?: number; filters?: VisitorFilters },
+  ) => [...visitorQueryKeys.all, "list", workspaceId, params] as const,
   stats: (workspaceId: string, days?: number) =>
     [...visitorQueryKeys.all, "stats", workspaceId, { days }] as const,
+  countries: (workspaceId: string) => [...visitorQueryKeys.all, "countries", workspaceId] as const,
   detail: (workspaceId: string, visitorId: string) =>
     [...visitorQueryKeys.all, "detail", workspaceId, visitorId] as const,
 }
@@ -105,19 +134,55 @@ export const visitorQueryKeys = {
 // ============================================================================
 
 /**
- * Fetch visitor sessions list with pagination
+ * Fetch visitor sessions list with pagination and filters
  */
 export function useVisitorSessions(
   workspaceId: string | undefined,
-  options?: { limit?: number; offset?: number; enabled?: boolean },
+  options?: {
+    limit?: number
+    offset?: number
+    filters?: VisitorFilters
+    enabled?: boolean
+  },
 ) {
-  const { limit = 50, offset = 0, enabled = true } = options || {}
+  const { limit = 50, offset = 0, filters, enabled = true } = options || {}
 
   return useQuery({
-    queryKey: visitorQueryKeys.list(workspaceId || "", limit, offset),
+    queryKey: visitorQueryKeys.list(workspaceId || "", { limit, offset, filters }),
     queryFn: async () => {
+      const params = new URLSearchParams()
+      params.set("limit", limit.toString())
+      params.set("offset", offset.toString())
+
+      if (filters) {
+        if (filters.search) {
+          params.set("search", filters.search)
+        }
+        if (filters.countries?.length) {
+          params.set("countries", filters.countries.join(","))
+        }
+        if (filters.hasCompany !== undefined) {
+          params.set("hasCompany", filters.hasCompany.toString())
+        }
+        if (filters.securityFlags?.length) {
+          params.set("securityFlags", filters.securityFlags.join(","))
+        }
+        if (filters.dateFrom) {
+          params.set("dateFrom", filters.dateFrom)
+        }
+        if (filters.dateTo) {
+          params.set("dateTo", filters.dateTo)
+        }
+        if (filters.sortBy) {
+          params.set("sortBy", filters.sortBy)
+        }
+        if (filters.sortOrder) {
+          params.set("sortOrder", filters.sortOrder)
+        }
+      }
+
       const res = await apiFetch<ListVisitorsResponse>(
-        `/api/v1/workspaces/${workspaceId}/visitors?limit=${limit}&offset=${offset}`,
+        `/api/v1/workspaces/${workspaceId}/visitors?${params.toString()}`,
       )
       return res.data
     },
@@ -145,6 +210,23 @@ export function useVisitorStats(
     },
     enabled: enabled && !!workspaceId,
     staleTime: 60 * 1000, // 1 minute
+  })
+}
+
+/**
+ * Fetch unique countries for filter dropdown
+ */
+export function useVisitorCountries(workspaceId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: visitorQueryKeys.countries(workspaceId || ""),
+    queryFn: async () => {
+      const res = await apiFetch<CountriesResponse>(
+        `/api/v1/workspaces/${workspaceId}/visitors/countries`,
+      )
+      return res.data
+    },
+    enabled: enabled && !!workspaceId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 

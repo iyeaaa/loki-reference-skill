@@ -8,10 +8,12 @@
 import { Elysia, t } from "elysia"
 import {
   deleteOldSessions,
+  getVisitorCountries,
   getVisitorSession,
   getVisitorStats,
   listVisitorSessions,
   trackVisitor,
+  type VisitorFilters,
 } from "../services/visitor.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
@@ -241,14 +243,29 @@ export const visitorProtectedRoutes = new Elysia({
       const limit = Math.min(parseInt(query.limit || "50", 10), 100)
       const offset = parseInt(query.offset || "0", 10)
 
-      const result = await listVisitorSessions(workspaceId, limit, offset)
+      // Parse filters from query params
+      const filters: VisitorFilters = {}
+      if (query.search) filters.search = query.search
+      if (query.countries) filters.countries = query.countries.split(",")
+      if (query.hasCompany !== undefined) filters.hasCompany = query.hasCompany === "true"
+      if (query.securityFlags) {
+        filters.securityFlags = query.securityFlags.split(",") as VisitorFilters["securityFlags"]
+      }
+      if (query.dateFrom) filters.dateFrom = query.dateFrom
+      if (query.dateTo) filters.dateTo = query.dateTo
+      if (query.sortBy) filters.sortBy = query.sortBy as VisitorFilters["sortBy"]
+      if (query.sortOrder) filters.sortOrder = query.sortOrder as VisitorFilters["sortOrder"]
+
+      const result = await listVisitorSessions(workspaceId, limit, offset, filters)
 
       return successResponse(
         {
           sessions: result.sessions,
           total: result.total,
+          totalPages: Math.ceil(result.total / limit),
           limit,
           offset,
+          page: Math.floor(offset / limit) + 1,
         },
         "Visitor sessions retrieved",
       )
@@ -260,11 +277,53 @@ export const visitorProtectedRoutes = new Elysia({
       query: t.Object({
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
+        search: t.Optional(t.String({ description: "Search by IP, company name, domain, city" })),
+        countries: t.Optional(t.String({ description: "Comma-separated country codes" })),
+        hasCompany: t.Optional(
+          t.String({ description: "Filter by company identified (true/false)" }),
+        ),
+        securityFlags: t.Optional(
+          t.String({
+            description: "Comma-separated: vpn,proxy,tor,datacenter,mobile,crawler,abuser",
+          }),
+        ),
+        dateFrom: t.Optional(t.String({ description: "ISO date string for start date" })),
+        dateTo: t.Optional(t.String({ description: "ISO date string for end date" })),
+        sortBy: t.Optional(
+          t.String({
+            description: "Sort by: lastVisitAt, firstVisitAt, visitCount, country, companyName",
+          }),
+        ),
+        sortOrder: t.Optional(t.String({ description: "Sort order: asc, desc" })),
       }),
       detail: {
         tags: ["visitors"],
         summary: "List visitor sessions",
-        description: "List all visitor sessions for a workspace with pagination.",
+        description:
+          "List all visitor sessions for a workspace with pagination, search, and filters.",
+      },
+    },
+  )
+
+  /**
+   * Get unique countries for filter dropdown
+   * GET /api/v1/workspaces/:id/visitors/countries
+   */
+  .get(
+    "/countries",
+    async ({ params }) => {
+      const { id: workspaceId } = params
+      const countries = await getVisitorCountries(workspaceId)
+      return successResponse(countries, "Countries retrieved")
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Get visitor countries",
+        description: "Get list of unique countries from visitor sessions for filter dropdown.",
       },
     },
   )

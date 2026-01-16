@@ -5,7 +5,7 @@
  * Used for landing page visitor analytics.
  */
 
-import { and, desc, eq, gte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
 import type { NewVisitorSession, VisitorSession } from "../db/schema/visitor-sessions"
@@ -40,6 +40,17 @@ export interface VisitorStats {
   topCountries: { country: string; count: number }[]
   topCompanies: { company: string; count: number }[]
   recentVisitors: VisitorSession[]
+}
+
+export interface VisitorFilters {
+  search?: string // IP, company name, domain search
+  countries?: string[] // Filter by country codes
+  hasCompany?: boolean // Only visitors with company identified
+  securityFlags?: ("vpn" | "proxy" | "tor" | "datacenter" | "mobile" | "crawler" | "abuser")[]
+  dateFrom?: string // ISO date string
+  dateTo?: string // ISO date string
+  sortBy?: "lastVisitAt" | "firstVisitAt" | "visitCount" | "country" | "companyName"
+  sortOrder?: "asc" | "desc"
 }
 
 // ============================================================================
@@ -190,31 +201,139 @@ export async function getVisitorSession(id: string): Promise<VisitorSession | nu
 }
 
 /**
- * List visitor sessions for a workspace with pagination
+ * List visitor sessions for a workspace with pagination and filters
  */
 export async function listVisitorSessions(
   workspaceId: string,
   limit = 50,
   offset = 0,
+  filters?: VisitorFilters,
 ): Promise<{ sessions: VisitorSession[]; total: number }> {
+  // Build where conditions
+  const conditions = [eq(visitorSessions.workspaceId, workspaceId)]
+
+  if (filters) {
+    // Search filter (IP, company name, domain)
+    if (filters.search) {
+      const searchPattern = `%${filters.search}%`
+      const searchCondition = or(
+        ilike(visitorSessions.ipAddress, searchPattern),
+        ilike(visitorSessions.companyName, searchPattern),
+        ilike(visitorSessions.companyDomain, searchPattern),
+        ilike(visitorSessions.city, searchPattern),
+      )
+      if (searchCondition) {
+        conditions.push(searchCondition)
+      }
+    }
+
+    // Country filter
+    if (filters.countries && filters.countries.length > 0) {
+      conditions.push(inArray(visitorSessions.countryCode, filters.countries))
+    }
+
+    // Has company filter
+    if (filters.hasCompany === true) {
+      conditions.push(sql`${visitorSessions.companyName} IS NOT NULL`)
+    } else if (filters.hasCompany === false) {
+      conditions.push(sql`${visitorSessions.companyName} IS NULL`)
+    }
+
+    // Security flags filter
+    if (filters.securityFlags && filters.securityFlags.length > 0) {
+      const flagConditions = filters.securityFlags.map((flag) => {
+        switch (flag) {
+          case "vpn":
+            return eq(visitorSessions.isVpn, true)
+          case "proxy":
+            return eq(visitorSessions.isProxy, true)
+          case "tor":
+            return eq(visitorSessions.isTor, true)
+          case "datacenter":
+            return eq(visitorSessions.isDatacenter, true)
+          case "mobile":
+            return eq(visitorSessions.isMobile, true)
+          case "crawler":
+            return eq(visitorSessions.isCrawler, true)
+          case "abuser":
+            return eq(visitorSessions.isAbuser, true)
+          default:
+            return eq(visitorSessions.isVpn, true) // fallback, should never reach
+        }
+      })
+      const flagCondition = or(...flagConditions)
+      if (flagCondition) {
+        conditions.push(flagCondition)
+      }
+    }
+
+    // Date range filter
+    if (filters.dateFrom) {
+      conditions.push(gte(visitorSessions.firstVisitAt, new Date(filters.dateFrom)))
+    }
+    if (filters.dateTo) {
+      conditions.push(lte(visitorSessions.firstVisitAt, new Date(filters.dateTo)))
+    }
+  }
+
+  // Build order by
+  const sortBy = filters?.sortBy || "lastVisitAt"
+  const sortOrder = filters?.sortOrder || "desc"
+  const orderByColumn = {
+    lastVisitAt: visitorSessions.lastVisitAt,
+    firstVisitAt: visitorSessions.firstVisitAt,
+    visitCount: visitorSessions.visitCount,
+    country: visitorSessions.country,
+    companyName: visitorSessions.companyName,
+  }[sortBy]
+  const orderByDirection = sortOrder === "asc" ? asc : desc
+
+  const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0]
+
   const [sessions, countResult] = await Promise.all([
     db
       .select()
       .from(visitorSessions)
-      .where(eq(visitorSessions.workspaceId, workspaceId))
-      .orderBy(desc(visitorSessions.lastVisitAt))
+      .where(whereClause)
+      .orderBy(orderByDirection(orderByColumn))
       .limit(limit)
       .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(visitorSessions)
-      .where(eq(visitorSessions.workspaceId, workspaceId)),
+    db.select({ count: sql<number>`count(*)::int` }).from(visitorSessions).where(whereClause),
   ])
 
   return {
     sessions,
     total: countResult[0]?.count ?? 0,
   }
+}
+
+/**
+ * Get unique countries for filter dropdown
+ */
+export async function getVisitorCountries(
+  workspaceId: string,
+): Promise<{ countryCode: string; country: string; count: number }[]> {
+  const result = await db
+    .select({
+      countryCode: visitorSessions.countryCode,
+      country: visitorSessions.country,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(visitorSessions)
+    .where(
+      and(
+        eq(visitorSessions.workspaceId, workspaceId),
+        sql`${visitorSessions.countryCode} IS NOT NULL`,
+      ),
+    )
+    .groupBy(visitorSessions.countryCode, visitorSessions.country)
+    .orderBy(sql`count(*) desc`)
+
+  return result.map((r) => ({
+    countryCode: r.countryCode || "",
+    country: r.country || "Unknown",
+    count: r.count,
+  }))
 }
 
 /**

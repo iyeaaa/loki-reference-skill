@@ -487,7 +487,16 @@ export default function AppDashboardPage() {
                 <div className="absolute top-4 right-0 left-0 h-0.5 bg-gray-200" />
                 <div
                   className="absolute top-4 left-0 h-0.5 bg-blue-600 transition-all duration-500"
-                  style={{ width: "66.6%" }}
+                  style={{
+                    width:
+                      totalStats.replied > 0
+                        ? "66.6%"
+                        : totalStats.opened > 0
+                          ? "50%"
+                          : totalStats.sent > 0
+                            ? "33.3%"
+                            : "16.6%",
+                  }}
                 />
 
                 {/* 단계들 */}
@@ -536,7 +545,7 @@ export default function AppDashboardPage() {
                     </div>
                   </button>
 
-                  {/* 3. 첫오픈 (더미: 완료) */}
+                  {/* 3. 첫오픈 */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("open")}
@@ -545,20 +554,42 @@ export default function AppDashboardPage() {
                     <div
                       className={cn(
                         "mb-2 flex h-8 w-8 items-center justify-center rounded-full",
-                        selectedStage === "open"
-                          ? "bg-blue-700 ring-2 ring-blue-300 ring-offset-2"
-                          : "bg-blue-700",
+                        totalStats.opened > 0
+                          ? selectedStage === "open"
+                            ? "bg-blue-700 ring-2 ring-blue-300 ring-offset-2"
+                            : "bg-blue-700"
+                          : selectedStage === "open"
+                            ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100 ring-offset-2"
+                            : "border-2 border-blue-200 bg-blue-50",
                       )}
                     >
-                      <CheckCircle2 className="h-5 w-5 text-white" />
+                      {totalStats.opened > 0 ? (
+                        <CheckCircle2 className="h-5 w-5 text-white" />
+                      ) : (
+                        <span className="font-medium text-blue-400 text-xs">3</span>
+                      )}
                     </div>
                     <div className="text-center">
-                      <div className="font-medium text-sm">첫오픈</div>
-                      <div className="mt-1 text-blue-700 text-xs">완료</div>
+                      <div
+                        className={cn(
+                          "font-medium text-sm",
+                          totalStats.opened > 0 ? "" : "text-blue-500",
+                        )}
+                      >
+                        첫오픈
+                      </div>
+                      <div
+                        className={cn(
+                          "mt-1 text-xs",
+                          totalStats.opened > 0 ? "text-blue-700" : "text-blue-400",
+                        )}
+                      >
+                        {totalStats.opened > 0 ? "완료" : "미진행"}
+                      </div>
                     </div>
                   </button>
 
-                  {/* 4. 첫답장 (더미: 완료) */}
+                  {/* 4. 첫답장 */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("reply")}
@@ -567,16 +598,38 @@ export default function AppDashboardPage() {
                     <div
                       className={cn(
                         "mb-2 flex h-8 w-8 items-center justify-center rounded-full",
-                        selectedStage === "reply"
-                          ? "bg-blue-700 ring-2 ring-blue-300 ring-offset-2"
-                          : "bg-blue-700",
+                        totalStats.replied > 0
+                          ? selectedStage === "reply"
+                            ? "bg-blue-700 ring-2 ring-blue-300 ring-offset-2"
+                            : "bg-blue-700"
+                          : selectedStage === "reply"
+                            ? "border-blue-300 bg-blue-50 ring-2 ring-blue-100 ring-offset-2"
+                            : "border-2 border-blue-200 bg-blue-50",
                       )}
                     >
-                      <CheckCircle2 className="h-5 w-5 text-white" />
+                      {totalStats.replied > 0 ? (
+                        <CheckCircle2 className="h-5 w-5 text-white" />
+                      ) : (
+                        <span className="font-medium text-blue-400 text-xs">4</span>
+                      )}
                     </div>
                     <div className="text-center">
-                      <div className="font-medium text-sm">첫답장</div>
-                      <div className="mt-1 text-blue-700 text-xs">완료</div>
+                      <div
+                        className={cn(
+                          "font-medium text-sm",
+                          totalStats.replied > 0 ? "" : "text-blue-500",
+                        )}
+                      >
+                        첫답장
+                      </div>
+                      <div
+                        className={cn(
+                          "mt-1 text-xs",
+                          totalStats.replied > 0 ? "text-blue-700" : "text-blue-400",
+                        )}
+                      >
+                        {totalStats.replied > 0 ? "완료" : "미진행"}
+                      </div>
                     </div>
                   </button>
 
@@ -727,14 +780,9 @@ export default function AppDashboardPage() {
                             있어요.
                           </p>
                         ) : (
-                          <div className="mt-4 border-t pt-4">
-                            <p className="mb-3 text-center text-muted-foreground text-sm">
-                              ⚠️ 더미 데이터로 시뮬레이션 중입니다
-                            </p>
-                            <p className="text-muted-foreground text-sm">
-                              실제 발송을 시작하려면 Step 4로 이동하세요
-                            </p>
-                          </div>
+                          <p className="text-muted-foreground text-sm">
+                            💡 이메일 발송을 시작하면 여기에서 진행 상황을 확인할 수 있습니다.
+                          </p>
                         )}
                       </div>
                     </div>
@@ -742,8 +790,44 @@ export default function AppDashboardPage() {
                 </>
               )}
 
-              {/* 첫오픈 (더미: 완료) */}
+              {/* 첫오픈 */}
               {selectedStage === "open" && (
+                <>
+                  {totalStats.opened > 0 ? (
+                    <>
+                      <h3 className="font-semibold text-lg">완료된 단계</h3>
+                      {/* 원래 완료 UI */}
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-semibold text-lg">예정된 단계</h3>
+                      <Card className="border-blue-200 bg-blue-50/50">
+                        <div className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                              <AlertCircle className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">첫 오픈</h4>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
+                                  미진행
+                                </span>
+                              </div>
+                              <p className="mt-1 text-muted-foreground text-sm">
+                                이메일 발송 후 바이어가 열어보면 여기에 표시됩니다
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* 원래 첫오픈 완료 UI */}
+              {false && selectedStage === "open" && totalStats.opened > 0 && (
                 <>
                   <h3 className="font-semibold text-lg">완료된 단계</h3>
                   <Card>
@@ -802,8 +886,44 @@ export default function AppDashboardPage() {
                 </>
               )}
 
-              {/* 첫답장 (더미: 완료) */}
+              {/* 첫답장 */}
               {selectedStage === "reply" && (
+                <>
+                  {totalStats.replied > 0 ? (
+                    <>
+                      <h3 className="font-semibold text-lg">완료된 단계</h3>
+                      {/* 원래 완료 UI */}
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-semibold text-lg">예정된 단계</h3>
+                      <Card className="border-blue-200 bg-blue-50/50">
+                        <div className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                              <AlertCircle className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">첫 답장</h4>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
+                                  미진행
+                                </span>
+                              </div>
+                              <p className="mt-1 text-muted-foreground text-sm">
+                                바이어가 답장하면 여기에 표시됩니다
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* 원래 첫답장 완료 UI */}
+              {false && selectedStage === "reply" && totalStats.replied > 0 && (
                 <>
                   <h3 className="font-semibold text-lg">완료된 단계</h3>
                   <Card>

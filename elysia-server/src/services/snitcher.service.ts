@@ -77,20 +77,45 @@ export async function findCompanyByIp(
     })
 
     const statusCode = response.status
+    const responseText = await response.text()
+
+    logger.info({ ip, statusCode, responseText }, "[Snitcher] Raw API response")
+
+    // Try to parse JSON
+    let responseData: unknown
+    try {
+      responseData = JSON.parse(responseText)
+    } catch {
+      // Not JSON, use raw text
+      logger.warn({ ip, statusCode, responseText }, "[Snitcher] Non-JSON response")
+      return {
+        success: false,
+        statusCode,
+        error: responseText || `Unexpected response (status: ${statusCode})`,
+      }
+    }
 
     // Handle different response codes
     switch (statusCode) {
       case 200: {
-        const data = (await response.json()) as NonNullable<
-          SnitcherCompanyResponse["data"]
-        >["company"]
-        logger.info({ ip, company: data?.name }, "[Snitcher] Company found")
+        // Check if response has error field (some APIs return 200 with error)
+        const data = responseData as Record<string, unknown>
+        if (data.error || data.message) {
+          logger.warn({ ip, data }, "[Snitcher] 200 response with error/message")
+          return {
+            success: false,
+            statusCode,
+            error: (data.error as string) || (data.message as string),
+          }
+        }
+        const company = responseData as NonNullable<SnitcherCompanyResponse["data"]>["company"]
+        logger.info({ ip, company: company?.name }, "[Snitcher] Company found")
         return {
           success: true,
           statusCode,
           data: {
             ip,
-            company: data,
+            company,
           },
         }
       }
@@ -128,15 +153,10 @@ export async function findCompanyByIp(
         }
 
       case 401: {
-        const errorText = await response.text()
         let errorMessage = "Authentication failed. Invalid API key."
-        try {
-          const errorJson = JSON.parse(errorText) as { message?: string }
-          if (errorJson.message) {
-            errorMessage = errorJson.message
-          }
-        } catch {
-          // Use default message
+        const data = responseData as { message?: string }
+        if (data?.message) {
+          errorMessage = data.message
         }
         logger.error({ ip, statusCode, error: errorMessage }, "[Snitcher] Authentication error")
         return {
@@ -147,16 +167,9 @@ export async function findCompanyByIp(
       }
 
       default: {
-        const errorText = await response.text()
-        let errorMessage = errorText
-        try {
-          const errorJson = JSON.parse(errorText) as { message?: string }
-          if (errorJson.message) {
-            errorMessage = errorJson.message
-          }
-        } catch {
-          // Use raw text
-        }
+        const data = responseData as { message?: string; error?: string }
+        const errorMessage =
+          data?.message || data?.error || responseText || `Unknown error (status: ${statusCode})`
         logger.error({ ip, statusCode, error: errorMessage }, "[Snitcher] Unexpected error")
         return {
           success: false,

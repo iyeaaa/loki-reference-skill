@@ -65,13 +65,10 @@ type TrackingResult = {
   message: string
   data?: {
     tracked: boolean
-    isNewVisitor?: boolean
-    visitorId?: string
+    isNewVisitor: boolean
+    visitorId: string
     ipSource: string | null
-    visitor?: VisitorData | null
-    // ISP traffic skipping (Snitcher-style)
-    skipped?: boolean
-    skipReason?: string
+    visitor: VisitorData | null
   }
 }
 
@@ -213,19 +210,15 @@ export default function VisitorTrackingTestPage() {
                 "border-l-4",
                 loading
                   ? "border-l-blue-500"
-                  : trackingResult?.data?.skipped
-                    ? "border-l-amber-500"
-                    : trackingResult?.success
-                      ? "border-l-emerald-500"
-                      : "border-l-red-500",
+                  : trackingResult?.success
+                    ? "border-l-emerald-500"
+                    : "border-l-red-500",
               )}
             >
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-3">
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                  ) : trackingResult?.data?.skipped ? (
-                    <ShieldAlert className="h-5 w-5 text-amber-500" />
                   ) : trackingResult?.success ? (
                     <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   ) : (
@@ -235,34 +228,26 @@ export default function VisitorTrackingTestPage() {
                     <p className="font-medium text-sm">
                       {loading
                         ? "분석 중..."
-                        : trackingResult?.data?.skipped
-                          ? "ISP 트래픽 (저장 안 함)"
-                          : trackingResult?.success
-                            ? trackingResult.data?.isNewVisitor
-                              ? "신규 방문자"
-                              : "재방문자"
-                            : "추적 실패"}
+                        : trackingResult?.success
+                          ? trackingResult.data?.isNewVisitor
+                            ? "신규 방문자"
+                            : "재방문자"
+                          : "추적 실패"}
                     </p>
                     <p className="text-muted-foreground text-xs">
                       {loading
                         ? "IP 정보를 수집하고 있습니다"
-                        : trackingResult?.data?.skipped
-                          ? trackingResult.data.skipReason
-                          : trackingResult?.success
-                            ? `IP Source: ${trackingResult.data?.ipSource || "unknown"}`
-                            : error}
+                        : trackingResult?.success
+                          ? `IP Source: ${trackingResult.data?.ipSource || "unknown"}`
+                          : error}
                     </p>
                   </div>
                 </div>
-                {trackingResult?.data?.skipped ? (
-                  <Badge className="bg-amber-100 text-amber-700" variant="secondary">
-                    ISP 제외됨
-                  </Badge>
-                ) : trackingResult?.data?.visitorId ? (
+                {trackingResult?.data?.visitorId && (
                   <Badge className="font-mono" variant="secondary">
                     {trackingResult.data.visitorId.slice(0, 8)}
                   </Badge>
-                ) : null}
+                )}
               </CardContent>
             </Card>
           </MotionDiv>

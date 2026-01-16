@@ -269,6 +269,11 @@ export const config = {
     apiKey: getEnvOrDefault("SNITCHER_API_KEY", ""),
   },
 
+  // ipapi.is (IP Intelligence API)
+  ipapi: {
+    apiKey: getEnvOrDefault("IPAPI_API_KEY", ""),
+  },
+
   // PortOne (Payment Gateway Integration)
   // All keys must be set in environment variables
   portone: {

@@ -55,7 +55,7 @@ import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
 import { paymentRoutes } from "./routes/payment.routes"
 import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
-import { snitcherTestRoutes } from "./routes/snitcher.routes"
+import { ipapiTestRoutes, snitcherTestRoutes } from "./routes/snitcher.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { testRoutes } from "./routes/test.routes"
 import { trialAnalyticsRoutes } from "./routes/trial-analytics.routes"
@@ -261,8 +261,9 @@ const app = new Elysia()
   .use(trialAnalyticsRoutes)
   // Test routes
   .use(testRoutes)
-  // Snitcher API test routes (public)
+  // IP Intelligence API test routes (public)
   .use(snitcherTestRoutes)
+  .use(ipapiTestRoutes)
 
   .listen(config.port)
 

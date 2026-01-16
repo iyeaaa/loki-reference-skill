@@ -30,6 +30,9 @@ export interface TrackVisitorResult {
   isNewVisitor: boolean
   visitor?: VisitorSession
   error?: string
+  /** ISP traffic is skipped and not stored (Snitcher-style filtering) */
+  skipped?: boolean
+  skipReason?: string
 }
 
 export interface VisitorStats {
@@ -112,6 +115,28 @@ export async function trackVisitor(input: TrackVisitorInput): Promise<TrackVisit
     // New visitor - enrich with ipapi.is
     const apiKey = config.ipapi.apiKey || undefined
     const ipapiResult = await lookupIp(ipAddress, apiKey)
+
+    // Skip ISP traffic (Snitcher-style filtering)
+    // ISP traffic cannot be attributed to specific companies
+    if (ipapiResult.success && ipapiResult.data) {
+      const data = ipapiResult.data
+      const isIsp = data.asn?.type === "isp" || data.company?.type === "isp"
+
+      if (isIsp) {
+        const ispName = data.company?.name || data.asn?.org || "Unknown ISP"
+        logger.info(
+          { workspaceId, ipAddress, ispName, asnType: data.asn?.type },
+          "[Visitor] Skipped ISP traffic (cannot identify company)",
+        )
+
+        return {
+          success: true,
+          isNewVisitor: false,
+          skipped: true,
+          skipReason: `ISP traffic from ${ispName} - cannot identify specific company`,
+        }
+      }
+    }
 
     // Prepare session data
     const sessionData: NewVisitorSession = {

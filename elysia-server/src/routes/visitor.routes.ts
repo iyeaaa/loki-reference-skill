@@ -133,6 +133,19 @@ export const visitorPublicRoutes = new Elysia({ prefix: "/api/v1/visitors" })
         return errorResponse(result.error || "Failed to track visitor", ResponseCode.INTERNAL_ERROR)
       }
 
+      // ISP traffic was skipped (Snitcher-style filtering)
+      if (result.skipped) {
+        return successResponse(
+          {
+            tracked: false,
+            skipped: true,
+            skipReason: result.skipReason,
+            ipSource,
+          },
+          result.skipReason || "ISP traffic skipped",
+        )
+      }
+
       // Return response with visitor details
       return successResponse(
         {

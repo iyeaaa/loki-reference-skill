@@ -62,6 +62,7 @@ import { trialAnalyticsRoutes } from "./routes/trial-analytics.routes"
 import { unipileRoutes } from "./routes/unipile.routes"
 import { uploadRoutes } from "./routes/upload.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
+import { visitorProtectedRoutes, visitorPublicRoutes } from "./routes/visitor.routes"
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
 import { websetRoutes } from "./routes/websets.routes"
@@ -266,6 +267,9 @@ const app = new Elysia()
   // IP Intelligence API test routes (public)
   .use(snitcherTestRoutes)
   .use(ipapiTestRoutes)
+  // Visitor tracking routes
+  .use(visitorPublicRoutes)
+  .use(visitorProtectedRoutes)
 
   .listen(config.port)
 

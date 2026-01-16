@@ -69,6 +69,7 @@ const BullMQTestPage = lazy(() =>
   import("../pages/settings/BullMQTestPage").then((m) => ({ default: m.BullMQTestPage })),
 )
 const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
+const VisitorAnalyticsPage = lazy(() => import("../pages/settings/VisitorAnalyticsPage"))
 const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction"))
 const WebsetPage = lazy(() => import("../pages/webset"))
 const WebsetCriteriaPage = lazy(() => import("../pages/webset/criteria"))
@@ -80,6 +81,7 @@ const AnalyticsDashboardPage = lazy(() => import("../pages/dashboard/DashboardV2
 // Public Pages (No auth required)
 const PaymentTestPublic = lazy(() => import("../pages/PaymentTestPublic"))
 const SnitcherTestPage = lazy(() => import("../pages/SnitcherTestPage"))
+const VisitorTrackingTestPage = lazy(() => import("../pages/VisitorTrackingTestPage"))
 const TermsPage = lazy(() => import("../pages/legal/TermsPage"))
 const PrivacyPage = lazy(() => import("../pages/legal/PrivacyPage"))
 
@@ -167,6 +169,21 @@ export const router = createBrowserRouter([
         }
       >
         <SnitcherTestPage />
+      </Suspense>
+    ),
+  },
+  // Visitor Tracking Test Page (Landing page replacement for testing)
+  {
+    path: "/visitor-test",
+    element: (
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        }
+      >
+        <VisitorTrackingTestPage />
       </Suspense>
     ),
   },
@@ -486,6 +503,14 @@ export const router = createBrowserRouter([
             element: (
               <RouteGuard>
                 <WebDataExtraction />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "settings/visitor-analytics",
+            element: (
+              <RouteGuard>
+                <VisitorAnalyticsPage />
               </RouteGuard>
             ),
           },

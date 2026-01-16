@@ -7,18 +7,8 @@
  * - 복사 기능
  */
 
-import {
-  AlertCircle,
-  Check,
-  CheckCircle2,
-  Code2,
-  Copy,
-  ExternalLink,
-  Loader2,
-  Play,
-} from "lucide-react"
+import { Check, CheckCircle2, Code2, Copy, ExternalLink, Loader2, Play } from "lucide-react"
 import { useState } from "react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -30,6 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { API_BASE_URL } from "@/lib/env"
 
 type IntegrationGuideSheetProps = {
   open: boolean
@@ -1126,14 +1117,18 @@ function CodeBlock({ code, onCopy }: { code: string; onCopy: () => void }) {
   return (
     <div className="relative">
       <Button
-        className="absolute top-2 right-2 h-8 w-8"
+        className="absolute top-2 right-2 h-7 w-7 bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800"
         onClick={handleCopy}
         size="icon"
-        variant="ghost"
+        variant="outline"
       >
-        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-green-600" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
       </Button>
-      <pre className="overflow-x-auto rounded-lg bg-slate-950 p-4 text-slate-50 text-sm">
+      <pre className="overflow-x-auto rounded-lg border bg-slate-50 p-4 text-slate-800 text-sm dark:bg-slate-900 dark:text-slate-200">
         <code>{code}</code>
       </pre>
     </div>
@@ -1182,7 +1177,7 @@ export function IntegrationGuideSheet({
     setCopiedCount((prev) => prev + 1)
   }
 
-  // 라이브 API 테스트 실행
+  // 라이브 API 테스트 실행 (현재 origin 사용 - CSP 우회)
   const handleApiTest = async () => {
     setIsTestLoading(true)
     setTestResult(null)
@@ -1190,7 +1185,8 @@ export function IntegrationGuideSheet({
     const startTime = performance.now()
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/visitors/track`, {
+      // API_BASE_URL 사용 (프로덕션에서는 현재 origin, 개발에서는 proxy)
+      const response = await fetch(`${API_BASE_URL}/api/v1/visitors/track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1245,109 +1241,84 @@ export function IntegrationGuideSheet({
 
         <ScrollArea className="h-[calc(100vh-180px)] pr-4">
           <div className="space-y-6">
-            {/* 워크스페이스 정보 */}
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">연동 대상 워크스페이스</p>
-                  <p className="text-muted-foreground text-xs">{workspaceName}</p>
+            {/* 워크스페이스 정보 + API 테스트 통합 */}
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs">연동 워크스페이스</p>
+                  <p className="truncate font-medium text-sm">{workspaceName}</p>
+                  <p className="font-mono text-muted-foreground text-xs">{workspaceId}</p>
                 </div>
-                <Badge variant="outline">{workspaceId.slice(0, 8)}...</Badge>
+                <Button
+                  className="shrink-0"
+                  disabled={isTestLoading}
+                  onClick={handleApiTest}
+                  size="sm"
+                  variant={testResult?.success ? "outline" : "default"}
+                >
+                  {isTestLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : testResult?.success ? (
+                    <>
+                      <CheckCircle2 className="mr-1.5 h-4 w-4 text-green-600" />
+                      연동 성공
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-1.5 h-4 w-4" />
+                      연동 테스트
+                    </>
+                  )}
+                </Button>
               </div>
-            </div>
 
-            {/* 라이브 API 테스트 */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">연동 테스트</h3>
-                {testResult?.responseTime && (
-                  <span className="text-muted-foreground text-xs">
-                    응답시간: {testResult.responseTime}ms
-                  </span>
-                )}
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Button
-                    className="flex-shrink-0"
-                    disabled={isTestLoading}
-                    onClick={handleApiTest}
-                    size="sm"
-                  >
-                    {isTestLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        테스트 중...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-4 w-4" />
-                        API 테스트 실행
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-muted-foreground text-xs">
-                    현재 브라우저 IP로 실제 API를 호출합니다
-                  </p>
-                </div>
-
-                {/* 테스트 결과 */}
-                {testResult && (
-                  <div className="mt-4 space-y-3">
-                    {testResult.success ? (
-                      <>
-                        <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <AlertDescription className="text-green-700 dark:text-green-300">
-                            {testResult.data?.skipped
-                              ? `ISP 트래픽으로 필터링됨: ${testResult.data.skipReason}`
-                              : testResult.data?.isNewVisitor
-                                ? "새 방문자로 성공적으로 추적되었습니다"
-                                : "기존 방문자 - 방문 기록이 업데이트되었습니다"}
-                          </AlertDescription>
-                        </Alert>
-
-                        {testResult.data?.visitor && !testResult.data.skipped && (
-                          <div className="rounded-lg border bg-slate-950 p-3">
-                            <p className="mb-2 font-medium text-slate-400 text-xs">응답 데이터</p>
-                            <div className="grid grid-cols-2 gap-2 text-slate-50 text-sm">
-                              <div>
-                                <span className="text-slate-400">IP:</span>{" "}
-                                {testResult.data.visitor.ipAddress}
-                              </div>
-                              <div>
-                                <span className="text-slate-400">국가:</span>{" "}
-                                {testResult.data.visitor.country} (
-                                {testResult.data.visitor.countryCode})
-                              </div>
-                              <div>
-                                <span className="text-slate-400">도시:</span>{" "}
-                                {testResult.data.visitor.city || "-"}
-                              </div>
-                              <div>
-                                <span className="text-slate-400">회사:</span>{" "}
-                                {testResult.data.visitor.companyName || "-"}
-                              </div>
-                              {testResult.data.visitorId && (
-                                <div className="col-span-2">
-                                  <span className="text-slate-400">Visitor ID:</span>{" "}
-                                  <code className="text-xs">{testResult.data.visitorId}</code>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+              {/* 테스트 결과 - 컴팩트 표시 */}
+              {testResult && (
+                <div className="mt-3 border-t pt-3">
+                  {testResult.success ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-green-600">●</span>
+                        <span className="text-muted-foreground">
+                          {testResult.data?.skipped
+                            ? `ISP 필터링: ${testResult.data.skipReason}`
+                            : testResult.data?.isNewVisitor
+                              ? "새 방문자 등록됨"
+                              : "기존 방문자 업데이트"}
+                        </span>
+                        {testResult.responseTime && (
+                          <span className="text-muted-foreground">
+                            · {testResult.responseTime}ms
+                          </span>
                         )}
-                      </>
-                    ) : (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>테스트 실패: {testResult.error}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
-              </div>
+                      </div>
+                      {testResult.data?.visitor && !testResult.data.skipped && (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                          <span>
+                            <span className="text-muted-foreground">IP:</span>{" "}
+                            {testResult.data.visitor.ipAddress}
+                          </span>
+                          <span>
+                            <span className="text-muted-foreground">위치:</span>{" "}
+                            {testResult.data.visitor.city || testResult.data.visitor.country}
+                          </span>
+                          {testResult.data.visitor.companyName && (
+                            <span>
+                              <span className="text-muted-foreground">회사:</span>{" "}
+                              {testResult.data.visitor.companyName}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-destructive">●</span>
+                      <span className="text-destructive">{testResult.error}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* API 엔드포인트 정보 */}

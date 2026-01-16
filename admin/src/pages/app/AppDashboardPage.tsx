@@ -791,216 +791,70 @@ export default function AppDashboardPage() {
               )}
 
               {/* 첫오픈 */}
-              {selectedStage === "open" && (
-                <>
-                  {totalStats.opened > 0 ? (
-                    <>
-                      <h3 className="font-semibold text-lg">완료된 단계</h3>
-                      {/* 원래 완료 UI */}
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="font-semibold text-lg">예정된 단계</h3>
-                      <Card className="border-blue-200 bg-blue-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                              <AlertCircle className="h-6 w-6 text-blue-600" />
+              {selectedStage === "open" &&
+                (totalStats.opened > 0 ? (
+                  <>
+                    <h3 className="font-semibold text-lg">완료된 단계</h3>
+                    {/* 원래 완료 UI */}
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-semibold text-lg">예정된 단계</h3>
+                    <Card className="border-blue-200 bg-blue-50/50">
+                      <div className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                            <AlertCircle className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">첫 오픈</h4>
+                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
+                                미진행
+                              </span>
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">첫 오픈</h4>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                  미진행
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                이메일 발송 후 바이어가 열어보면 여기에 표시됩니다
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* 원래 첫오픈 완료 UI */}
-              {false && selectedStage === "open" && totalStats.opened > 0 && (
-                <>
-                  <h3 className="font-semibold text-lg">완료된 단계</h3>
-                  <Card>
-                    <div className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                          <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">첫 오픈</h4>
-                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                              완료
-                            </span>
-                          </div>
-                          <p className="mt-1 text-muted-foreground text-sm">
-                            {totalStats.opened}명의 바이어가 이메일을 열어봤습니다
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* 상세 정보 */}
-                      <div className="mt-4 space-y-3 border-t pt-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>오픈률</span>
-                            <span className="font-medium text-blue-600">
-                              {totalStats.opened}명 / {totalStats.sent}명 (
-                              {Math.round(totalStats.openRate)}%)
-                            </span>
-                          </div>
-                          <Progress className="h-2" value={totalStats.openRate} />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 text-sm">
-                          <div className="rounded-lg border bg-white p-3">
-                            <div className="text-muted-foreground text-xs">발송</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.sent}명</div>
-                          </div>
-                          <div className="rounded-lg border bg-blue-50 p-3">
-                            <div className="text-muted-foreground text-xs">오픈</div>
-                            <div className="mt-1 font-semibold text-blue-600 text-lg">
-                              {totalStats.opened}명
-                            </div>
-                          </div>
-                          <div className="rounded-lg border bg-white p-3">
-                            <div className="text-muted-foreground text-xs">미오픈</div>
-                            <div className="mt-1 font-semibold text-lg">
-                              {totalStats.sent - totalStats.opened}명
-                            </div>
+                            <p className="mt-1 text-muted-foreground text-sm">
+                              이메일 발송 후 바이어가 열어보면 여기에 표시됩니다
+                            </p>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                </>
-              )}
+                    </Card>
+                  </>
+                ))}
 
               {/* 첫답장 */}
-              {selectedStage === "reply" && (
-                <>
-                  {totalStats.replied > 0 ? (
-                    <>
-                      <h3 className="font-semibold text-lg">완료된 단계</h3>
-                      {/* 원래 완료 UI */}
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="font-semibold text-lg">예정된 단계</h3>
-                      <Card className="border-blue-200 bg-blue-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                              <AlertCircle className="h-6 w-6 text-blue-600" />
+              {selectedStage === "reply" &&
+                (totalStats.replied > 0 ? (
+                  <>
+                    <h3 className="font-semibold text-lg">완료된 단계</h3>
+                    {/* 원래 완료 UI */}
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-semibold text-lg">예정된 단계</h3>
+                    <Card className="border-blue-200 bg-blue-50/50">
+                      <div className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                            <AlertCircle className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">첫 답장</h4>
+                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
+                                미진행
+                              </span>
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">첫 답장</h4>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                  미진행
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                바이어가 답장하면 여기에 표시됩니다
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* 원래 첫답장 완료 UI */}
-              {false && selectedStage === "reply" && totalStats.replied > 0 && (
-                <>
-                  <h3 className="font-semibold text-lg">완료된 단계</h3>
-                  <Card>
-                    <div className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                          <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">첫 답장</h4>
-                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                              완료
-                            </span>
-                          </div>
-                          <p className="mt-1 text-muted-foreground text-sm">
-                            {totalStats.replied}명의 바이어가 답장했습니다
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* 상세 정보 */}
-                      <div className="mt-4 space-y-3 border-t pt-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>답장률</span>
-                            <span className="font-medium text-blue-600">
-                              {totalStats.replied}명 / {totalStats.sent}명 (
-                              {Math.round(totalStats.replyRate)}%)
-                            </span>
-                          </div>
-                          <Progress className="h-2" value={totalStats.replyRate} />
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-3 text-sm">
-                          <div className="rounded-lg border bg-white p-3">
-                            <div className="text-muted-foreground text-xs">발송</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.sent}명</div>
-                          </div>
-                          <div className="rounded-lg border bg-white p-3">
-                            <div className="text-muted-foreground text-xs">오픈</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.opened}명</div>
-                          </div>
-                          <div className="rounded-lg border bg-white p-3">
-                            <div className="text-muted-foreground text-xs">클릭</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.clicked}명</div>
-                          </div>
-                          <div className="rounded-lg border bg-blue-50 p-3">
-                            <div className="text-muted-foreground text-xs">답장</div>
-                            <div className="mt-1 font-semibold text-blue-600 text-lg">
-                              {totalStats.replied}명
-                            </div>
-                          </div>
-                        </div>
-
-                        {totalStats.replied > 0 && (
-                          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                            <p className="font-medium text-sm">
-                              💬 받은 답장 ({totalStats.replied}건)
+                            <p className="mt-1 text-muted-foreground text-sm">
+                              바이어가 답장하면 여기에 표시됩니다
                             </p>
-                            <Button
-                              className="mt-3 w-full"
-                              onClick={() => {
-                                setActiveTab("emails")
-                              }}
-                              size="sm"
-                              variant="outline"
-                            >
-                              받은 답장 전체 보기
-                            </Button>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                </>
-              )}
+                    </Card>
+                  </>
+                ))}
 
               {/* 미팅 (잠금) */}
               {selectedStage === "meeting" && (

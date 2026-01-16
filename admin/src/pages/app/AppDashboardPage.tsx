@@ -39,7 +39,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Progress } from "@/components/ui/progress"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -49,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -139,9 +139,9 @@ export default function AppDashboardPage() {
   const [selectedStage, setSelectedStage] = useState<JourneyStage>("setup")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature>(null)
-  
+
   // 답장 온 회사 목록 (더미 데이터)
-  const [repliedLeads, setRepliedLeads] = useState<RepliedLead[]>([
+  const [repliedLeads, _setRepliedLeads] = useState<RepliedLead[]>([
     {
       id: "1",
       companyName: "ABC Trading Co.",
@@ -170,8 +170,8 @@ export default function AppDashboardPage() {
       dealStatus: "none",
     },
   ])
-  
-  const [selectedLeadForMeeting, setSelectedLeadForMeeting] = useState<string | null>(null)
+
+  const [_selectedLeadForMeeting, _setSelectedLeadForMeeting] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date()
     const thirtyDaysAgo = new Date()
@@ -210,7 +210,7 @@ export default function AppDashboardPage() {
     1000,
     !!firstSequenceId,
   )
-  
+
   // 바이어 수: enrollments, leads, 또는 onboarding의 selectedLeadIds 중 가장 큰 값
   const leadsCount =
     enrollmentsData?.total ||
@@ -221,14 +221,13 @@ export default function AppDashboardPage() {
 
   // 워크스페이스의 이메일 계정 가져오기
   const { data: emailAccounts } = useEmailAccountsByWorkspace(workspaceId || "", !!workspaceId)
-  
+
   // 이메일 계정: 워크스페이스의 첫 번째 이메일 또는 로그인한 사용자 이메일
   const emailAccount = emailAccounts?.[0]?.email || currentUser?.email || null
 
   // 시퀀스 스텝 정보 가져오기
   const { data: sequenceSteps } = useSequenceSteps(firstSequenceId || "", !!firstSequenceId)
   const stepsCount = sequenceSteps?.length || sequences?.[0]?.stepsCount || 0
-
 
   // 워크스페이스 전체/선택에 따라 데이터 조회
   const {
@@ -355,10 +354,10 @@ export default function AppDashboardPage() {
     const opened = stats?.funnel?.opened || 0
     const clicked = stats?.funnel?.clicked || 0
     const replied = stats?.funnel?.replied || 0
-    
+
     // 더미 데이터: 발송이 진행 중인 것처럼 시뮬레이션
     const useDummyData = leadsCount > 0 && sent === 0 && scheduled === 0
-    
+
     if (useDummyData) {
       // 더미 데이터: 19명 중 10명 발송, 5명 오픈, 2명 클릭, 3명 답장
       const dummySent = 10
@@ -367,7 +366,7 @@ export default function AppDashboardPage() {
       const dummyClicked = 2
       const dummyReplied = 3 // 3개 회사에서 답장
       const dummyTotal = dummyScheduled + dummySent
-      
+
       return {
         scheduled: dummyScheduled,
         sent: dummySent,
@@ -382,11 +381,12 @@ export default function AppDashboardPage() {
         sendingProgress: (dummySent / dummyTotal) * 100, // 52.6%
       }
     }
-    
+
     // 실제 데이터
-    const effectiveScheduled = scheduled > 0 ? scheduled : (leadsCount > 0 && sent === 0 ? leadsCount : 0)
+    const effectiveScheduled =
+      scheduled > 0 ? scheduled : leadsCount > 0 && sent === 0 ? leadsCount : 0
     const total = effectiveScheduled + sent
-    
+
     return {
       scheduled: effectiveScheduled,
       sent,
@@ -544,19 +544,19 @@ export default function AppDashboardPage() {
             <Card className="p-6">
               <div className="relative">
                 {/* 연결선 */}
-                <div className="absolute left-0 right-0 top-4 h-0.5 bg-gray-200" />
+                <div className="absolute top-4 right-0 left-0 h-0.5 bg-gray-200" />
                 <div
-                  className="absolute left-0 top-4 h-0.5 bg-blue-600 transition-all duration-500"
+                  className="absolute top-4 left-0 h-0.5 bg-blue-600 transition-all duration-500"
                   style={{ width: "66.6%" }}
                 />
-                
+
                 {/* 단계들 */}
                 <div className="relative flex items-start justify-between">
                   {/* 1. 설정완료 (완료) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("setup")}
+                    type="button"
                   >
                     <div
                       className={cn(
@@ -576,9 +576,9 @@ export default function AppDashboardPage() {
 
                   {/* 2. 발송시작 (진행중) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("sending")}
+                    type="button"
                   >
                     <div
                       className={cn(
@@ -598,9 +598,9 @@ export default function AppDashboardPage() {
 
                   {/* 3. 첫오픈 (더미: 완료) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("open")}
+                    type="button"
                   >
                     <div
                       className={cn(
@@ -620,9 +620,9 @@ export default function AppDashboardPage() {
 
                   {/* 4. 첫답장 (더미: 완료) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => setSelectedStage("reply")}
+                    type="button"
                   >
                     <div
                       className={cn(
@@ -642,43 +642,43 @@ export default function AppDashboardPage() {
 
                   {/* 5. 미팅 (잠금) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => {
                       setUpgradeFeature("meeting")
                       setShowUpgradeModal(true)
                     }}
+                    type="button"
                   >
                     <div className="relative mb-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100">
                       <Lock className="h-4 w-4 text-gray-500" />
                     </div>
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm font-medium text-gray-500">
+                      <div className="flex items-center justify-center gap-1 font-medium text-gray-500 text-sm">
                         미팅
                         <Lock className="h-3 w-3" />
                       </div>
-                      <div className="mt-1 text-xs text-gray-400">잠김</div>
+                      <div className="mt-1 text-gray-400 text-xs">잠김</div>
                     </div>
                   </button>
 
                   {/* 6. 거래성사 (잠금) */}
                   <button
-                    type="button"
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
                     onClick={() => {
                       setUpgradeFeature("deal")
                       setShowUpgradeModal(true)
                     }}
+                    type="button"
                   >
                     <div className="relative mb-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-gray-100">
                       <Lock className="h-4 w-4 text-gray-500" />
                     </div>
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm font-medium text-gray-500">
+                      <div className="flex items-center justify-center gap-1 font-medium text-gray-500 text-sm">
                         거래성사
                         <Lock className="h-3 w-3" />
                       </div>
-                      <div className="mt-1 text-xs text-gray-400">잠김</div>
+                      <div className="mt-1 text-gray-400 text-xs">잠김</div>
                     </div>
                   </button>
                 </div>
@@ -763,15 +763,18 @@ export default function AppDashboardPage() {
                           <div className="flex items-center justify-between text-sm">
                             <span>발송 진행률</span>
                             <span className="font-medium text-blue-600">
-                              {totalStats.sent}건 / {totalStats.total}건 ({Math.round(totalStats.sendingProgress)}%)
+                              {totalStats.sent}건 / {totalStats.total}건 (
+                              {Math.round(totalStats.sendingProgress)}%)
                             </span>
                           </div>
-                          <Progress value={totalStats.sendingProgress} className="h-2" />
+                          <Progress className="h-2" value={totalStats.sendingProgress} />
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                           <div className="rounded-lg border bg-white p-3">
                             <div className="text-muted-foreground text-xs">발송 예정</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.scheduled}건</div>
+                            <div className="mt-1 font-semibold text-lg">
+                              {totalStats.scheduled}건
+                            </div>
                           </div>
                           <div className="rounded-lg border bg-white p-3">
                             <div className="text-muted-foreground text-xs">발송 완료</div>
@@ -780,7 +783,8 @@ export default function AppDashboardPage() {
                         </div>
                         {totalStats.sent > 0 ? (
                           <p className="text-muted-foreground text-sm">
-                            💡 첫 이메일 발송이 시작되었습니다. 24시간 내 30%의 오픈율을 기대할 수 있어요.
+                            💡 첫 이메일 발송이 시작되었습니다. 24시간 내 30%의 오픈율을 기대할 수
+                            있어요.
                           </p>
                         ) : (
                           <div className="mt-4 border-t pt-4">
@@ -827,12 +831,13 @@ export default function AppDashboardPage() {
                           <div className="flex items-center justify-between text-sm">
                             <span>오픈률</span>
                             <span className="font-medium text-blue-600">
-                              {totalStats.opened}명 / {totalStats.sent}명 ({Math.round(totalStats.openRate)}%)
+                              {totalStats.opened}명 / {totalStats.sent}명 (
+                              {Math.round(totalStats.openRate)}%)
                             </span>
                           </div>
-                          <Progress value={totalStats.openRate} className="h-2" />
+                          <Progress className="h-2" value={totalStats.openRate} />
                         </div>
-                        
+
                         <div className="grid grid-cols-3 gap-3 text-sm">
                           <div className="rounded-lg border bg-white p-3">
                             <div className="text-muted-foreground text-xs">발송</div>
@@ -840,11 +845,15 @@ export default function AppDashboardPage() {
                           </div>
                           <div className="rounded-lg border bg-blue-50 p-3">
                             <div className="text-muted-foreground text-xs">오픈</div>
-                            <div className="mt-1 font-semibold text-blue-600 text-lg">{totalStats.opened}명</div>
+                            <div className="mt-1 font-semibold text-blue-600 text-lg">
+                              {totalStats.opened}명
+                            </div>
                           </div>
                           <div className="rounded-lg border bg-white p-3">
                             <div className="text-muted-foreground text-xs">미오픈</div>
-                            <div className="mt-1 font-semibold text-lg">{totalStats.sent - totalStats.opened}명</div>
+                            <div className="mt-1 font-semibold text-lg">
+                              {totalStats.sent - totalStats.opened}명
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -882,12 +891,13 @@ export default function AppDashboardPage() {
                           <div className="flex items-center justify-between text-sm">
                             <span>답장률</span>
                             <span className="font-medium text-blue-600">
-                              {totalStats.replied}명 / {totalStats.sent}명 ({Math.round(totalStats.replyRate)}%)
+                              {totalStats.replied}명 / {totalStats.sent}명 (
+                              {Math.round(totalStats.replyRate)}%)
                             </span>
                           </div>
-                          <Progress value={totalStats.replyRate} className="h-2" />
+                          <Progress className="h-2" value={totalStats.replyRate} />
                         </div>
-                        
+
                         <div className="grid grid-cols-4 gap-3 text-sm">
                           <div className="rounded-lg border bg-white p-3">
                             <div className="text-muted-foreground text-xs">발송</div>
@@ -903,32 +913,38 @@ export default function AppDashboardPage() {
                           </div>
                           <div className="rounded-lg border bg-blue-50 p-3">
                             <div className="text-muted-foreground text-xs">답장</div>
-                            <div className="mt-1 font-semibold text-blue-600 text-lg">{totalStats.replied}명</div>
+                            <div className="mt-1 font-semibold text-blue-600 text-lg">
+                              {totalStats.replied}명
+                            </div>
                           </div>
                         </div>
 
                         <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                          <p className="font-medium text-sm">💬 받은 답장 ({repliedLeads.length}개 회사)</p>
+                          <p className="font-medium text-sm">
+                            💬 받은 답장 ({repliedLeads.length}개 회사)
+                          </p>
                           <div className="mt-2 space-y-2">
                             {repliedLeads.map((lead) => (
-                              <div key={lead.id} className="rounded bg-white p-3 text-sm">
+                              <div className="rounded bg-white p-3 text-sm" key={lead.id}>
                                 <div className="flex items-center justify-between">
                                   <div className="font-medium">{lead.companyName}</div>
-                                  <span className="text-muted-foreground text-xs">{lead.repliedAt}</span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {lead.repliedAt}
+                                  </span>
                                 </div>
-                                <p className="mt-1 text-muted-foreground text-xs line-clamp-2">
+                                <p className="mt-1 line-clamp-2 text-muted-foreground text-xs">
                                   "{lead.replyContent}"
                                 </p>
                               </div>
                             ))}
                           </div>
-                          <Button 
-                            className="mt-3 w-full" 
-                            variant="outline"
-                            size="sm"
+                          <Button
+                            className="mt-3 w-full"
                             onClick={() => {
                               setActiveTab("emails")
                             }}
+                            size="sm"
+                            variant="outline"
                           >
                             받은 답장 전체 보기
                           </Button>
@@ -1012,718 +1028,10 @@ export default function AppDashboardPage() {
               )}
 
               {/* 원래 미팅 코드 숨김 */}
-              {false && selectedStage === "meeting" && (
-                <>
-                  {repliedLeads.some((lead) => lead.hasMeeting) ? (
-                    // 미팅 일정 기록 완료 (일부)
-                    <>
-                      <h3 className="font-semibold text-lg">
-                        미팅 일정 ({repliedLeads.filter((l) => l.hasMeeting).length}/{repliedLeads.length})
-                      </h3>
-                      <div className="space-y-3">
-                        {/* 미팅 기록된 회사들 */}
-                        {repliedLeads
-                          .filter((lead) => lead.hasMeeting)
-                          .map((lead) => (
-                            <Card key={lead.id} className="border-blue-200">
-                              <div className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                                    <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="font-medium">{lead.companyName}</div>
-                                    <div className="mt-1 text-muted-foreground text-xs">
-                                      📅 {lead.meetingDate} {lead.meetingTime}
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setRepliedLeads(
-                                        repliedLeads.map((l) =>
-                                          l.id === lead.id ? { ...l, hasMeeting: false } : l,
-                                        ),
-                                      )
-                                    }}
-                                  >
-                                    수정
-                                  </Button>
-                                </div>
-                                {lead.meetingNote && (
-                                  <p className="mt-2 text-muted-foreground text-sm">{lead.meetingNote}</p>
-                                )}
-                              </div>
-                            </Card>
-                          ))}
-
-                        {/* 미팅 기록 안 된 회사들 */}
-                        {repliedLeads
-                          .filter((lead) => !lead.hasMeeting)
-                          .map((lead) => (
-                            <Card
-                              key={lead.id}
-                              className={cn(
-                                "border-blue-200",
-                                selectedLeadForMeeting === lead.id ? "bg-blue-50" : "",
-                              )}
-                            >
-                              <div className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                                    <AlertCircle className="h-6 w-6 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <div className="font-medium">{lead.companyName}</div>
-                                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                        답장 받음
-                                      </span>
-                                    </div>
-                                    <p className="mt-1 text-muted-foreground text-xs line-clamp-1">
-                                      "{lead.replyContent}"
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* 미팅 일정 입력 폼 */}
-                                {selectedLeadForMeeting === lead.id ? (
-                                  <div className="mt-4 space-y-3 border-t pt-4">
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">미팅 날짜</label>
-                                        <input
-                                          type="date"
-                                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                          onChange={(e) => {
-                                            const date = e.target.value
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, meetingDate: date } : l,
-                                              ),
-                                            )
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">미팅 시간</label>
-                                        <input
-                                          type="time"
-                                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                          onChange={(e) => {
-                                            const time = e.target.value
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, meetingTime: time } : l,
-                                              ),
-                                            )
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-sm font-medium">메모 (선택)</label>
-                                      <textarea
-                                        placeholder="미팅 관련 메모"
-                                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                        rows={2}
-                                        onChange={(e) => {
-                                          const note = e.target.value
-                                          setRepliedLeads(
-                                            repliedLeads.map((l) =>
-                                              l.id === lead.id ? { ...l, meetingNote: note } : l,
-                                            ),
-                                          )
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={() => setSelectedLeadForMeeting(null)}
-                                      >
-                                        취소
-                                      </Button>
-                                      <Button
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                        disabled={!lead.meetingDate || !lead.meetingTime}
-                                        onClick={() => {
-                                          setRepliedLeads(
-                                            repliedLeads.map((l) =>
-                                              l.id === lead.id
-                                                ? { ...l, hasMeeting: true, dealStatus: "in_progress" }
-                                                : l,
-                                            ),
-                                          )
-                                          setSelectedLeadForMeeting(null)
-                                        }}
-                                      >
-                                        저장
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    className="mt-3 w-full"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedLeadForMeeting(lead.id)}
-                                  >
-                                    미팅 일정 추가
-                                  </Button>
-                                )}
-                              </div>
-                            </Card>
-                          ))}
-                      </div>
-                    </>
-                  ) : totalStats.replied > 0 ? (
-                    // 답장 왔으니 미팅 목록 보여주기
-                    <>
-                      <h3 className="font-semibold text-lg">미팅 일정 기록</h3>
-                      <Card className="border-blue-200 bg-blue-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                              <AlertCircle className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">답장 온 바이어</h4>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                  {repliedLeads.length}개 회사
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                답장 온 회사별로 미팅 일정을 기록하세요
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* 답장 온 회사 목록 */}
-                          <div className="mt-4 space-y-3 border-t pt-4">
-                            {repliedLeads.map((lead) => (
-                              <div
-                                key={lead.id}
-                                className="rounded-lg border bg-white p-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="font-medium text-sm">{lead.companyName}</div>
-                                    <p className="mt-1 text-muted-foreground text-xs line-clamp-1">
-                                      "{lead.replyContent}"
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* 미팅 일정 입력 폼 */}
-                                {selectedLeadForMeeting === lead.id ? (
-                                  <div className="mt-3 space-y-3 border-t pt-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">미팅 날짜</label>
-                                        <input
-                                          type="date"
-                                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                          onChange={(e) => {
-                                            const date = e.target.value
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, meetingDate: date } : l,
-                                              ),
-                                            )
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">미팅 시간</label>
-                                        <input
-                                          type="time"
-                                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                          onChange={(e) => {
-                                            const time = e.target.value
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, meetingTime: time } : l,
-                                              ),
-                                            )
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-sm font-medium">메모 (선택)</label>
-                                      <textarea
-                                        placeholder="미팅 관련 메모"
-                                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                        rows={2}
-                                        onChange={(e) => {
-                                          const note = e.target.value
-                                          setRepliedLeads(
-                                            repliedLeads.map((l) =>
-                                              l.id === lead.id ? { ...l, meetingNote: note } : l,
-                                            ),
-                                          )
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={() => setSelectedLeadForMeeting(null)}
-                                      >
-                                        취소
-                                      </Button>
-                                      <Button
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                        disabled={!lead.meetingDate || !lead.meetingTime}
-                                        onClick={() => {
-                                          setRepliedLeads(
-                                            repliedLeads.map((l) =>
-                                              l.id === lead.id
-                                                ? { ...l, hasMeeting: true, dealStatus: "in_progress" }
-                                                : l,
-                                            ),
-                                          )
-                                          setSelectedLeadForMeeting(null)
-                                        }}
-                                      >
-                                        저장
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    className="mt-3 w-full"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedLeadForMeeting(lead.id)}
-                                  >
-                                    미팅 일정 추가
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  ) : (
-                    // 답장이 아직 없음
-                    <>
-                      <h3 className="font-semibold text-lg">예정된 단계</h3>
-                      <Card className="border-amber-200 bg-amber-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                              <AlertCircle className="h-6 w-6 text-amber-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">미팅</h4>
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 text-xs">
-                                  답장 대기 중
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                바이어 답장이 오면 미팅 일정을 기록할 수 있습니다
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 border-t pt-4">
-                            <p className="text-muted-foreground text-sm">
-                              💡 답장률 {Math.round(totalStats.replyRate)}%입니다. 답장이 오면 이 단계에서 미팅 일정을 관리할 수 있습니다.
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  )}
-                </>
-              )}
+              {false}
 
               {/* 원래 거래성사 코드 숨김 */}
-              {false && selectedStage === "deal" && (
-                <>
-                  {repliedLeads.some((l) => l.hasMeeting) ? (
-                    // 미팅 잡힌 회사들 - 성사된 것과 진행중인 것 구분
-                    <div className="space-y-6">
-                      {/* 거래 성사 완료 섹션 */}
-                      {repliedLeads.filter((l) => l.dealStatus === "closed").length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-lg">
-                              ✅ 거래 성사 ({repliedLeads.filter((l) => l.dealStatus === "closed").length}건)
-                            </h3>
-                            <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700 text-sm">
-                              완료
-                            </span>
-                          </div>
-                          {repliedLeads
-                            .filter((lead) => lead.dealStatus === "closed")
-                            .map((lead) => (
-                              <Card key={lead.id} className="border-blue-200 bg-blue-50/30">
-                                <div className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                                      <CheckCircle2 className="h-6 w-6 text-blue-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <div className="font-semibold">{lead.companyName}</div>
-                                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                          성사 완료
-                                        </span>
-                                      </div>
-                                      <div className="mt-1 flex items-center gap-3 text-sm">
-                                        <span className="font-medium text-blue-700">
-                                          💰 {lead.dealAmount}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                          📅 {lead.dealDate}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setRepliedLeads(
-                                          repliedLeads.map((l) =>
-                                            l.id === lead.id ? { ...l, dealStatus: "in_progress" } : l,
-                                          ),
-                                        )
-                                      }}
-                                    >
-                                      수정
-                                    </Button>
-                                  </div>
-                                  
-                                  {/* 거래 상세 정보 */}
-                                  <div className="mt-3 space-y-2 rounded-lg border border-blue-200 bg-white p-3">
-                                    <div className="font-medium text-sm">📝 거래 상세</div>
-                                    <div className="grid grid-cols-2 gap-3 text-sm">
-                                      <div>
-                                        <div className="text-muted-foreground text-xs">미팅 일정</div>
-                                        <div className="mt-1">
-                                          {lead.meetingDate} {lead.meetingTime}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className="text-muted-foreground text-xs">계약 금액</div>
-                                        <div className="mt-1 font-medium text-blue-700">
-                                          {lead.dealAmount}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {lead.dealNote && (
-                                      <div className="border-t pt-2">
-                                        <div className="text-muted-foreground text-xs">거래 노트</div>
-                                        <p className="mt-1 text-sm">{lead.dealNote}</p>
-                                      </div>
-                                    )}
-                                    {lead.meetingNote && (
-                                      <div className="border-t pt-2">
-                                        <div className="text-muted-foreground text-xs">미팅 노트</div>
-                                        <p className="mt-1 text-sm">{lead.meetingNote}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </Card>
-                            ))}
-                        </div>
-                      )}
-
-                      {/* 거래 진행 중 섹션 */}
-                      {repliedLeads.filter((l) => l.hasMeeting && l.dealStatus === "in_progress").length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-lg">
-                              🤝 거래 진행 중 ({repliedLeads.filter((l) => l.hasMeeting && l.dealStatus === "in_progress").length}건)
-                            </h3>
-                            <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700 text-sm">
-                              협상 중
-                            </span>
-                          </div>
-                          {repliedLeads
-                            .filter((lead) => lead.hasMeeting && lead.dealStatus === "in_progress")
-                            .map((lead) => (
-                              <Card key={lead.id} className="border-blue-200 bg-blue-50/50">
-                                <div className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                                      <AlertCircle className="h-6 w-6 text-blue-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-medium">{lead.companyName}</div>
-                                      <div className="mt-1 text-muted-foreground text-xs">
-                                        📅 미팅: {lead.meetingDate} {lead.meetingTime}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* 거래 성사 입력 폼 */}
-                                  {selectedLeadForMeeting === lead.id ? (
-                                    <div className="mt-3 space-y-3 border-t pt-3">
-                                      <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">계약 금액</label>
-                                          <input
-                                            type="text"
-                                            placeholder="$50,000 또는 ₩50,000,000"
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                            onChange={(e) => {
-                                              const amount = e.target.value
-                                              setRepliedLeads(
-                                                repliedLeads.map((l) =>
-                                                  l.id === lead.id ? { ...l, dealAmount: amount } : l,
-                                                ),
-                                              )
-                                            }}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">계약 날짜</label>
-                                          <input
-                                            type="date"
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                            onChange={(e) => {
-                                              const date = e.target.value
-                                              setRepliedLeads(
-                                                repliedLeads.map((l) =>
-                                                  l.id === lead.id ? { ...l, dealDate: date } : l,
-                                                ),
-                                              )
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">거래 노트</label>
-                                        <textarea
-                                          placeholder="거래 성사 내용, 계약 조건, 특이사항 등을 기록하세요"
-                                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                          rows={3}
-                                          onChange={(e) => {
-                                            const note = e.target.value
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, dealNote: note } : l,
-                                              ),
-                                            )
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <Button
-                                          variant="outline"
-                                          className="flex-1"
-                                          onClick={() => setSelectedLeadForMeeting(null)}
-                                        >
-                                          취소
-                                        </Button>
-                                        <Button
-                                          className="flex-1 bg-blue-600 hover:bg-green-700"
-                                          disabled={!lead.dealAmount || !lead.dealDate}
-                                          onClick={() => {
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id ? { ...l, dealStatus: "closed" } : l,
-                                              ),
-                                            )
-                                            setSelectedLeadForMeeting(null)
-                                          }}
-                                        >
-                                          거래 성사 기록
-                                        </Button>
-                                        <Button
-                                          variant="destructive"
-                                          className="flex-1"
-                                          onClick={() => {
-                                            const reason = prompt("거래 실패 사유를 입력하세요 (선택)")
-                                            setRepliedLeads(
-                                              repliedLeads.map((l) =>
-                                                l.id === lead.id
-                                                  ? {
-                                                      ...l,
-                                                      dealStatus: "failed",
-                                                      dealFailReason: reason || "미기재",
-                                                    }
-                                                  : l,
-                                              ),
-                                            )
-                                            setSelectedLeadForMeeting(null)
-                                          }}
-                                        >
-                                          거래 실패 처리
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="mt-3 border-t pt-3">
-                                      {lead.meetingNote && (
-                                        <div className="mb-3 rounded bg-white p-2">
-                                          <div className="text-muted-foreground text-xs">미팅 노트</div>
-                                          <p className="mt-1 text-sm">{lead.meetingNote}</p>
-                                        </div>
-                                      )}
-                                      <Button
-                                        className="w-full bg-blue-600 hover:bg-green-700"
-                                        size="sm"
-                                        onClick={() => setSelectedLeadForMeeting(lead.id)}
-                                      >
-                                        거래 성사 기록하기
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              </Card>
-                            ))}
-                        </div>
-                      )}
-
-                      {/* 거래 실패 섹션 */}
-                      {repliedLeads.filter((l) => l.hasMeeting && l.dealStatus === "failed").length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-lg">
-                              ❌ 거래 미성사 ({repliedLeads.filter((l) => l.hasMeeting && l.dealStatus === "failed").length}건)
-                            </h3>
-                            <span className="rounded-full bg-red-100 px-3 py-1 font-medium text-red-700 text-sm">
-                              실패
-                            </span>
-                          </div>
-                          {repliedLeads
-                            .filter((lead) => lead.hasMeeting && lead.dealStatus === "failed")
-                            .map((lead) => (
-                              <Card key={lead.id} className="border-red-200 bg-red-50/30">
-                                <div className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                                      <AlertCircle className="h-6 w-6 text-red-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <div className="font-medium">{lead.companyName}</div>
-                                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700 text-xs">
-                                          거래 실패
-                                        </span>
-                                      </div>
-                                      <div className="mt-1 text-muted-foreground text-xs">
-                                        미팅 진행: {lead.meetingDate}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setRepliedLeads(
-                                          repliedLeads.map((l) =>
-                                            l.id === lead.id ? { ...l, dealStatus: "in_progress" } : l,
-                                          ),
-                                        )
-                                      }}
-                                    >
-                                      진행 중으로 변경
-                                    </Button>
-                                  </div>
-
-                                  {/* 실패 사유 */}
-                                  <div className="mt-3 rounded-lg border border-red-200 bg-white p-3">
-                                    <div className="text-muted-foreground text-xs">실패 사유</div>
-                                    <p className="mt-1 text-sm">{lead.dealFailReason || "미기재"}</p>
-                                  </div>
-                                </div>
-                              </Card>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : repliedLeads.some((l) => l.hasMeeting) ? (
-                    // 미팅 잡았으니 거래 성사 기록 가능
-                    <>
-                      <h3 className="font-semibold text-lg">거래 성사 기록</h3>
-                      <Card className="border-blue-200 bg-blue-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                              <AlertCircle className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">미팅 예정 바이어</h4>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 text-xs">
-                                  {repliedLeads.filter((l) => l.hasMeeting).length}개 회사
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                미팅 후 거래가 성사되면 기록하세요
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* 미팅 예정 회사 목록 */}
-                          <div className="mt-4 space-y-3 border-t pt-4">
-                            {repliedLeads
-                              .filter((lead) => lead.hasMeeting && lead.dealStatus !== "closed" && lead.dealStatus !== "failed")
-                              .map((lead) => (
-                                <div key={lead.id} className="rounded-lg border bg-white p-3">
-                                  <div className="font-medium text-sm">{lead.companyName}</div>
-                                  <div className="mt-1 text-muted-foreground text-xs">
-                                    📅 미팅: {lead.meetingDate} {lead.meetingTime}
-                                  </div>
-                                  <Button
-                                    className="mt-3 w-full bg-blue-600 hover:bg-green-700"
-                                    size="sm"
-                                    onClick={() => setSelectedLeadForMeeting(lead.id)}
-                                  >
-                                    거래 성사 기록하기
-                                  </Button>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  ) : (
-                    // 미팅도 없음
-                    <>
-                      <h3 className="font-semibold text-lg">예정된 단계</h3>
-                      <Card className="border-amber-200 bg-amber-50/50">
-                        <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                              <AlertCircle className="h-6 w-6 text-amber-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">거래 성사</h4>
-                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 text-xs">
-                                  미팅 대기 중
-                                </span>
-                              </div>
-                              <p className="mt-1 text-muted-foreground text-sm">
-                                미팅 일정을 먼저 기록해주세요
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 border-t pt-4">
-                            <p className="text-muted-foreground text-sm">
-                              💡 미팅 후 거래가 성사되면 최종 단계를 기록할 수 있습니다.
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-                    </>
-                  )}
-                </>
-              )}
+              {false}
             </div>
           </div>
         </TabsContent>
@@ -2292,7 +1600,7 @@ export default function AppDashboardPage() {
         </TabsContent>
 
         {/* 업그레이드 팝업 */}
-        <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <Dialog onOpenChange={setShowUpgradeModal} open={showUpgradeModal}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -2331,7 +1639,7 @@ export default function AppDashboardPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowUpgradeModal(false)}>
+              <Button onClick={() => setShowUpgradeModal(false)} variant="outline">
                 닫기
               </Button>
               <Button

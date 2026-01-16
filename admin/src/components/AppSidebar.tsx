@@ -362,18 +362,16 @@ export function AppSidebar({
               </Link>
             </div>
           </SidebarMenuItem>
-          {/* 업그레이드 CTA (Trial 사용자만, 펼쳐졌을 때) */}
-          {user?.trialStatus?.isTrialActive && (
-            <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-              <Button
-                className="h-9 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
-                onClick={() => setIsUpgradeModalOpen(true)}
-                size="sm"
-              >
-                {t("sidebar.upgrade.button")}
-              </Button>
-            </SidebarMenuItem>
-          )}
+          {/* 업그레이드 CTA (펼쳐졌을 때) */}
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <Button
+              className="h-9 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
+              onClick={() => setIsUpgradeModalOpen(true)}
+              size="sm"
+            >
+              {t("sidebar.upgrade.button")}
+            </Button>
+          </SidebarMenuItem>
           {/* 설정 아이콘만 (접혔을 때) */}
           <div className="hidden group-data-[collapsible=icon]:block">
             <CustomMenuItem

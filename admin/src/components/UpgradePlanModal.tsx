@@ -80,9 +80,10 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
       window.open(CONTACT_URL, "_blank")
       return
     }
-    // 다른 플랜은 공개 결제 테스트 페이지로 이동 (tier 파라미터 전달)
+    // 다른 플랜은 공개 결제 테스트 페이지로 이동 (tier, interval 파라미터 전달)
+    const interval = isYearly ? "year" : "month"
     onOpenChange(false)
-    navigate(`/payment-test?tier=${plan.id}`)
+    navigate(`/payment-test?tier=${plan.id}&interval=${interval}`)
   }
 
   return (

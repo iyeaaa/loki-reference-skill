@@ -313,19 +313,28 @@ export default function PaymentTestPublic() {
   useEffect(() => {
     if (plans.length > 0 && !selectedPlanId) {
       const tierParam = searchParams.get("tier")
+      const intervalParam = searchParams.get("interval")
+
       if (tierParam) {
-        // tier 파라미터와 매칭되는 플랜 찾기 (product.tier 또는 plan name으로 매칭)
-        const matchingPlan = plans.find(
-          (p) =>
+        // tier + interval 조합으로 매칭되는 플랜 찾기
+        const matchingPlan = plans.find((p) => {
+          const tierMatch =
             p.product?.tier?.toLowerCase() === tierParam.toLowerCase() ||
-            p.name.toLowerCase().includes(tierParam.toLowerCase()),
-        )
+            p.name.toLowerCase().includes(tierParam.toLowerCase())
+
+          // interval 파라미터가 있으면 billingInterval도 매칭
+          if (intervalParam && tierMatch) {
+            return p.billingInterval === intervalParam
+          }
+          return tierMatch
+        })
+
         if (matchingPlan) {
           setSelectedPlanId(matchingPlan.id)
           return
         }
       }
-      // tier 파라미터가 없거나 매칭되는 플랜이 없으면 첫 번째 플랜 선택
+      // 파라미터가 없거나 매칭되는 플랜이 없으면 첫 번째 플랜 선택
       setSelectedPlanId(plans[0].id)
     }
   }, [plans, selectedPlanId, searchParams])

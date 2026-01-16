@@ -5,7 +5,7 @@
  * Survives server restarts and continues from last checkpoint
  */
 
-import { type Job, Worker } from "bullmq"
+import { type Job, Queue, Worker } from "bullmq"
 import { and, eq, isNotNull } from "drizzle-orm"
 import { db } from "../../db"
 import { leadContacts } from "../../db/schema/lead-details"
@@ -439,6 +439,101 @@ async function processOnboardingJob(
 /** Memory cleanup interval reference */
 let cleanupInterval: ReturnType<typeof setInterval> | null = null
 
+/**
+ * 서버 재시작 후 stuck 상태의 작업을 복구
+ * - Active 상태로 남아있지만 실제로 처리되지 않는 작업을 감지
+ * - 해당 작업을 waiting 상태로 되돌려서 재처리
+ */
+async function recoverStuckJobs(): Promise<void> {
+  const queue = new Queue<OnboardingAutoGenerateJob>(QUEUE_NAMES.ONBOARDING_GENERATION, {
+    connection: createRedisConnection(),
+  })
+
+  try {
+    // Active 상태의 작업 가져오기
+    const activeJobs = await queue.getActive()
+
+    if (activeJobs.length === 0) {
+      logger.info("[OnboardingWorker] No stuck jobs to recover")
+      await queue.close()
+      return
+    }
+
+    logger.info(
+      { count: activeJobs.length },
+      "[OnboardingWorker] Found active jobs to check for recovery",
+    )
+
+    for (const job of activeJobs) {
+      // 작업 시작 시간 확인 (processedOn은 작업이 시작된 시간)
+      const processedOn = job.processedOn
+      const now = Date.now()
+
+      // 10분 이상 진행 중인 작업은 stuck으로 간주
+      // (lockDuration이 10분이므로, 정상적인 작업은 10분 내에 heartbeat를 보냄)
+      const STUCK_THRESHOLD_MS = 10 * 60 * 1000 // 10 minutes
+
+      if (processedOn && now - processedOn > STUCK_THRESHOLD_MS) {
+        logger.warn(
+          {
+            jobId: job.id,
+            workspaceId: job.data.workspaceId,
+            processedOn: new Date(processedOn).toISOString(),
+            stuckDuration: `${Math.round((now - processedOn) / 1000 / 60)} minutes`,
+          },
+          "[OnboardingWorker] Recovering stuck job - moving back to waiting",
+        )
+
+        try {
+          // 작업을 실패 상태로 변경 (자동으로 재시도됨)
+          await job.moveToFailed(
+            new Error("Job stuck after server restart - auto-recovering"),
+            job.token || "recovery",
+            false, // fetchNext = false
+          )
+
+          // 재시도가 남아있으면 자동으로 다시 queue에 추가됨
+          // 재시도가 없으면 새 작업을 추가
+          if (job.attemptsMade >= (job.opts.attempts || 3)) {
+            // 최대 재시도 초과 - 새 작업 추가
+            await queue.add("onboarding-recovery", job.data, {
+              attempts: 3,
+              backoff: { type: "exponential", delay: 5000 },
+              jobId: `recovery-${job.data.workspaceId}-${Date.now()}`,
+            })
+            logger.info(
+              { jobId: job.id, workspaceId: job.data.workspaceId },
+              "[OnboardingWorker] Created new recovery job (max retries exceeded)",
+            )
+          } else {
+            logger.info(
+              { jobId: job.id, attemptsMade: job.attemptsMade },
+              "[OnboardingWorker] Job will be auto-retried by BullMQ",
+            )
+          }
+        } catch (moveError) {
+          logger.error(
+            { jobId: job.id, error: moveError },
+            "[OnboardingWorker] Failed to recover stuck job",
+          )
+        }
+      } else {
+        logger.debug(
+          {
+            jobId: job.id,
+            processedOn: processedOn ? new Date(processedOn).toISOString() : "N/A",
+          },
+          "[OnboardingWorker] Job is recently active, not stuck",
+        )
+      }
+    }
+  } catch (error) {
+    logger.error({ error }, "[OnboardingWorker] Error during stuck job recovery")
+  } finally {
+    await queue.close()
+  }
+}
+
 /** 로그 기록 재시도 헬퍼 */
 async function logWithRetry<T>(
   operation: () => Promise<T>,
@@ -583,8 +678,15 @@ export function startOnboardingAutoGenerateWorker(): Worker<
   /**
    * Worker 준비 완료 이벤트
    */
-  onboardingWorker.on("ready", () => {
+  onboardingWorker.on("ready", async () => {
     logger.info("[OnboardingWorker] Worker is ready to process jobs")
+
+    // 서버 재시작 후 stuck 작업 복구 시도
+    try {
+      await recoverStuckJobs()
+    } catch (error) {
+      logger.error({ error }, "[OnboardingWorker] Failed to recover stuck jobs on startup")
+    }
   })
 
   /**

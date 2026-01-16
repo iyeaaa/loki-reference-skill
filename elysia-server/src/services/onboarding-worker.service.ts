@@ -21,22 +21,22 @@ import { sequenceSteps, sequences } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
 import type { OnboardingAutoGenerateJob, OnboardingAutoGenerateResult } from "../lib/queue/types"
 import {
-  createCompleteEvent,
-  createDiscoveryCompleteEvent,
+  createCompleteEventWithSummary,
   createDiscoverySearchingEvent,
   createDiscoveryStartEvent,
   createErrorEvent,
   createGroupCompleteEvent,
   createGroupStartEvent,
-  createPreviewProgressEvent,
-  createPreviewsCompleteEvent,
   createPreviewsStartEvent,
   createSequenceCompleteEvent,
   createSequenceStartEvent,
   createTemplateProgressEvent,
   createTemplatesCompleteEvent,
   createTemplatesStartEvent,
+  createTemplatesWritingEvent,
+  type EmailProgressItem,
   emitOnboardingProgress,
+  type LeadProgressItem,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
 import { getAITemplateGenerationService } from "./ai-template-generation.service"
@@ -54,6 +54,12 @@ import {
   generatePreviewEmailsForSequence,
   KST_OFFSET_MS,
 } from "./onboarding.service"
+import {
+  generateIntelligenceSummary,
+  generateOnboardingSummary,
+  generateScoringSummary,
+  generateSearchSummary,
+} from "./onboarding-summary.service"
 import { createSequence, createSequenceStep } from "./sequence.service"
 import { getUser } from "./user.service"
 import * as workspaceServiceImport from "./workspace.service"
@@ -124,6 +130,12 @@ export interface CheckpointState {
     emailSubject: string
     emailBodyText: string
     emailBodyHtml: string
+  }>
+  // NEW: Buyer personas for summary generation
+  buyerPersonas?: Array<{
+    type: string
+    typeKo?: string
+    description?: string
   }>
   errors: Array<{
     phase: string
@@ -335,6 +347,10 @@ export async function runDiscoveryPhase(
 
     console.log(`[DiscoveryPhase] BuyerSearch input:`, JSON.stringify(buyerSearchInput, null, 2))
 
+    // 🆕 실시간 리드 업데이트를 위한 임시 저장소
+    const scoredLeadsMap = new Map<string, LeadProgressItem>()
+    let scoredLeadIndex = 0
+
     // 🆕 Use the new buyer-search service with progress callback
     const searchResult = await searchBuyers(
       buyerSearchInput,
@@ -349,40 +365,78 @@ export async function runDiscoveryPhase(
           progressPercent: discoveryPercent,
         })
 
-        // Determine user-friendly message based on phase
-        const phaseMessages: Record<string, { en: string; ko: string }> = {
-          intelligence: { en: "Analyzing buyer personas...", ko: "바이어 페르소나 분석 중..." },
-          search_perplexity: { en: "Searching web sources...", ko: "웹 검색 중..." },
-          search_apollo: { en: "Searching B2B databases...", ko: "B2B 데이터베이스 검색 중..." },
-          search_serper: { en: "Additional web search...", ko: "추가 웹 검색 중..." },
-          search_places: { en: "Finding local businesses...", ko: "로컬 비즈니스 검색 중..." },
-          dedup: { en: "Removing duplicates...", ko: "중복 제거 중..." },
-          enrichment: { en: "Finding contact emails...", ko: "이메일 찾는 중..." },
-          scoring: { en: "Scoring and ranking...", ko: "점수 평가 중..." },
-          finalizing: { en: "Finalizing results...", ko: "결과 정리 중..." },
-        }
-
-        const messageInfo = phaseMessages[progress.phase] || {
-          en: progress.message,
-          ko: progress.message,
-        }
         const isKorean = surveyData.lang === "ko"
 
-        // Emit SSE event with user-friendly message
+        // 🆕 스코어링된 회사 실시간 업데이트
+        if (progress.scoredCompany) {
+          const scored = progress.scoredCompany
+          scoredLeadIndex++
+
+          // 스코어링된 리드 정보 저장
+          const hasExistingLead = scoredLeadsMap.has(scored.companyName)
+          if (!hasExistingLead && scoredLeadsMap.size >= TARGET_LEADS) {
+            // Limit SSE lead updates to final target count
+            // Continue to emit general progress below without lead details
+          } else {
+            const leadProgress: LeadProgressItem = {
+              leadId: `scoring-${scoredLeadIndex}`,
+              companyName: scored.companyName,
+              country: scored.country,
+              status: "done" as const,
+              email: scored.email,
+              leadSource: "perplexity" as const,
+              score: scored.score,
+              description: scored.description,
+            }
+            scoredLeadsMap.set(scored.companyName, leadProgress)
+
+            // 스코어링된 리드 즉시 emit (실시간 UI 업데이트)
+            const allScoredLeads = Array.from(scoredLeadsMap.values())
+            await emitAndSaveNotification(
+              {
+                workspaceId,
+                jobId,
+                phase: "discovery",
+                progressPercent: discoveryPercent,
+                message: isKorean
+                  ? `${scored.companyName} 평가 완료 (${scored.score}점)`
+                  : `Scored ${scored.companyName} (${scored.score})`,
+                messageKr: `${scored.companyName} 평가 완료 (${scored.score}점)`,
+                details: {
+                  leadsFound: allScoredLeads.length,
+                  currentLead: leadProgress,
+                  leads: allScoredLeads,
+                },
+                parallelProgress: {
+                  discovery: { percent: discoveryPercent, done: discoveryPercent >= 100 },
+                  templates: { percent: 50, done: false },
+                },
+                reasoning: progress.reasoning,
+                timestamp: new Date().toISOString(),
+              },
+              userId,
+            )
+            return
+          }
+        }
+
+        // Emit SSE event with reasoning from buyer-search
         await emitAndSaveNotification(
           {
             workspaceId,
             jobId,
             phase: "discovery",
             progressPercent: discoveryPercent,
-            message: isKorean ? messageInfo.ko : messageInfo.en,
-            messageKr: messageInfo.ko,
+            message: isKorean ? progress.messageKr || progress.message : progress.message,
+            messageKr: progress.messageKr || progress.message,
             details: {},
             // 병렬 실행 정보: Discovery 진행 중, Templates는 병렬로 실행 중
             parallelProgress: {
               discovery: { percent: discoveryPercent, done: discoveryPercent >= 100 },
               templates: { percent: 50, done: false }, // 병렬 실행 중이므로 50%로 표시
             },
+            // AI reasoning 정보 전달
+            reasoning: progress.reasoning,
             timestamp: new Date().toISOString(),
           },
           userId,
@@ -396,8 +450,211 @@ export async function runDiscoveryPhase(
     console.log(`[DiscoveryPhase]   - Sources: ${searchResult.metadata.sources.join(", ")}`)
     console.log(`[DiscoveryPhase]   - Search time: ${searchResult.metadata.searchTimeSeconds}s`)
 
+    // 🆕 Generate Phase 1 (Intelligence) summary if personas were generated
+    if (searchResult.buyerPersonas.length > 0) {
+      try {
+        console.log(
+          `[DiscoveryPhase] Generating intelligence summary for ${searchResult.buyerPersonas.length} personas`,
+        )
+        const intelligenceSummary = await generateIntelligenceSummary({
+          companyName,
+          companyDescription,
+          buyerPersonas: searchResult.buyerPersonas,
+          locale: surveyData.lang === "en" ? "en" : "ko",
+        })
+
+        // Emit intelligence summary as a phase summary
+        await emitAndSaveNotification(
+          {
+            workspaceId,
+            jobId,
+            phase: "discovery",
+            progressPercent: PHASE_PROGRESS_RANGES.intelligence.end,
+            message: "Buyer persona analysis complete",
+            messageKr: "바이어 페르소나 분석 완료",
+            details: {},
+            reasoning: {
+              step: "Generated buyer personas",
+              stepKr: "바이어 페르소나를 생성했어요",
+            },
+            phaseSummary: {
+              phase: "intelligence",
+              summary: intelligenceSummary,
+              metadata: {
+                personaCount: searchResult.buyerPersonas.length,
+              },
+            },
+            timestamp: new Date().toISOString(),
+          },
+          userId,
+        )
+        console.log(`[DiscoveryPhase] Intelligence summary emitted`)
+      } catch (error) {
+        console.error(`[DiscoveryPhase] Failed to generate intelligence summary:`, error)
+        // Continue without summary - non-critical
+      }
+    }
+
+    // 🆕 Generate Phase 2 (Search) summary
+    if (searchResult.buyers.length > 0) {
+      try {
+        // Build country distribution from search results
+        const countryDistribution: Record<string, number> = {}
+        const industryDistribution: Record<string, number> = {}
+        for (const buyer of searchResult.buyers) {
+          if (buyer.country) {
+            countryDistribution[buyer.country] = (countryDistribution[buyer.country] || 0) + 1
+          }
+          if (buyer.industry) {
+            industryDistribution[buyer.industry] = (industryDistribution[buyer.industry] || 0) + 1
+          }
+        }
+
+        const searchSummary = await generateSearchSummary({
+          companyName,
+          totalFound: searchResult.buyers.length,
+          countryDistribution,
+          industryDistribution,
+          locale: surveyData.lang === "en" ? "en" : "ko",
+        })
+
+        // Emit search summary as a phase summary
+        await emitAndSaveNotification(
+          {
+            workspaceId,
+            jobId,
+            phase: "discovery",
+            progressPercent: PHASE_PROGRESS_RANGES.search_perplexity.end,
+            message: `Found ${searchResult.buyers.length} buyers`,
+            messageKr: `${searchResult.buyers.length}명의 바이어를 찾았어요`,
+            details: {
+              leadsFound: searchResult.buyers.length,
+            },
+            reasoning: {
+              step: `Found ${searchResult.buyers.length} buyers`,
+              stepKr: `${searchResult.buyers.length}명의 바이어를 찾았어요`,
+            },
+            phaseSummary: {
+              phase: "search",
+              summary: searchSummary,
+              metadata: {
+                buyerCount: searchResult.buyers.length,
+                countryDistribution,
+              },
+            },
+            timestamp: new Date().toISOString(),
+          },
+          userId,
+        )
+        console.log(`[DiscoveryPhase] Search summary emitted`)
+      } catch (error) {
+        console.error(`[DiscoveryPhase] Failed to generate search summary:`, error)
+        // Continue without summary - non-critical
+      }
+    }
+
+    // 🆕 Generate Phase 4 (Scoring) summary
+    if (searchResult.buyers.length > 0) {
+      try {
+        // Prepare scored buyers data
+        const scoredBuyers = searchResult.buyers
+          .filter((b) => b.score !== undefined)
+          .slice(0, 10)
+          .map((b) => ({
+            companyName: b.companyName,
+            score: b.score || 0,
+            reason: b.description || "",
+          }))
+
+        // Calculate average score
+        const scores = searchResult.buyers
+          .map((b) => b.score)
+          .filter((s): s is number => s !== undefined)
+        const averageScore =
+          scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
+
+        if (scoredBuyers.length > 0) {
+          const scoringSummary = await generateScoringSummary({
+            companyName,
+            scoredBuyers,
+            averageScore,
+            locale: surveyData.lang === "en" ? "en" : "ko",
+          })
+
+          // Emit scoring summary as a phase summary
+          await emitAndSaveNotification(
+            {
+              workspaceId,
+              jobId,
+              phase: "discovery",
+              progressPercent: PHASE_PROGRESS_RANGES.scoring.end,
+              message: `Evaluated ${scoredBuyers.length} buyers`,
+              messageKr: `${scoredBuyers.length}명의 바이어를 평가했어요`,
+              details: {
+                leadsFound: searchResult.buyers.length,
+              },
+              reasoning: {
+                step: `Evaluated ${scoredBuyers.length} buyers`,
+                stepKr: `${scoredBuyers.length}명의 바이어를 평가했어요`,
+              },
+              phaseSummary: {
+                phase: "scoring",
+                summary: scoringSummary,
+                metadata: {
+                  buyerCount: scoredBuyers.length,
+                  averageScore,
+                },
+              },
+              timestamp: new Date().toISOString(),
+            },
+            userId,
+          )
+          console.log(`[DiscoveryPhase] Scoring summary emitted`)
+        }
+      } catch (error) {
+        console.error(`[DiscoveryPhase] Failed to generate scoring summary:`, error)
+        // Continue without summary - non-critical
+      }
+    }
+
     // 🆕 Convert buyers to lead format using adapter
     const leadsToCreate = buyersToLeadDataArray(searchResult.buyers)
+
+    // 🆕 Emit found buyers immediately (before DB save) for real-time UI update
+    const preliminaryLeads: LeadProgressItem[] = searchResult.buyers
+      .slice(0, TARGET_LEADS)
+      .map((buyer, index) => ({
+        leadId: `pending-${index}`,
+        companyName: buyer.companyName,
+        country: buyer.country,
+        status: "done" as const,
+        email: buyer.email,
+        leadSource: "perplexity" as const,
+        score: buyer.score, // LLM 평가 점수 (0-100)
+        description: buyer.description, // 회사 설명
+      }))
+
+    console.log(
+      `[DiscoveryPhase] 🆕 Emitting ${preliminaryLeads.length} leads via SSE:`,
+      JSON.stringify(preliminaryLeads.slice(0, 3), null, 2),
+    )
+
+    await emitAndSaveNotification(
+      {
+        workspaceId,
+        jobId,
+        phase: "discovery",
+        progressPercent: 28,
+        message: `Found ${preliminaryLeads.length} buyers`,
+        messageKr: `${preliminaryLeads.length}명의 바이어를 찾았어요`,
+        details: {
+          leadsFound: preliminaryLeads.length,
+          leads: preliminaryLeads,
+        },
+        timestamp: new Date().toISOString(),
+      },
+      userId,
+    )
 
     console.log(`[DiscoveryPhase] Saving ${leadsToCreate.length} leads to database`)
 
@@ -409,23 +666,65 @@ export async function runDiscoveryPhase(
 
     console.log(`[DiscoveryPhase] Saved ${stats.created} new leads (${stats.skipped} duplicates)`)
 
+    // 🆕 Emit saved leads with real IDs for UI update
+    // Map createdLeads to find corresponding buyer data for email
+    const savedLeadsProgress: LeadProgressItem[] = createdLeads
+      .slice(0, TARGET_LEADS)
+      .map((lead) => {
+        // Find matching buyer from original search results by company name
+        const matchingBuyer = searchResult.buyers.find(
+          (b) => b.companyName === lead.companyName || b.website === lead.websiteUrl,
+        )
+        return {
+          leadId: lead.id,
+          companyName: lead.companyName || "Unknown",
+          country: lead.country || undefined,
+          status: "done" as const,
+          email: matchingBuyer?.email || undefined,
+          leadSource: "perplexity" as const,
+          score: matchingBuyer?.score, // LLM 평가 점수 (0-100)
+          description: matchingBuyer?.description, // 회사 설명
+        }
+      })
+
     // Extract lead IDs from created leads
     const leadIds = createdLeads.map((lead) => lead.id)
 
-    // Update checkpoint with final count
+    // 🆕 Use AI-generated buyer personas from searchResult
+    const buyerPersonas = searchResult.buyerPersonas.map((p) => ({
+      type: p.type,
+      typeKo: p.typeKo,
+      description: p.description,
+    }))
+
+    // Update checkpoint with final count and personas
     const finalCount = await countLeadsWithEmails(workspaceId)
     await saveCheckpoint(job, {
       leadsWithEmailsCount: finalCount,
       lastIterationCompleted: true,
+      buyerPersonas, // 🆕 Store personas for summary generation
     })
 
     console.log(
       `[DiscoveryPhase] Complete: ${finalCount} leads with emails, returning ${leadIds.length} IDs`,
     )
 
-    // Emit SSE + Save to DB: Discovery complete
+    // Emit SSE + Save to DB: Discovery complete (with leads array for UI)
     await emitAndSaveNotification(
-      createDiscoveryCompleteEvent(workspaceId, jobId, finalCount),
+      {
+        workspaceId,
+        jobId,
+        phase: "discovery",
+        progressPercent: 30,
+        message: `${finalCount} buyers saved`,
+        messageKr: `${finalCount}명 다 찾았어요 ✓`,
+        details: {
+          leadsFound: finalCount,
+          leadsEnriched: finalCount,
+          leads: savedLeadsProgress,
+        },
+        timestamp: new Date().toISOString(),
+      },
       userId,
     )
 
@@ -568,6 +867,9 @@ export async function runTemplatesPhase(
     userId,
   )
 
+  // 🆕 Emit Templates reasoning event (AI 스타일 진행 표시)
+  await emitAndSaveNotification(createTemplatesWritingEvent(workspaceId, jobId), userId)
+
   try {
     await saveCheckpoint(job, { phase: "templates" })
 
@@ -664,11 +966,27 @@ export async function runTemplatesPhase(
 
     console.log(`[TemplatesPhase] Generated ${templates.length} templates`)
 
-    // Emit SSE + Save to DB: Templates complete
+    // 🆕 SSE용 steps 데이터 (임시 ID 포함)
+    const sseSteps = templates.map((t, i) => ({
+      id: `temp-step-${i + 1}`, // 임시 ID (sequence 생성 전)
+      stepOrder: t.stepOrder,
+      delayDays: t.delayDays,
+      emailSubject: t.emailSubject,
+      emailBodyText: t.emailBodyText,
+      emailBodyHtml: t.emailBodyHtml,
+    }))
+
+    // Emit SSE + Save to DB: Templates complete (with steps data for immediate display)
     await emitAndSaveNotification(
-      createTemplatesCompleteEvent(workspaceId, jobId, templates.length),
+      createTemplatesCompleteEvent(workspaceId, jobId, templates.length, sseSteps),
       userId,
     )
+
+    // 🆕 Emit Templates complete reasoning event (activePhase 전환)
+    // await emitAndSaveNotification(
+    //   createTemplatesCompleteReasoningEvent(workspaceId, jobId, templates.length),
+    //   userId,
+    // )
 
     // Save final templates to checkpoint
     await saveCheckpoint(job, { generatedTemplates: templates })
@@ -983,6 +1301,18 @@ export async function runPreviewsPhase(
       `[PreviewsPhase] Found ${leadEmails.length} contact emails for ${leadDetails.length} leads`,
     )
 
+    // 🆕 Prepare leads progress array for SSE events
+    const leadsProgress: LeadProgressItem[] = leadDetailsWithEmail.map((lead) => ({
+      leadId: lead.id,
+      companyName: lead.companyName || "Unknown",
+      country: lead.country || undefined,
+      status: "done" as const,
+      email: lead.contactEmail || undefined,
+    }))
+
+    // 🆕 Accumulator for emails progress
+    const emailsProgress: EmailProgressItem[] = []
+
     // Get or create email account
     let emailAccountId: string
     const [existingAccount] = await db
@@ -1025,22 +1355,49 @@ export async function runPreviewsPhase(
       sequenceId,
       steps,
       leadDetailsWithEmail,
-      // Progress callback for SSE + DB updates
-      async (generated: number, total: number) => {
+      // 🆕 Enhanced progress callback with email data
+      async (
+        generated: number,
+        total: number,
+        emailData?: {
+          leadId: string
+          companyName: string
+          subject: string
+          step: number
+        },
+      ) => {
+        // 🆕 Accumulate email data if provided
+        if (emailData) {
+          emailsProgress.push({
+            emailId: `${emailData.leadId}-step${emailData.step}`,
+            leadId: emailData.leadId,
+            companyName: emailData.companyName,
+            subject: emailData.subject,
+            step: emailData.step,
+            status: "done" as const,
+          })
+        }
+
         // Emit every 5% or at least every 10 previews for real-time updates
         const interval = Math.max(1, Math.floor(total / 20))
         if (generated % interval === 0 || generated === total) {
-          // Calculate which step we're on
-          const currentStep = Math.ceil(generated / leadCount) || 1
+          // 🆕 Emit with leads and emails arrays for real-time UI
           await emitAndSaveNotification(
-            createPreviewProgressEvent(
+            {
               workspaceId,
               jobId,
-              generated,
-              total,
-              currentStep,
-              stepCount,
-            ),
+              phase: "previews",
+              progressPercent: Math.round(78 + (generated / total) * 17),
+              message: `${generated} of ${total} emails done`,
+              messageKr: `${generated}/${total}개 이메일 완료`,
+              details: {
+                previewsGenerated: generated,
+                totalPreviews: total,
+                leads: leadsProgress,
+                emails: emailsProgress.slice(-30), // Last 30 emails for memory efficiency
+              },
+              timestamp: new Date().toISOString(),
+            },
             userId,
           )
         }
@@ -1051,9 +1408,23 @@ export async function runPreviewsPhase(
       `[PreviewsPhase] Generated ${previewCount} preview emails (${leadDetails.length} leads × ${steps.length} steps)`,
     )
 
-    // Emit SSE + Save to DB: Previews complete
+    // Emit SSE + Save to DB: Previews complete (with leads and emails for UI)
     await emitAndSaveNotification(
-      createPreviewsCompleteEvent(workspaceId, jobId, previewCount, leadCount, stepCount),
+      {
+        workspaceId,
+        jobId,
+        phase: "previews",
+        progressPercent: 95,
+        message: `${previewCount} emails ready`,
+        messageKr: `${previewCount}개 이메일 완료 ✓`,
+        details: {
+          previewsGenerated: previewCount,
+          totalPreviews: previewCount,
+          leads: leadsProgress,
+          emails: emailsProgress.slice(-30),
+        },
+        timestamp: new Date().toISOString(),
+      },
       userId,
     )
 
@@ -1130,8 +1501,83 @@ export async function completeOnboarding(
     // Mark as complete in checkpoint
     await saveCheckpoint(job, { phase: "complete" })
 
-    // Emit SSE + Save to DB: Complete
-    await emitAndSaveNotification(createCompleteEvent(workspaceId, jobId, leadIds.length), userId)
+    // 🆕 Generate LLM completion summary
+    let completionSummary: { ko: string; en: string } | null = null
+    try {
+      // Get checkpoint data for personas
+      const checkpoint = loadCheckpoint(job)
+
+      // Get workspace info
+      const [workspace] = await db
+        .select({
+          companyName: workspaces.companyName,
+          companyDescription: workspaces.companyDescription,
+        })
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1)
+
+      // Get email steps from sequence
+      const emailSteps = await db
+        .select({
+          stepOrder: sequenceSteps.stepOrder,
+          delayDays: sequenceSteps.delayDays,
+          emailSubject: sequenceSteps.emailSubject,
+        })
+        .from(sequenceSteps)
+        .where(eq(sequenceSteps.sequenceId, sequenceId))
+        .orderBy(sequenceSteps.stepOrder)
+
+      // Get leads info
+      const leadsInfo = await db
+        .select({
+          companyName: leadsTable.companyName,
+          country: leadsTable.country,
+          businessType: leadsTable.businessType,
+          leadScore: leadsTable.leadScore,
+          employeeCount: leadsTable.employeeCount,
+        })
+        .from(leadsTable)
+        .where(inArray(leadsTable.id, leadIds))
+
+      // Generate summary
+      completionSummary = await generateOnboardingSummary({
+        workspaceName: workspace?.companyName || "Company",
+        companyDescription: workspace?.companyDescription || undefined,
+        buyerPersonas: checkpoint.buyerPersonas || [],
+        buyers: leadsInfo.map((l) => ({
+          companyName: l.companyName || "Unknown",
+          industry: l.businessType || undefined,
+          country: l.country || undefined,
+          score: l.leadScore || undefined,
+          size: l.employeeCount || undefined,
+        })),
+        emailSteps: emailSteps.map((s) => ({
+          stepOrder: s.stepOrder,
+          delayDays: s.delayDays,
+          emailSubject: s.emailSubject,
+        })),
+        locale: surveyData.lang === "en" ? "en" : "ko",
+      })
+
+      console.log("[CompletePhase] Generated LLM completion summary")
+    } catch (summaryError) {
+      console.warn("[CompletePhase] Failed to generate completion summary:", summaryError)
+      // Continue without summary - fallback will be used on frontend
+    }
+
+    // Emit SSE + Save to DB: Complete (with summary if available)
+    const emailCount = leadIds.length * EMAIL_TYPES_3TOUCH.length
+    await emitAndSaveNotification(
+      createCompleteEventWithSummary(
+        workspaceId,
+        jobId,
+        leadIds.length,
+        emailCount,
+        completionSummary,
+      ),
+      userId,
+    )
 
     // 🆕 Send completion email via Loops.so (helps reduce drop-off during long onboarding)
     // Optimized with 2025 best practices: dynamic subject line, progress bar, social proof

@@ -252,10 +252,15 @@ export const onboardingApi = {
 
   /**
    * 회사 소개서 파일 AI 분석
+   * @param file - 업로드할 파일
+   * @param lang - 응답 언어 (ko: 한국어, en: 영어)
    */
-  analyzeCompanyFile: async (file: File): Promise<CompanyFileAnalysisResult> => {
+  analyzeCompanyFile: async (file: File, lang?: string): Promise<CompanyFileAnalysisResult> => {
     const formData = new FormData()
     formData.append("file", file)
+    if (lang) {
+      formData.append("lang", lang)
+    }
 
     const response = await fetch(
       `${import.meta.env.VITE_API_BASE_URL || ""}/api/v1/onboarding/analyze-company-file`,

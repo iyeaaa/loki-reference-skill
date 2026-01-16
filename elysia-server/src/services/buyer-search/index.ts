@@ -4,7 +4,7 @@
  */
 
 import logger from "../../utils/logger"
-import { PHASE_PROGRESS_RANGES } from "./constants"
+import { FINAL_BUYER_COUNT, PHASE_PROGRESS_RANGES } from "./constants"
 import { deduplicateAndNormalize } from "./phases/dedup"
 import { enrichWithEmails } from "./phases/enrichment"
 import { selectFinal30 } from "./phases/finalizing"
@@ -12,20 +12,6 @@ import { generateBuyerIntelligence } from "./phases/intelligence"
 import { scoreAndRankCompanies } from "./phases/scoring"
 import { searchWithPerplexity } from "./phases/search-perplexity"
 import type { Buyer, BuyerSearchInput, BuyerSearchResult, ProgressEvent } from "./types"
-
-/**
- * 진행률 업데이트 헬퍼
- */
-function emitProgress(
-  phase: string,
-  progress: number,
-  message: string,
-  onProgress?: (event: ProgressEvent) => void,
-) {
-  if (onProgress) {
-    onProgress({ phase, progress, message })
-  }
-}
 
 /**
  * Buyer Search - 메인 함수
@@ -46,88 +32,133 @@ export async function searchBuyers(
     // ========================================================================
     // Phase 1: Buyer Intelligence Generation (0% → 15%)
     // ========================================================================
-    emitProgress(
-      "intelligence",
-      PHASE_PROGRESS_RANGES.intelligence.start,
-      "바이어 인텔리전스 생성 중...",
-      onProgress,
-    )
+    onProgress?.({
+      phase: "intelligence",
+      progress: PHASE_PROGRESS_RANGES.intelligence.start,
+      message: "Analyzing buyer personas...",
+      messageKr: "바이어 유형을 분석하고 있어요...",
+      reasoning: {
+        step: "Analyzing buyer personas...",
+        stepKr: "바이어 유형을 분석하고 있어요...",
+      },
+    })
 
-    const intelligence = await generateBuyerIntelligence(input)
+    const intelligence = await generateBuyerIntelligence(input, onProgress)
 
-    emitProgress(
-      "intelligence",
-      PHASE_PROGRESS_RANGES.intelligence.end,
-      `${intelligence.buyerPersonas.length}개 바이어 페르소나 생성 완료`,
-      onProgress,
-    )
+    // 생성된 페르소나 이름 추출
+    const personaNames = intelligence.buyerPersonas.map((p) => p.typeKo || p.type).slice(0, 3)
+    const personaList = personaNames.join(", ")
+
+    onProgress?.({
+      phase: "intelligence",
+      progress: PHASE_PROGRESS_RANGES.intelligence.end,
+      message: `Generated ${intelligence.buyerPersonas.length} buyer personas`,
+      messageKr: `${intelligence.buyerPersonas.length}개의 바이어 페르소나를 생성했어요`,
+      reasoning: {
+        step: `Generated ${intelligence.buyerPersonas.length} buyer personas`,
+        stepKr: `${intelligence.buyerPersonas.length}개의 바이어 페르소나를 생성했어요`,
+        details: personaList,
+        detailsKr: personaList,
+      },
+    })
 
     // ========================================================================
     // Phase 2: Multi-Source Parallel Search (15% → 70%)
     // ========================================================================
+    const countryText = input.country.join(", ")
 
     // 2A: Perplexity (15% → 30%)
-    emitProgress(
-      "search_perplexity",
-      PHASE_PROGRESS_RANGES.search_perplexity.start,
-      "웹 검색 중 (Perplexity)...",
-      onProgress,
-    )
+    onProgress?.({
+      phase: "search_perplexity",
+      progress: PHASE_PROGRESS_RANGES.search_perplexity.start,
+      message: "Searching buyer databases and web...",
+      messageKr: "바이어 DB와 웹에서 검색 중...",
+      reasoning: {
+        step: "Searching buyer databases and web...",
+        stepKr: "바이어 DB와 웹에서 검색 중...",
+        details: countryText,
+        detailsKr: `${countryText} 시장`,
+      },
+    })
 
     const perplexityPromise = searchWithPerplexity(intelligence, input.country)
 
-    emitProgress(
-      "search_perplexity",
-      PHASE_PROGRESS_RANGES.search_perplexity.end,
-      "웹 검색 완료",
-      onProgress,
-    )
+    onProgress?.({
+      phase: "search_perplexity",
+      progress: PHASE_PROGRESS_RANGES.search_perplexity.end,
+      message: "Searching buyer databases and web complete",
+      messageKr: "바이어 DB와 웹에서 검색을 완료했어요",
+      reasoning: {
+        step: "Searching buyer databases and web complete",
+        stepKr: "바이어 DB와 웹에서 검색을 완료했어요",
+      },
+    })
 
     // 2B: Apollo (30% → 45%) - 임시 비활성화
-    emitProgress(
-      "search_apollo",
-      PHASE_PROGRESS_RANGES.search_apollo.start,
-      "B2B 데이터베이스 검색 스킵 (API 키 미설정)...",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_apollo",
+    //   progress: PHASE_PROGRESS_RANGES.search_apollo.start,
+    //   message: "Searching B2B databases...",
+    //   messageKr: "B2B 데이터베이스 검색 중...",
+    //   reasoning: {
+    //     step: "Searching B2B databases...",
+    //     stepKr: "B2B 데이터베이스 검색 중...",
+    //   },
+    // })
 
     // TODO: API 키 설정 후 활성화
     // const apolloPromise = searchWithApollo(intelligence, input.country, input.target)
     const apolloPromise = Promise.resolve([])
 
-    emitProgress(
-      "search_apollo",
-      PHASE_PROGRESS_RANGES.search_apollo.end,
-      "B2B 데이터베이스 검색 스킵",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_apollo",
+    //   progress: PHASE_PROGRESS_RANGES.search_apollo.end,
+    //   message: "B2B database search complete",
+    //   messageKr: "B2B 데이터베이스 검색 완료",
+    //   reasoning: {
+    //     step: "B2B database search complete",
+    //     stepKr: "B2B 데이터베이스 검색 완료",
+    //   },
+    // })
 
     // 2C: Serper (45% → 55%) - 임시 비활성화
-    emitProgress(
-      "search_serper",
-      PHASE_PROGRESS_RANGES.search_serper.start,
-      "추가 검색 스킵 (API 키 미설정)...",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_serper",
+    //   progress: PHASE_PROGRESS_RANGES.search_serper.start,
+    //   message: "Additional web search...",
+    //   messageKr: "추가 웹 검색 중...",
+    //   reasoning: {
+    //     step: "Additional web search...",
+    //     stepKr: "추가 웹 검색 중...",
+    //   },
+    // })
 
     // TODO: API 키 설정 후 활성화
     // const serperPromise = searchWithSerper(intelligence, input.country)
     const serperPromise = Promise.resolve([])
 
-    emitProgress(
-      "search_serper",
-      PHASE_PROGRESS_RANGES.search_serper.end,
-      "추가 검색 스킵",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_serper",
+    //   progress: PHASE_PROGRESS_RANGES.search_serper.end,
+    //   message: "Additional search complete",
+    //   messageKr: "추가 검색 완료",
+    //   reasoning: {
+    //     step: "Additional search complete",
+    //     stepKr: "추가 검색 완료",
+    //   },
+    // })
 
     // 2D: Google Places (55% → 65%) - 임시 비활성화
-    emitProgress(
-      "search_places",
-      PHASE_PROGRESS_RANGES.search_places.start,
-      "로컬 비즈니스 검색 스킵 (API 키 미설정)...",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_places",
+    //   progress: PHASE_PROGRESS_RANGES.search_places.start,
+    //   message: "Searching local businesses...",
+    //   messageKr: "로컬 비즈니스 검색 중...",
+    //   reasoning: {
+    //     step: "Searching local businesses...",
+    //     stepKr: "로컬 비즈니스 검색 중...",
+    //   },
+    // })
 
     // TODO: API 키 설정 후 활성화
     // let placesPromise = Promise.resolve([])
@@ -136,12 +167,16 @@ export async function searchBuyers(
     // }
     const placesPromise = Promise.resolve([])
 
-    emitProgress(
-      "search_places",
-      PHASE_PROGRESS_RANGES.search_places.end,
-      "로컬 비즈니스 검색 스킵",
-      onProgress,
-    )
+    // onProgress?.({
+    //   phase: "search_places",
+    //   progress: PHASE_PROGRESS_RANGES.search_places.end,
+    //   message: "Local business search complete",
+    //   messageKr: "로컬 비즈니스 검색 완료",
+    //   reasoning: {
+    //     step: "Local business search complete",
+    //     stepKr: "로컬 비즈니스 검색 완료",
+    //   },
+    // })
 
     // 모든 검색 완료 대기
     const [perplexityResults, apolloResults, serperResults, placesResults] = await Promise.all([
@@ -156,58 +191,158 @@ export async function searchBuyers(
     logger.info(`[BuyerSearch] 원시 검색 결과: ${rawPool.length}개`)
 
     // 2E: Deduplication (65% → 70%)
-    emitProgress("dedup", PHASE_PROGRESS_RANGES.dedup.start, "중복 제거 중...", onProgress)
+    onProgress?.({
+      phase: "dedup",
+      progress: PHASE_PROGRESS_RANGES.dedup.start,
+      message: "Removing duplicates...",
+      messageKr: "중복 제거 중...",
+      reasoning: {
+        step: "Removing duplicates...",
+        stepKr: "중복 제거 중...",
+      },
+    })
 
     const uniquePool = deduplicateAndNormalize(rawPool)
 
-    emitProgress(
-      "dedup",
-      PHASE_PROGRESS_RANGES.dedup.end,
-      `${rawPool.length}개 → ${uniquePool.length}개 정리 완료`,
-      onProgress,
-    )
+    onProgress?.({
+      phase: "dedup",
+      progress: PHASE_PROGRESS_RANGES.dedup.end,
+      message: `Organized ${rawPool.length} → ${uniquePool.length} companies`,
+      messageKr: `${rawPool.length}개 → ${uniquePool.length}개로 정리했어요`,
+      reasoning: {
+        step: `Organized ${rawPool.length} → ${uniquePool.length} companies`,
+        stepKr: `${rawPool.length}개 → ${uniquePool.length}개로 정리했어요`,
+      },
+    })
 
     // ========================================================================
     // Phase 3: Email Enrichment (70% → 85%)
     // ========================================================================
-    emitProgress(
-      "enrichment",
-      PHASE_PROGRESS_RANGES.enrichment.start,
-      "이메일 수집 및 검증 중...",
-      onProgress,
-    )
+    onProgress?.({
+      phase: "enrichment",
+      progress: PHASE_PROGRESS_RANGES.enrichment.start,
+      message: `Finding contact emails for ${uniquePool.length} companies...`,
+      messageKr: `${uniquePool.length}개 회사의 담당자 이메일을 찾고 있어요...`,
+      reasoning: {
+        step: `Finding contact emails for ${uniquePool.length} companies...`,
+        stepKr: `${uniquePool.length}개 회사의 담당자 이메일을 찾고 있어요...`,
+      },
+    })
 
     const enrichedPool = await enrichWithEmails(uniquePool)
 
-    emitProgress(
-      "enrichment",
-      PHASE_PROGRESS_RANGES.enrichment.end,
-      `이메일 확보: ${enrichedPool.length}개`,
-      onProgress,
-    )
+    onProgress?.({
+      phase: "enrichment",
+      progress: PHASE_PROGRESS_RANGES.enrichment.end,
+      message: `Found emails for ${enrichedPool.length} companies`,
+      messageKr: `${enrichedPool.length}개 회사의 이메일을 찾았어요`,
+      reasoning: {
+        step: `Found emails for ${enrichedPool.length} companies`,
+        stepKr: `${enrichedPool.length}개 회사의 이메일을 찾았어요`,
+      },
+    })
 
     // ========================================================================
     // Phase 4: Scoring & Ranking (85% → 92%)
     // ========================================================================
-    emitProgress("scoring", PHASE_PROGRESS_RANGES.scoring.start, "적합도 평가 중...", onProgress)
+    onProgress?.({
+      phase: "scoring",
+      progress: PHASE_PROGRESS_RANGES.scoring.start,
+      message: "Evaluating buyer fit...",
+      messageKr: "바이어 적합도를 평가하고 있어요...",
+      reasoning: {
+        step: "Evaluating buyer fit...",
+        stepKr: "바이어 적합도를 평가하고 있어요...",
+      },
+    })
 
-    const scoredPool = await scoreAndRankCompanies(enrichedPool, intelligence, input)
+    let scoredCount = 0
+    let scoredSseCount = 0
+    const scoredPool = await scoreAndRankCompanies(enrichedPool, intelligence, input, (scored) => {
+      // 각 회사가 스코어링될 때마다 실시간 업데이트
+      scoredCount++
+      const shouldEmitScoredCompany = scoredSseCount < FINAL_BUYER_COUNT
+      if (shouldEmitScoredCompany) {
+        scoredSseCount++
+      }
+      const progressPercent =
+        PHASE_PROGRESS_RANGES.scoring.start +
+        Math.floor(
+          ((scoredCount / enrichedPool.length) *
+            (PHASE_PROGRESS_RANGES.scoring.end - PHASE_PROGRESS_RANGES.scoring.start)) /
+            2,
+        )
 
-    emitProgress("scoring", PHASE_PROGRESS_RANGES.scoring.end, "순위 결정 완료", onProgress)
+      // 사용자 locale에 따라 설명 선택
+      // - Korean (ko): llmEvaluation.reason (한글) 우선 사용
+      // - English (en): 원본 description (영문) 우선 사용
+      const scoredDescription =
+        input.locale === "ko"
+          ? scored.llmEvaluation?.reason || scored.description || undefined
+          : scored.description || scored.llmEvaluation?.reason || undefined
+
+      onProgress?.({
+        phase: "scoring",
+        progress: progressPercent,
+        message: `Scoring ${scored.companyName}...`,
+        messageKr: `${scored.companyName} 평가 중...`,
+        reasoning: {
+          step: `Evaluated ${scoredCount}/${enrichedPool.length} companies`,
+          stepKr: `${scoredCount}/${enrichedPool.length}개 회사 평가 완료`,
+          details: scored.companyName,
+          detailsKr: scored.companyName,
+        },
+        ...(shouldEmitScoredCompany
+          ? {
+              scoredCompany: {
+                companyName: scored.companyName,
+                country: scored.country,
+                email: scored.primaryEmail?.email,
+                description: scoredDescription,
+                score: Math.round(scored.finalScore * 100),
+              },
+            }
+          : {}),
+      })
+    })
+
+    onProgress?.({
+      phase: "scoring",
+      progress: PHASE_PROGRESS_RANGES.scoring.end,
+      message: "Ranking complete",
+      messageKr: "순위 결정 완료",
+      reasoning: {
+        step: "Ranking complete",
+        stepKr: "순위 결정 완료",
+      },
+    })
 
     // ========================================================================
     // Phase 5: Finalizing (92% → 100%)
     // ========================================================================
-    emitProgress(
-      "finalizing",
-      PHASE_PROGRESS_RANGES.finalizing.start,
-      "최종 결과 정리 중...",
-      onProgress,
-    )
+    onProgress?.({
+      phase: "finalizing",
+      progress: PHASE_PROGRESS_RANGES.finalizing.start,
+      message: "Finalizing results...",
+      messageKr: "최종 결과를 정리하고 있어요...",
+      reasoning: {
+        step: "Finalizing results...",
+        stepKr: "최종 결과를 정리하고 있어요...",
+      },
+    })
 
     const finalBuyers = await selectFinal30(scoredPool, input, intelligence)
 
-    emitProgress("finalizing", PHASE_PROGRESS_RANGES.finalizing.end, "완료!", onProgress)
+    onProgress?.({
+      phase: "finalizing",
+      progress: PHASE_PROGRESS_RANGES.finalizing.end,
+      message: "Done!",
+      messageKr: `${finalBuyers.length}명의 적합한 바이어를 찾았어요`,
+      reasoning: {
+        step: `Found ${finalBuyers.length} qualified buyers`,
+        stepKr: `${finalBuyers.length}명의 적합한 바이어를 찾았어요`,
+      },
+    })
 
     // ========================================================================
     // Build Result
@@ -222,10 +357,12 @@ export async function searchBuyers(
       country: fb.country,
       description: fb.description,
       size: fb.size,
+      score: fb.score ? Math.round(fb.score * 100) : undefined, // finalScore(0-1) → 0-100
     }))
 
     const result: BuyerSearchResult = {
       buyers,
+      buyerPersonas: intelligence.buyerPersonas,
       metadata: {
         totalSearched: rawPool.length,
         totalWithEmail: enrichedPool.length,
@@ -245,6 +382,7 @@ export async function searchBuyers(
     // 에러 시 빈 결과 반환
     return {
       buyers: [],
+      buyerPersonas: [],
       metadata: {
         totalSearched: 0,
         totalWithEmail: 0,
@@ -263,5 +401,6 @@ export type {
   Country,
   Industry,
   ProgressEvent,
+  ScoredCompanyProgress,
   TargetCustomer,
 } from "./types"

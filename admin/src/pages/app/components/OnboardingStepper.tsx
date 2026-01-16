@@ -5,22 +5,33 @@ import { cn } from "@/lib/utils"
 type OnboardingStepperProps = {
   currentStep: number
   completedSteps?: number[]
+  totalSteps?: 2 | 4 // 2단계 또는 4단계 플로우
 }
 
-export function OnboardingStepper({ currentStep, completedSteps = [] }: OnboardingStepperProps) {
+export function OnboardingStepper({
+  currentStep,
+  completedSteps = [],
+  totalSteps = 2,
+}: OnboardingStepperProps) {
   const { t } = useTranslation()
 
-  // Updated: New onboarding flow
-  // Step 1: 정보 입력 (+ 백그라운드 작업 시작)
-  // Step 2: 이메일 연동 (Unipile OAuth)
-  // Step 3: 바이어 찾고 이메일 생성 (조건부 - 백그라운드 미완료 시 표시)
-  // Step 4: 캠페인 실행
-  const steps = [
+  // NEW: 2-step onboarding flow
+  // Step 1: 회사 정보 입력
+  // Step 2: AI 어시스턴트 (바이어 검색 + 이메일 작성 + 연동 + 발송)
+  const twoSteps = [
+    { number: 1, label: t("app.onboarding.step1.label", "회사 정보 입력") },
+    { number: 2, label: t("app.onboarding.step2.chatLabel", "AI 어시스턴트") },
+  ]
+
+  // Legacy: 4-step onboarding flow (for backward compatibility)
+  const fourSteps = [
     { number: 1, label: t("app.onboarding.step1.label", "정보 입력") },
     { number: 2, label: t("app.onboarding.step2.labelNew", "이메일 연동") },
     { number: 3, label: t("app.onboarding.step3.labelNew", "바이어 찾고 이메일 생성") },
     { number: 4, label: t("app.onboarding.step4.labelNew", "캠페인 실행") },
   ]
+
+  const steps = totalSteps === 2 ? twoSteps : fourSteps
 
   return (
     <div className="mx-auto mb-8 max-w-2xl">

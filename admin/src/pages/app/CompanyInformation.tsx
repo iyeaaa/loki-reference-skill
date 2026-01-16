@@ -13,11 +13,8 @@ import { useOnboardingProgress, useSaveSurvey } from "@/lib/api/hooks/onboarding
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { cn } from "@/lib/utils"
 import { isValidSurveyData, migrateFromSessionStorage, surveyDataAtom } from "@/store/survey"
-import { OnboardingStepper } from "./components/OnboardingStepper"
-import { StepBuyerLoading } from "./components/StepBuyerLoading"
+import { StepChatOnboarding } from "./components/StepChatOnboarding"
 import { StepCompanyInfo } from "./components/StepCompanyInfo"
-import { StepConfirmation } from "./components/StepConfirmation"
-import { StepEmailLink } from "./components/StepEmailLink"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -464,38 +461,34 @@ export default function CompanyInformation() {
     return <PageSkeleton />
   }
 
-  // Calculate completed steps (all steps before current step)
-  const completedSteps = Array.from({ length: currentStep - 1 }, (_, i) => i + 1)
-
-  // Updated: New onboarding flow
-  // Step 1: 정보 입력 (+ 백그라운드 작업 시작)
-  // Step 2: 유니파일 이메일 연동 (백그라운드 병렬 실행)
-  // Step 3: 바이어 찾고 이메일 생성 (조건부 - 백그라운드 미완료 시)
-  // Step 4: 캠페인 확인 및 실행
+  // NEW: 2-step onboarding flow
+  // Step 1: 회사 정보 입력 (+ 백그라운드 작업 시작)
+  // Step 2: ChatGPT 스타일 대화형 페이지 (바이어 검색 + 이메일 작성 + 연동 + 발송)
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return <StepCompanyInfo />
-      case 2:
-        return <StepEmailLink />
-      case 3:
-        return <StepBuyerLoading />
-      case 4:
-        return <StepConfirmation />
       default:
-        return <StepCompanyInfo />
+        // Step 2 이상은 모두 채팅 온보딩 페이지로 렌더링
+        return <StepChatOnboarding />
     }
   }
 
   return (
-    <div className="py-6">
+    <div className={cn("py-6", currentStep >= 2 && "py-2")}>
       {/* localStorage Warning - Show if localStorage is disabled */}
       <LocalStorageWarning open={!isLocalStorageEnabled} />
 
       <WelcomePopup onComplete={handleWelcomeComplete} open={showWelcome} />
 
-      {/* Stepper */}
-      <OnboardingStepper completedSteps={completedSteps} currentStep={currentStep} />
+      {/* Stepper - Step 1에서만 표시, 채팅 페이지에서는 숨김 */}
+      {/* {currentStep === 1 && (
+        <OnboardingStepper
+          completedSteps={completedSteps}
+          currentStep={currentStep}
+          totalSteps={2}
+        />
+      )} */}
 
       {/* Step Content */}
       <AnimatePresence mode="wait">

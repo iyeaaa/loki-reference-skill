@@ -3,11 +3,11 @@
  *
  * Unipile OAuth 콜백 처리 컴포넌트
  * - /app/redirect?account_id=xxx&state=workspaceId 형태로 리다이렉트됨
- * - 성공 시 Step 3 (바이어 찾고 이메일 생성)로 이동
- * - 실패 시 Step 2 (이메일 연동)로 이동
+ * - 팝업에서 실행된 경우: 부모 창에 postMessage 전달 후 닫힘
+ * - 일반 창에서 실행된 경우: 성공 시 Step 3, 실패 시 Step 2로 이동
  */
 
-import { Loader2 } from "lucide-react"
+import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -19,11 +19,38 @@ import { processUnipileCallback } from "@/lib/api/services/unipile"
 // [DEPRECATED] Nylas는 더 이상 사용하지 않음 - Unipile 사용
 // import { exchangeCodeForGrant } from "@/lib/api/services/nylas"
 
+/**
+ * 팝업 창에서 실행 중인지 확인
+ */
+function isRunningInPopup(): boolean {
+  try {
+    // window.opener가 있고, 같은 origin인 경우 팝업으로 간주
+    return !!window.opener && window.opener !== window
+  } catch {
+    // cross-origin 접근 에러 발생 시 false
+    return false
+  }
+}
+
+/**
+ * 부모 창에 메시지 전송
+ */
+function notifyParent(type: "EMAIL_CONNECT_SUCCESS" | "EMAIL_CONNECT_ERROR", message?: string) {
+  try {
+    if (window.opener) {
+      window.opener.postMessage({ type, message }, window.location.origin)
+    }
+  } catch (error) {
+    console.warn("⚠️ [UnipileRedirect] Failed to send message to parent:", error)
+  }
+}
+
 export function NylasRedirect() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [hasProcessed, setHasProcessed] = useState(false)
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
 
   // Get user's workspace (fallback when state param is missing)
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
@@ -67,6 +94,10 @@ export function NylasRedirect() {
     console.log("🔍 [UnipileRedirect] State:", { hasProcessed, isLoadingWorkspaces, userId })
     console.log("🔍 [UnipileRedirect] ============ DEBUG END ==============")
 
+    // 팝업 여부 확인
+    const isPopup = isRunningInPopup()
+    console.log("🔍 [UnipileRedirect] Running in popup:", isPopup)
+
     // Check for error from auth provider
     if (errorParam) {
       console.error("❌ [UnipileRedirect] OAuth error from provider:", errorParam)
@@ -76,6 +107,15 @@ export function NylasRedirect() {
       } catch (storageError) {
         console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
       }
+
+      // 팝업인 경우 부모에게 알리고 닫기
+      if (isPopup) {
+        setStatus("error")
+        notifyParent("EMAIL_CONNECT_ERROR", t("redirect.error", "이메일 연동에 실패했습니다."))
+        setTimeout(() => window.close(), 1500)
+        return
+      }
+
       toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
       navigate("/company?step=2", { replace: true })
       return
@@ -136,6 +176,14 @@ export function NylasRedirect() {
           console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
         }
 
+        // 팝업인 경우 부모에게 알리고 닫기
+        if (isPopup) {
+          setStatus("success")
+          notifyParent("EMAIL_CONNECT_SUCCESS")
+          setTimeout(() => window.close(), 100)
+          return
+        }
+
         toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
         // Step 3: 바이어 찾고 이메일 생성 화면으로 이동 (백그라운드 작업 진행 표시)
         navigate("/company?step=3", { replace: true })
@@ -153,7 +201,7 @@ export function NylasRedirect() {
           errorName: error.name,
         })
 
-        // 409 Conflict = 이미 연동된 계정 → Step 3으로 이동
+        // 409 Conflict = 이미 연동된 계정 → 성공으로 처리
         if (status === 409 || error.message?.includes("already exists")) {
           console.log("ℹ️ [UnipileRedirect] Account already exists (409), proceeding to step 3")
 
@@ -162,6 +210,14 @@ export function NylasRedirect() {
             localStorage.removeItem("unipile_oauth_workspace_id")
           } catch (storageError) {
             console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
+          }
+
+          // 팝업인 경우 부모에게 알리고 닫기 (이미 연동된 계정도 성공으로 처리)
+          if (isPopup) {
+            setStatus("success")
+            notifyParent("EMAIL_CONNECT_SUCCESS")
+            setTimeout(() => window.close(), 1500)
+            return
           }
 
           toast.success(t("redirect.alreadyConnected", "이미 연동된 계정입니다. 계속 진행합니다."))
@@ -186,14 +242,52 @@ export function NylasRedirect() {
           console.warn("⚠️ [UnipileRedirect] Failed to clean up localStorage:", storageError)
         }
 
-        toast.error(
+        const errorMessage =
           data?.message ||
-            error.message ||
-            t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."),
-        )
+          error.message ||
+          t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요.")
+
+        // 팝업인 경우 부모에게 알리고 닫기
+        if (isPopup) {
+          setStatus("error")
+          notifyParent("EMAIL_CONNECT_ERROR", errorMessage)
+          setTimeout(() => window.close(), 2000)
+          return
+        }
+
+        toast.error(errorMessage)
         navigate("/company?step=2", { replace: true })
       })
   }, [searchParams, navigate, hasProcessed, t, fallbackWorkspaceId, isLoadingWorkspaces, userId])
+
+  // 상태별 UI 렌더링
+  if (status === "success") {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+        <CheckCircle className="mb-4 h-12 w-12 text-green-500" />
+        <p className="font-medium text-gray-700">
+          {t("redirect.success", "이메일 계정이 연동되었습니다!")}
+        </p>
+        <p className="mt-2 text-gray-500 text-sm">
+          {t("redirect.closingPopup", "잠시 후 창이 닫힙니다...")}
+        </p>
+      </div>
+    )
+  }
+
+  if (status === "error") {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+        <XCircle className="mb-4 h-12 w-12 text-red-500" />
+        <p className="font-medium text-gray-700">
+          {t("redirect.error", "이메일 연동에 실패했습니다.")}
+        </p>
+        <p className="mt-2 text-gray-500 text-sm">
+          {t("redirect.closingPopup", "잠시 후 창이 닫힙니다...")}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center">

@@ -70,6 +70,7 @@ export interface Buyer {
   country: string // "Japan"
   description: string // "일본 산업용 장비 전문 유통사..."
   size?: CompanySize // 회사 규모 (선택적)
+  score?: number // LLM 평가 점수 (0-100, 선택적)
 }
 
 /**
@@ -87,7 +88,33 @@ export interface SearchMetadata {
  */
 export interface BuyerSearchResult {
   buyers: Buyer[]
+  buyerPersonas: BuyerPersona[] // AI 생성 바이어 페르소나
   metadata: SearchMetadata
+}
+
+/**
+ * 스코어링된 회사 진행 정보 (실시간 업데이트용)
+ */
+export interface ScoredCompanyProgress {
+  companyName: string
+  country: string
+  email?: string
+  description?: string
+  score: number // 0-100
+}
+
+/**
+ * Phase Summary for AI-generated messages
+ */
+export interface PhaseSummary {
+  phase: "intelligence" | "search" | "scoring" | "complete"
+  summary: { ko: string; en: string }
+  metadata?: {
+    personaCount?: number
+    buyerCount?: number
+    averageScore?: number
+    countryDistribution?: Record<string, number>
+  }
 }
 
 /**
@@ -97,7 +124,19 @@ export interface ProgressEvent {
   phase: string // 현재 단계 (intelligence, search_perplexity, ...)
   progress: number // 진행률 0-100
   message: string // 사용자에게 표시할 메시지
+  messageKr?: string // 한글 메시지
   detail?: unknown // 추가 상세 정보
+  // AI reasoning 스타일 상세 정보
+  reasoning?: {
+    step: string // 현재 단계 설명 (영문)
+    stepKr: string // 현재 단계 설명 (한글)
+    details?: string // 추가 상세 (페르소나, 키워드 등)
+    detailsKr?: string // 추가 상세 (한글)
+  }
+  // 스코어링 진행 정보 (실시간 업데이트용)
+  scoredCompany?: ScoredCompanyProgress
+  // Phase별 AI 요약 (intelligence, search, scoring 완료 시)
+  phaseSummary?: PhaseSummary
 }
 
 // ============================================================================

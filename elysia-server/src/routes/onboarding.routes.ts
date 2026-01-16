@@ -12,6 +12,7 @@ import { addOnboardingJob } from "../lib/queue/queues"
 import {
   createOnboardingSubscriber,
   getCachedOnboardingState,
+  getOnboardingMessages,
   type OnboardingProgressEvent,
 } from "../lib/redis/onboarding-events"
 import { aiApiRateLimit } from "../plugins/rate-limit.plugin"
@@ -455,6 +456,24 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   )
 
   // ====================================
+  // 채팅 메시지 조회
+  // ====================================
+
+  // Get chat messages for onboarding (for restoring chat history)
+  .get(
+    "/workspace/:workspaceId/messages",
+    async ({ params: { workspaceId } }) => {
+      const messages = await getOnboardingMessages(workspaceId)
+      return successResponse(messages, "Chat messages retrieved successfully")
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // ====================================
   // 바이어 검색 Job 시작
   // ====================================
 
@@ -610,7 +629,8 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   .post(
     "/analyze-company-file",
     async ({ body, set }) => {
-      const { file } = body
+      const { file, lang } = body
+      const isKorean = lang === "ko"
 
       // 파일 유효성 검증
       if (!file || typeof file !== "object" || !file.name) {
@@ -667,38 +687,71 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
           else if (fileName.endsWith(".txt")) mimeType = "text/plain"
         }
 
-        // AI 분석 프롬프트
+        // AI 분석 프롬프트 (사용자 언어에 따라 응답 언어 결정)
+        const languageInstruction = isKorean
+          ? `**LANGUAGE INSTRUCTION:**
+Write companyDescription in KOREAN (한국어). Summarize the company's products, strengths, and credentials in Korean.`
+          : `**LANGUAGE INSTRUCTION:**
+Write companyDescription in ENGLISH. Summarize the company's products, strengths, and credentials in English.`
+
         const analysisPrompt = `You are an expert at extracting company information from business documents.
 
 Analyze the uploaded company introduction document and extract the following information.
+
+${languageInstruction}
 
 **CRITICAL RULES:**
 1. ONLY extract information that is EXPLICITLY stated in the document
 2. DO NOT invent, guess, or fabricate any information
 3. If information is not found in the document, use null for that field
-4. For companyDescription, structure it to include (if found in document):
-   - Product/Service names (specific, not generic)
-   - Differentiation points (patents, technology, experience, performance)
-   - Credibility signals (certifications, export records, client list)
+
+**How to find COMPANY NAME (companyName, companyNameEn):**
+- Look in: document title, header, footer, cover page, "About Us" section, or company logo area
+- Korean company names often include: 주식회사, (주), 회사, 기업
+- English company names often include: Co., Ltd., Inc., Corporation, Corp., LLC
+- IMPORTANT: At least one of companyName or companyNameEn MUST be extracted
+- If only Korean name is found, extract it as companyName
+- If only English name is found, extract it as BOTH companyName AND companyNameEn (same value)
+- If both are found, extract them separately
+- Example: "주식회사 린다코스메틱" → companyName: "주식회사 린다코스메틱"
+- Example: "RINDA Cosmetics Co., Ltd." (English only) → companyName: "RINDA Cosmetics Co., Ltd.", companyNameEn: "RINDA Cosmetics Co., Ltd."
+
+**How to structure companyDescription:**
+Include these elements (if found in document):
+- Product/Service names (specific, not generic)
+- Differentiation points (patents, technology, experience, performance)
+- Credibility signals (certifications, export records, client list)
 
 **Output Format (JSON only):**
 {
-  "companyName": "회사명 (한글)" or null,
+  "companyName": "회사명" (REQUIRED - never null),
   "companyNameEn": "Company Name (English)" or null,
-  "companyDescription": "Structured description with product/strength/credentials found in document" or null,
+  "companyDescription": "Structured description in ${isKorean ? "Korean" : "English"}" or null,
   "websiteUrl": "https://example.com" or null,
   "industry": "beauty" | "fashion" | "food" | "it_saas" | "manufacturing" | "retail" | "healthcare" | "education" | "other" or null
 }
 
-**companyDescription Format Example (include only what's found in document):**
-"[Products found] / [Strengths/tech found] / [Certifications/experience found]"
+**Example outputs (${isKorean ? "Korean" : "English"} description):**
+{
+  "companyName": "주식회사 린다코스메틱",
+  "companyNameEn": "RINDA Cosmetics Co., Ltd.",
+  "companyDescription": "${isKorean ? "K-뷰티 스킨케어 전문 / 비타민C 세럼, 히알루론산 크림 / FDA 인증, 비건 / 15년 OEM 경험" : "K-beauty skincare / Vitamin C serum, HA cream / FDA certified, Vegan / 15 years OEM experience"}",
+  "websiteUrl": "https://rindacosmetics.com",
+  "industry": "beauty"
+}
 
-Example outputs:
-- Full info: "K-beauty skincare / Vitamin C serum, HA cream / FDA certified, Vegan / 15 years OEM experience"
-- Partial (no certs found): "Industrial valves manufacturer / 20 years experience"
-- Minimal: "Coffee cat litter products"
+{
+  "companyName": "ACME Industries Inc.",
+  "companyNameEn": "ACME Industries Inc.",
+  "companyDescription": "${isKorean ? "산업용 밸브 제조업체 / 20년 경력" : "Industrial valves manufacturer / 20 years experience"}",
+  "websiteUrl": null,
+  "industry": "manufacturing"
+}
 
-**IMPORTANT:** 
+**IMPORTANT:**
+- companyName is REQUIRED - if only English name exists, use it for companyName too
+- PRIORITIZE extracting company names - they are usually prominently displayed
+- Write companyDescription in ${isKorean ? "Korean (한국어)" : "English"}
 - If the document doesn't mention certifications, DO NOT add fake ones
 - If no website is found, return null for websiteUrl
 - Extract actual product names mentioned, not generic descriptions
@@ -706,7 +759,7 @@ Example outputs:
 
         // Gemini로 파일 분석
         const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
+          model: "gemini-3-flash-preview",
           contents: [
             {
               role: "user",
@@ -761,6 +814,11 @@ Example outputs:
           industry: analysisResult.industry || null,
         }
 
+        // companyName 폴백: 회사명이 없으면 영문 회사명 사용 (필수 필드)
+        if (!result.companyName && result.companyNameEn) {
+          result.companyName = result.companyNameEn
+        }
+
         // industry 값 검증
         const validIndustries = [
           "beauty",
@@ -813,6 +871,7 @@ Example outputs:
         file: t.File({
           maxSize: "20m",
         }),
+        lang: t.Optional(t.String()),
       }),
     },
   )

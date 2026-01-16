@@ -103,27 +103,30 @@ export function OnboardingTest() {
 
       setUploadedFileName(file.name)
 
-      analyzeFileMutation.mutate(file, {
-        onSuccess: (result) => {
-          setIsFilledByAI(true)
-          if (result.companyName) {
-            setCompanyName(result.companyName)
-          }
-          if (result.companyNameEn) {
-            setCompanyNameEn(result.companyNameEn)
-          }
-          if (result.companyDescription) {
-            setCompanyDescription(result.companyDescription)
-          }
-          if (result.industry) {
-            setIndustry(result.industry)
-          }
-          toast.success("회사 소개서 분석이 완료되었습니다!")
+      analyzeFileMutation.mutate(
+        { file, lang: "ko" },
+        {
+          onSuccess: (result) => {
+            setIsFilledByAI(true)
+            if (result.companyName) {
+              setCompanyName(result.companyName)
+            }
+            if (result.companyNameEn) {
+              setCompanyNameEn(result.companyNameEn)
+            }
+            if (result.companyDescription) {
+              setCompanyDescription(result.companyDescription)
+            }
+            if (result.industry) {
+              setIndustry(result.industry)
+            }
+            toast.success("회사 소개서 분석이 완료되었습니다!")
+          },
+          onError: () => {
+            setUploadedFileName(null)
+          },
         },
-        onError: () => {
-          setUploadedFileName(null)
-        },
-      })
+      )
     },
     [analyzeFileMutation],
   )

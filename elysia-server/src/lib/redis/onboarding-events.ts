@@ -16,6 +16,10 @@ export const ONBOARDING_CHANNEL_PREFIX = "onboarding:progress:"
 export const ONBOARDING_STATE_PREFIX = "onboarding:state:"
 export const ONBOARDING_STATE_TTL = 3600 // 1 hour TTL for cached state
 
+// Chat message persistence
+export const ONBOARDING_MESSAGES_PREFIX = "onboarding:messages:"
+export const ONBOARDING_MESSAGES_TTL = 604800 // 7 days
+
 export function getOnboardingChannel(workspaceId: string): string {
   return `${ONBOARDING_CHANNEL_PREFIX}${workspaceId}`
 }
@@ -24,9 +28,42 @@ export function getOnboardingStateKey(workspaceId: string): string {
   return `${ONBOARDING_STATE_PREFIX}${workspaceId}`
 }
 
+export function getOnboardingMessagesKey(workspaceId: string): string {
+  return `${ONBOARDING_MESSAGES_PREFIX}${workspaceId}`
+}
+
 // ============================================================================
 // Types
 // ============================================================================
+
+// Chat message types for persistence
+export type OnboardingChatMessageType =
+  | "user_input"
+  | "phase_summary"
+  | "completion"
+  | "progress"
+  | "error"
+
+export interface OnboardingChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  timestamp: string
+  messageType: OnboardingChatMessageType
+  phase?: OnboardingPhase
+}
+
+// Phase summary for AI-generated messages
+export interface OnboardingPhaseSummary {
+  phase: "intelligence" | "search" | "scoring" | "complete"
+  summary: { ko: string; en: string }
+  metadata?: {
+    personaCount?: number
+    buyerCount?: number
+    averageScore?: number
+    countryDistribution?: Record<string, number>
+  }
+}
 
 export type OnboardingPhase =
   | "init"
@@ -47,6 +84,8 @@ export interface LeadProgressItem {
   email?: string
   emailCount?: number
   leadSource?: "b2b" | "apollo" | "fresh" | "revation" | "perplexity" | "hunterio-discover"
+  score?: number // LLM 평가 점수 (0-100)
+  description?: string // 회사 설명
 }
 
 // Individual email for real-time display
@@ -57,6 +96,21 @@ export interface EmailProgressItem {
   subject: string
   step: number
   status: "generating" | "done"
+}
+
+// AI reasoning 정보 (ChatGPT 스타일 상세 진행 표시)
+export interface ReasoningInfo {
+  step: string // 현재 단계 설명 (영문)
+  stepKr: string // 현재 단계 설명 (한글)
+  details?: string // 추가 상세 (페르소나, 키워드 등)
+  detailsKr?: string // 추가 상세 (한글)
+}
+
+export interface TodoChecklist {
+  findBuyers: boolean
+  writeEmails: boolean
+  pickBestBuyers: boolean
+  refineEmails: boolean
 }
 
 export interface OnboardingProgressEvent {
@@ -84,6 +138,20 @@ export interface OnboardingProgressEvent {
     currentLead?: LeadProgressItem
     emails?: EmailProgressItem[]
     recentEmail?: EmailProgressItem
+    // NEW: Email template steps (templates phase 완료 시 즉시 전송)
+    steps?: Array<{
+      id: string
+      stepOrder: number
+      delayDays: number
+      emailSubject: string
+      emailBodyText?: string
+      emailBodyHtml?: string
+    }>
+    // NEW: LLM-generated completion summary
+    completionSummary?: {
+      ko: string
+      en: string
+    }
   }
   message: string
   messageKr: string
@@ -93,6 +161,16 @@ export interface OnboardingProgressEvent {
     discovery: { percent: number; done: boolean }
     templates: { percent: number; done: boolean }
   }
+  // NEW: AI reasoning 스타일 상세 진행 정보
+  reasoning?: ReasoningInfo
+  // NEW: 현재 활성 phase (reasoning 표시용)
+  activePhase?: "discovery" | "templates"
+  // NEW: Checklist completion status for frontend TODO list
+  todoChecklist?: TodoChecklist
+  // NEW: Phase별 AI 요약 (intelligence, search, scoring 완료 시)
+  phaseSummary?: OnboardingPhaseSummary
+  // NEW: 채팅 메시지로 직접 추가할 내용
+  chatMessage?: OnboardingChatMessage
 }
 
 // ============================================================================
@@ -124,18 +202,43 @@ export async function emitOnboardingProgress(event: OnboardingProgressEvent): Pr
     const channel = getOnboardingChannel(event.workspaceId)
     const stateKey = getOnboardingStateKey(event.workspaceId)
     const publisher = getPublisher()
-    const eventJson = JSON.stringify(event)
+    let eventToPublish = event
+
+    if (!event.details?.steps?.length) {
+      const cached = await publisher.get(stateKey)
+      if (cached) {
+        const cachedEvent = JSON.parse(cached) as OnboardingProgressEvent
+        if (cachedEvent.details?.steps?.length) {
+          eventToPublish = {
+            ...event,
+            details: {
+              ...event.details,
+              steps: cachedEvent.details.steps,
+            },
+          }
+        }
+      }
+    }
+
+    const eventJson = JSON.stringify(eventToPublish)
 
     // Publish to PubSub for real-time listeners
     await publisher.publish(channel, eventJson)
 
     // Cache state in Redis for reconnection (with TTL)
     // Complete/error states have shorter TTL since they're final
-    const ttl = event.phase === "complete" || event.phase === "error" ? 300 : ONBOARDING_STATE_TTL
+    const ttl =
+      eventToPublish.phase === "complete" || eventToPublish.phase === "error"
+        ? 300
+        : ONBOARDING_STATE_TTL
     await publisher.setex(stateKey, ttl, eventJson)
 
     logger.debug(
-      { workspaceId: event.workspaceId, phase: event.phase, percent: event.progressPercent },
+      {
+        workspaceId: eventToPublish.workspaceId,
+        phase: eventToPublish.phase,
+        percent: eventToPublish.progressPercent,
+      },
       "[OnboardingEvents] Progress emitted and cached",
     )
   } catch (error) {
@@ -258,6 +361,27 @@ interface CreateEventParams {
   messageKr: string
   details?: OnboardingProgressEvent["details"]
   parallelProgress?: OnboardingProgressEvent["parallelProgress"]
+  reasoning?: ReasoningInfo
+  activePhase?: "discovery" | "templates"
+  todoChecklist?: TodoChecklist
+}
+
+function buildTodoChecklist(
+  phase: OnboardingPhase,
+  progressPercent: number,
+  parallelProgress?: OnboardingProgressEvent["parallelProgress"],
+): TodoChecklist {
+  const discoveryDone = parallelProgress?.discovery?.done || progressPercent >= 30
+  const templatesDone = parallelProgress?.templates?.done || progressPercent >= 65
+  const sequenceDone = phase === "sequence" || phase === "previews" || phase === "complete"
+  const previewsDone = phase === "complete" || progressPercent >= 95
+
+  return {
+    findBuyers: discoveryDone,
+    writeEmails: templatesDone,
+    pickBestBuyers: sequenceDone,
+    refineEmails: previewsDone,
+  }
 }
 
 export function createProgressEvent(params: CreateEventParams): OnboardingProgressEvent {
@@ -270,6 +394,11 @@ export function createProgressEvent(params: CreateEventParams): OnboardingProgre
     messageKr: params.messageKr,
     details: params.details || {},
     parallelProgress: params.parallelProgress,
+    reasoning: params.reasoning,
+    activePhase: params.activePhase,
+    todoChecklist:
+      params.todoChecklist ||
+      buildTodoChecklist(params.phase, params.progressPercent, params.parallelProgress),
     timestamp: new Date().toISOString(),
   }
 }
@@ -440,6 +569,14 @@ export function createTemplatesCompleteEvent(
   workspaceId: string,
   jobId: string,
   totalTemplates: number,
+  steps?: Array<{
+    id: string
+    stepOrder: number
+    delayDays: number
+    emailSubject: string
+    emailBodyText?: string
+    emailBodyHtml?: string
+  }>,
 ): OnboardingProgressEvent {
   return createProgressEvent({
     workspaceId,
@@ -451,12 +588,111 @@ export function createTemplatesCompleteEvent(
     details: {
       templatesGenerated: totalTemplates,
       totalTemplates,
+      steps, // 🆕 템플릿 데이터 포함 (프론트엔드에서 즉시 표시)
     },
     // 병렬 실행 정보: Templates 완료, Discovery는 계속 진행 중일 수 있음
     parallelProgress: {
       discovery: { percent: 50, done: false }, // Discovery는 아직 진행 중일 수 있음
       templates: { percent: 100, done: true }, // Templates 완료
     },
+  })
+}
+
+// ============================================================================
+// NEW: Templates Reasoning Events (AI 스타일 상세 진행 표시)
+// ============================================================================
+
+/**
+ * Create templates reasoning event for AI-style progress display
+ */
+export function createTemplatesReasoningEvent(
+  workspaceId: string,
+  jobId: string,
+  progressPercent: number,
+  reasoning: ReasoningInfo,
+): OnboardingProgressEvent {
+  return createProgressEvent({
+    workspaceId,
+    jobId,
+    phase: "templates",
+    progressPercent,
+    message: reasoning.step,
+    messageKr: reasoning.stepKr,
+    details: {},
+    parallelProgress: {
+      discovery: { percent: 10, done: false }, // Discovery 병렬 시작
+      templates: { percent: progressPercent - 45, done: false }, // 45%에서 시작
+    },
+    reasoning,
+    activePhase: "templates", // Templates reasoning 표시
+  })
+}
+
+/**
+ * Templates phase started - writing emails
+ */
+export function createTemplatesWritingEvent(
+  workspaceId: string,
+  jobId: string,
+): OnboardingProgressEvent {
+  return createTemplatesReasoningEvent(workspaceId, jobId, 46, {
+    step: "Writing email templates...",
+    stepKr: "이메일 템플릿을 작성 중이에요...",
+  })
+}
+
+/**
+ * Templates phase - writing specific step
+ */
+export function createTemplatesStepEvent(
+  workspaceId: string,
+  jobId: string,
+  current: number,
+  total: number,
+  stepType: string,
+): OnboardingProgressEvent {
+  const stepTypeKr: Record<string, string> = {
+    introduction: "첫 인사 이메일",
+    follow_up_1: "첫 번째 팔로업",
+    follow_up_2: "두 번째 팔로업",
+  }
+  const progressPercent = 46 + Math.floor((current / total) * 15) // 46% to 61%
+  return createTemplatesReasoningEvent(workspaceId, jobId, progressPercent, {
+    step: `Writing ${stepType.replace("_", " ")} email (${current}/${total})...`,
+    stepKr: `${stepTypeKr[stepType] || stepType} 작성 중 (${current}/${total})...`,
+    details: `Step ${current} of ${total}`,
+    detailsKr: `${current}/${total}단계`,
+  })
+}
+
+/**
+ * Templates phase complete with reasoning
+ */
+export function createTemplatesCompleteReasoningEvent(
+  workspaceId: string,
+  jobId: string,
+  totalTemplates: number,
+): OnboardingProgressEvent {
+  return createProgressEvent({
+    workspaceId,
+    jobId,
+    phase: "templates",
+    progressPercent: 65,
+    message: `${totalTemplates} email templates ready`,
+    messageKr: `${totalTemplates}개의 이메일 템플릿 완료 ✓`,
+    details: {
+      templatesGenerated: totalTemplates,
+      totalTemplates,
+    },
+    parallelProgress: {
+      discovery: { percent: 50, done: false },
+      templates: { percent: 100, done: true },
+    },
+    reasoning: {
+      step: `${totalTemplates} email templates ready`,
+      stepKr: `${totalTemplates}개의 이메일 템플릿이 준비되었어요`,
+    },
+    activePhase: "discovery", // Templates 완료 후 Discovery로 전환
   })
 }
 
@@ -749,6 +985,31 @@ export function createCompleteEvent(
   })
 }
 
+/**
+ * Create complete event with LLM-generated summary
+ */
+export function createCompleteEventWithSummary(
+  workspaceId: string,
+  jobId: string,
+  leadsCount: number,
+  emailCount: number,
+  summary: { ko: string; en: string } | null,
+): OnboardingProgressEvent {
+  return createProgressEvent({
+    workspaceId,
+    jobId,
+    phase: "complete",
+    progressPercent: 100,
+    message: `Done! ${leadsCount} buyers, ${emailCount} emails ready`,
+    messageKr: `다 됐어요! 바이어 ${leadsCount}명, 이메일 ${emailCount}개 준비 완료`,
+    details: {
+      leadsFound: leadsCount,
+      previewsGenerated: emailCount,
+      completionSummary: summary || undefined,
+    },
+  })
+}
+
 // Error helper
 export function createErrorEvent(
   workspaceId: string,
@@ -767,6 +1028,231 @@ export function createErrorEvent(
       error,
     },
   })
+}
+
+// ============================================================================
+// NEW: Discovery Detail Event with Reasoning (AI 스타일 상세 진행 표시)
+// ============================================================================
+
+/**
+ * Create discovery event with AI reasoning details
+ * Used to show detailed progress during buyer search phases
+ */
+export function createDiscoveryDetailEvent(
+  workspaceId: string,
+  jobId: string,
+  _phase: string,
+  progressPercent: number,
+  reasoning: ReasoningInfo,
+  leadsFound?: number,
+): OnboardingProgressEvent {
+  return createProgressEvent({
+    workspaceId,
+    jobId,
+    phase: "discovery",
+    progressPercent,
+    message: reasoning.step,
+    messageKr: reasoning.stepKr,
+    details: {
+      leadsFound,
+    },
+    reasoning,
+    parallelProgress: {
+      discovery: { percent: progressPercent, done: progressPercent >= 100 },
+      templates: { percent: 0, done: false },
+    },
+  })
+}
+
+/**
+ * Intelligence phase reasoning events
+ */
+export function createIntelligenceAnalyzingEvent(
+  workspaceId: string,
+  jobId: string,
+): OnboardingProgressEvent {
+  return createDiscoveryDetailEvent(workspaceId, jobId, "intelligence", 5, {
+    step: "Analyzing buyer personas...",
+    stepKr: "바이어 유형을 분석하고 있어요...",
+  })
+}
+
+export function createIntelligencePersonasEvent(
+  workspaceId: string,
+  jobId: string,
+  personas: string[],
+): OnboardingProgressEvent {
+  const personaList = personas.slice(0, 3).join(", ")
+  return createDiscoveryDetailEvent(workspaceId, jobId, "intelligence", 10, {
+    step: `Generated ${personas.length} buyer personas`,
+    stepKr: `${personas.length}개의 바이어 페르소나를 생성했어요`,
+    details: personaList,
+    detailsKr: personaList,
+  })
+}
+
+/**
+ * Search phase reasoning events
+ */
+export function createSearchStartEvent(
+  workspaceId: string,
+  jobId: string,
+  country?: string,
+): OnboardingProgressEvent {
+  const countryText = country ? ` in ${country}` : ""
+  const countryTextKr = country ? `${country}에서 ` : ""
+  return createDiscoveryDetailEvent(workspaceId, jobId, "search", 15, {
+    step: `Searching buyer databases and web${countryText}...`,
+    stepKr: `${countryTextKr}바이어 DB와 웹에서 검색 중...`,
+  })
+}
+
+export function createSearchProgressEvent(
+  workspaceId: string,
+  jobId: string,
+  progressPercent: number,
+  leadsFound: number,
+  country?: string,
+  industry?: string,
+): OnboardingProgressEvent {
+  const contextEn = [country, industry].filter(Boolean).join(" ")
+  const contextKr = [country, industry].filter(Boolean).join(" ")
+  return createDiscoveryDetailEvent(
+    workspaceId,
+    jobId,
+    "search",
+    progressPercent,
+    {
+      step: `Found ${leadsFound} potential buyers${contextEn ? ` - ${contextEn}` : ""}`,
+      stepKr: `${leadsFound}개 회사 발견${contextKr ? ` - ${contextKr}` : ""}`,
+      details: contextEn || undefined,
+      detailsKr: contextKr || undefined,
+    },
+    leadsFound,
+  )
+}
+
+/**
+ * Enrichment phase reasoning events
+ */
+export function createEnrichmentStartEvent(
+  workspaceId: string,
+  jobId: string,
+  totalCompanies: number,
+): OnboardingProgressEvent {
+  return createDiscoveryDetailEvent(workspaceId, jobId, "enrichment", 60, {
+    step: `Finding contact emails for ${totalCompanies} companies...`,
+    stepKr: `${totalCompanies}개 회사의 담당자 이메일을 찾고 있어요...`,
+  })
+}
+
+export function createEnrichmentProgressEvent(
+  workspaceId: string,
+  jobId: string,
+  enrichedCount: number,
+  totalCompanies: number,
+): OnboardingProgressEvent {
+  const progressPercent = 60 + Math.floor((enrichedCount / totalCompanies) * 30)
+  return createDiscoveryDetailEvent(
+    workspaceId,
+    jobId,
+    "enrichment",
+    progressPercent,
+    {
+      step: `Verified ${enrichedCount} of ${totalCompanies} emails`,
+      stepKr: `${enrichedCount}/${totalCompanies}개 이메일 확인 완료`,
+    },
+    enrichedCount,
+  )
+}
+
+// ============================================================================
+// Chat Message Persistence
+// ============================================================================
+
+/**
+ * Save onboarding chat messages to Redis
+ * Used for persisting chat history across page refreshes
+ */
+export async function saveOnboardingMessages(
+  workspaceId: string,
+  messages: OnboardingChatMessage[],
+): Promise<void> {
+  try {
+    const key = getOnboardingMessagesKey(workspaceId)
+    const publisher = getPublisher()
+    const messagesJson = JSON.stringify(messages)
+    await publisher.setex(key, ONBOARDING_MESSAGES_TTL, messagesJson)
+
+    logger.debug(
+      { workspaceId, messageCount: messages.length },
+      "[OnboardingEvents] Saved chat messages",
+    )
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to save chat messages")
+  }
+}
+
+/**
+ * Get onboarding chat messages from Redis
+ * Used for restoring chat history on page load
+ */
+export async function getOnboardingMessages(workspaceId: string): Promise<OnboardingChatMessage[]> {
+  try {
+    const key = getOnboardingMessagesKey(workspaceId)
+    const publisher = getPublisher()
+    const messagesJson = await publisher.get(key)
+
+    if (messagesJson) {
+      const messages = JSON.parse(messagesJson) as OnboardingChatMessage[]
+      logger.debug(
+        { workspaceId, messageCount: messages.length },
+        "[OnboardingEvents] Retrieved chat messages",
+      )
+      return messages
+    }
+    return []
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to get chat messages")
+    return []
+  }
+}
+
+/**
+ * Add a single message to existing chat history
+ */
+export async function addOnboardingMessage(
+  workspaceId: string,
+  message: OnboardingChatMessage,
+): Promise<void> {
+  try {
+    const existingMessages = await getOnboardingMessages(workspaceId)
+
+    // Prevent duplicate messages (same id)
+    const isDuplicate = existingMessages.some((m) => m.id === message.id)
+    if (isDuplicate) {
+      return
+    }
+
+    const updatedMessages = [...existingMessages, message].slice(-50) // Keep last 50 messages
+    await saveOnboardingMessages(workspaceId, updatedMessages)
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to add chat message")
+  }
+}
+
+/**
+ * Clear onboarding chat messages
+ */
+export async function clearOnboardingMessages(workspaceId: string): Promise<void> {
+  try {
+    const key = getOnboardingMessagesKey(workspaceId)
+    const publisher = getPublisher()
+    await publisher.del(key)
+    logger.debug({ workspaceId }, "[OnboardingEvents] Cleared chat messages")
+  } catch (error) {
+    logger.warn({ error, workspaceId }, "[OnboardingEvents] Failed to clear chat messages")
+  }
 }
 
 // ============================================================================

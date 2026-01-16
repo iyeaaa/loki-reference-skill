@@ -327,16 +327,6 @@ export function EmailEditModal({
                   <Badge className="bg-blue-100 text-blue-700" variant="outline">
                     {isKorean ? "번역됨" : "Translated"}
                   </Badge>
-                  <div className="flex gap-2">
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() => setShowTranslation(false)}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-500">{isKorean ? "제목" : "Subject"}</Label>

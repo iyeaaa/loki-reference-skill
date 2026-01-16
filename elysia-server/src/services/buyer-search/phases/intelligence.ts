@@ -7,7 +7,7 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai"
 import { config } from "../../../config"
 import logger from "../../../utils/logger"
 import { buildIntelligencePrompt } from "../prompts"
-import type { BuyerIntelligence, BuyerSearchInput } from "../types"
+import type { BuyerIntelligence, BuyerSearchInput, ProgressEvent } from "../types"
 
 const llm = new ChatGoogleGenerativeAI({
   model: "gemini-3-flash-preview",
@@ -206,6 +206,7 @@ function createFallbackIntelligence(input: BuyerSearchInput): BuyerIntelligence 
  */
 export async function generateBuyerIntelligence(
   input: BuyerSearchInput,
+  _onProgress?: (event: ProgressEvent) => void,
 ): Promise<BuyerIntelligence> {
   const startTime = Date.now()
 

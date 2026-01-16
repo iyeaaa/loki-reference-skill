@@ -871,7 +871,7 @@ export type CompanyFileAnalysisResult = {
  * const analyzeFile = useAnalyzeCompanyFile()
  *
  * const handleFileUpload = (file: File) => {
- *   analyzeFile.mutate(file, {
+ *   analyzeFile.mutate({ file, lang: "ko" }, {
  *     onSuccess: (result) => {
  *       setCompanyName(result.companyName || "")
  *       setCompanyDescription(result.companyDescription || "")
@@ -881,8 +881,8 @@ export type CompanyFileAnalysisResult = {
  * ```
  */
 export function useAnalyzeCompanyFile() {
-  return useMutation<CompanyFileAnalysisResult, Error, File>({
-    mutationFn: async (file: File) => onboardingApi.analyzeCompanyFile(file),
+  return useMutation<CompanyFileAnalysisResult, Error, { file: File; lang?: string }>({
+    mutationFn: async ({ file, lang }) => onboardingApi.analyzeCompanyFile(file, lang),
     onError: (error: Error) => {
       sonnerToast.error(error.message || "파일 분석에 실패했습니다")
     },

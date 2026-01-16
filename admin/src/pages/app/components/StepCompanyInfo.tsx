@@ -3,12 +3,12 @@ import {
   CheckCircle,
   FileText,
   Globe,
-  Lightbulb,
+  Info,
   Loader2,
   Settings,
   Sparkles,
-  Target,
   Upload,
+  User,
   Users,
   X,
 } from "lucide-react"
@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 // import { Switch } from "@/components/ui/switch" // Temporarily hidden
 // Select 컴포넌트 - 설문 드롭다운 제거로 인해 사용하지 않음
 // import {
@@ -132,6 +133,21 @@ export function StepCompanyInfo() {
     enabled: !isLoading && !!workspace?.id, // Only enable after initial data is loaded
   })
 
+  // Track which suggestions have been added (to prevent duplicate additions)
+  const [addedSuggestionIndices, setAddedSuggestionIndices] = useState<Set<number>>(new Set())
+
+  // Create a stable key from suggestions content
+  const suggestionsKey = useMemo(() => suggestions.map((s) => s.type).join(","), [suggestions])
+  const prevSuggestionsKeyRef = useRef(suggestionsKey)
+
+  // Reset added suggestions when suggestions content changes
+  useEffect(() => {
+    if (suggestionsKey !== prevSuggestionsKeyRef.current) {
+      setAddedSuggestionIndices(new Set())
+      prevSuggestionsKeyRef.current = suggestionsKey
+    }
+  }, [suggestionsKey])
+
   // Company name translation hook
   const translateMutation = useTranslateCompanyName()
 
@@ -168,29 +184,34 @@ export function StepCompanyInfo() {
 
       setUploadedFileName(file.name)
 
-      analyzeFileMutation.mutate(file, {
-        onSuccess: (result) => {
-          setIsFilledByAI(true)
-          setEditedData((prev) => ({
-            ...prev,
-            companyName: result.companyName || prev.companyName,
-            companyNameEn: result.companyNameEn || prev.companyNameEn,
-            companyDescription: result.companyDescription || prev.companyDescription,
-            websiteUrl: result.websiteUrl || prev.websiteUrl,
-            industry: result.industry || prev.industry,
-          }))
-          // Clear validation errors if fields are filled
-          setErrors({})
-          toast.success(
-            isKorean ? "회사 소개서 분석이 완료되었습니다!" : "Company profile analysis completed!",
-          )
+      analyzeFileMutation.mutate(
+        { file, lang: i18n.language },
+        {
+          onSuccess: (result) => {
+            setIsFilledByAI(true)
+            setEditedData((prev) => ({
+              ...prev,
+              companyName: result.companyName || prev.companyName,
+              companyNameEn: result.companyNameEn || prev.companyNameEn,
+              companyDescription: result.companyDescription || prev.companyDescription,
+              websiteUrl: result.websiteUrl || prev.websiteUrl,
+              industry: result.industry || prev.industry,
+            }))
+            // Clear validation errors if fields are filled
+            setErrors({})
+            toast.success(
+              isKorean
+                ? "회사 소개서 분석이 완료되었습니다!"
+                : "Company profile analysis completed!",
+            )
+          },
+          onError: () => {
+            setUploadedFileName(null)
+          },
         },
-        onError: () => {
-          setUploadedFileName(null)
-        },
-      })
+      )
     },
-    [analyzeFileMutation, isKorean],
+    [analyzeFileMutation, isKorean, i18n.language],
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -483,28 +504,13 @@ export function StepCompanyInfo() {
         console.error("Failed to complete step 1:", error)
       }
 
-      // 4. 바이어 검색 Job 시작 (수정된 데이터 기반)
-      console.log(
-        `[StepCompanyInfo] 🚀 Starting discovery job at /api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
-      )
-
-      const discoveryResponse = await apiFetch(
-        `/api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            userId,
-            surveyData: {
-              industry: editedData.industry,
-              target: editedData.target,
-              country: editedData.country,
-              experience: editedData.experience,
-              lang: i18n.language,
-            },
-          }),
-        },
-      )
-      console.log("[StepCompanyInfo] ✅ Discovery job started:", discoveryResponse)
+      // 📊 Analytics: Step 1 완료 이벤트 추적
+      trackOnboardingStep1Complete({
+        companyName: editedData.companyName,
+        industry: editedData.industry,
+        target: editedData.target,
+        country: editedData.country,
+      })
 
       // 시작 알림 toast
       toast.success(isKorean ? "바이어 찾기를 시작했어요" : "Started finding buyers", {
@@ -514,16 +520,33 @@ export function StepCompanyInfo() {
         duration: 4000,
       })
 
-      // 📊 Analytics: Step 1 완료 이벤트 추적
-      trackOnboardingStep1Complete({
-        companyName: editedData.companyName,
-        industry: editedData.industry,
-        target: editedData.target,
-        country: editedData.country,
-      })
-
-      // 다음 단계로 이동 (jobStarted 파라미터로 job 시작 상태 전달)
+      // 다음 단계로 바로 이동 (jobStarted 파라미터로 job 시작 상태 전달)
       setSearchParams({ step: "2", jobStarted: "true" })
+
+      // 4. 바이어 검색 Job 시작 (비동기로 실행 - 기다리지 않음)
+      console.log(
+        `[StepCompanyInfo] 🚀 Starting discovery job at /api/v1/onboarding/workspace/${workspace.id}/start-discovery`,
+      )
+
+      apiFetch(`/api/v1/onboarding/workspace/${workspace.id}/start-discovery`, {
+        method: "POST",
+        body: JSON.stringify({
+          userId,
+          surveyData: {
+            industry: editedData.industry,
+            target: editedData.target,
+            country: editedData.country,
+            experience: editedData.experience,
+            lang: i18n.language,
+          },
+        }),
+      })
+        .then((response) => {
+          console.log("[StepCompanyInfo] ✅ Discovery job started:", response)
+        })
+        .catch((error) => {
+          console.error("[StepCompanyInfo] ❌ Failed to start discovery job:", error)
+        })
     } catch (error) {
       console.error("[StepCompanyInfo] ❌ Failed to save:", error)
       toast.error(isKorean ? "저장에 실패했습니다" : "Failed to save")
@@ -579,389 +602,414 @@ export function StepCompanyInfo() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-2xl">
             {isKorean ? "RINDA에게 회사를 소개해주세요" : "Tell RINDA about your company"}
           </CardTitle>
-          <p className="mt-1 text-gray-600 text-sm">
-            {isKorean
-              ? "이 정보로 딱 맞는 해외 바이어를 찾아드릴게요"
-              : "RINDA will find the perfect international buyers for you"}
-          </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* 가치 제안 배너 - 왜 상세하게 입력해야 하는지 안내 */}
-          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                <Lightbulb className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900 text-sm">
-                  {isKorean
-                    ? "상세하게 입력할수록 더 정확한 바이어를 찾아드려요"
-                    : "More details help us find better-matched buyers"}
-                </h4>
-                <ul className="mt-2 space-y-1.5">
-                  <li className="flex items-center gap-2 text-gray-600 text-sm">
-                    <Target className="h-3.5 w-3.5 text-blue-500" />
-                    {isKorean
-                      ? "제품 특성 → 관심 있는 바이어만 선별"
-                      : "Product details → Filter interested buyers only"}
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-600 text-sm">
-                    <FileText className="h-3.5 w-3.5 text-blue-500" />
-                    {isKorean
-                      ? "회사 강점 → AI가 설득력 있는 이메일 작성"
-                      : "Company strengths → AI writes persuasive emails"}
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-600 text-sm">
-                    <Globe className="h-3.5 w-3.5 text-blue-500" />
-                    {isKorean
-                      ? "웹사이트 → 바이어에게 신뢰감 전달"
-                      : "Website → Build trust with buyers"}
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* 프로필 완성도 표시기 */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-2 font-medium text-gray-700 text-sm">
-                <Users className="h-4 w-4" />
-                {isKorean ? "프로필 완성도" : "Profile completeness"}
-              </span>
-              <span
-                className={`font-semibold text-sm ${
-                  completenessLevel === "excellent"
-                    ? "text-green-600"
-                    : completenessLevel === "good"
-                      ? "text-blue-600"
-                      : "text-gray-500"
-                }`}
-              >
-                {profileCompleteness}%
-              </span>
-            </div>
-            <Progress
-              className={`h-2 ${
-                completenessLevel === "excellent"
-                  ? "[&>div]:bg-green-500"
-                  : completenessLevel === "good"
-                    ? "[&>div]:bg-blue-500"
-                    : "[&>div]:bg-gray-400"
-              }`}
-              value={profileCompleteness}
-            />
-            <p className="mt-2 flex items-center gap-1.5 text-gray-500 text-xs">
-              {completenessLevel === "excellent" ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                  {isKorean
-                    ? "훌륭해요! 최적의 바이어 매칭이 가능해요"
-                    : "Excellent! Best buyer matching available"}
-                </>
-              ) : completenessLevel === "good" ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
-                  {isKorean
-                    ? "좋아요! 웹사이트를 추가하면 더 좋아요"
-                    : "Good! Add your website for better results"}
-                </>
-              ) : isKorean ? (
-                "회사 설명을 더 자세히 적어주세요"
-              ) : (
-                "Add more details about your company"
-              )}
-            </p>
-          </div>
-
-          {/* 회사 소개서 파일 업로드 */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <Label className="font-semibold text-gray-900">
-                {isKorean ? "회사 소개서로 자동 입력" : "Auto-fill with company profile"}
-              </Label>
-              <span className="rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-700 text-xs">
-                AI
-              </span>
-            </div>
-
-            <input
-              accept=".pdf,.docx,.pptx,.txt"
-              className="hidden"
-              onChange={handleFileInputChange}
-              ref={fileInputRef}
-              type="file"
-            />
-
-            {uploadedFileName ? (
-              <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-3">
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Left Column - AI 자동 입력 */}
+            <div className="flex flex-col">
+              {/* 회사 소개서 파일 업로드 - 전체 높이 사용 */}
+              <div className="flex flex-1 flex-col space-y-1">
                 <div className="flex items-center gap-2">
-                  {analyzeFileMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-purple-600" />
-                  )}
-                  <span className="text-purple-800 text-sm">{uploadedFileName}</span>
-                  {analyzeFileMutation.isPending && (
-                    <span className="text-purple-600 text-xs">
-                      {isKorean ? "AI가 분석 중..." : "AI analyzing..."}
+                  <Sparkles className="h-5 w-5 text-blue-500" />
+                  <Label className="font-semibold text-base text-gray-900">
+                    {isKorean ? "회사 소개서로 자동 입력" : "Auto-fill with company profile"}
+                  </Label>
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700 text-xs">
+                    AI
+                  </span>
+                </div>
+
+                <p className="mb-5 text-gray-600 text-sm">
+                  {isKorean
+                    ? "이 정보로 딱 맞는 해외 바이어를 찾아드릴게요"
+                    : "RINDA will find the perfect international buyers for you"}
+                </p>
+
+                <input
+                  accept=".pdf,.docx,.pptx,.txt"
+                  className="hidden"
+                  onChange={handleFileInputChange}
+                  ref={fileInputRef}
+                  type="file"
+                />
+
+                {uploadedFileName ? (
+                  <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-2">
+                    <div className="flex items-center gap-2">
+                      {analyzeFileMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      ) : (
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      )}
+                      <span className="truncate text-blue-800 text-sm">{uploadedFileName}</span>
+                      {analyzeFileMutation.isPending && (
+                        <span className="text-blue-600 text-xs">
+                          {isKorean ? "분석 중..." : "Analyzing..."}
+                        </span>
+                      )}
+                      {isFilledByAI && !analyzeFileMutation.isPending && (
+                        <span className="text-green-600 text-xs">
+                          {isKorean ? "✓ 완료" : "✓ Done"}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      className="rounded p-1 text-gray-400 hover:bg-blue-100 hover:text-gray-600"
+                      onClick={clearUploadedFile}
+                      type="button"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  // biome-ignore lint/a11y/useSemanticElements: Drag and drop zone requires div element
+                  <div
+                    className={`flex min-h-[280px] flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                      isDragging
+                        ? "border-blue-400 bg-blue-50"
+                        : "border-gray-300 hover:border-blue-300 hover:bg-blue-50/50"
+                    }`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        fileInputRef.current?.click()
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <Upload className="mx-auto h-12 w-12 text-blue-400" />
+                    <p className="mt-4 font-medium text-gray-700">
+                      {isKorean
+                        ? "회사 소개서를 드래그하거나 클릭하여 업로드"
+                        : "Drag & drop or click to upload company profile"}
+                    </p>
+                    <p className="mt-2 text-gray-500 text-sm">
+                      {isKorean
+                        ? "PDF, DOCX, PPTX, TXT 파일 지원 (최대 20MB)"
+                        : "Supports PDF, DOCX, PPTX, TXT (max 20MB)"}
+                    </p>
+                    <p className="mt-4 text-gray-400 text-xs">
+                      {isKorean
+                        ? "AI가 회사명, 소개, 웹사이트를 자동으로 추출합니다"
+                        : "AI will automatically extract company name, description, and website"}
+                    </p>
+                  </div>
+                )}
+
+                {isFilledByAI && (
+                  <p className="flex items-center gap-1.5 text-purple-600 text-xs">
+                    <Sparkles className="h-3 w-3" />
+                    {isKorean
+                      ? "AI가 정보를 추출했어요. 오른쪽에서 확인 후 수정해주세요."
+                      : "AI extracted info. Please review and edit on the right."}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - 직접 입력 */}
+            <div className="flex flex-col space-y-1">
+              {/* 또는 구분선 (모바일에서만 표시) */}
+              <div className="relative py-1 lg:hidden">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-gray-300 border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">
+                    {isKorean ? "또는 직접 입력" : "or enter manually"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Company Name - Grid layout */}
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-gray-500" />
+                <Label className="font-semibold text-base text-gray-900">
+                  {isKorean ? "또는 직접 입력" : "or enter manually"}
+                </Label>
+              </div>
+
+              <p className="mb-5 text-gray-600 text-sm">
+                {isKorean
+                  ? "회사 소개서가 없다면 직접 입력해서 수정할 수도 있어요"
+                  : "If you don't have a company profile, you can enter it manually and edit it"}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-2 font-semibold text-gray-900 text-sm">
+                    {isKorean ? "회사 이름" : "Company Name"}
+                    <span
+                      className={`font-normal text-xs ${errors.companyName ? "text-red-500" : "text-blue-500"}`}
+                    >
+                      {isKorean ? "필수" : "Required"}
                     </span>
-                  )}
-                  {isFilledByAI && !analyzeFileMutation.isPending && (
-                    <span className="text-green-600 text-xs">
-                      {isKorean ? "✓ 분석 완료" : "✓ Analysis complete"}
-                    </span>
+                  </Label>
+                  <Input
+                    className={`h-9 ${errors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                    onChange={(e) => {
+                      setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
+                      if (errors.companyName) {
+                        setErrors((prev) => ({ ...prev, companyName: false }))
+                      }
+                    }}
+                    placeholder={isKorean ? "예: 린다 코스메틱" : "e.g., Rinda Cosmetics"}
+                    value={editedData.companyName}
+                  />
+                  {errors.companyName && (
+                    <p className="text-red-500 text-xs">
+                      {isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name"}
+                    </p>
                   )}
                 </div>
-                <button
-                  className="rounded p-1 text-gray-400 hover:bg-purple-100 hover:text-gray-600"
-                  onClick={clearUploadedFile}
-                  type="button"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-2 font-semibold text-gray-900 text-sm">
+                    {isKorean ? "영문 이름" : "English Name"}
+                    <TooltipProvider>
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          <span
+                            aria-label="English name translation info"
+                            className="inline-flex"
+                            role="img"
+                          >
+                            <Info className="h-3.5 w-3.5 text-gray-400" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs" side="top">
+                          {isKorean
+                            ? "AI 번역이라 오류가 있을 수 있어요. 꼭 확인해주세요."
+                            : "AI translation may contain errors. Please review carefully."}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <span className="font-normal text-gray-500 text-xs">
+                      {isKorean ? "선택" : "Optional"}
+                    </span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      className="h-9"
+                      onChange={(e) => {
+                        setEditedData((prev) => ({ ...prev, companyNameEn: e.target.value }))
+                      }}
+                      placeholder={isKorean ? "예: Rinda Cosmetics" : "e.g., Rinda Cosmetics"}
+                      value={editedData.companyNameEn}
+                    />
+                    {translateMutation.isPending && (
+                      <Loader2 className="absolute top-2 right-3 h-5 w-5 animate-spin text-blue-500" />
+                    )}
+                  </div>
+                </div>
               </div>
-            ) : (
-              // biome-ignore lint/a11y/useSemanticElements: Drag and drop zone requires div element
-              <div
-                className={`cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
-                  isDragging
-                    ? "border-purple-400 bg-purple-50"
-                    : "border-gray-300 hover:border-purple-300 hover:bg-purple-50/50"
-                }`}
-                onClick={() => fileInputRef.current?.click()}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    fileInputRef.current?.click()
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <Upload className="mx-auto h-6 w-6 text-gray-400" />
-                <p className="mt-2 text-gray-600 text-sm">
-                  {isKorean
-                    ? "회사 소개서를 드래그하거나 클릭하여 업로드"
-                    : "Drag & drop or click to upload company profile"}
-                </p>
-                <p className="mt-1 text-gray-400 text-xs">PDF, DOCX, PPTX, TXT (최대 20MB)</p>
-              </div>
-            )}
 
-            {isFilledByAI && (
-              <p className="flex items-center gap-1.5 text-purple-600 text-xs">
-                <Sparkles className="h-3 w-3" />
-                {isKorean
-                  ? "AI가 소개서에서 정보를 추출했어요. 내용을 확인하고 수정해주세요."
-                  : "AI extracted info from your profile. Please review and edit."}
-              </p>
-            )}
-          </div>
-
-          {/* 또는 구분선 */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-gray-300 border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">
-                {isKorean ? "또는 직접 입력" : "or enter manually"}
-              </span>
-            </div>
-          </div>
-
-          {/* Company Name - Grid layout with English name */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                {isKorean ? "회사 이름" : "Company Name"}
-                <span
-                  className={`font-normal text-xs ${errors.companyName ? "text-red-500" : "text-blue-500"}`}
-                >
-                  {isKorean ? "필수" : "Required"}
-                </span>
-              </Label>
-              <Input
-                className={`h-12 text-base ${errors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                onChange={(e) => {
-                  setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
-                  if (errors.companyName) {
-                    setErrors((prev) => ({ ...prev, companyName: false }))
-                  }
-                }}
-                placeholder={isKorean ? "예: 린다 코스메틱" : "e.g., Rinda Cosmetics"}
-                value={editedData.companyName}
-              />
-              {errors.companyName && (
-                <p className="text-red-500 text-sm">
-                  {isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name"}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 font-semibold text-gray-900">
-                {isKorean ? "회사 이름 (영문)" : "Company Name (English)"}
-                <span className="font-normal text-gray-500 text-xs">
-                  {isKorean ? "선택사항" : "Optional"}
-                </span>
-              </Label>
-              <div className="relative">
+              {/* Website URL */}
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-2 text-sm" htmlFor={websiteUrlId}>
+                  <Globe className="h-4 w-4" />
+                  {isKorean ? "홈페이지" : "Website"}
+                  <span className="font-normal text-gray-400 text-xs">
+                    {isKorean ? "선택" : "Optional"}
+                  </span>
+                </Label>
                 <Input
-                  className="h-12 text-base"
-                  onChange={(e) => {
-                    setEditedData((prev) => ({ ...prev, companyNameEn: e.target.value }))
-                  }}
-                  placeholder={isKorean ? "예: Rinda Cosmetics" : "e.g., Rinda Cosmetics"}
-                  value={editedData.companyNameEn}
+                  className="h-9"
+                  id={websiteUrlId}
+                  onChange={(e) =>
+                    setEditedData((prev) => ({ ...prev, websiteUrl: e.target.value }))
+                  }
+                  placeholder="https://example.com"
+                  type="url"
+                  value={editedData.websiteUrl}
                 />
-                {translateMutation.isPending && (
-                  <Loader2 className="absolute top-3 right-3 h-6 w-6 animate-spin text-blue-500" />
+              </div>
+
+              {/* Company Description - Full height with AI feedback */}
+              <div className="flex flex-1 flex-col space-y-1.5">
+                <Label className="flex items-center gap-2 font-semibold text-gray-900 text-sm">
+                  {isKorean ? "어떤 회사인가요?" : "What does your company do?"}
+                  <span
+                    className={`font-normal text-xs ${errors.companyDescription ? "text-red-500" : "text-blue-500"}`}
+                  >
+                    {isKorean ? "필수" : "Required"}
+                  </span>
+                </Label>
+                <textarea
+                  className={`flex w-full flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    errors.companyDescription
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : "border-input focus-visible:ring-blue-500"
+                  }`}
+                  onChange={(e) => {
+                    setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
+                    if (errors.companyDescription) {
+                      setErrors((prev) => ({ ...prev, companyDescription: false }))
+                    }
+                  }}
+                  placeholder={
+                    isKorean
+                      ? "예: 천연 성분 기반 K-뷰티 스킨케어\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건, 20년 OEM 경험"
+                      : "e.g., Natural K-beauty skincare\nProducts: Vitamin C serum, HA cream\nStrengths: FDA certified, Vegan, 20yr OEM"
+                  }
+                  style={{ minHeight: "120px" }}
+                  value={editedData.companyDescription}
+                />
+                {errors.companyDescription ? (
+                  <p className="text-red-500 text-xs">
+                    {isKorean
+                      ? "회사 설명을 입력해주세요"
+                      : "Please enter your company description"}
+                  </p>
+                ) : (
+                  <>
+                    {/* AI Suggestions */}
+                    {isAnalyzing && editedData.companyDescription.trim().length >= 10 ? (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs">
+                        <div className="h-3 w-3 animate-spin rounded-full border-gray-400 border-b-2" />
+                        <span>{isKorean ? "AI 분석 중..." : "AI analyzing..."}</span>
+                      </div>
+                    ) : null}
+
+                    {isRateLimited ? (
+                      <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-2">
+                        <p className="text-orange-700 text-xs">
+                          {isKorean ? "⏱️ 분당 10회 제한" : "⏱️ 10 req/min limit"}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {!(isAnalyzing || isRateLimited) && suggestions.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {suggestions.map((suggestion, index) => (
+                          <div
+                            className="flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2"
+                            key={`${suggestion.type}-${index}`}
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-amber-600 text-sm">💡</span>
+                              <p className="text-amber-800 text-xs">
+                                {isKorean ? suggestion.messageKo : suggestion.messageEn}
+                              </p>
+                            </div>
+                            <button
+                              className={`shrink-0 rounded px-2 py-0.5 text-white text-xs ${
+                                addedSuggestionIndices.has(index)
+                                  ? "cursor-not-allowed bg-gray-400"
+                                  : "bg-amber-600 hover:bg-amber-700"
+                              }`}
+                              disabled={addedSuggestionIndices.has(index)}
+                              onClick={() => {
+                                const currentDescription = editedData.companyDescription.trim()
+                                const suggestionText = isKorean
+                                  ? suggestion.suggestionKo
+                                  : suggestion.suggestionEn
+                                const newDescription = currentDescription
+                                  ? `${currentDescription}\n${suggestionText}`
+                                  : suggestionText
+                                setEditedData((prev) => ({
+                                  ...prev,
+                                  companyDescription: newDescription,
+                                }))
+                                setAddedSuggestionIndices((prev) => new Set(prev).add(index))
+                              }}
+                              type="button"
+                            >
+                              {addedSuggestionIndices.has(index)
+                                ? isKorean
+                                  ? "추가됨"
+                                  : "Added"
+                                : isKorean
+                                  ? "추가"
+                                  : "Add"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {hasAnalyzed &&
+                    !isAnalyzing &&
+                    !isRateLimited &&
+                    suggestions.length === 0 &&
+                    editedData.companyDescription.trim().length >= 10 ? (
+                      <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-2">
+                        <span className="text-green-600 text-sm">✨</span>
+                        <p className="text-green-800 text-xs">
+                          {isKorean
+                            ? "충분한 정보! 실제 정보로 수정해주세요 ✏️"
+                            : "Good! Update with your actual info ✏️"}
+                        </p>
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Company Description - Full width with AI feedback */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 font-semibold text-gray-900">
-              {isKorean ? "어떤 회사인가요?" : "What does your company do?"}
-              <span
-                className={`font-normal text-xs ${errors.companyDescription ? "text-red-500" : "text-blue-500"}`}
-              >
-                {isKorean ? "필수" : "Required"}
-              </span>
-            </Label>
-            <textarea
-              className={`flex w-full resize-y rounded-md border bg-background px-4 py-3 text-base ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                errors.companyDescription
-                  ? "border-red-500 focus-visible:ring-red-500"
-                  : "border-input focus-visible:ring-blue-500"
-              }`}
-              onChange={(e) => {
-                setEditedData((prev) => ({ ...prev, companyDescription: e.target.value }))
-                if (errors.companyDescription) {
-                  setErrors((prev) => ({ ...prev, companyDescription: false }))
-                }
-              }}
-              placeholder={
-                isKorean
-                  ? "예: 천연 성분 기반 K-뷰티 스킨케어\n주력 제품: 비타민C 세럼, 히알루론산 크림\n강점: FDA 인증, 비건, 20년 OEM 경험"
-                  : "e.g., Natural K-beauty skincare\nProducts: Vitamin C serum, HA cream\nStrengths: FDA certified, Vegan, 20yr OEM"
-              }
-              rows={4}
-              style={{ minHeight: "100px", maxHeight: "200px" }}
-              value={editedData.companyDescription}
-            />
-            {errors.companyDescription ? (
-              <p className="text-red-500 text-sm">
-                {isKorean ? "회사 설명을 입력해주세요" : "Please enter your company description"}
+          {/* 하단: 프로필 완성도 + 다음 단계 버튼 */}
+          <div className="mt-6 flex items-center justify-between gap-4 border-t pt-4">
+            {/* 프로필 완성도 표시기 */}
+            <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-medium text-gray-700 text-sm">
+                  <Users className="h-3.5 w-3.5" />
+                  {isKorean ? "프로필 완성도" : "Profile completeness"}
+                </span>
+                <span
+                  className={`font-semibold text-sm ${
+                    completenessLevel === "excellent"
+                      ? "text-green-600"
+                      : completenessLevel === "good"
+                        ? "text-blue-600"
+                        : "text-gray-500"
+                  }`}
+                >
+                  {profileCompleteness}%
+                </span>
+              </div>
+              <Progress
+                className={`h-2 ${
+                  completenessLevel === "excellent"
+                    ? "[&>div]:bg-green-500"
+                    : completenessLevel === "good"
+                      ? "[&>div]:bg-blue-500"
+                      : "[&>div]:bg-gray-400"
+                }`}
+                value={profileCompleteness}
+              />
+              <p className="mt-1.5 flex items-center gap-1.5 text-gray-500 text-xs">
+                {completenessLevel === "excellent" ? (
+                  <>
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    {isKorean ? "최적의 바이어 매칭 가능" : "Best buyer matching available"}
+                  </>
+                ) : completenessLevel === "good" ? (
+                  <>
+                    <CheckCircle className="h-3 w-3 text-blue-500" />
+                    {isKorean ? "웹사이트 추가하면 더 좋아요" : "Add website for better results"}
+                  </>
+                ) : isKorean ? (
+                  "설명을 더 자세히 적어주세요"
+                ) : (
+                  "Add more details"
+                )}
               </p>
-            ) : (
-              <>
-                {/* AI Suggestions */}
-                {isAnalyzing && editedData.companyDescription.trim().length >= 10 ? (
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <div className="h-3 w-3 animate-spin rounded-full border-gray-400 border-b-2" />
-                    <span>{isKorean ? "AI가 분석 중..." : "AI analyzing..."}</span>
-                  </div>
-                ) : null}
+            </div>
 
-                {isRateLimited ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-2">
-                    <p className="text-orange-700 text-sm">
-                      {isKorean ? "⏱️ 분당 10회 제한" : "⏱️ 10 req/min limit"}
-                    </p>
-                  </div>
-                ) : null}
-
-                {!(isAnalyzing || isRateLimited) && suggestions.length > 0 ? (
-                  <div className="space-y-2">
-                    {suggestions.map((suggestion, index) => (
-                      <div
-                        className="flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2"
-                        key={`${suggestion.type}-${index}`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="text-amber-600">💡</span>
-                          <p className="text-amber-800 text-sm">
-                            {isKorean ? suggestion.messageKo : suggestion.messageEn}
-                          </p>
-                        </div>
-                        <button
-                          className="shrink-0 rounded bg-amber-600 px-2 py-1 text-white text-xs hover:bg-amber-700"
-                          onClick={() => {
-                            const currentDescription = editedData.companyDescription.trim()
-                            const suggestionText = isKorean
-                              ? suggestion.suggestionKo
-                              : suggestion.suggestionEn
-                            const newDescription = currentDescription
-                              ? `${currentDescription}\n${suggestionText}`
-                              : suggestionText
-                            setEditedData((prev) => ({
-                              ...prev,
-                              companyDescription: newDescription,
-                            }))
-                          }}
-                          type="button"
-                        >
-                          {isKorean ? "추가" : "Add"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {hasAnalyzed &&
-                !isAnalyzing &&
-                !isRateLimited &&
-                suggestions.length === 0 &&
-                editedData.companyDescription.trim().length >= 10 ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-2">
-                    <span className="text-green-600">✨</span>
-                    <p className="text-green-800 text-sm">
-                      {isKorean
-                        ? "충분한 정보가 담겨있어요! 반드시 실제 정보로 수정해주세요 ✏️"
-                        : "Good! If you added AI suggestions, please update them with your actual info ✏️"}
-                    </p>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
-
-          {/* Website URL - Full width */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-sm" htmlFor={websiteUrlId}>
-              <Globe className="h-4 w-4" />
-              {isKorean ? "홈페이지" : "Website"}
-              <span className="font-normal text-gray-400 text-xs">
-                {isKorean ? "선택" : "Optional"}
-              </span>
-            </Label>
-            <Input
-              id={websiteUrlId}
-              onChange={(e) => setEditedData((prev) => ({ ...prev, websiteUrl: e.target.value }))}
-              placeholder="https://example.com"
-              type="url"
-              value={editedData.websiteUrl}
-            />
-          </div>
-
-          {/* Next Button */}
-          <div className="flex justify-end pt-4">
+            {/* Next Button */}
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="h-20 bg-blue-600 px-6 hover:bg-blue-700"
               disabled={isSaving}
               onClick={handleSaveAndNext}
             >

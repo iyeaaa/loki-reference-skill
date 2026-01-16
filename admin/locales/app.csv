@@ -144,8 +144,8 @@ dashboard.loadingStrategies,전략을 불러오는 중...,Loading strategies...
 onboarding.step2.labelNew,이메일 연동,Email Setup
 onboarding.step3.labelNew,바이어 찾고 이메일 생성,Find Buyers & Generate Emails
 onboarding.step4.labelNew,영업 시작,Start Sales
-onboarding.step1.short,[NO TRANSLATION] app.onboarding.step1.short,[NO TRANSLATION] app.onboarding.step1.short
-onboarding.step2.short,[NO TRANSLATION] app.onboarding.step2.short,[NO TRANSLATION] app.onboarding.step2.short
-onboarding.step3.short,[NO TRANSLATION] app.onboarding.step3.short,[NO TRANSLATION] app.onboarding.step3.short
-onboarding.step4.short,[NO TRANSLATION] app.onboarding.step4.short,[NO TRANSLATION] app.onboarding.step4.short
-onboarding.step2.chatLabel,[NO TRANSLATION] app.onboarding.step2.chatLabel,[NO TRANSLATION] app.onboarding.step2.chatLabel
+onboarding.step1.short,정보 입력,Enter Info
+onboarding.step2.short,이메일 연동,Connect Email
+onboarding.step3.short,바이어 검색,Find Buyers
+onboarding.step4.short,영업 시작,Start Sales
+onboarding.step2.chatLabel,AI 어시스턴트,AI Assistant

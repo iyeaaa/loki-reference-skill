@@ -144,6 +144,7 @@ export function buyerToLeadData(buyer: Buyer): {
   primaryEmail?: string
   leadSource: string
   leadStatus: "new"
+  leadScore?: number
 } {
   // CompanySize → employeeCount 문자열 변환
   const sizeToEmployeeCount: Record<CompanySize, string> = {
@@ -165,6 +166,7 @@ export function buyerToLeadData(buyer: Buyer): {
     primaryEmail: buyer.email || undefined,
     leadSource: "buyer-search",
     leadStatus: "new" as const,
+    leadScore: buyer.score, // LLM 평가 점수 (0-100)
   }
 }
 
@@ -182,6 +184,7 @@ export function buyersToLeadDataArray(buyers: Buyer[]): Array<{
   primaryEmail?: string
   leadSource: string
   leadStatus: "new"
+  leadScore?: number
 }> {
   return buyers.map(buyerToLeadData)
 }

@@ -120,8 +120,12 @@ export function buildBatchEvaluationPrompt(
   intelligence: BuyerIntelligence,
   companies: EnrichedCompany[],
   sellerSize: CompanySize,
+  locale: "ko" | "en" = "ko",
 ): string {
-  const personaTypes = intelligence.buyerPersonas.map((p) => p.typeKo).join(", ")
+  const isKorean = locale === "ko"
+  const personaTypes = intelligence.buyerPersonas
+    .map((p) => (isKorean ? p.typeKo : p.type))
+    .join(", ")
   const sellerSizeLabel = COMPANY_SIZE_LABELS[sellerSize]
 
   const companyDescriptions = companies
@@ -136,6 +140,12 @@ export function buildBatchEvaluationPrompt(
 ---`,
     )
     .join("\n")
+
+  const languageInstruction = isKorean
+    ? `"matchedPersona": "Matched persona type (Korean)",
+    "reason": "Reason for suitability (briefly 1-2 sentences in Korean)"`
+    : `"matchedPersona": "Matched persona type (English)",
+    "reason": "Reason for suitability (briefly 1-2 sentences in English)"`
 
   return `You are a B2B/B2C export buyer matching expert.
 
@@ -158,8 +168,7 @@ Respond with a JSON array for each company:
   {
     "index": 0,
     "score": 8,
-    "matchedPersona": "Matched persona type (Korean)",
-    "reason": "Reason for suitability (briefly 1-2 sentences in Korean)"
+    ${languageInstruction}
   },
   ...
 ]
@@ -186,6 +195,11 @@ export function buildDescriptionPrompt(
   intelligence: BuyerIntelligence,
   buyer: ScoredCompany,
 ): string {
+  const isKorean = input.locale === "ko"
+  const languageInstruction = isKorean
+    ? "Explain why this buyer is a good candidate in 1-2 sentences in Korean."
+    : "Explain why this buyer is a good candidate in 1-2 sentences in English."
+
   return `You are a B2B export sales expert.
 
 [Seller]
@@ -199,7 +213,7 @@ Country: ${buyer.country}
 Collected Info: ${buyer.description || "N/A"}
 Suitability Reason: ${buyer.llmEvaluation.reason}
 
-Explain why this buyer is a good candidate in 1-2 sentences in Korean.
+${languageInstruction}
 Write concisely so that sales representatives can use it immediately.
 Focus on the company's characteristics and potential for transaction.
 

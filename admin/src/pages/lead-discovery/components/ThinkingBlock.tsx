@@ -90,7 +90,7 @@ export function ThinkingBlock({
       className={cn(
         "overflow-hidden rounded-lg border transition-colors",
         isStreaming
-          ? "border-violet-500/30 bg-violet-500/5 dark:border-violet-400/30 dark:bg-violet-950/20"
+          ? "border-blue-500/30 bg-blue-500/5 dark:border-blue-400/30 dark:bg-blue-950/20"
           : "border-border/50 bg-muted/30",
         className,
       )}
@@ -103,7 +103,7 @@ export function ThinkingBlock({
         aria-label={isExpanded ? "Thinking 접기" : "Thinking 펼치기"}
         className={cn(
           "flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
-          "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50",
+          "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50",
         )}
         onClick={() => setIsExpanded(!isExpanded)}
         type="button"
@@ -113,7 +113,7 @@ export function ThinkingBlock({
           className={cn(
             "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md",
             isStreaming
-              ? "bg-violet-500/20 text-violet-600 dark:text-violet-400"
+              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
               : "bg-muted text-muted-foreground",
           )}
         >
@@ -130,15 +130,15 @@ export function ThinkingBlock({
             <span
               className={cn(
                 "font-medium text-sm",
-                isStreaming ? "text-violet-600 dark:text-violet-400" : "text-foreground",
+                isStreaming ? "text-blue-600 dark:text-blue-400" : "text-foreground",
               )}
             >
               {isStreaming ? "분석 중" : "완료"}
             </span>
             {isStreaming && (
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
               </span>
             )}
             {node && (
@@ -157,7 +157,7 @@ export function ThinkingBlock({
         <div
           className={cn(
             "flex-shrink-0 transition-colors",
-            isStreaming ? "text-violet-500" : "text-muted-foreground",
+            isStreaming ? "text-blue-500" : "text-muted-foreground",
           )}
         >
           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}

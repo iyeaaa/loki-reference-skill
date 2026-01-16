@@ -66,23 +66,31 @@ async function evaluateBatch(
   intelligence: BuyerIntelligence,
   companies: EnrichedCompany[],
   sellerSize: CompanySize,
+  locale: "ko" | "en" = "ko",
 ): Promise<Map<number, LLMEvaluation>> {
   const evaluations = new Map<number, LLMEvaluation>()
 
   try {
-    const prompt = buildBatchEvaluationPrompt(intelligence, companies, sellerSize)
+    const prompt = buildBatchEvaluationPrompt(intelligence, companies, sellerSize, locale)
     const response = await llm.invoke(prompt)
     const responseText = (response.content as string).trim()
 
     const parsed = parseLLMEvaluations(responseText)
 
+    const isKorean = locale === "ko"
+
     if (!parsed) {
       // Fallback: 모든 회사에 중간 점수
+      const defaultPersona = isKorean
+        ? intelligence.buyerPersonas[0]?.typeKo
+        : intelligence.buyerPersonas[0]?.type
       companies.forEach((_, idx) => {
         evaluations.set(idx, {
           score: 6,
-          matchedPersona: intelligence.buyerPersonas[0]?.typeKo || "Unknown",
-          reason: "LLM 평가 파싱 실패 - 기본 점수 부여",
+          matchedPersona: defaultPersona || "Unknown",
+          reason: isKorean
+            ? "LLM 평가 파싱 실패 - 기본 점수 부여"
+            : "LLM evaluation parsing failed - default score assigned",
         })
       })
       return evaluations
@@ -105,7 +113,7 @@ async function evaluateBatch(
         evaluations.set(idx, {
           score: 5,
           matchedPersona: "",
-          reason: "LLM 평가 누락",
+          reason: isKorean ? "LLM 평가 누락" : "LLM evaluation missing",
         })
       }
     })
@@ -113,11 +121,12 @@ async function evaluateBatch(
     logger.error({ error }, "[Scoring] LLM 평가 실패")
 
     // Fallback
+    const isKorean = locale === "ko"
     companies.forEach((_, idx) => {
       evaluations.set(idx, {
         score: 5,
         matchedPersona: "",
-        reason: "LLM 평가 오류",
+        reason: isKorean ? "LLM 평가 오류" : "LLM evaluation error",
       })
     })
   }
@@ -232,12 +241,18 @@ function calculateFinalScore(
 }
 
 /**
+ * 스코어링 진행 콜백 타입
+ */
+export type ScoringProgressCallback = (scored: ScoredCompany) => void
+
+/**
  * Phase 4: 스코어링 및 랭킹
  */
 export async function scoreAndRankCompanies(
   companies: EnrichedCompany[],
   intelligence: BuyerIntelligence,
   input: BuyerSearchInput,
+  onProgress?: ScoringProgressCallback,
 ): Promise<ScoredCompany[]> {
   const startTime = Date.now()
   logger.info(
@@ -247,42 +262,56 @@ export async function scoreAndRankCompanies(
   const scoredCompanies: ScoredCompany[] = []
 
   const limit = pLimit(10)
-  const batches = []
+  const batches: EnrichedCompany[][] = []
   for (let i = 0; i < companies.length; i += LLM_BATCH_SIZE) {
     batches.push(companies.slice(i, i + LLM_BATCH_SIZE))
   }
 
-  const batchResults = await Promise.all(
-    batches.map(async (batch, batchIdx) => {
-      logger.info(`[Scoring] 배치 ${batchIdx + 1}: ${batch.length}개 평가 중...`)
-      const evaluations = await limit(async () => {
-        return await evaluateBatch(intelligence, batch, input.companySize)
-      })
-      return { batch, evaluations }
-    }),
-  )
+  // 순차 처리로 변경하여 실시간 업데이트 가능하게 함
+  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+    const batch = batches[batchIdx]
+    if (!batch) {
+      continue
+    }
+    logger.info(`[Scoring] 배치 ${batchIdx + 1}/${batches.length}: ${batch.length}개 평가 중...`)
 
-  for (const { batch, evaluations } of batchResults) {
-    // 최종 스코어 계산
-    batch.forEach((company, batchIdx) => {
-      const llmEvaluation = evaluations.get(batchIdx)
-      if (!llmEvaluation) {
-        logger.warn(`[Scoring] 배치 인덱스 ${batchIdx}에 대한 평가 결과가 없습니다.`)
-        return
+    const evaluations = await limit(async () => {
+      return await evaluateBatch(intelligence, batch, input.companySize, input.locale)
+    })
+
+    // 최종 스코어 계산 및 실시간 콜백
+    for (let i = 0; i < batch.length; i++) {
+      const company = batch[i]
+      if (!company) {
+        continue
       }
+      const llmEvaluation = evaluations.get(i)
+
+      if (!llmEvaluation) {
+        logger.warn(`[Scoring] 배치 인덱스 ${i}에 대한 평가 결과가 없습니다.`)
+        continue
+      }
+
       const { finalScore, breakdown } = calculateFinalScore(
         company,
         llmEvaluation,
         input.companySize,
       )
 
-      scoredCompanies.push({
+      const scoredCompany: ScoredCompany = {
         ...company,
         llmEvaluation,
         finalScore,
         scoreBreakdown: breakdown,
-      })
-    })
+      }
+
+      scoredCompanies.push(scoredCompany)
+
+      // 실시간 진행 콜백 호출
+      if (onProgress) {
+        onProgress(scoredCompany)
+      }
+    }
   }
 
   // 점수 기준 정렬 (내림차순)

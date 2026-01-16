@@ -114,9 +114,13 @@ function DashboardContent({ children }: DashboardContentProps) {
     if (!sequence?.id) {
       return false
     }
+    // 페이지가 /company 일경우 표시 X
+    if (location.pathname === "/company") {
+      return false
+    }
     // 시퀀스가 draft 또는 ready 상태일 때만 표시 (활성화되지 않은 경우)
     return sequence.status === "draft" || sequence.status === "ready"
-  }, [isTrialUser, onboardingProgress, sequence])
+  }, [isTrialUser, onboardingProgress, sequence, location.pathname])
 
   // Workspace를 WorkspaceOption으로 변환 (메모이제이션으로 무한 루프 방지)
   const workspaces: WorkspaceOption[] = useMemo(

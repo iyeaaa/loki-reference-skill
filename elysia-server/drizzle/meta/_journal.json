@@ -351,6 +351,13 @@
       "when": 1768536199253,
       "tag": "0049_lean_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1768557896370,
+      "tag": "0050_great_the_executioner",
+      "breakpoints": true
     }
   ]
 }

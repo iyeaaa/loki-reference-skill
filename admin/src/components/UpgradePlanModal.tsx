@@ -160,6 +160,7 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
                           })}
                         </p>
                       )}
+                      <p className="mt-1 text-muted-foreground text-xs">부가세 별도</p>
                     </>
                   )}
                 </div>

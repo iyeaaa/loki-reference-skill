@@ -19,6 +19,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Clock,
+  Code2,
+  ExternalLink,
   Eye,
   Filter,
   Globe,
@@ -83,6 +85,7 @@ import {
 } from "@/lib/api/hooks/visitor-analytics"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
+import { IntegrationGuideSheet } from "./components/IntegrationGuideSheet"
 
 // ============================================================================
 // Constants
@@ -660,6 +663,7 @@ export function VisitorAnalyticsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [statsDays, setStatsDays] = useState(30)
   const [showFilters, setShowFilters] = useState(false)
+  const [isGuideOpen, setIsGuideOpen] = useState(false)
 
   // Get workspace from sidebar selection (localStorage)
   const { selectedWorkspace } = useWorkspace()
@@ -764,10 +768,7 @@ export function VisitorAnalyticsPage() {
   if (!isValidWorkspace) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="font-bold text-2xl">웹사이트 방문자</h1>
-          <p className="text-muted-foreground text-sm">IP Intelligence 기반 방문자 추적 및 분석</p>
-        </div>
+        <p className="text-muted-foreground text-sm">IP Intelligence 기반 방문자 추적 및 분석</p>
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -789,7 +790,6 @@ export function VisitorAnalyticsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-2xl">웹사이트 방문자</h1>
               <Badge className="text-xs" variant="outline">
                 {selectedWorkspace?.name}
               </Badge>
@@ -799,6 +799,10 @@ export function VisitorAnalyticsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setIsGuideOpen(true)} variant="outline">
+              <Code2 className="mr-2 h-4 w-4" />
+              연동 가이드
+            </Button>
             <Select onValueChange={(v) => setStatsDays(Number(v))} value={String(statsDays)}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue />
@@ -1090,6 +1094,7 @@ export function VisitorAnalyticsPage() {
                             <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </TableHead>
+                        <TableHead>웹사이트</TableHead>
                         <TableHead>보안</TableHead>
                         <TableHead
                           className="cursor-pointer text-right"
@@ -1115,7 +1120,7 @@ export function VisitorAnalyticsPage() {
                     <TableBody>
                       {sessions.length === 0 ? (
                         <TableRow>
-                          <TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>
+                          <TableCell className="py-8 text-center text-muted-foreground" colSpan={8}>
                             방문자 데이터가 없습니다.
                           </TableCell>
                         </TableRow>
@@ -1147,6 +1152,23 @@ export function VisitorAnalyticsPage() {
                                     {visitor.companyDomain ? ` (${visitor.companyDomain})` : ""}
                                   </TooltipContent>
                                 </Tooltip>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {visitor.companyDomain ? (
+                                <a
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                  href={`https://${visitor.companyDomain}`}
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  <span className="max-w-[120px] truncate text-sm">
+                                    {visitor.companyDomain}
+                                  </span>
+                                  <ExternalLink className="h-3 w-3 shrink-0" />
+                                </a>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
@@ -1248,6 +1270,15 @@ export function VisitorAnalyticsPage() {
           onClose={() => setIsDetailOpen(false)}
           open={isDetailOpen}
           visitor={selectedVisitor}
+        />
+
+        {/* Integration Guide Sheet */}
+        <IntegrationGuideSheet
+          apiBaseUrl="https://api.rinda.ai"
+          onOpenChange={setIsGuideOpen}
+          open={isGuideOpen}
+          workspaceId={workspaceId}
+          workspaceName={selectedWorkspace?.name || ""}
         />
       </div>
     </TooltipProvider>

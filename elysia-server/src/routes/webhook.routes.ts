@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import * as portoneService from "../services/portone.service"
+import * as tossService from "../services/toss.service"
 import { webhookService } from "../services/webhook.service"
 import logger, { generateTraceId, inboundEmailLogger, webhookLogger } from "../utils/logger"
 
@@ -187,33 +187,34 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       throw error
     }
   })
-  // PortOne V2 Payment Webhook
+  // TossPayments Webhook
   .post(
-    "/portone",
+    "/toss",
     async ({ body, headers, set }) => {
       const startTime = Date.now()
       const traceId = generateTraceId()
 
       // Get raw body for signature verification
       const payload = JSON.stringify(body)
-      const signature = headers["x-portone-signature"] || ""
+      const signature =
+        headers["toss-signature"] || headers["tosspayments-webhook-signature"] || null
 
-      webhookLogger.batchReceived({ source: "portone", traceId }, 1)
+      webhookLogger.batchReceived({ source: "toss", traceId }, 1)
 
       // Verify webhook signature
-      if (!portoneService.verifyWebhookSignature(payload, signature)) {
-        logger.warn({ traceId }, "[PortOne Webhook] Invalid signature")
+      if (!tossService.verifyWebhookSignature(payload, signature)) {
+        logger.warn({ traceId }, "[Toss Webhook] Invalid signature")
         set.status = 401
         return { success: false, error: "Invalid signature" }
       }
 
       try {
-        const event = body as portoneService.PortOneWebhookPayload
-        const result = await portoneService.handleWebhookEvent(event)
+        const event = body as tossService.TossWebhookPayload
+        const result = await tossService.handleWebhookEvent(event)
 
         const durationMs = Date.now() - startTime
         webhookLogger.processed(
-          { source: "portone", eventType: event.type, traceId },
+          { source: "toss", eventType: event.eventType, traceId },
           { success: result.success, durationMs, metadata: { message: result.message } },
         )
 
@@ -221,22 +222,22 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
       } catch (error) {
         const durationMs = Date.now() - startTime
         webhookLogger.processed(
-          { source: "portone", eventType: "unknown", traceId },
+          { source: "toss", eventType: "unknown", traceId },
           {
             success: false,
             durationMs,
             metadata: { error: error instanceof Error ? error.message : String(error) },
           },
         )
-        logger.error({ error, traceId }, "[PortOne Webhook] Processing error")
+        logger.error({ error, traceId }, "[Toss Webhook] Processing error")
         set.status = 500
         return { success: false, error: "Internal server error" }
       }
     },
     {
       body: t.Object({
-        type: t.String(),
-        timestamp: t.String(),
+        eventType: t.String(),
+        createdAt: t.String(),
         data: t.Any(),
       }),
     },

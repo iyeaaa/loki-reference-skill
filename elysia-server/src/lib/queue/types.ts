@@ -15,6 +15,7 @@ export const QUEUE_NAMES = {
   FOLLOWUP_EMAIL: "followup-email", // Followup email check (welcome, step reminders, etc.)
   TEST_QUEUE: "test-queue", // For testing purposes
   WEB_EXTRACTION: "web-extraction", // Web data extraction with BullMQ
+  BILLING_PAYMENT: "billing-payment", // Recurring billing payment processing
 } as const
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
@@ -356,4 +357,51 @@ export interface WebExtractionBatchProgress {
   }>
   /** Latest processed result */
   latestResult?: WebExtractionResult["record"]
+}
+
+// ============================================================================
+// Billing Payment Types
+// ============================================================================
+
+/**
+ * Billing Payment Job - processes recurring subscription payments
+ *
+ * Features:
+ * - Daily scheduled check for subscriptions due for renewal
+ * - Uses stored billing keys for automatic card payments
+ * - Updates subscription period after successful payment
+ * - Handles payment failures with retry and status updates
+ */
+export interface BillingPaymentJob {
+  /** Trigger type: 'scheduled' for daily check, 'manual' for on-demand */
+  trigger: "scheduled" | "manual"
+  /** Optional: specific subscription ID to process (for manual trigger) */
+  subscriptionId?: string
+  /** Optional: specific billing key ID to use (for testing) */
+  billingKeyId?: string
+}
+
+/**
+ * Billing Payment Job Result
+ */
+export interface BillingPaymentResult {
+  success: boolean
+  /** Number of subscriptions processed */
+  processedCount: number
+  /** Number of successful payments */
+  successCount: number
+  /** Number of failed payments */
+  failedCount: number
+  /** Individual payment results */
+  payments: Array<{
+    subscriptionId: string
+    billingKeyId: string
+    orderId: string
+    amount: number
+    status: "success" | "failed"
+    paymentKey?: string
+    error?: string
+  }>
+  /** Processing duration in ms */
+  durationMs: number
 }

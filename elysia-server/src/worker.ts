@@ -49,6 +49,7 @@
 import { config } from "./config"
 import { startHealthServer, stopHealthServer } from "./lib/health"
 import {
+  billingPaymentQueue,
   followupEmailQueue,
   migratePendingExecutionsToBullMQ,
   trialExpirationQueue,
@@ -57,6 +58,7 @@ import {
 import { redisConnection } from "./lib/redis"
 import logger from "./utils/logger"
 import {
+  getBillingPaymentWorkerStatus,
   getFollowupEmailWorkerStatus,
   getOnboardingAutoGenerateWorkerStatus,
   getSequenceEmailWorkerStatus,
@@ -64,6 +66,7 @@ import {
   getTrialExpirationWorkerStatus,
   getUnipileInboxPollWorkerStatus,
   getWebExtractionWorkerStatus,
+  startBillingPaymentWorker,
   startFollowupEmailWorker,
   startOnboardingAutoGenerateWorker,
   startSequenceEmailWorker,
@@ -71,6 +74,7 @@ import {
   startTrialExpirationWorker,
   startUnipileInboxPollWorker,
   startWebExtractionWorker,
+  stopBillingPaymentWorker,
   stopFollowupEmailWorker,
   stopOnboardingAutoGenerateWorker,
   stopSequenceEmailWorker,
@@ -149,6 +153,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
     await stopFollowupEmailWorker()
     logger.info("[Worker] FollowupEmailWorker stopped")
+
+    await stopBillingPaymentWorker()
+    logger.info("[Worker] BillingPaymentWorker stopped")
 
     // Close Redis connection
     await redisConnection.quit()
@@ -484,6 +491,35 @@ async function main(): Promise<void> {
     logger.error(
       { running: followupStatus.running },
       "[Worker] FollowupEmailWorker failed to start",
+    )
+  }
+
+  // Start Billing Payment Worker (정기결제 자동 승인)
+  const billingPaymentWorker = startBillingPaymentWorker()
+  const billingPaymentStatus = getBillingPaymentWorkerStatus()
+  if (billingPaymentWorker) {
+    logger.info(
+      { running: billingPaymentStatus.running, concurrency: billingPaymentStatus.concurrency },
+      "[Worker] BillingPaymentWorker started",
+    )
+
+    // Schedule daily billing payment check
+    // Cron: "0 0 * * *" = Every day at UTC 00:00 = KST 09:00
+    await billingPaymentQueue.add(
+      "daily-billing",
+      { trigger: "scheduled" },
+      {
+        repeat: {
+          pattern: "0 0 * * *", // UTC 00:00 = KST 09:00
+        },
+        jobId: "billing-payment-daily", // Prevent duplicates
+      },
+    )
+    logger.info("[Worker] Billing payment check scheduled (daily at KST 09:00)")
+  } else {
+    logger.error(
+      { running: billingPaymentStatus.running },
+      "[Worker] BillingPaymentWorker failed to start",
     )
   }
 

@@ -3,23 +3,25 @@
  *
  * PG 심사용 공개 결제 테스트 페이지
  * - 로그인 없이 접근 가능
- * - 국내: 토스페이먼츠 (KRW)
- * - 해외: 페이팔 (USD)
+ * - TossPayments 정기결제(빌링) SDK 사용
+ * - 빌링키 발급 → 자동결제 방식
  *
  * 경로: /payment-test
  */
 
-import * as PortOne from "@portone/browser-sdk/v2"
 import { useMutation } from "@tanstack/react-query"
+import { loadTossPayments } from "@tosspayments/tosspayments-sdk"
 import {
   AlertCircle,
   CheckCircle2,
   CreditCard,
+  DollarSign,
   Globe,
   Info,
   Loader2,
   RefreshCw,
   Search,
+  Settings,
   XCircle,
 } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
@@ -42,68 +44,99 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { publicApiFetch } from "@/lib/api/client"
-import {
-  type BillingPlan,
-  usePublicBillingPlans,
-  usePublicExchangeRate,
-} from "@/lib/api/hooks/public-payment"
+import { type BillingPlan, usePublicBillingPlans } from "@/lib/api/hooks/public-payment"
 import { env } from "@/lib/env"
-import {
-  detectLocale,
-  getDefaultPaymentMethod,
-  getExchangeRateSourceLabel,
-  PAYMENT_METHODS,
-  type PaymentMethod,
-} from "@/lib/locale"
 
 // ============================================================================
 // Config
 // ============================================================================
 
-const PORTONE_STORE_ID = env.VITE_PORTONE_STORE_ID
-const PORTONE_CHANNEL_KEY_TOSS = env.VITE_PORTONE_CHANNEL_KEY_TOSS
-const PORTONE_CHANNEL_KEY_PAYPAL = env.VITE_PORTONE_CHANNEL_KEY_PAYPAL
+const TOSS_CLIENT_KEY = env.VITE_TOSS_CLIENT_KEY
 
 // ============================================================================
 // Types
 // ============================================================================
 
-// BillingPlan type is imported from public-payment hooks
-// 백엔드에서 amount/amountUSD/displayAmount/displayAmountUSD 직접 제공
+type PaymentMethod = "KRW" | "PAYPAL"
 
-type PaymentResult = {
+type BillingResult = {
   success: boolean
-  paymentId: string
-  status?: string
+  billingKey?: string
+  customerKey?: string
   message?: string
-  amount?: number
-  method?: string
-  paidAt?: string
+  cardCompany?: string
+  cardNumber?: string
+  authenticatedAt?: string
+}
+
+type IssueBillingKeyParams = {
+  authKey: string
+  customerKey: string
+}
+
+type IssueBillingKeyResponse = {
+  success: boolean
+  data?: {
+    billingKey: string
+    customerKey: string
+    cardCompany?: string
+    cardNumber?: string
+    authenticatedAt?: string
+  }
+  error?: string
 }
 
 // ============================================================================
 // API Functions
 // ============================================================================
 
-type PaymentVerifyData = {
-  id: string
-  status: string
-  amount: { total: number }
-  method?: { type: string }
-  paidAt?: string
+async function issueBillingKeyApi(params: IssueBillingKeyParams): Promise<IssueBillingKeyResponse> {
+  return publicApiFetch<IssueBillingKeyResponse>("/api/v1/public/billing/issue-key", {
+    method: "POST",
+    body: JSON.stringify({
+      authKey: params.authKey,
+      customerKey: params.customerKey,
+    }),
+  })
 }
 
-type PaymentVerifyApiResponse = {
-  success: boolean
-  data: PaymentVerifyData
+async function lookupBillingKeyApi(billingKey: string): Promise<Record<string, unknown>> {
+  return publicApiFetch<Record<string, unknown>>(`/api/v1/public/billing/${billingKey}`)
 }
 
-async function verifyPaymentApi(paymentId: string): Promise<PaymentVerifyApiResponse> {
-  return publicApiFetch<PaymentVerifyApiResponse>(`/api/v1/payments/${paymentId}`)
+async function chargeBillingKeyApi(params: {
+  billingKey: string
+  amount: number
+  orderName: string
+}): Promise<Record<string, unknown>> {
+  return publicApiFetch<Record<string, unknown>>(
+    `/api/v1/public/billing/${params.billingKey}/charge`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        amount: params.amount,
+        orderName: params.orderName,
+      }),
+    },
+  )
 }
 
-async function lookupPaymentApi(paymentId: string): Promise<Record<string, unknown>> {
-  return publicApiFetch<Record<string, unknown>>(`/api/v1/payments/${paymentId}`)
+async function deactivateBillingKeyApi(billingKey: string): Promise<Record<string, unknown>> {
+  return publicApiFetch<Record<string, unknown>>(
+    `/api/v1/public/billing/${billingKey}/deactivate`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+async function reactivateBillingKeyApi(billingKey: string): Promise<Record<string, unknown>> {
+  return publicApiFetch<Record<string, unknown>>(
+    `/api/v1/public/billing/${billingKey}/reactivate`,
+    {
+      method: "POST",
+    },
+  )
 }
 
 // ============================================================================
@@ -131,12 +164,13 @@ function formatInterval(plan: BillingPlan): string {
 // ============================================================================
 
 export default function PaymentTestPublic() {
-  const termsId = useId()
-  const privacyId = useId()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Fetch billing plans from DB (tanstack query)
-  // 백엔드에서 amount/amountUSD 직접 제공 - 변환 불필요
+  // IDs for accessibility
+  const termsId = useId()
+  const privacyId = useId()
+
+  // Fetch billing plans from DB
   const {
     data: plans = [],
     isLoading: isLoadingPlans,
@@ -145,56 +179,121 @@ export default function PaymentTestPublic() {
 
   const plansError = plansQueryError ? "요금제를 불러오는데 실패했습니다." : null
 
-  // Locale detection
-  const [locale] = useState(() => detectLocale())
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() =>
-    getDefaultPaymentMethod(locale),
-  )
-
-  // Exchange rate (tanstack query)
-  const { data: exchangeRateData } = usePublicExchangeRate("USD", "KRW")
-  const exchangeRate = exchangeRateData
-    ? {
-        rate: exchangeRateData.rate,
-        source: exchangeRateData.source,
-      }
-    : null
-
-  // PayPal ref
-  const paypalPaymentIdRef = useRef<string>("")
-
   // State
   const [selectedPlanId, setSelectedPlanId] = useState<string>("")
-  const [agreedTerms, setAgreedTerms] = useState(false)
-  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("KRW")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
+  const [billingResult, setBillingResult] = useState<BillingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Payment lookup
-  const [lookupPaymentId, setLookupPaymentId] = useState("")
+  // Terms agreement state
+  const [agreedTerms, setAgreedTerms] = useState(false)
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
+
+  // Billing key lookup
+  const [lookupBillingKey, setLookupBillingKey] = useState("")
   const [lookupResult, setLookupResult] = useState<Record<string, unknown> | null>(null)
+
+  // Billing key charge (수동 결제)
+  const [chargeBillingKey, setChargeBillingKey] = useState("")
+  const [chargeAmount, setChargeAmount] = useState("100")
+  const [chargeOrderName, setChargeOrderName] = useState("테스트 결제")
+  const [chargeResult, setChargeResult] = useState<Record<string, unknown> | null>(null)
+
+  // Billing key management (비활성화/재활성화)
+  const [manageBillingKey, setManageBillingKey] = useState("")
+  const [manageResult, setManageResult] = useState<Record<string, unknown> | null>(null)
+
+  // Refs to prevent double processing
+  const redirectProcessedRef = useRef(false)
 
   // Selected plan
   const selectedPlan = plans.find((p) => p.id === selectedPlanId)
 
-  // USD price - 백엔드에서 직접 제공 (계산 불필요)
-  const selectedPlanUSD = selectedPlan?.amountUSD || 0
+  // Price display helper
+  const getPriceDisplay = (plan: BillingPlan) => plan.displayAmount
 
-  // Price display helper - 백엔드에서 직접 제공
-  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") =>
-    currency === "KRW" ? plan.displayAmount : plan.displayAmountUSD
+  // Environment check
+  const isTossConfigured = Boolean(TOSS_CLIENT_KEY)
 
-  // Payment lookup mutation
-  const lookupPaymentMutation = useMutation({
-    mutationFn: lookupPaymentApi,
-    onSuccess: (data) => {
-      setLookupResult(data)
-    },
+  // Can register check - 약관 동의 포함
+  const canRegister =
+    !isProcessing &&
+    selectedPlan &&
+    isTossConfigured &&
+    paymentMethod === "KRW" &&
+    agreedTerms &&
+    agreedPrivacy
+
+  // Billing key lookup mutation
+  const lookupBillingMutation = useMutation({
+    mutationFn: lookupBillingKeyApi,
+    onSuccess: (data) => setLookupResult(data),
     onError: (err) => {
       console.error("[Lookup] Error:", err)
       setLookupResult({ error: "조회 실패" })
     },
+  })
+
+  // Billing key charge mutation (수동 결제)
+  const chargeBillingMutation = useMutation({
+    mutationFn: chargeBillingKeyApi,
+    onSuccess: (data) => setChargeResult(data),
+    onError: (err) => {
+      console.error("[Charge] Error:", err)
+      setChargeResult({ error: "결제 실패" })
+    },
+  })
+
+  // Billing key deactivate mutation
+  const deactivateBillingMutation = useMutation({
+    mutationFn: deactivateBillingKeyApi,
+    onSuccess: (data) => setManageResult(data),
+    onError: (err) => {
+      console.error("[Deactivate] Error:", err)
+      setManageResult({ error: "비활성화 실패" })
+    },
+  })
+
+  // Billing key reactivate mutation
+  const reactivateBillingMutation = useMutation({
+    mutationFn: reactivateBillingKeyApi,
+    onSuccess: (data) => setManageResult(data),
+    onError: (err) => {
+      console.error("[Reactivate] Error:", err)
+      setManageResult({ error: "재활성화 실패" })
+    },
+  })
+
+  // Issue billing key mutation (for redirect handling)
+  const issueBillingKeyMutation = useMutation({
+    mutationFn: issueBillingKeyApi,
+    onSuccess: (response) => {
+      if (response?.success && response?.data) {
+        setBillingResult({
+          success: true,
+          billingKey: response.data.billingKey,
+          customerKey: response.data.customerKey,
+          message: "카드 등록이 완료되었습니다. 정기결제가 설정됩니다.",
+          cardCompany: response.data.cardCompany,
+          cardNumber: response.data.cardNumber,
+          authenticatedAt: response.data.authenticatedAt,
+        })
+      } else {
+        setBillingResult({
+          success: false,
+          message: response?.error || "빌링키 발급에 실패했습니다.",
+        })
+      }
+    },
+    onError: (err) => {
+      console.error("[Billing] Issue key error:", err)
+      setBillingResult({
+        success: false,
+        message: "빌링키 발급 중 오류가 발생했습니다.",
+      })
+    },
+    onSettled: () => setIsProcessing(false),
   })
 
   // Set default plan
@@ -204,222 +303,142 @@ export default function PaymentTestPublic() {
     }
   }, [plans, selectedPlanId])
 
-  // Handle mobile redirect
+  // Handle redirect from TossPayments (billing auth)
   useEffect(() => {
-    const redirectPaymentId = searchParams.get("paymentId")
+    if (redirectProcessedRef.current) {
+      return
+    }
 
-    if (redirectPaymentId) {
+    const authKey = searchParams.get("authKey")
+    const customerKey = searchParams.get("customerKey")
+    const errorCode = searchParams.get("code")
+    const errorMessage = searchParams.get("message")
+
+    // Handle success redirect - issue billing key
+    if (authKey && customerKey) {
+      redirectProcessedRef.current = true
       setSearchParams({})
       setIsProcessing(true)
       setError(null)
 
-      verifyPaymentApi(redirectPaymentId)
-        .then((verifyResponse) => {
-          if (verifyResponse?.success && verifyResponse?.data?.status === "PAID") {
-            setPaymentResult({
-              success: true,
-              paymentId: redirectPaymentId,
-              status: "PAID",
-              message: "결제가 완료되었습니다.",
-              amount: verifyResponse.data.amount.total,
-              method: verifyResponse.data.method?.type,
-              paidAt: verifyResponse.data.paidAt,
-            })
-          } else {
-            setPaymentResult({
-              success: false,
-              paymentId: redirectPaymentId,
-              message: "결제가 완료되지 않았습니다.",
-              status: verifyResponse?.data?.status,
-            })
-          }
-        })
-        .catch((err) => {
-          console.error("[Payment] Mobile redirect error:", err)
-          setError("결제 확인 중 오류가 발생했습니다.")
-        })
-        .finally(() => {
-          setIsProcessing(false)
-        })
+      issueBillingKeyMutation.mutate({
+        authKey,
+        customerKey,
+      })
     }
-  }, [searchParams, setSearchParams])
 
-  // Environment check
-  const isTossConfigured = Boolean(PORTONE_STORE_ID && PORTONE_CHANNEL_KEY_TOSS)
-  const isPaypalConfigured = Boolean(PORTONE_STORE_ID && PORTONE_CHANNEL_KEY_PAYPAL)
-  const isEnvConfigured = paymentMethod === "TOSS" ? isTossConfigured : isPaypalConfigured
-
-  // Can pay check
-  const canPay = agreedTerms && agreedPrivacy && !isProcessing && selectedPlan && isEnvConfigured
+    // Handle failure redirect
+    if (errorCode) {
+      redirectProcessedRef.current = true
+      setSearchParams({})
+      setError(errorMessage || `카드 등록 실패 (${errorCode})`)
+      setBillingResult({
+        success: false,
+        message: errorMessage || "카드 등록이 취소되었거나 실패했습니다.",
+      })
+    }
+  }, [searchParams, setSearchParams, issueBillingKeyMutation.mutate])
 
   // ============================================================================
   // Handlers
   // ============================================================================
 
-  const handleTossPayment = async () => {
-    if (!(canPay && selectedPlan)) {
+  const handlePaymentMethodChange = (value: string) => {
+    setPaymentMethod(value as PaymentMethod)
+    setError(null)
+  }
+
+  const handleRegisterCard = async () => {
+    if (!(canRegister && selectedPlan)) {
+      return
+    }
+
+    if (!TOSS_CLIENT_KEY) {
+      setError("토스페이먼츠 클라이언트 키가 설정되지 않았습니다.")
       return
     }
 
     setIsProcessing(true)
     setError(null)
-    setPaymentResult(null)
+    setBillingResult(null)
 
-    const paymentId = `pg-test-${crypto.randomUUID()}`
+    // Generate unique customer key (UUID)
+    const customerKey = crypto.randomUUID()
 
     try {
-      const response = await PortOne.requestPayment({
-        storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_TOSS,
-        paymentId,
-        orderName: `[PG심사] ${selectedPlan.product?.name || selectedPlan.name}`,
-        totalAmount: selectedPlan.amount,
-        currency: "CURRENCY_KRW",
-        payMethod: "CARD",
-        customer: {
-          email: "pg-test@example.com",
-          fullName: "PG심사테스트",
-          phoneNumber: "01012345678",
-        },
-        customData: {
-          planId: selectedPlan.id,
-          isTestPayment: true,
-        },
-        redirectUrl: `${window.location.origin}/payment-test?paymentId=${paymentId}`,
+      const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
+      const payment = tossPayments.payment({ customerKey })
+
+      // Request billing auth (카드 등록창)
+      await payment.requestBillingAuth({
+        method: "CARD",
+        successUrl: `${window.location.origin}/payment-test`,
+        failUrl: `${window.location.origin}/payment-test`,
+        customerEmail: "pg-test@example.com",
+        customerName: "PG심사테스트",
       })
-
-      if (response?.code) {
-        setError(`결제 실패: ${response.message || response.code}`)
-        setPaymentResult({
-          success: false,
-          paymentId,
-          message: response.message || "결제가 취소되었습니다.",
-        })
-      } else if (response?.paymentId) {
-        // Verify payment
-        const verifyResponse = await verifyPaymentApi(response.paymentId)
-
-        if (verifyResponse?.data?.status === "PAID") {
-          setPaymentResult({
-            success: true,
-            paymentId: response.paymentId,
-            status: "PAID",
-            message: "결제가 완료되었습니다.",
-            amount: verifyResponse.data.amount.total,
-            method: verifyResponse.data.method?.type,
-            paidAt: verifyResponse.data.paidAt,
-          })
-        } else {
-          setPaymentResult({
-            success: false,
-            paymentId: response.paymentId,
-            status: verifyResponse?.data?.status,
-            message: "결제 상태 확인이 필요합니다.",
-          })
-        }
-      }
     } catch (err) {
-      console.error("[Payment] Toss error:", err)
-      setError("결제 처리 중 오류가 발생했습니다.")
-    } finally {
+      console.error("[Billing] Error:", err)
+      setError("카드 등록 중 오류가 발생했습니다.")
+      setBillingResult({
+        success: false,
+        message: err instanceof Error ? err.message : "카드 등록이 취소되었습니다.",
+      })
       setIsProcessing(false)
     }
   }
 
-  // PayPal SPB
-  useEffect(() => {
-    if (
-      paymentMethod !== "PAYPAL" ||
-      !isPaypalConfigured ||
-      !selectedPlan ||
-      !agreedTerms ||
-      !agreedPrivacy
-    ) {
+  const handleLookupBilling = () => {
+    if (!lookupBillingKey.trim()) {
       return
     }
-
-    paypalPaymentIdRef.current = `pg-test-${crypto.randomUUID()}`
-
-    PortOne.loadPaymentUI(
-      {
-        uiType: "PAYPAL_SPB",
-        storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_PAYPAL ?? "",
-        paymentId: paypalPaymentIdRef.current,
-        orderName: `[PG Test] ${selectedPlan.product?.name || selectedPlan.name}`,
-        totalAmount: selectedPlanUSD,
-        currency: "CURRENCY_USD",
-        customer: {
-          email: "pg-test@example.com",
-          fullName: "PG Test User",
-        },
-        customData: {
-          planId: selectedPlan.id,
-          isTestPayment: true,
-        },
-      },
-      {
-        onPaymentSuccess: async () => {
-          setIsProcessing(true)
-          try {
-            const verifyResponse = await verifyPaymentApi(paypalPaymentIdRef.current)
-
-            if (verifyResponse?.data?.status === "PAID") {
-              setPaymentResult({
-                success: true,
-                paymentId: paypalPaymentIdRef.current,
-                status: "PAID",
-                message: "PayPal 결제가 완료되었습니다.",
-                amount: verifyResponse.data.amount.total,
-                method: "PayPal",
-                paidAt: verifyResponse.data.paidAt,
-              })
-            }
-          } finally {
-            setIsProcessing(false)
-          }
-        },
-        onPaymentFail: (error: unknown) => {
-          console.error("[Payment] PayPal error:", error)
-          const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-              ? String(error.message)
-              : "PayPal payment failed"
-          setError(errorMessage)
-          setPaymentResult({
-            success: false,
-            paymentId: paypalPaymentIdRef.current,
-            message: errorMessage,
-          })
-        },
-      },
-    )
-
-    return () => {
-      const container = document.querySelector(".portone-ui-container")
-      if (container) {
-        container.innerHTML = ""
-      }
-    }
-  }, [paymentMethod, selectedPlan, selectedPlanUSD, agreedTerms, agreedPrivacy, isPaypalConfigured])
-
-  const handleLookupPayment = () => {
-    if (!lookupPaymentId.trim()) {
-      return
-    }
-
     setLookupResult(null)
-    lookupPaymentMutation.mutate(lookupPaymentId.trim())
+    lookupBillingMutation.mutate(lookupBillingKey.trim())
   }
 
-  // Lookup loading state (use mutation isPending)
-  const isLookingUp = lookupPaymentMutation.isPending
+  const handleChargeBilling = () => {
+    if (!chargeBillingKey.trim()) {
+      return
+    }
+    const amount = Number.parseInt(chargeAmount, 10)
+    if (Number.isNaN(amount) || amount < 100) {
+      setChargeResult({ error: "금액은 100원 이상이어야 합니다." })
+      return
+    }
+    setChargeResult(null)
+    chargeBillingMutation.mutate({
+      billingKey: chargeBillingKey.trim(),
+      amount,
+      orderName: chargeOrderName || "테스트 결제",
+    })
+  }
+
+  const handleDeactivateBilling = () => {
+    if (!manageBillingKey.trim()) {
+      return
+    }
+    setManageResult(null)
+    deactivateBillingMutation.mutate(manageBillingKey.trim())
+  }
+
+  const handleReactivateBilling = () => {
+    if (!manageBillingKey.trim()) {
+      return
+    }
+    setManageResult(null)
+    reactivateBillingMutation.mutate(manageBillingKey.trim())
+  }
 
   const handleReset = () => {
-    setPaymentResult(null)
+    setBillingResult(null)
     setError(null)
-    setAgreedTerms(false)
-    setAgreedPrivacy(false)
+  }
+
+  // 빌링키 복사 헬퍼
+  const copyBillingKeyToFields = (billingKey: string) => {
+    setLookupBillingKey(billingKey)
+    setChargeBillingKey(billingKey)
+    setManageBillingKey(billingKey)
   }
 
   // ============================================================================
@@ -436,385 +455,396 @@ export default function PaymentTestPublic() {
             <span className="text-blue-400">|</span>
             <span className="text-blue-600 text-sm">해외 바이어 발굴 · 글로벌 세일즈 자동화</span>
           </div>
-          <h1 className="mb-2 font-bold text-2xl">PG 결제 테스트</h1>
-          <p className="text-gray-500">토스페이먼츠 / PayPal 결제 심사용 테스트 페이지</p>
+          <h1 className="mb-2 font-bold text-2xl">PG 정기결제 테스트</h1>
+          <p className="text-gray-500">토스페이먼츠 빌링(자동결제) SDK 심사용 테스트 페이지</p>
           <Badge className="mt-3" variant="outline">
             테스트 모드
           </Badge>
         </div>
 
-        <Tabs className="space-y-6" defaultValue="payment">
+        <Tabs className="space-y-6" defaultValue="billing">
           <TabsList className="h-9 rounded-lg bg-muted p-1">
-            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="payment">
+            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="billing">
               <CreditCard className="h-3.5 w-3.5" />
-              결제 테스트
+              카드 등록
             </TabsTrigger>
             <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="lookup">
               <Search className="h-3.5 w-3.5" />
-              결제 조회
+              빌링키 조회
+            </TabsTrigger>
+            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="charge">
+              <DollarSign className="h-3.5 w-3.5" />
+              수동 결제
+            </TabsTrigger>
+            <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="manage">
+              <Settings className="h-3.5 w-3.5" />
+              빌링키 관리
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent className="space-y-6" value="payment">
-            {/* Region Info */}
+          <TabsContent className="space-y-6" value="billing">
+            {/* Info */}
             <Alert>
-              <Globe className="h-4 w-4" />
-              <AlertTitle>지역 기반 결제 수단</AlertTitle>
+              <Info className="h-4 w-4" />
+              <AlertTitle>정기결제 안내</AlertTitle>
               <AlertDescription>
-                <div>
-                  감지된 언어: <code className="rounded bg-gray-200 px-1">{locale.language}</code>
-                  {" → "}
-                  {locale.isKorean ? "한국 카드결제 (KRW)" : "PayPal (USD)"} 기본 선택
+                <div>카드를 한 번 등록하면 매월 자동으로 결제됩니다.</div>
+                <div className="mt-1 text-gray-500 text-xs">
+                  빌링키 발급 → 정기 자동결제 방식 (구매자 인증 1회만 필요)
                 </div>
-                {exchangeRate?.rate && (
-                  <div className="mt-1 text-gray-500 text-xs">
-                    환율: 1 USD = {exchangeRate.rate.toLocaleString()} KRW
-                    <span className="ml-2 rounded bg-blue-100 px-1 text-blue-700">
-                      {getExchangeRateSourceLabel(exchangeRate.source)}
-                    </span>
-                  </div>
-                )}
               </AlertDescription>
             </Alert>
 
             {/* Env Warning */}
-            {!isEnvConfigured && (
+            {!isTossConfigured && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>환경변수 미설정</AlertTitle>
-                <AlertDescription>결제를 사용하려면 환경변수를 설정해야 합니다.</AlertDescription>
+                <AlertDescription>
+                  결제를 사용하려면{" "}
+                  <code className="rounded bg-gray-200 px-1">VITE_TOSS_CLIENT_KEY</code> 환경변수를
+                  설정해야 합니다.
+                </AlertDescription>
               </Alert>
             )}
 
             <div className="grid gap-6 lg:grid-cols-3">
-              {/* Plan Selection */}
+              {/* Plan Selection & Card Registration */}
               <Card className="lg:col-span-2">
                 <CardHeader>
-                  <CardTitle className="text-base">결제 정보</CardTitle>
-                  <CardDescription>요금제를 선택하세요</CardDescription>
+                  <CardTitle className="text-base">정기결제 등록</CardTitle>
+                  <CardDescription>요금제를 선택하고 결제 카드를 등록하세요</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   {/* Plan Select */}
                   <div className="space-y-2">
                     <Label className="font-medium text-sm">요금제</Label>
+                    {isLoadingPlans ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                      </div>
+                    ) : plansError ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{plansError}</AlertDescription>
+                      </Alert>
+                    ) : plans.length === 0 ? (
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>활성화된 요금제가 없습니다.</AlertDescription>
+                      </Alert>
+                    ) : (
+                      <>
+                        <Select onValueChange={setSelectedPlanId} value={selectedPlanId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="요금제를 선택하세요" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {plans.map((plan) => (
+                              <SelectItem key={plan.id} value={plan.id}>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span>{plan.product?.name || plan.name}</span>
+                                  <span className="text-gray-500">
+                                    {getPriceDisplay(plan)}/{formatInterval(plan)}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {/* Selected Plan Info */}
+                        {selectedPlan && (
+                          <div className="rounded-lg bg-gray-100 p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium">
+                                  {selectedPlan.product?.name || selectedPlan.name}
+                                </h4>
+                                <p className="text-gray-500 text-sm">
+                                  {selectedPlan.description || "설명 없음"}
+                                </p>
+                                {selectedPlan.product?.tier && (
+                                  <Badge className="mt-1" variant="outline">
+                                    {selectedPlan.product.tier.toUpperCase()}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg">{getPriceDisplay(selectedPlan)}</p>
+                                <p className="text-gray-500 text-xs">
+                                  /{formatInterval(selectedPlan)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  {isLoadingPlans ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+
+                  <Separator />
+
+                  {/* Payment Method Selection */}
+                  <div className="space-y-3">
+                    <Label className="font-medium text-sm">결제 방식</Label>
+                    <RadioGroup
+                      className="grid grid-cols-2 gap-3"
+                      onValueChange={handlePaymentMethodChange}
+                      value={paymentMethod}
+                    >
+                      {/* 국내 카드 결제 (KRW) */}
+                      <div>
+                        <RadioGroupItem
+                          className="peer sr-only"
+                          disabled={!isTossConfigured}
+                          id="payment-krw"
+                          value="KRW"
+                        />
+                        <Label
+                          className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 ${
+                            isTossConfigured ? "" : "cursor-not-allowed opacity-50"
+                          }`}
+                          htmlFor="payment-krw"
+                        >
+                          <CreditCard className="mb-2 h-6 w-6" />
+                          <div className="text-center">
+                            <p className="font-medium text-sm">국내 카드</p>
+                            <p className="text-gray-500 text-xs">
+                              {selectedPlan && getPriceDisplay(selectedPlan)}
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+
+                      {/* PayPal - Disabled (정기결제 미지원) */}
+                      <div>
+                        <RadioGroupItem
+                          className="peer sr-only"
+                          disabled={true}
+                          id="payment-paypal"
+                          value="PAYPAL"
+                        />
+                        <Label
+                          className="flex cursor-not-allowed flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 opacity-50"
+                          htmlFor="payment-paypal"
+                        >
+                          <Globe className="mb-2 h-6 w-6" />
+                          <div className="text-center">
+                            <p className="font-medium text-sm">PayPal</p>
+                            <p className="text-orange-500 text-xs">추후 지원</p>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <Separator />
+
+                  {/* Terms Agreement */}
+                  <div className="space-y-3">
+                    <Label className="font-medium text-sm">약관 동의</Label>
+                    <div className="space-y-3 rounded-lg border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={agreedTerms}
+                            id={termsId}
+                            onCheckedChange={(checked) => setAgreedTerms(checked === true)}
+                          />
+                          <Label
+                            className="cursor-pointer text-sm leading-relaxed"
+                            htmlFor={termsId}
+                          >
+                            <span className="text-red-500">[필수]</span> 이용약관에 동의합니다
+                          </Label>
+                        </div>
+                        <Link
+                          className="text-gray-500 text-sm hover:text-blue-600"
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          to="/terms"
+                        >
+                          (보기)
+                        </Link>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            checked={agreedPrivacy}
+                            id={privacyId}
+                            onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
+                          />
+                          <Label
+                            className="cursor-pointer text-sm leading-relaxed"
+                            htmlFor={privacyId}
+                          >
+                            <span className="text-red-500">[필수]</span> 개인정보 처리방침에
+                            동의합니다
+                          </Label>
+                        </div>
+                        <Link
+                          className="text-gray-500 text-sm hover:text-blue-600"
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          to="/privacy"
+                        >
+                          (보기)
+                        </Link>
+                      </div>
                     </div>
-                  ) : plansError ? (
+                  </div>
+
+                  {error && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{plansError}</AlertDescription>
+                      <AlertTitle>오류</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
                     </Alert>
-                  ) : plans.length === 0 ? (
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>활성화된 요금제가 없습니다.</AlertDescription>
-                    </Alert>
-                  ) : (
-                    <>
-                      <Select onValueChange={setSelectedPlanId} value={selectedPlanId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="요금제를 선택하세요" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {plans.map((plan) => (
-                            <SelectItem key={plan.id} value={plan.id}>
-                              <div className="flex items-center justify-between gap-4">
-                                <span>{plan.product?.name || plan.name}</span>
-                                <span className="text-gray-500">
-                                  {getPriceDisplay(plan, "KRW")}/{formatInterval(plan)}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      {/* Selected Plan Info */}
-                      {selectedPlan && (
-                        <div className="rounded-lg bg-gray-100 p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium">
-                                {selectedPlan.product?.name || selectedPlan.name}
-                              </h4>
-                              <p className="text-gray-500 text-sm">
-                                {selectedPlan.description || "설명 없음"}
-                              </p>
-                              {selectedPlan.product?.tier && (
-                                <Badge className="mt-1" variant="outline">
-                                  {selectedPlan.product.tier.toUpperCase()}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-lg">
-                                {paymentMethod === "TOSS"
-                                  ? getPriceDisplay(selectedPlan, "KRW")
-                                  : getPriceDisplay(selectedPlan, "USD")}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                /{formatInterval(selectedPlan)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Payment Method */}
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-sm">결제 수단</h4>
-                        <RadioGroup
-                          className="grid grid-cols-2 gap-3"
-                          onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
-                          value={paymentMethod}
-                        >
-                          {/* Toss */}
-                          <div>
-                            <RadioGroupItem
-                              className="peer sr-only"
-                              disabled={!isTossConfigured}
-                              id="payment-toss"
-                              value="TOSS"
-                            />
-                            <Label
-                              className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 ${
-                                isTossConfigured ? "" : "cursor-not-allowed opacity-50"
-                              }`}
-                              htmlFor="payment-toss"
-                            >
-                              <CreditCard className="mb-2 h-6 w-6" />
-                              <div className="text-center">
-                                <p className="font-medium text-sm">
-                                  {PAYMENT_METHODS.TOSS.icon} {PAYMENT_METHODS.TOSS.name}
-                                </p>
-                                <p className="text-gray-500 text-xs">
-                                  {selectedPlan && getPriceDisplay(selectedPlan, "KRW")}
-                                </p>
-                              </div>
-                            </Label>
-                          </div>
-
-                          {/* PayPal - PG 심사용이므로 지역 제한 없음 */}
-                          <div>
-                            <RadioGroupItem
-                              className="peer sr-only"
-                              disabled={!isPaypalConfigured}
-                              id="payment-paypal"
-                              value="PAYPAL"
-                            />
-                            <Label
-                              className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-gray-200 bg-white p-4 hover:bg-gray-50 peer-data-[state=checked]:border-blue-500 ${
-                                isPaypalConfigured ? "" : "cursor-not-allowed opacity-50"
-                              }`}
-                              htmlFor="payment-paypal"
-                            >
-                              <Globe className="mb-2 h-6 w-6" />
-                              <div className="text-center">
-                                <p className="font-medium text-sm">
-                                  {PAYMENT_METHODS.PAYPAL.icon} {PAYMENT_METHODS.PAYPAL.name}
-                                </p>
-                                <p className="text-gray-500 text-xs">
-                                  {selectedPlan && getPriceDisplay(selectedPlan, "USD")}
-                                </p>
-                              </div>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* Terms */}
-                      <div className="space-y-3 rounded-lg border p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              checked={agreedTerms}
-                              id={termsId}
-                              onCheckedChange={(checked) => setAgreedTerms(checked === true)}
-                            />
-                            <Label
-                              className="cursor-pointer text-sm leading-relaxed"
-                              htmlFor={termsId}
-                            >
-                              <span className="text-red-500">[필수]</span> 이용약관에 동의합니다
-                            </Label>
-                          </div>
-                          <Link
-                            className="text-gray-500 text-sm hover:text-blue-600"
-                            onClick={(e) => e.stopPropagation()}
-                            target="_blank"
-                            to="/terms"
-                          >
-                            (보기)
-                          </Link>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Checkbox
-                              checked={agreedPrivacy}
-                              id={privacyId}
-                              onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
-                            />
-                            <Label
-                              className="cursor-pointer text-sm leading-relaxed"
-                              htmlFor={privacyId}
-                            >
-                              <span className="text-red-500">[필수]</span> 개인정보 처리방침에
-                              동의합니다
-                            </Label>
-                          </div>
-                          <Link
-                            className="text-gray-500 text-sm hover:text-blue-600"
-                            onClick={(e) => e.stopPropagation()}
-                            target="_blank"
-                            to="/privacy"
-                          >
-                            (보기)
-                          </Link>
-                        </div>
-                      </div>
-                    </>
                   )}
 
                   <Separator />
 
-                  {/* Payment Button */}
-                  {paymentMethod === "TOSS" ? (
-                    <Button
-                      className="w-full"
-                      disabled={!canPay}
-                      onClick={handleTossPayment}
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          결제 처리 중...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          {selectedPlan
-                            ? `${getPriceDisplay(selectedPlan, "KRW")} 결제하기`
-                            : "요금제를 선택하세요"}
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <div className="space-y-3">
-                      {isProcessing && (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          <span>결제 처리 중...</span>
-                        </div>
-                      )}
-                      {isPaypalConfigured ? (
-                        agreedTerms && agreedPrivacy ? (
-                          <>
-                            <div className="mb-2 text-center text-gray-500 text-sm">
-                              {selectedPlan && getPriceDisplay(selectedPlan, "USD")}
-                            </div>
-                            <div className="portone-ui-container flex min-h-[50px] items-center justify-center" />
-                          </>
-                        ) : (
-                          <div className="py-4 text-center text-gray-500 text-sm">
-                            약관에 동의하면 PayPal 버튼이 표시됩니다
-                          </div>
-                        )
-                      ) : (
-                        <div className="py-4 text-center text-gray-500 text-sm">
-                          PayPal 환경변수를 설정해주세요
-                        </div>
-                      )}
-                    </div>
+                  {/* Register Button */}
+                  <Button
+                    className="w-full"
+                    disabled={!canRegister}
+                    onClick={handleRegisterCard}
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        {selectedPlan
+                          ? `카드 등록하고 ${getPriceDisplay(selectedPlan)}/${formatInterval(selectedPlan)} 정기결제 시작`
+                          : "요금제를 선택하세요"}
+                      </>
+                    )}
+                  </Button>
+
+                  {paymentMethod === "PAYPAL" && (
+                    <p className="text-center text-orange-500 text-xs">
+                      PayPal은 정기결제를 지원하지 않습니다. 국내 카드를 선택해주세요.
+                    </p>
                   )}
 
-                  {!(agreedTerms && agreedPrivacy) && selectedPlan ? (
+                  {paymentMethod === "KRW" && !(agreedTerms && agreedPrivacy) && (
                     <p className="text-center text-gray-500 text-xs">
-                      결제를 진행하려면 필수 약관에 동의해주세요
+                      카드 등록을 진행하려면 약관에 동의해주세요.
                     </p>
-                  ) : null}
+                  )}
                 </CardContent>
               </Card>
 
               {/* Result */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">결제 결과</CardTitle>
-                  <CardDescription>결제 처리 결과가 표시됩니다</CardDescription>
+                  <CardTitle className="text-base">등록 결과</CardTitle>
+                  <CardDescription>카드 등록 결과가 표시됩니다</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {error && (
-                    <Alert className="mb-4" variant="destructive">
-                      <XCircle className="h-4 w-4" />
-                      <AlertTitle>오류</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {paymentResult && (
+                  {billingResult && (
                     <div className="space-y-4">
-                      <Alert variant={paymentResult.success ? "default" : "destructive"}>
-                        {paymentResult.success ? (
+                      <Alert variant={billingResult.success ? "default" : "destructive"}>
+                        {billingResult.success ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
                         ) : (
                           <XCircle className="h-4 w-4" />
                         )}
-                        <AlertTitle>{paymentResult.success ? "결제 성공" : "결제 실패"}</AlertTitle>
-                        <AlertDescription>{paymentResult.message}</AlertDescription>
+                        <AlertTitle>
+                          {billingResult.success ? "카드 등록 성공" : "카드 등록 실패"}
+                        </AlertTitle>
+                        <AlertDescription>{billingResult.message}</AlertDescription>
                       </Alert>
 
-                      <div className="space-y-2 rounded-lg bg-gray-100 p-4 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">결제 ID</span>
-                          <code className="rounded bg-gray-200 px-2 text-xs">
-                            {paymentResult.paymentId}
-                          </code>
+                      {billingResult.success && (
+                        <div className="space-y-2 rounded-lg bg-gray-100 p-4 text-sm">
+                          {billingResult.billingKey && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">빌링키</span>
+                              <code className="rounded bg-gray-200 px-2 text-xs">
+                                {billingResult.billingKey}
+                              </code>
+                            </div>
+                          )}
+                          {billingResult.customerKey && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">고객 키</span>
+                              <code className="rounded bg-gray-200 px-2 text-xs">
+                                {billingResult.customerKey}
+                              </code>
+                            </div>
+                          )}
+                          {billingResult.cardCompany && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">카드사</span>
+                              <span>{billingResult.cardCompany}</span>
+                            </div>
+                          )}
+                          {billingResult.cardNumber && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">카드번호</span>
+                              <span>{billingResult.cardNumber}</span>
+                            </div>
+                          )}
+                          {billingResult.authenticatedAt && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">등록 시간</span>
+                              <span>
+                                {new Date(billingResult.authenticatedAt).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {paymentResult.status && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">상태</span>
-                            <Badge
-                              variant={paymentResult.status === "PAID" ? "default" : "secondary"}
-                            >
-                              {paymentResult.status}
-                            </Badge>
-                          </div>
-                        )}
-                        {paymentResult.amount && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">금액</span>
-                            <span>{paymentResult.amount.toLocaleString()}</span>
-                          </div>
-                        )}
-                        {paymentResult.method && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">결제 수단</span>
-                            <span>{paymentResult.method}</span>
-                          </div>
-                        )}
-                        {paymentResult.paidAt && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">결제 시간</span>
-                            <span>{new Date(paymentResult.paidAt).toLocaleString()}</span>
-                          </div>
-                        )}
-                      </div>
+                      )}
 
-                      <Button className="w-full" onClick={handleReset} variant="outline">
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        다시 테스트
-                      </Button>
+                      {billingResult.success && billingResult.billingKey && (
+                        <Alert className="border-blue-200 bg-blue-50">
+                          <Info className="h-4 w-4 text-blue-600" />
+                          <AlertDescription className="text-blue-800 text-sm">
+                            이제 "수동 결제" 탭에서 이 빌링키로 결제를 테스트하거나, "빌링키 관리"
+                            탭에서 비활성화할 수 있습니다.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {billingResult.success && billingResult.billingKey && (
+                          <Button
+                            className="w-full"
+                            onClick={() => {
+                              if (billingResult.billingKey) {
+                                copyBillingKeyToFields(billingResult.billingKey)
+                                // 수동 결제 탭으로 이동
+                                const tabTrigger = document.querySelector(
+                                  '[value="charge"]',
+                                ) as HTMLButtonElement
+                                tabTrigger?.click()
+                              }
+                            }}
+                          >
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            빌링키로 결제하기
+                          </Button>
+                        )}
+                        <Button className="w-full" onClick={handleReset} variant="outline">
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          다시 테스트
+                        </Button>
+                      </div>
                     </div>
                   )}
 
-                  {!(paymentResult || error) && (
+                  {!billingResult && (
                     <div className="flex flex-col items-center justify-center py-8 text-center text-gray-400">
                       <CreditCard className="mb-2 h-12 w-12 opacity-20" />
-                      <p>결제를 진행하면 결과가 여기에 표시됩니다</p>
+                      <p>카드를 등록하면 결과가 여기에 표시됩니다</p>
                     </div>
                   )}
                 </CardContent>
@@ -825,18 +855,24 @@ export default function PaymentTestPublic() {
           <TabsContent className="space-y-6" value="lookup">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">결제 내역 조회</CardTitle>
-                <CardDescription>결제 ID로 결제 내역을 조회합니다</CardDescription>
+                <CardTitle className="text-base">빌링키 조회</CardTitle>
+                <CardDescription>
+                  빌링키(billingKey)로 등록된 카드 정보를 조회합니다
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    onChange={(e) => setLookupPaymentId(e.target.value)}
-                    placeholder="결제 ID를 입력하세요"
-                    value={lookupPaymentId}
+                    onChange={(e) => setLookupBillingKey(e.target.value)}
+                    placeholder="billingKey를 입력하세요"
+                    value={lookupBillingKey}
                   />
-                  <Button disabled={isLookingUp} onClick={handleLookupPayment}>
-                    {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : "조회"}
+                  <Button disabled={lookupBillingMutation.isPending} onClick={handleLookupBilling}>
+                    {lookupBillingMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "조회"
+                    )}
                   </Button>
                 </div>
 
@@ -844,6 +880,185 @@ export default function PaymentTestPublic() {
                   <div className="rounded-lg bg-gray-100 p-4">
                     <pre className="overflow-auto text-xs">
                       {JSON.stringify(lookupResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent className="space-y-6" value="charge">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>수동 결제 테스트</AlertTitle>
+              <AlertDescription>
+                <div>등록된 빌링키로 즉시 결제를 요청합니다.</div>
+                <div className="mt-1 text-gray-500 text-xs">
+                  테스트 환경에서는 당일 23:30에 자동 취소됩니다.
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">빌링키로 결제</CardTitle>
+                <CardDescription>빌링키를 사용하여 카드 인증 없이 바로 결제합니다</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="font-medium text-sm">빌링키</Label>
+                  <Input
+                    onChange={(e) => setChargeBillingKey(e.target.value)}
+                    placeholder="billingKey를 입력하세요"
+                    value={chargeBillingKey}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-medium text-sm">결제 금액 (원)</Label>
+                  <Input
+                    min={100}
+                    onChange={(e) => setChargeAmount(e.target.value)}
+                    placeholder="100"
+                    type="number"
+                    value={chargeAmount}
+                  />
+                  <p className="text-gray-500 text-xs">최소 100원 이상</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-medium text-sm">주문명</Label>
+                  <Input
+                    onChange={(e) => setChargeOrderName(e.target.value)}
+                    placeholder="테스트 결제"
+                    value={chargeOrderName}
+                  />
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={chargeBillingMutation.isPending || !chargeBillingKey.trim()}
+                  onClick={handleChargeBilling}
+                >
+                  {chargeBillingMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      결제 처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      결제하기
+                    </>
+                  )}
+                </Button>
+
+                {chargeResult && (
+                  <div className="rounded-lg bg-gray-100 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      {chargeResult.success ? (
+                        <>
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <span className="font-medium text-green-600">결제 성공</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="font-medium text-red-600">결제 실패</span>
+                        </>
+                      )}
+                    </div>
+                    <pre className="overflow-auto text-xs">
+                      {JSON.stringify(chargeResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent className="space-y-6" value="manage">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>빌링키 관리</AlertTitle>
+              <AlertDescription>
+                <div>빌링키를 비활성화하면 정기결제가 중단됩니다.</div>
+                <div className="mt-1 text-gray-500 text-xs">
+                  재활성화하면 정기결제가 다시 진행됩니다.
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">빌링키 비활성화 / 재활성화</CardTitle>
+                <CardDescription>빌링키의 활성 상태를 관리합니다 (Soft Delete)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="font-medium text-sm">빌링키</Label>
+                  <Input
+                    onChange={(e) => setManageBillingKey(e.target.value)}
+                    placeholder="billingKey를 입력하세요"
+                    value={manageBillingKey}
+                  />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    disabled={deactivateBillingMutation.isPending || !manageBillingKey.trim()}
+                    onClick={handleDeactivateBilling}
+                    variant="destructive"
+                  >
+                    {deactivateBillingMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        비활성화
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    disabled={reactivateBillingMutation.isPending || !manageBillingKey.trim()}
+                    onClick={handleReactivateBilling}
+                    variant="default"
+                  >
+                    {reactivateBillingMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        재활성화
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {manageResult && (
+                  <div className="rounded-lg bg-gray-100 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      {manageResult.success ? (
+                        <>
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <span className="font-medium text-green-600">처리 완료</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="font-medium text-red-600">처리 실패</span>
+                        </>
+                      )}
+                    </div>
+                    <pre className="overflow-auto text-xs">
+                      {JSON.stringify(manageResult, null, 2)}
                     </pre>
                   </div>
                 )}

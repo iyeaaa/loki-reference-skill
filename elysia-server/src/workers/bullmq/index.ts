@@ -1,4 +1,9 @@
 export {
+  getBillingPaymentWorkerStatus,
+  startBillingPaymentWorker,
+  stopBillingPaymentWorker,
+} from "./billing-payment.worker"
+export {
   getFollowupEmailWorkerStatus,
   startFollowupEmailWorker,
   stopFollowupEmailWorker,

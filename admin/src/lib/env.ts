@@ -49,22 +49,12 @@ const envSchema = z.object({
   VITE_GA_MEASUREMENT_ID: z.string().optional(),
 
   /**
-   * PortOne Store ID for payment integration
+   * TossPayments Client Key for payment integration
+   * - Test: test_ck_xxx
+   * - Live: live_ck_xxx
    * Optional: Payment features will be disabled if not set
    */
-  VITE_PORTONE_STORE_ID: z.string().optional().default(""),
-
-  /**
-   * PortOne Channel Key for TossPayments (KRW payments)
-   * Optional: TossPayments will be disabled if not set
-   */
-  VITE_PORTONE_CHANNEL_KEY_TOSS: z.string().optional().default(""),
-
-  /**
-   * PortOne Channel Key for PayPal (USD payments)
-   * Optional: PayPal will be disabled if not set
-   */
-  VITE_PORTONE_CHANNEL_KEY_PAYPAL: z.string().optional().default(""),
+  VITE_TOSS_CLIENT_KEY: z.string().optional().default("test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm"),
 })
 
 /**
@@ -84,9 +74,7 @@ function parseEnv(): Env {
     PROD: import.meta.env.PROD ?? false,
     VITE_MIXPANEL_TOKEN: import.meta.env.VITE_MIXPANEL_TOKEN,
     VITE_GA_MEASUREMENT_ID: import.meta.env.VITE_GA_MEASUREMENT_ID,
-    VITE_PORTONE_STORE_ID: import.meta.env.VITE_PORTONE_STORE_ID,
-    VITE_PORTONE_CHANNEL_KEY_TOSS: import.meta.env.VITE_PORTONE_CHANNEL_KEY_TOSS,
-    VITE_PORTONE_CHANNEL_KEY_PAYPAL: import.meta.env.VITE_PORTONE_CHANNEL_KEY_PAYPAL,
+    VITE_TOSS_CLIENT_KEY: import.meta.env.VITE_TOSS_CLIENT_KEY,
   }
 
   const result = envSchema.safeParse(rawEnv)

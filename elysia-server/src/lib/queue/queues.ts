@@ -3,6 +3,7 @@ import * as jobLogService from "../../services/job-log.service"
 import logger from "../../utils/logger"
 import { redisConnection } from "../redis/connection"
 import {
+  type BillingPaymentJob,
   type CampaignEmailJob,
   type FollowupEmailJob,
   type MetricsSyncJob,
@@ -236,6 +237,34 @@ export const testQueue = new Queue<TestJob>(QUEUE_NAMES.TEST_QUEUE, {
 })
 
 /**
+ * Billing Payment Queue
+ * Processes recurring subscription payments using stored billing keys
+ *
+ * Features:
+ * - Daily scheduled check for subscriptions due for renewal
+ * - Automatic payment using TossPayments billing key
+ * - Subscription period update on success
+ * - Status update (past_due) on failure after retries
+ */
+export const billingPaymentQueue = new Queue<BillingPaymentJob>(QUEUE_NAMES.BILLING_PAYMENT, {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3, // 3회 재시도
+    backoff: {
+      type: "exponential",
+      delay: 60000, // 1분 → 2분 → 4분
+    },
+    removeOnComplete: {
+      age: 7 * 24 * 3600, // 7일 보관
+      count: 100, // 최대 100개
+    },
+    removeOnFail: {
+      age: 30 * 24 * 3600, // 30일 보관 (결제 실패는 중요)
+    },
+  },
+})
+
+/**
  * Get all queues for monitoring
  */
 export function getAllQueues() {
@@ -250,6 +279,7 @@ export function getAllQueues() {
     [QUEUE_NAMES.TRIAL_EXPIRATION]: trialExpirationQueue,
     [QUEUE_NAMES.FOLLOWUP_EMAIL]: followupEmailQueue,
     [QUEUE_NAMES.TEST_QUEUE]: testQueue,
+    [QUEUE_NAMES.BILLING_PAYMENT]: billingPaymentQueue,
   }
 }
 
@@ -268,6 +298,7 @@ export async function closeAllQueues(): Promise<void> {
     trialExpirationQueue.close(),
     followupEmailQueue.close(),
     testQueue.close(),
+    billingPaymentQueue.close(),
   ])
 }
 

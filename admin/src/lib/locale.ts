@@ -46,11 +46,13 @@ export function detectLocale(): LocaleInfo {
 export type PaymentMethod = "TOSS" | "PAYPAL"
 
 /**
- * 지역 기반 기본 결제 수단 반환
+ * 기본 결제 수단 반환
+ * - TossPayments 공식 SDK로 전환되어 항상 TOSS 반환
+ * - PayPal은 현재 비활성화됨
  */
-export function getDefaultPaymentMethod(locale?: LocaleInfo): PaymentMethod {
-  const { isKorean } = locale || detectLocale()
-  return isKorean ? "TOSS" : "PAYPAL"
+export function getDefaultPaymentMethod(_locale?: LocaleInfo): PaymentMethod {
+  // TossPayments 공식 SDK 사용으로 항상 TOSS 반환
+  return "TOSS"
 }
 
 /**
@@ -171,13 +173,17 @@ export const PAYMENT_METHODS = {
     description: "한국 신용/체크카드",
     currency: "KRW" as const,
     icon: "💳",
+    disabled: false,
+    disabledReason: null,
   },
   PAYPAL: {
     id: "PAYPAL",
     name: "PayPal",
     nameEn: "PayPal",
-    description: "International payments",
+    description: "International payments (USD)",
     currency: "USD" as const,
     icon: "🅿️",
+    disabled: false,
+    disabledReason: null,
   },
 } as const

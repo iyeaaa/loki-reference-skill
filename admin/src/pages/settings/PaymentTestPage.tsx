@@ -1,22 +1,20 @@
 /**
- * Payment Test Page
+ * Payment Test Page (Settings)
  *
  * PG 심사 통과를 위한 결제 테스트 페이지
- * - 국내: 토스페이먼츠 (KRW)
- * - 해외: 페이팔 (USD)
+ * - TossPayments 결제위젯 SDK 사용
  *
- * 2025년 토스페이먼츠/페이팔 심사 요건 충족:
+ * 2025년 토스페이먼츠 심사 요건 충족:
  * - 결제창 정상 호출
- * - 이용약관/개인정보 동의 체크박스
+ * - 이용약관/개인정보 동의 (위젯 내 렌더링)
  * - 상품 정보 명시 (실제 DB 요금제 연동)
- * - 결제 완료 후 서버 검증 (/complete API 호출)
+ * - 결제 완료 후 서버 검증 (/confirm API 호출)
  * - 결제 내역 조회
  * - 모바일 리다이렉트 처리
- * - 지역 기반 자동 결제수단 선택
  */
 
-import * as PortOne from "@portone/browser-sdk/v2"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { loadTossPayments, type TossPaymentsWidgets } from "@tosspayments/tosspayments-sdk"
 import {
   AlertCircle,
   CheckCircle2,
@@ -29,16 +27,14 @@ import {
   ShieldCheck,
   XCircle,
 } from "lucide-react"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Select,
   SelectContent,
@@ -52,21 +48,13 @@ import { apiFetch } from "@/lib/api/client"
 import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { env } from "@/lib/env"
-import {
-  detectLocale,
-  getDefaultPaymentMethod,
-  PAYMENT_METHODS,
-  type PaymentMethod,
-} from "@/lib/locale"
 
 // ============================================================================
-// Config - Environment Variables (Required)
+// Config - Environment Variables
 // ============================================================================
 
-// PortOne keys from environment variables (set in .env file)
-const PORTONE_STORE_ID = env.VITE_PORTONE_STORE_ID
-const PORTONE_CHANNEL_KEY_TOSS = env.VITE_PORTONE_CHANNEL_KEY_TOSS
-const PORTONE_CHANNEL_KEY_PAYPAL = env.VITE_PORTONE_CHANNEL_KEY_PAYPAL
+// TossPayments Client Key (환경변수에서 가져옴)
+const TOSS_CLIENT_KEY = env.VITE_TOSS_CLIENT_KEY || ""
 
 // ============================================================================
 // Types
@@ -74,9 +62,9 @@ const PORTONE_CHANNEL_KEY_PAYPAL = env.VITE_PORTONE_CHANNEL_KEY_PAYPAL
 
 type PlanPriceInfo = {
   currency: string
-  amount: number // minor unit (원, 센트)
-  displayAmount: string // "₩9,900", "$9.99"
-  isCalculated: boolean // true = 환율 계산, false = DB 저장값
+  amount: number
+  displayAmount: string
+  isCalculated: boolean
 }
 
 type BillingPlan = {
@@ -94,11 +82,10 @@ type BillingPlan = {
     description: string | null
   }
   prices: PlanPriceInfo[]
-  // 백엔드에서 직접 제공 (변환 불필요)
-  amount: number // KRW
-  amountUSD: number // USD (센트)
-  displayAmount: string // "₩9,900"
-  displayAmountUSD: string // "$9.99"
+  amount: number
+  amountUSD: number
+  displayAmount: string
+  displayAmountUSD: string
 }
 
 type PaymentResult = {
@@ -122,9 +109,9 @@ type PaymentResult = {
   } | null
 }
 
-// 테스트 카드 정보
+// 테스트 카드 정보 (TossPayments)
 const TEST_CARD_INFO = {
-  cardNumber: "4242424242424242",
+  cardNumber: "4330000000000000",
   expiry: "12/30",
   cvc: "123",
   password: "12",
@@ -150,26 +137,14 @@ type BillingPlansResponse = {
       description: string | null
     }
     prices: PlanPriceInfo[]
-    // 백엔드에서 직접 제공 (프론트 변환 불필요)
-    amount: number // KRW
-    amountUSD: number // USD (센트)
-    displayAmount: string // "₩9,900"
-    displayAmountUSD: string // "$9.99"
+    amount: number
+    amountUSD: number
+    displayAmount: string
+    displayAmountUSD: string
   }>
 }
 
-type PaymentVerifyResponse = {
-  success: boolean
-  data: {
-    id: string
-    status: string
-    amount: { total: number }
-    method?: { type: string }
-    paidAt?: string
-  }
-}
-
-type PaymentCompleteResponse = {
+type PaymentConfirmResponse = {
   success: boolean
   data: {
     subscriptionId: string
@@ -183,49 +158,38 @@ type PaymentCompleteResponse = {
 
 // API functions
 async function fetchBillingPlans(): Promise<BillingPlansResponse> {
-  // 설정 페이지에서는 모든 플랜 표시 (excludeTiers=none으로 enterprise 포함)
   return apiFetch<BillingPlansResponse>(
     "/api/v1/billing/pricing/plans?currencies=KRW,USD&activeOnly=true&excludeTiers=",
   )
 }
 
-async function verifyPayment(paymentId: string): Promise<PaymentVerifyResponse> {
-  return apiFetch<PaymentVerifyResponse>(`/api/v1/payments/${paymentId}`)
-}
-
-async function completePayment(params: {
-  paymentId: string
+async function confirmPayment(params: {
+  paymentKey: string
+  orderId: string
+  amount: number
   planId: string
   workspaceId: string
   customerId: string
-  currency: "KRW" | "USD"
-  amount: number
-}): Promise<PaymentCompleteResponse> {
-  return apiFetch<PaymentCompleteResponse>("/api/v1/payments/complete", {
+}): Promise<PaymentConfirmResponse> {
+  return apiFetch<PaymentConfirmResponse>("/api/v1/payments/confirm", {
     method: "POST",
     body: JSON.stringify(params),
   })
 }
 
-async function lookupPayment(paymentId: string): Promise<Record<string, unknown>> {
-  return apiFetch<Record<string, unknown>>(`/api/v1/payments/${paymentId}`)
+async function lookupPaymentByOrderId(orderId: string): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>(`/api/v1/payments/orders/${orderId}`)
 }
 
 // ============================================================================
 // Hooks
 // ============================================================================
 
-/**
- * Fetch billing plans with multi-currency prices
- * 백엔드에서 amount/amountUSD/displayAmount/displayAmountUSD 직접 제공
- * - 프론트 변환 불필요 (무한 루프 방지)
- */
 function useBillingPlans() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["billing", "plans"],
     queryFn: fetchBillingPlans,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    // 백엔드에서 직접 제공하므로 변환 불필요
+    staleTime: 5 * 60 * 1000,
     select: (response) => response.plans,
   })
 
@@ -241,8 +205,6 @@ function useBillingPlans() {
 // ============================================================================
 
 export function PaymentTestPage() {
-  const termsId = useId()
-  const privacyId = useId()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // User & Workspace
@@ -254,97 +216,68 @@ export function PaymentTestPage() {
   // Fetch billing plans from DB
   const { plans, isLoading: isLoadingPlans, error: plansError } = useBillingPlans()
 
-  // Locale detection - 자동으로 지역 기반 결제 수단 선택
-  const [locale] = useState(() => detectLocale())
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() =>
-    getDefaultPaymentMethod(locale),
-  )
-
-  // PayPal 결제 ID ref
-  const paypalPaymentIdRef = useRef<string>("")
-
   // State
   const [selectedPlanId, setSelectedPlanId] = useState<string>("")
-  const [agreedTerms, setAgreedTerms] = useState(false)
-  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Payment lookup state
-  const [lookupPaymentId, setLookupPaymentId] = useState("")
+  const [lookupOrderId, setLookupOrderId] = useState("")
   const [lookupResult, setLookupResult] = useState<Record<string, unknown> | null>(null)
+
+  // Ref to prevent double processing of redirect
+  const redirectProcessedRef = useRef(false)
+
+  // Widget state
+  const widgetsRef = useRef<TossPaymentsWidgets | null>(null)
+  const [isWidgetReady, setIsWidgetReady] = useState(false)
+  const [isWidgetLoading, setIsWidgetLoading] = useState(false)
+  const widgetInitializedRef = useRef(false)
 
   // ============================================================================
   // Mutations
   // ============================================================================
 
-  // Payment verification mutation (for mobile redirect)
-  const verifyPaymentMutation = useMutation({
-    mutationFn: verifyPayment,
-    onSuccess: (verifyResponse, paymentId) => {
-      if (verifyResponse?.success && verifyResponse?.data?.status === "PAID") {
+  // Payment confirm mutation (for redirect success)
+  const confirmPaymentMutation = useMutation({
+    mutationFn: confirmPayment,
+    onSuccess: (response, variables) => {
+      if (response?.success && response?.data) {
         setPaymentResult({
           success: true,
-          paymentId,
-          status: "PAID",
-          message: "결제가 완료되었습니다. 구독 처리는 별도로 확인해주세요.",
+          paymentId: variables.paymentKey,
+          status: "DONE",
+          subscriptionId: response.data.subscriptionId,
+          plan: response.data.plan,
+          product: response.data.product,
+          amount: response.data.plan.amount,
         })
       } else {
         setPaymentResult({
-          success: false,
-          paymentId,
-          message: "결제가 완료되지 않았습니다.",
-          status: verifyResponse?.data?.status,
+          success: true,
+          paymentId: variables.paymentKey,
+          message: "결제는 완료되었으나 구독 처리 중입니다.",
         })
       }
     },
-    onError: (err) => {
-      console.error("[Payment] Mobile redirect error:", err)
-      setError("결제 확인 중 오류가 발생했습니다.")
+    onError: (err, variables) => {
+      console.error("[Payment] Confirm API error:", err)
+      setPaymentResult({
+        success: false,
+        paymentId: variables.paymentKey,
+        message: "결제 승인 중 오류가 발생했습니다.",
+      })
+      setError(err instanceof Error ? err.message : "결제 승인 중 오류가 발생했습니다.")
     },
     onSettled: () => {
       setIsProcessing(false)
     },
   })
 
-  // Payment complete mutation
-  const completePaymentMutation = useMutation({
-    mutationFn: completePayment,
-    onSuccess: (completeResponse, variables) => {
-      if (completeResponse?.success && completeResponse?.data) {
-        setPaymentResult({
-          success: true,
-          paymentId: variables.paymentId,
-          status: "PAID",
-          subscriptionId: completeResponse.data.subscriptionId,
-          plan: completeResponse.data.plan,
-          product: completeResponse.data.product,
-          amount: completeResponse.data.plan.amount,
-        })
-      } else {
-        setPaymentResult({
-          success: true,
-          paymentId: variables.paymentId,
-          message: "결제는 완료되었으나 구독 처리 중입니다.",
-        })
-      }
-    },
-    onError: (err, variables) => {
-      console.error("[Payment] Complete API error:", err)
-      setPaymentResult({
-        success: false,
-        paymentId: variables.paymentId,
-        status: "PAID",
-        message: "결제는 완료되었으나 구독 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요.",
-      })
-      setError("구독 처리 중 오류가 발생했습니다. 결제는 완료되었습니다.")
-    },
-  })
-
   // Payment lookup mutation
   const lookupPaymentMutation = useMutation({
-    mutationFn: lookupPayment,
+    mutationFn: lookupPaymentByOrderId,
     onSuccess: (response) => {
       setLookupResult(response)
     },
@@ -353,15 +286,11 @@ export function PaymentTestPage() {
     },
   })
 
-  // Selected plan - select 패턴으로 plans 참조 안정화됨
+  // Selected plan
   const selectedPlan = plans.find((p) => p.id === selectedPlanId)
 
-  // USD 가격 - 백엔드에서 직접 제공
-  const selectedPlanUSD = selectedPlan?.amountUSD || 0
-
-  // 가격 표시용 헬퍼 - 백엔드에서 직접 제공
-  const getPriceDisplay = (plan: BillingPlan, currency: "KRW" | "USD") =>
-    currency === "KRW" ? plan.displayAmount : plan.displayAmountUSD
+  // 가격 표시용 헬퍼
+  const getPriceDisplay = (plan: BillingPlan) => plan.displayAmount
 
   // Set default selected workspace when workspaces are loaded
   useEffect(() => {
@@ -377,72 +306,149 @@ export function PaymentTestPage() {
     }
   }, [plans, selectedPlanId])
 
-  // Handle mobile redirect (payment completion from redirect)
+  // Handle TossPayments redirect (payment completion from redirect)
   useEffect(() => {
-    const redirectPaymentId = searchParams.get("paymentId")
-    const tab = searchParams.get("tab")
+    // Prevent double processing
+    if (redirectProcessedRef.current) {
+      return
+    }
 
-    if (redirectPaymentId && tab === "payment-test") {
+    const success = searchParams.get("success")
+    const fail = searchParams.get("fail")
+    const paymentKey = searchParams.get("paymentKey")
+    const orderId = searchParams.get("orderId")
+    const amount = searchParams.get("amount")
+    const errorCode = searchParams.get("code")
+    const errorMessage = searchParams.get("message")
+
+    // 성공 리다이렉트 처리
+    if (success === "true" && paymentKey && orderId && amount) {
+      redirectProcessedRef.current = true
       // Clear URL params
       setSearchParams({})
 
-      // Process the redirected payment using mutation
-      setIsProcessing(true)
-      setError(null)
-      verifyPaymentMutation.mutate(redirectPaymentId)
-    }
-  }, [searchParams, setSearchParams, verifyPaymentMutation])
+      // sessionStorage에서 결제 정보 복원
+      const savedPaymentInfo = sessionStorage.getItem(`payment_${orderId}`)
+      if (savedPaymentInfo) {
+        const { planId, workspaceId, customerId } = JSON.parse(savedPaymentInfo)
+        sessionStorage.removeItem(`payment_${orderId}`)
 
-  // 환경변수 설정 여부 (토스는 필수, 페이팔은 선택)
-  const isTossConfigured = Boolean(PORTONE_STORE_ID && PORTONE_CHANNEL_KEY_TOSS)
-  const isPaypalConfigured = Boolean(PORTONE_STORE_ID && PORTONE_CHANNEL_KEY_PAYPAL)
-  const isEnvConfigured = paymentMethod === "TOSS" ? isTossConfigured : isPaypalConfigured
+        // 결제 승인 API 호출
+        setIsProcessing(true)
+        setError(null)
+        confirmPaymentMutation.mutate({
+          paymentKey,
+          orderId,
+          amount: Number(amount),
+          planId,
+          workspaceId,
+          customerId,
+        })
+      } else {
+        setError("결제 정보를 찾을 수 없습니다. 다시 시도해주세요.")
+      }
+    }
+
+    // 실패 리다이렉트 처리
+    if (fail === "true") {
+      redirectProcessedRef.current = true
+      setSearchParams({})
+      const message = errorMessage
+        ? decodeURIComponent(errorMessage)
+        : errorCode
+          ? `결제 실패 (${errorCode})`
+          : "결제가 취소되었습니다."
+      setError(message)
+      setPaymentResult({
+        success: false,
+        paymentId: orderId || "unknown",
+        message,
+      })
+    }
+  }, [searchParams, setSearchParams, confirmPaymentMutation.mutate])
+
+  // Initialize TossPayments Widget
+  const initializeWidget = useCallback(async () => {
+    if (!(TOSS_CLIENT_KEY && selectedPlan && currentUser) || widgetInitializedRef.current) {
+      return
+    }
+
+    // DOM 요소 확인
+    const paymentMethodEl = document.getElementById("payment-method-settings")
+    if (!paymentMethodEl) {
+      return
+    }
+
+    widgetInitializedRef.current = true
+    setIsWidgetLoading(true)
+    setError(null)
+
+    try {
+      const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY)
+      const widgets = tossPayments.widgets({ customerKey: currentUser.id })
+
+      await widgets.setAmount({
+        currency: "KRW",
+        value: selectedPlan.amount,
+      })
+
+      await widgets.renderPaymentMethods({
+        selector: "#payment-method-settings",
+        variantKey: "DEFAULT",
+      })
+
+      widgetsRef.current = widgets
+      setIsWidgetReady(true)
+    } catch (err) {
+      console.error("[Widget] Init error:", err)
+      setError(err instanceof Error ? err.message : "결제 위젯 초기화 실패")
+      widgetInitializedRef.current = false
+    } finally {
+      setIsWidgetLoading(false)
+    }
+  }, [selectedPlan, currentUser])
+
+  // Initialize widget when plan and user are ready
+  useEffect(() => {
+    if (selectedPlan && currentUser && !widgetInitializedRef.current) {
+      const timeoutId = setTimeout(() => initializeWidget(), 100)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [selectedPlan, currentUser, initializeWidget])
+
+  // Update amount when plan changes (if widget already initialized)
+  useEffect(() => {
+    if (widgetsRef.current && isWidgetReady && selectedPlan) {
+      widgetsRef.current
+        .setAmount({
+          currency: "KRW",
+          value: selectedPlan.amount,
+        })
+        .catch((err) => console.error("[Widget] Amount update error:", err))
+    }
+  }, [selectedPlan, isWidgetReady])
+
+  // 환경변수 설정 여부
+  const isTossConfigured = Boolean(TOSS_CLIENT_KEY)
 
   // 결제 가능 여부
   const canPay =
-    agreedTerms &&
-    agreedPrivacy &&
     !isProcessing &&
     selectedPlan &&
     currentWorkspace &&
-    isEnvConfigured
+    currentUser &&
+    isTossConfigured &&
+    isWidgetReady
 
   // ============================================================================
   // Handlers
   // ============================================================================
 
   /**
-   * Complete payment on server (call /complete API)
+   * 결제 요청 - TossPayments Widget
    */
-  const completePaymentOnServer = useCallback(
-    async (paymentId: string, currency: "KRW" | "USD" = "KRW") => {
-      if (!(selectedPlan && currentWorkspace?.id && currentUser?.id)) {
-        throw new Error("Missing required data for payment completion")
-      }
-
-      // USD는 이미 센트 단위 (서버에서 조회), KRW는 원 단위
-      const amountToSend =
-        currency === "USD"
-          ? selectedPlanUSD // 이미 센트 단위
-          : selectedPlan.amount // 원 단위
-
-      completePaymentMutation.mutate({
-        paymentId,
-        planId: selectedPlan.id,
-        workspaceId: currentWorkspace.id,
-        customerId: currentUser.id,
-        currency,
-        amount: amountToSend,
-      })
-    },
-    [selectedPlan, selectedPlanUSD, currentWorkspace?.id, currentUser?.id, completePaymentMutation],
-  )
-
-  /**
-   * 결제 요청 - 토스페이먼츠 (KRW)
-   */
-  const handleTossPayment = async () => {
-    if (!(canPay && selectedPlan)) {
+  const handlePayment = useCallback(async () => {
+    if (!(canPay && widgetsRef.current && selectedPlan && currentWorkspace && currentUser)) {
       return
     }
 
@@ -450,148 +456,51 @@ export function PaymentTestPage() {
     setError(null)
     setPaymentResult(null)
 
-    const paymentId = `payment-${crypto.randomUUID()}`
+    // 주문 ID 생성
+    const orderId = `order-${crypto.randomUUID()}`
+
+    // 결제 정보를 sessionStorage에 저장 (리다이렉트 후 복원용)
+    sessionStorage.setItem(
+      `payment_${orderId}`,
+      JSON.stringify({
+        planId: selectedPlan.id,
+        workspaceId: currentWorkspace.id,
+        customerId: currentUser.id,
+      }),
+    )
 
     try {
-      const response = await PortOne.requestPayment({
-        storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_TOSS,
-        paymentId,
+      await widgetsRef.current.requestPayment({
+        orderId,
         orderName: selectedPlan.product?.name || selectedPlan.name,
-        totalAmount: selectedPlan.amount,
-        currency: "CURRENCY_KRW",
-        payMethod: "CARD",
-        customer: {
-          email: currentUser?.email || "test@example.com",
-          fullName: currentUser?.username || "테스트 사용자",
-          phoneNumber: "01012345678",
-        },
-        redirectUrl: `${window.location.origin}/settings?tab=payment-test&paymentId=${paymentId}`,
-        customData: {
-          planId: selectedPlan.id,
-          productId: selectedPlan.productId,
-          workspaceId: currentWorkspace?.id,
-          currency: "KRW",
-        },
+        successUrl: `${window.location.origin}/settings?tab=payment-test&success=true`,
+        failUrl: `${window.location.origin}/settings?tab=payment-test&fail=true`,
+        customerEmail: currentUser.email || "test@example.com",
+        customerName: currentUser.username || "테스트 사용자",
       })
-
-      if (!response || response.code) {
-        const errorMessage = response?.message || "결제가 취소되었습니다."
-        setError(errorMessage)
-        setPaymentResult({ success: false, paymentId, message: errorMessage })
-        return
-      }
-
-      await completePaymentOnServer(paymentId, "KRW")
     } catch (err) {
-      console.error("[Payment] Toss error:", err)
-      setError(err instanceof Error ? err.message : "결제 처리 중 오류가 발생했습니다.")
-      setPaymentResult({ success: false, paymentId, message: String(err) })
-    } finally {
+      console.error("[Payment] Error:", err)
+      const errorMessage = err instanceof Error ? err.message : "결제 처리 중 오류가 발생했습니다."
+      setError(errorMessage)
+      setPaymentResult({
+        success: false,
+        paymentId: "unknown",
+        message: errorMessage,
+      })
       setIsProcessing(false)
     }
-  }
-
-  /**
-   * 페이팔 SPB 버튼 렌더링
-   */
-  useEffect(() => {
-    // 페이팔이 선택되지 않았거나, 설정이 안 되었거나, 플랜이 없으면 스킵
-    if (
-      paymentMethod !== "PAYPAL" ||
-      !isPaypalConfigured ||
-      !selectedPlan ||
-      !agreedTerms ||
-      !agreedPrivacy
-    ) {
-      return
-    }
-
-    // 새 paymentId 생성
-    paypalPaymentIdRef.current = `payment-${crypto.randomUUID()}`
-
-    // PayPal SPB 버튼 렌더링
-    // Note: PortOne SDK는 'portone-ui-container' 클래스를 가진 div에 자동으로 버튼 렌더링
-    // USD 금액은 minor unit (센트) 단위로 전송해야 함 (예: $10.00 = 1000)
-    // selectedPlanUSD는 이미 센트 단위 (서버에서 조회)
-
-    PortOne.loadPaymentUI(
-      {
-        uiType: "PAYPAL_SPB",
-        storeId: PORTONE_STORE_ID,
-        channelKey: PORTONE_CHANNEL_KEY_PAYPAL ?? "",
-        paymentId: paypalPaymentIdRef.current,
-        orderName: selectedPlan.product?.name || selectedPlan.name,
-        totalAmount: selectedPlanUSD, // 이미 센트 단위
-        currency: "CURRENCY_USD",
-        customer: {
-          email: currentUser?.email || "test@example.com",
-          fullName: currentUser?.username || "Test User",
-        },
-        customData: {
-          planId: selectedPlan.id,
-          productId: selectedPlan.productId,
-          workspaceId: currentWorkspace?.id,
-          currency: "USD",
-        },
-      },
-      {
-        onPaymentSuccess: async () => {
-          setIsProcessing(true)
-          try {
-            // 서버에는 원래 USD 금액 전송 (센트 아님)
-            await completePaymentOnServer(paypalPaymentIdRef.current, "USD")
-          } finally {
-            setIsProcessing(false)
-          }
-        },
-        onPaymentFail: (error: unknown) => {
-          console.error("[Payment] PayPal error:", error)
-          const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-              ? String(error.message)
-              : "PayPal payment failed"
-          setError(errorMessage)
-          setPaymentResult({
-            success: false,
-            paymentId: paypalPaymentIdRef.current,
-            message: errorMessage,
-          })
-        },
-      },
-    )
-  }, [
-    paymentMethod,
-    isPaypalConfigured,
-    selectedPlan,
-    selectedPlanUSD,
-    agreedTerms,
-    agreedPrivacy,
-    currentUser,
-    currentWorkspace?.id,
-    completePaymentOnServer,
-  ])
-
-  /**
-   * 결제 요청 핸들러 (결제 수단에 따라 분기)
-   */
-  const handlePayment = () => {
-    if (paymentMethod === "TOSS") {
-      handleTossPayment()
-    }
-    // PayPal은 SPB 버튼으로 직접 결제
-  }
+  }, [canPay, selectedPlan, currentWorkspace, currentUser])
 
   /**
    * 결제 내역 조회
    */
   const handleLookupPayment = () => {
-    if (!lookupPaymentId.trim()) {
+    if (!lookupOrderId.trim()) {
       return
     }
 
     setLookupResult(null)
-    lookupPaymentMutation.mutate(lookupPaymentId.trim())
+    lookupPaymentMutation.mutate(lookupOrderId.trim())
   }
 
   /**
@@ -600,8 +509,6 @@ export function PaymentTestPage() {
   const handleReset = () => {
     setPaymentResult(null)
     setError(null)
-    setAgreedTerms(false)
-    setAgreedPrivacy(false)
   }
 
   /**
@@ -633,7 +540,7 @@ export function PaymentTestPage() {
       <div>
         <h2 className="font-semibold text-lg">결제 테스트</h2>
         <p className="text-muted-foreground text-sm">
-          포트원 V2 + 토스페이먼츠 결제 연동 테스트 (PG 심사용)
+          TossPayments 결제위젯 SDK 연동 테스트 (PG 심사용)
         </p>
       </div>
 
@@ -645,11 +552,11 @@ export function PaymentTestPage() {
           <ul className="mt-2 space-y-1 text-sm">
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
-              결제창 정상 호출 (PortOne SDK v2)
+              결제창 정상 호출 (TossPayments 결제위젯)
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
-              이용약관/개인정보 동의 체크박스
+              이용약관/개인정보 동의 (위젯 내 렌더링)
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -657,7 +564,7 @@ export function PaymentTestPage() {
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
-              결제 완료 후 서버 검증 + 구독 생성
+              결제 완료 후 서버 승인 (confirm) + 구독 생성
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -683,41 +590,29 @@ export function PaymentTestPage() {
           {/* 지역 감지 정보 */}
           <Alert>
             <Globe className="h-4 w-4" />
-            <AlertTitle>지역 기반 결제 수단 자동 선택</AlertTitle>
+            <AlertTitle>결제 수단</AlertTitle>
             <AlertDescription>
-              감지된 언어: <code className="rounded bg-muted px-1">{locale.language}</code>
-              {" → "}
-              {locale.isKorean ? "한국 카드결제 (KRW)" : "PayPal (USD)"} 기본 선택
-              <span className="ml-2 text-muted-foreground text-xs">(아래에서 변경 가능)</span>
+              토스페이먼츠 결제위젯 SDK - 카드, 계좌이체, 간편결제 등 지원
             </AlertDescription>
           </Alert>
 
           {/* 환경변수 미설정 경고 */}
-          {!isEnvConfigured && (
+          {!isTossConfigured && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>환경변수 미설정</AlertTitle>
               <AlertDescription>
-                {paymentMethod === "TOSS" ? "토스페이먼츠" : "페이팔"} 결제를 사용하려면{" "}
-                <code className="rounded bg-muted px-1">.env</code> 파일에 환경변수를 설정해야
-                합니다.
+                TossPayments 결제를 사용하려면 <code className="rounded bg-muted px-1">.env</code>{" "}
+                파일에 환경변수를 설정해야 합니다.
                 <ul className="mt-2 list-inside list-disc text-sm">
                   <li>
-                    <code>VITE_PORTONE_STORE_ID</code>
-                    {PORTONE_STORE_ID ? " ✓" : " (미설정)"}
+                    <code>VITE_TOSS_CLIENT_KEY</code>
+                    {TOSS_CLIENT_KEY ? " ✓" : " (미설정)"}
                   </li>
-                  {paymentMethod === "TOSS" ? (
-                    <li>
-                      <code>VITE_PORTONE_CHANNEL_KEY_TOSS</code>
-                      {PORTONE_CHANNEL_KEY_TOSS ? " ✓" : " (미설정)"}
-                    </li>
-                  ) : (
-                    <li>
-                      <code>VITE_PORTONE_CHANNEL_KEY_PAYPAL</code>
-                      {PORTONE_CHANNEL_KEY_PAYPAL ? " ✓" : " (미설정)"}
-                    </li>
-                  )}
                 </ul>
+                <span className="mt-1 block text-xs">
+                  ⚠️ 결제위젯 전용 클라이언트 키(test_gck_...)를 사용해야 합니다.
+                </span>
               </AlertDescription>
             </Alert>
           )}
@@ -802,7 +697,7 @@ export function PaymentTestPage() {
                             <div className="flex items-center justify-between gap-4">
                               <span>{plan.product?.name || plan.name}</span>
                               <span className="text-muted-foreground">
-                                {getPriceDisplay(plan, "KRW")}/{formatInterval(plan)}
+                                {getPriceDisplay(plan)}/{formatInterval(plan)}
                               </span>
                             </div>
                           </SelectItem>
@@ -830,215 +725,68 @@ export function PaymentTestPage() {
                             )}
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-lg">
-                              {paymentMethod === "TOSS"
-                                ? getPriceDisplay(selectedPlan, "KRW")
-                                : getPriceDisplay(selectedPlan, "USD")}
-                            </p>
+                            <p className="font-bold text-lg">{getPriceDisplay(selectedPlan)}</p>
                             <p className="text-muted-foreground text-xs">
                               /{formatInterval(selectedPlan)}
                             </p>
-                            {/* 다른 통화 가격 참고 표시 */}
-                            <p className="mt-1 text-muted-foreground text-xs">
-                              {paymentMethod === "TOSS"
-                                ? `≈ ${getPriceDisplay(selectedPlan, "USD")}`
-                                : `≈ ${getPriceDisplay(selectedPlan, "KRW")}`}
-                            </p>
-                            {/* 환율 계산 여부 표시 */}
-                            {selectedPlan.prices?.find(
-                              (p) => p.currency === (paymentMethod === "TOSS" ? "USD" : "KRW"),
-                            )?.isCalculated && (
-                              <p className="text-muted-foreground text-xs">(환율 적용)</p>
-                            )}
                           </div>
                         </div>
                       </div>
                     )}
-
-                    {/* 결제 수단 선택 */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm">결제 수단</h4>
-                      <RadioGroup
-                        className="grid grid-cols-2 gap-3"
-                        onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
-                        value={paymentMethod}
-                      >
-                        {/* 토스페이먼츠 (한국) */}
-                        <div>
-                          <RadioGroupItem
-                            className="peer sr-only"
-                            disabled={!isTossConfigured}
-                            id="payment-toss"
-                            value="TOSS"
-                          />
-                          <Label
-                            className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary ${
-                              isTossConfigured ? "" : "cursor-not-allowed opacity-50"
-                            }`}
-                            htmlFor="payment-toss"
-                          >
-                            <CreditCard className="mb-2 h-6 w-6" />
-                            <div className="text-center">
-                              <p className="font-medium text-sm">
-                                {PAYMENT_METHODS.TOSS.icon} {PAYMENT_METHODS.TOSS.name}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {selectedPlan && getPriceDisplay(selectedPlan, "KRW")}
-                              </p>
-                              {/* 해외 사용자에게 토스 선택 시 안내 */}
-                              {!locale.isKorean && (
-                                <p className="mt-1 text-orange-500 text-xs">한국 카드만 지원</p>
-                              )}
-                            </div>
-                          </Label>
-                        </div>
-
-                        {/* 페이팔 (해외) */}
-                        <div>
-                          <RadioGroupItem
-                            className="peer sr-only"
-                            disabled={!isPaypalConfigured || locale.isKorean}
-                            id="payment-paypal"
-                            value="PAYPAL"
-                          />
-                          <Label
-                            className={`flex cursor-pointer flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary ${
-                              !isPaypalConfigured || locale.isKorean
-                                ? "cursor-not-allowed opacity-50"
-                                : ""
-                            }`}
-                            htmlFor="payment-paypal"
-                          >
-                            <Globe className="mb-2 h-6 w-6" />
-                            <div className="text-center">
-                              <p className="font-medium text-sm">
-                                {PAYMENT_METHODS.PAYPAL.icon} {PAYMENT_METHODS.PAYPAL.name}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {selectedPlan && getPriceDisplay(selectedPlan, "USD")}
-                              </p>
-                              {/* 한국 사용자에게 PayPal 불가 안내 */}
-                              {locale.isKorean && (
-                                <p className="mt-1 text-orange-500 text-xs">해외 구매자 전용</p>
-                              )}
-                            </div>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                      {!isPaypalConfigured && (
-                        <p className="text-muted-foreground text-xs">
-                          PayPal 결제를 사용하려면 환경변수를 설정하세요.
-                        </p>
-                      )}
-                    </div>
                   </>
                 )}
 
                 <Separator />
 
-                {/* 약관 동의 */}
+                {/* TossPayments Widget - Payment Methods */}
                 <div className="space-y-3">
-                  <h4 className="font-medium text-sm">약관 동의</h4>
-
-                  <div className="flex items-start gap-2">
-                    <Checkbox
-                      checked={agreedTerms}
-                      id={termsId}
-                      onCheckedChange={(checked) => setAgreedTerms(checked === true)}
+                  <Label className="font-medium text-sm">결제 수단</Label>
+                  <div className="relative">
+                    {isWidgetLoading && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50">
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin text-gray-400" />
+                        <span className="text-gray-500 text-sm">결제 위젯 로딩 중...</span>
+                      </div>
+                    )}
+                    <div
+                      className="min-h-[200px] rounded-lg border border-gray-200"
+                      id="payment-method-settings"
                     />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label className="cursor-pointer text-sm" htmlFor={termsId}>
-                        <span className="text-destructive">[필수]</span> 이용약관 동의
-                      </Label>
-                      <a
-                        className="flex items-center gap-1 text-muted-foreground text-xs hover:underline"
-                        href="/terms"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        이용약관 보기 <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2">
-                    <Checkbox
-                      checked={agreedPrivacy}
-                      id={privacyId}
-                      onCheckedChange={(checked) => setAgreedPrivacy(checked === true)}
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label className="cursor-pointer text-sm" htmlFor={privacyId}>
-                        <span className="text-destructive">[필수]</span> 개인정보 수집/이용 동의
-                      </Label>
-                      <a
-                        className="flex items-center gap-1 text-muted-foreground text-xs hover:underline"
-                        href="/privacy"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        개인정보처리방침 보기 <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* 결제 버튼 영역 */}
-                {paymentMethod === "TOSS" ? (
-                  /* 토스페이먼츠: 일반 버튼 */
-                  <Button className="w-full" disabled={!canPay} onClick={handlePayment} size="lg">
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        결제 처리 중...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        {selectedPlan
-                          ? `${getPriceDisplay(selectedPlan, "KRW")} 결제하기`
-                          : "요금제를 선택하세요"}
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  /* PayPal: SPB 버튼 컨테이너 */
-                  <div className="space-y-3">
-                    {isProcessing && (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        <span>결제 처리 중...</span>
-                      </div>
-                    )}
-                    {isPaypalConfigured ? (
-                      agreedTerms && agreedPrivacy ? (
-                        <>
-                          <div className="mb-2 text-center text-muted-foreground text-sm">
-                            {selectedPlan && getPriceDisplay(selectedPlan, "USD")}
-                          </div>
-                          {/* PortOne SDK는 'portone-ui-container' 클래스를 가진 div를 찾아 PayPal 버튼 렌더링 */}
-                          <div className="portone-ui-container flex min-h-[50px] items-center justify-center" />
-                        </>
-                      ) : (
-                        <div className="py-4 text-center text-muted-foreground text-sm">
-                          약관에 동의하면 PayPal 버튼이 표시됩니다
-                        </div>
-                      )
-                    ) : (
-                      <div className="py-4 text-center text-muted-foreground text-sm">
-                        PayPal 환경변수를 설정해주세요
-                      </div>
-                    )}
-                  </div>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>오류</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
 
-                {!(agreedTerms && agreedPrivacy) && selectedPlan ? (
+                <Separator />
+
+                {/* 결제 버튼 */}
+                <Button className="w-full" disabled={!canPay} onClick={handlePayment} size="lg">
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      결제 처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      {selectedPlan
+                        ? `${getPriceDisplay(selectedPlan)} 결제하기`
+                        : "요금제를 선택하세요"}
+                    </>
+                  )}
+                </Button>
+
+                {!isWidgetReady && selectedPlan && currentUser && !isWidgetLoading && (
                   <p className="text-center text-muted-foreground text-xs">
-                    결제를 진행하려면 필수 약관에 동의해주세요
+                    결제 위젯을 로드하는 중입니다. 잠시만 기다려주세요.
                   </p>
-                ) : null}
+                )}
               </CardContent>
             </Card>
 
@@ -1049,14 +797,6 @@ export function PaymentTestPage() {
                 <CardDescription>결제 처리 결과가 여기에 표시됩니다</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>결제 실패</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
                 {paymentResult && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -1093,7 +833,7 @@ export function PaymentTestPage() {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">상태</span>
                             <Badge
-                              variant={paymentResult.status === "PAID" ? "default" : "secondary"}
+                              variant={paymentResult.status === "DONE" ? "default" : "secondary"}
                             >
                               {paymentResult.status}
                             </Badge>
@@ -1137,7 +877,7 @@ export function PaymentTestPage() {
                   </div>
                 )}
 
-                {!(paymentResult || error) && (
+                {!paymentResult && (
                   <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                     <CreditCard className="mb-2 h-12 w-12 opacity-20" />
                     <p>결제를 진행하면 결과가 여기에 표시됩니다</p>
@@ -1153,17 +893,17 @@ export function PaymentTestPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">결제 내역 조회</CardTitle>
-              <CardDescription>결제 ID로 결제 내역을 조회합니다</CardDescription>
+              <CardDescription>주문 ID로 결제 내역을 조회합니다</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Input
-                  onChange={(e) => setLookupPaymentId(e.target.value)}
-                  placeholder="payment-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={lookupPaymentId}
+                  onChange={(e) => setLookupOrderId(e.target.value)}
+                  placeholder="order-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  value={lookupOrderId}
                 />
                 <Button
-                  disabled={lookupPaymentMutation.isPending || !lookupPaymentId.trim()}
+                  disabled={lookupPaymentMutation.isPending || !lookupOrderId.trim()}
                   onClick={handleLookupPayment}
                 >
                   {lookupPaymentMutation.isPending ? (
@@ -1190,7 +930,7 @@ export function PaymentTestPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">테스트 카드 정보</CardTitle>
-                <CardDescription>토스페이먼츠 테스트 결제용 카드</CardDescription>
+                <CardDescription>TossPayments 테스트 결제용 카드</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
@@ -1226,25 +966,15 @@ export function PaymentTestPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">연동 정보</CardTitle>
-                <CardDescription>포트원 V2 설정 정보</CardDescription>
+                <CardDescription>TossPayments 결제위젯 SDK 설정 정보</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Store ID</span>
-                    {PORTONE_STORE_ID ? (
+                    <span className="text-muted-foreground">Client Key</span>
+                    {TOSS_CLIENT_KEY ? (
                       <code className="max-w-[200px] truncate rounded bg-muted px-2 py-0.5 text-xs">
-                        {PORTONE_STORE_ID.substring(0, 20)}...
-                      </code>
-                    ) : (
-                      <Badge variant="destructive">미설정</Badge>
-                    )}
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Channel Key</span>
-                    {PORTONE_CHANNEL_KEY_TOSS ? (
-                      <code className="max-w-[200px] truncate rounded bg-muted px-2 py-0.5 text-xs">
-                        {PORTONE_CHANNEL_KEY_TOSS.substring(0, 20)}...
+                        {TOSS_CLIENT_KEY.substring(0, 20)}...
                       </code>
                     ) : (
                       <Badge variant="destructive">미설정</Badge>
@@ -1252,19 +982,36 @@ export function PaymentTestPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">SDK 버전</span>
-                    <Badge variant="outline">v2</Badge>
+                    <Badge variant="outline">v2 (결제위젯)</Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">결제 모드</span>
-                    <Badge variant="secondary">테스트</Badge>
+                    <Badge variant="secondary">
+                      {TOSS_CLIENT_KEY?.startsWith("test_") ? "테스트" : "라이브"}
+                    </Badge>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">환경변수 상태</span>
-                    <Badge variant={isEnvConfigured ? "default" : "destructive"}>
-                      {isEnvConfigured ? "설정 완료" : "미설정"}
+                    <span className="text-muted-foreground">키 타입</span>
+                    <Badge variant={TOSS_CLIENT_KEY?.includes("_gck_") ? "default" : "destructive"}>
+                      {TOSS_CLIENT_KEY?.includes("_gck_") ? "결제위젯 키" : "API 키 (비권장)"}
                     </Badge>
                   </div>
                 </div>
+                <Alert className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    결제위젯은 <code className="rounded bg-muted px-1">test_gck_...</code> 형식의
+                    클라이언트 키를 사용해야 합니다.
+                    <a
+                      className="ml-1 inline-flex items-center text-blue-600 hover:underline"
+                      href="https://docs.tosspayments.com/guides/v2/get-started"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      문서 보기 <ExternalLink className="ml-0.5 h-3 w-3" />
+                    </a>
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
 
@@ -1272,7 +1019,7 @@ export function PaymentTestPage() {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-base">PG 심사 통과 요건</CardTitle>
-                <CardDescription>토스페이먼츠 심사 시 확인되는 항목들</CardDescription>
+                <CardDescription>TossPayments 심사 시 확인되는 항목들</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1280,7 +1027,7 @@ export function PaymentTestPage() {
                     <h4 className="font-medium text-sm">필수 구현 사항</h4>
                     <ul className="space-y-1 text-muted-foreground text-sm">
                       <li>- 결제창 정상 호출</li>
-                      <li>- 결제 완료 후 서버 검증</li>
+                      <li>- 결제 완료 후 서버 승인 (confirm)</li>
                       <li>- 이용약관 동의 체크박스</li>
                       <li>- 개인정보 수집/이용 동의 체크박스</li>
                       <li>- 환불 정책 페이지</li>

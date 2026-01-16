@@ -374,6 +374,59 @@ export type {
 } from "./enums"
 
 // ============================================================================
+// Billing Keys Table (빌링키 저장)
+// ============================================================================
+
+/**
+ * 빌링키 테이블 (billing_keys)
+ *
+ * 토스페이먼츠 빌링키(자동결제용)를 저장
+ * - 빌링키는 발급 시 한 번만 조회 가능하므로 반드시 저장 필요
+ * - customerKey와 1:1 매핑
+ *
+ * @field id - 기본 식별자 (UUID)
+ * @field customerId - 결제 고객 연결 (nullable, billing_customers.id 참조)
+ * @field customerKey - 토스페이먼츠 고객 키 (프론트엔드에서 생성한 UUID)
+ * @field billingKey - 토스페이먼츠 빌링키 (암호화된 결제 정보)
+ * @field cardCompany - 카드사 (예: "삼성", "현대", "신한")
+ * @field cardNumber - 마스킹된 카드번호 (예: "53275002****335*")
+ * @field cardType - 카드 타입 (신용/체크/기프트/미확인)
+ * @field ownerType - 소유자 타입 (개인/법인/미확인)
+ * @field authenticatedAt - 카드 인증 시간
+ * @field isActive - 활성화 여부 (삭제 시 false)
+ * @field metadata - 추가 메타데이터 (JSONB)
+ * @field createdAt - 생성 시간
+ * @field updatedAt - 수정 시간
+ *
+ * @index billing_keys_customer_key_idx - customerKey로 빠른 조회
+ * @index billing_keys_billing_key_idx - billingKey로 빠른 조회
+ */
+export const billingKeys = pgTable(
+  "billing_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    customerId: uuid("customer_id").references(() => billingCustomers.id),
+    customerKey: varchar("customer_key", { length: 255 }).notNull().unique(),
+    billingKey: varchar("billing_key", { length: 255 }).notNull().unique(),
+    cardCompany: varchar("card_company", { length: 50 }),
+    cardNumber: varchar("card_number", { length: 50 }),
+    cardType: varchar("card_type", { length: 20 }),
+    ownerType: varchar("owner_type", { length: 20 }),
+    authenticatedAt: timestamp("authenticated_at", { withTimezone: true }),
+    isActive: boolean("is_active").notNull().default(true),
+    metadata: jsonb("metadata").default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    customerKeyIdx: index("billing_keys_customer_key_idx").on(table.customerKey),
+    billingKeyIdx: index("billing_keys_billing_key_idx").on(table.billingKey),
+    customerIdIdx: index("billing_keys_customer_id_idx").on(table.customerId),
+    activeIdx: index("billing_keys_active_idx").on(table.isActive),
+  }),
+)
+
+// ============================================================================
 // Multi-Currency Support Tables (다중 통화 지원)
 // ============================================================================
 
@@ -466,6 +519,13 @@ export const planPricesRelations = relations(planPrices, ({ one }) => ({
   }),
 }))
 
+export const billingKeysRelations = relations(billingKeys, ({ one }) => ({
+  customer: one(billingCustomers, {
+    fields: [billingKeys.customerId],
+    references: [billingCustomers.id],
+  }),
+}))
+
 // ============================================================================
 // Multi-Currency Type Exports
 // ============================================================================
@@ -474,3 +534,5 @@ export type PlanPrice = typeof planPrices.$inferSelect
 export type NewPlanPrice = typeof planPrices.$inferInsert
 export type ExchangeRate = typeof exchangeRates.$inferSelect
 export type NewExchangeRate = typeof exchangeRates.$inferInsert
+export type BillingKey = typeof billingKeys.$inferSelect
+export type NewBillingKey = typeof billingKeys.$inferInsert

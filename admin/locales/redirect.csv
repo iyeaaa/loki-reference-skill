@@ -3,3 +3,4 @@ connecting,이메일 계정을 연동하는 중...,Connecting your email account
 error,이메일 연동에 실패했습니다. 다시 시도해주세요.,Failed to connect email. Please try again.
 success,이메일 계정이 성공적으로 연동되었습니다!,Email account connected successfully!
 alreadyConnected,[NO TRANSLATION] redirect.alreadyConnected,[NO TRANSLATION] redirect.alreadyConnected
+closingPopup,[NO TRANSLATION] redirect.closingPopup,[NO TRANSLATION] redirect.closingPopup

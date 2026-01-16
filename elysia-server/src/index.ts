@@ -52,7 +52,7 @@ import { notificationRoutes } from "./routes/notification.routes"
 import { nylasRoutes } from "./routes/nylas.routes"
 import { onboardingRoutes } from "./routes/onboarding.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
-import { paymentRoutes } from "./routes/payment.routes"
+import { paymentRoutes, publicBillingRoutes, publicPaymentRoutes } from "./routes/payment.routes"
 import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { ipapiTestRoutes, snitcherTestRoutes } from "./routes/snitcher.routes"
@@ -240,8 +240,10 @@ const app = new Elysia()
   .use(billingCustomersRoutes)
   .use(exchangeRatesRoutes)
   .use(pricingRoutes)
-  // Payment routes (PortOne V2)
+  // Payment routes (TossPayments)
   .use(paymentRoutes)
+  .use(publicPaymentRoutes)
+  .use(publicBillingRoutes)
   // IAM routes
   .use(iamPoliciesRoutes)
   .use(iamRolesRoutes)

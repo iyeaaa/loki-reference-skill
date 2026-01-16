@@ -276,29 +276,24 @@ export const config = {
 
   // PortOne (Payment Gateway Integration)
   // All keys must be set in environment variables
-  portone: {
-    storeId: getEnvOrDefault("PORTONE_STORE_ID", ""),
-    apiSecret: getEnvOrDefault("PORTONE_API_SECRET", ""),
-    webhookSecret: getEnvOrDefault("PORTONE_WEBHOOK_SECRET", ""),
-    channelKeys: {
-      toss: getEnvOrDefault("PORTONE_CHANNEL_KEY_TOSS", ""),
-      paypal: getEnvOrDefault("PORTONE_CHANNEL_KEY_PAYPAL", ""),
-    },
+  toss: {
+    secretKey: getEnvOrDefault("TOSS_SECRET_KEY", "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6"),
+    webhookSecret: getEnvOrDefault("TOSS_WEBHOOK_SECRET", ""),
   },
 } as const
 
-// PortOne configuration validation (warn on startup if missing)
+// TossPayments configuration validation (warn on startup if missing)
 if (isProduction) {
-  const portoneWarnings: string[] = []
-  if (!config.portone.apiSecret) {
-    portoneWarnings.push("PORTONE_API_SECRET")
+  const tossWarnings: string[] = []
+  if (!config.toss.secretKey) {
+    tossWarnings.push("TOSS_SECRET_KEY")
   }
-  if (!config.portone.webhookSecret) {
-    portoneWarnings.push("PORTONE_WEBHOOK_SECRET")
+  if (!config.toss.webhookSecret) {
+    tossWarnings.push("TOSS_WEBHOOK_SECRET")
   }
-  if (portoneWarnings.length > 0) {
+  if (tossWarnings.length > 0) {
     console.warn(
-      `\n⚠️  [Config] Missing PortOne environment variables: ${portoneWarnings.join(", ")}`,
+      `\n⚠️  [Config] Missing TossPayments environment variables: ${tossWarnings.join(", ")}`,
       "\n   Payment features will not work properly.\n",
     )
   }

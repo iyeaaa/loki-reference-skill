@@ -27,12 +27,10 @@ import {
   Landmark,
   Loader2,
   MapPin,
-  Network,
   RefreshCw,
   Search,
   Server,
   Shield,
-  Smartphone,
   Star,
   Target,
   Trash2,
@@ -167,42 +165,6 @@ function VisitorTypeBadge({ type }: { type: VisitorType | null }) {
         </Badge>
       </TooltipTrigger>
       <TooltipContent>방문자 유형: {typeInfo.label}</TooltipContent>
-    </Tooltip>
-  )
-}
-
-function LeadScoreBadge({ score, isB2bLead }: { score: number | null; isB2bLead: boolean }) {
-  if (score === null) {
-    return <span className="text-muted-foreground">-</span>
-  }
-
-  const getScoreColor = (s: number) => {
-    if (s >= 70) {
-      return "bg-green-500 text-white"
-    }
-    if (s >= 50) {
-      return "bg-blue-500 text-white"
-    }
-    if (s >= 30) {
-      return "bg-yellow-500 text-white"
-    }
-    return "bg-gray-300 text-gray-700"
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="flex items-center gap-1">
-          <Badge className={cn("text-xs", getScoreColor(score))}>{score}</Badge>
-          {isB2bLead && <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent>
-        <div className="space-y-1">
-          <div>리드 스코어: {score}/100</div>
-          {isB2bLead && <div className="text-yellow-400">B2B 리드</div>}
-        </div>
-      </TooltipContent>
     </Tooltip>
   )
 }
@@ -386,6 +348,16 @@ function VisitorDetailModal({
             <div>
               <h4 className="mb-2 font-semibold text-sm">User Agent</h4>
               <p className="break-all rounded bg-muted p-2 text-xs">{visitor.userAgent}</p>
+            </div>
+          ) : null}
+
+          {/* Raw ipapi.is Response */}
+          {visitor.ipapiData ? (
+            <div>
+              <h4 className="mb-2 font-semibold text-sm">ipapi.is 원본 응답</h4>
+              <pre className="max-h-[300px] overflow-auto rounded bg-muted p-3 text-xs">
+                {JSON.stringify(visitor.ipapiData, null, 2)}
+              </pre>
             </div>
           ) : null}
         </div>
@@ -868,14 +840,14 @@ export function VisitorAnalyticsPage() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
           <div className="space-y-1">
             <h2 className="font-semibold text-lg">{selectedWorkspace?.name}</h2>
             <p className="text-muted-foreground text-sm">
               IP Intelligence 기반 방문자 추적 및 분석
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => setIsGuideOpen(true)} size="sm" variant="outline">
               <Code2 className="mr-1.5 h-4 w-4" />
               연동 가이드
@@ -1188,15 +1160,6 @@ export function VisitorAnalyticsPage() {
                         <TableHead className="w-[130px]">IP 주소</TableHead>
                         <TableHead className="w-[80px]">유형</TableHead>
                         <TableHead
-                          className="w-[70px] cursor-pointer text-center"
-                          onClick={() => handleSortChange("leadScore")}
-                        >
-                          점수
-                          {filters.sortBy === "leadScore" && (
-                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </TableHead>
-                        <TableHead
                           className="w-[100px] cursor-pointer"
                           onClick={() => handleSortChange("country")}
                         >
@@ -1215,7 +1178,6 @@ export function VisitorAnalyticsPage() {
                           )}
                         </TableHead>
                         <TableHead className="w-[150px]">웹사이트</TableHead>
-                        <TableHead className="w-[70px]">보안</TableHead>
                         <TableHead
                           className="w-[50px] cursor-pointer text-center"
                           onClick={() => handleSortChange("visitCount")}
@@ -1253,12 +1215,6 @@ export function VisitorAnalyticsPage() {
                             <TableCell className="font-mono text-xs">{visitor.ipAddress}</TableCell>
                             <TableCell>
                               <VisitorTypeBadge type={visitor.visitorType} />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <LeadScoreBadge
-                                isB2bLead={visitor.isB2bLead}
-                                score={visitor.leadScore}
-                              />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
@@ -1313,57 +1269,6 @@ export function VisitorAnalyticsPage() {
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {visitor.isVpn && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Shield className="h-4 w-4 text-yellow-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>VPN</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {visitor.isProxy && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Server className="h-4 w-4 text-yellow-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>Proxy</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {visitor.isTor && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Network className="h-4 w-4 text-red-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>Tor</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {visitor.isDatacenter && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Server className="h-4 w-4 text-blue-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>Datacenter</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {visitor.isMobile && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Smartphone className="h-4 w-4 text-gray-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>Mobile</TooltipContent>
-                                  </Tooltip>
-                                )}
-                                {!(
-                                  visitor.isVpn ||
-                                  visitor.isProxy ||
-                                  visitor.isTor ||
-                                  visitor.isDatacenter ||
-                                  visitor.isCrawler
-                                ) && <span className="text-muted-foreground">-</span>}
-                              </div>
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge variant="secondary">{visitor.visitCount}</Badge>

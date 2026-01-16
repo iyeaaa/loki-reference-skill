@@ -467,16 +467,15 @@ export default function AppDashboardPage() {
             {/* 헤더 */}
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h2 className="font-bold text-2xl">RINDA 체험판 여정</h2>
+                <h2 className="font-bold text-2xl">RINDA 무료 체험 중</h2>
                 <p className="mt-1 text-muted-foreground text-sm">
-                  진행 중인 캠페인의 단계별 현황을 확인하세요
+                  린다가 대표님 대신 해외영업 하고 있어요
                 </p>
               </div>
               <div className="flex flex-col items-end">
                 <div className="font-semibold text-blue-600 text-xl">
-                  체험판 Day {trialDay} of 14
+                  Day {trialDay} · {14 - trialDay}일 남았어요
                 </div>
-                <p className="mt-1 text-muted-foreground text-xs">남은 기간: {14 - trialDay}일</p>
               </div>
             </div>
 
@@ -576,7 +575,7 @@ export default function AppDashboardPage() {
                           totalStats.opened > 0 ? "" : "text-blue-500",
                         )}
                       >
-                        첫오픈
+                        바이어가 열어봄
                       </div>
                       <div
                         className={cn(
@@ -620,7 +619,7 @@ export default function AppDashboardPage() {
                           totalStats.replied > 0 ? "" : "text-blue-500",
                         )}
                       >
-                        첫답장
+                        답장 도착
                       </div>
                       <div
                         className={cn(

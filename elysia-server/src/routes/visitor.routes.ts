@@ -188,18 +188,19 @@ export const visitorPublicRoutes = new Elysia({ prefix: "/api/v1/visitors" })
 /**
  * Protected visitor management routes (requires workspace access)
  * For admin dashboard use
+ * Note: Uses :id instead of :workspaceId to match existing workspace routes pattern
  */
 export const visitorProtectedRoutes = new Elysia({
-  prefix: "/api/v1/workspaces/:workspaceId/visitors",
+  prefix: "/api/v1/workspaces/:id/visitors",
 })
   /**
    * Get visitor session details
-   * GET /api/v1/workspaces/:workspaceId/visitors/:visitorId
+   * GET /api/v1/workspaces/:id/visitors/:visitorId
    */
   .get(
     "/:visitorId",
     async ({ params, set }) => {
-      const { workspaceId, visitorId } = params
+      const { id: workspaceId, visitorId } = params
 
       const visitor = await getVisitorSession(visitorId)
 
@@ -218,7 +219,7 @@ export const visitorProtectedRoutes = new Elysia({
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        id: t.String({ format: "uuid" }),
         visitorId: t.String({ format: "uuid" }),
       }),
       detail: {
@@ -231,12 +232,12 @@ export const visitorProtectedRoutes = new Elysia({
 
   /**
    * List visitor sessions
-   * GET /api/v1/workspaces/:workspaceId/visitors
+   * GET /api/v1/workspaces/:id/visitors
    */
   .get(
     "/",
     async ({ params, query }) => {
-      const { workspaceId } = params
+      const { id: workspaceId } = params
       const limit = Math.min(parseInt(query.limit || "50", 10), 100)
       const offset = parseInt(query.offset || "0", 10)
 
@@ -254,7 +255,7 @@ export const visitorProtectedRoutes = new Elysia({
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        id: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         limit: t.Optional(t.String()),
@@ -270,12 +271,12 @@ export const visitorProtectedRoutes = new Elysia({
 
   /**
    * Get visitor statistics
-   * GET /api/v1/workspaces/:workspaceId/visitors/stats
+   * GET /api/v1/workspaces/:id/visitors/stats
    */
   .get(
     "/stats",
     async ({ params, query }) => {
-      const { workspaceId } = params
+      const { id: workspaceId } = params
       const days = Math.min(parseInt(query.days || "30", 10), 365)
 
       const stats = await getVisitorStats(workspaceId, days)
@@ -284,7 +285,7 @@ export const visitorProtectedRoutes = new Elysia({
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        id: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         days: t.Optional(
@@ -302,12 +303,12 @@ export const visitorProtectedRoutes = new Elysia({
 
   /**
    * Delete old visitor sessions (GDPR cleanup)
-   * DELETE /api/v1/workspaces/:workspaceId/visitors/cleanup
+   * DELETE /api/v1/workspaces/:id/visitors/cleanup
    */
   .delete(
     "/cleanup",
     async ({ params, query }) => {
-      const { workspaceId } = params
+      const { id: workspaceId } = params
       const daysOld = Math.max(parseInt(query.daysOld || "90", 10), 30) // Minimum 30 days
 
       const deletedCount = await deleteOldSessions(workspaceId, daysOld)
@@ -319,7 +320,7 @@ export const visitorProtectedRoutes = new Elysia({
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        id: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         daysOld: t.Optional(

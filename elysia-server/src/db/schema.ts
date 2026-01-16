@@ -51,10 +51,6 @@ export * from "./schema/user-signature-preferences"
 // Core (핵심 엔티티)
 // ============================================================================
 export * from "./schema/users"
-// ============================================================================
-// Visitor Analytics (방문자 분석)
-// ============================================================================
-export * from "./schema/visitor-sessions"
 export * from "./schema/websets"
 export * from "./schema/workflow-emails"
 export * from "./schema/workflow-executions"

@@ -344,13 +344,6 @@
       "when": 1768532860387,
       "tag": "0048_wandering_random",
       "breakpoints": true
-    },
-    {
-      "idx": 49,
-      "version": "7",
-      "when": 1768536199253,
-      "tag": "0049_lean_madrox",
-      "breakpoints": true
     }
   ]
 }

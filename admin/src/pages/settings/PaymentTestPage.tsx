@@ -424,7 +424,7 @@ export function PaymentTestPage() {
           currency: "KRW",
           value: selectedPlan.amount,
         })
-        .catch((err: unknown) => console.error("[Widget] Amount update error:", err))
+        .catch((err) => console.error("[Widget] Amount update error:", err))
     }
   }, [selectedPlan, isWidgetReady])
 

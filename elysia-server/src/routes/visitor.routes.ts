@@ -123,7 +123,7 @@ export const visitorPublicRoutes = new Elysia({ prefix: "/api/v1/visitors" })
         ipAddress,
         userAgent: userAgent || request.headers.get("user-agent") || undefined,
         referrer: referrer || request.headers.get("referer") || undefined,
-        landingPage,
+        landingPage: landingPage || undefined,
       })
 
       if (!result.success) {
@@ -169,14 +169,16 @@ export const visitorPublicRoutes = new Elysia({ prefix: "/api/v1/visitors" })
       body: t.Object({
         workspaceId: t.String({ description: "Workspace UUID" }),
         ipAddress: t.Optional(
-          t.String({
-            description:
-              "Visitor IP address (optional - auto-extracted from CF-Connecting-IP, X-Forwarded-For, or X-Real-IP headers)",
-          }),
+          t.Nullable(
+            t.String({
+              description:
+                "Visitor IP address (optional - auto-extracted from CF-Connecting-IP, X-Forwarded-For, or X-Real-IP headers)",
+            }),
+          ),
         ),
-        userAgent: t.Optional(t.String({ description: "Browser user agent" })),
-        referrer: t.Optional(t.String({ description: "Referrer URL" })),
-        landingPage: t.Optional(t.String({ description: "Landing page URL" })),
+        userAgent: t.Optional(t.Nullable(t.String({ description: "Browser user agent" }))),
+        referrer: t.Optional(t.Nullable(t.String({ description: "Referrer URL" }))),
+        landingPage: t.Optional(t.Nullable(t.String({ description: "Landing page URL" }))),
       }),
       detail: {
         tags: ["visitors"],

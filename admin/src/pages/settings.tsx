@@ -256,6 +256,12 @@ export default function SettingsPage() {
         icon: <Building2 className="h-4 w-4" />,
         permission: "public", // 모든 사용자가 자신의 워크스페이스 정보 확인 가능
       },
+      {
+        id: "visitor-analytics",
+        label: "웹사이트 방문자",
+        icon: <Eye className="h-4 w-4" />,
+        permission: "public", // Trial 사용자도 접근 가능
+      },
       // ───────────────────────────────────────────────────────────────────────
       // 시스템 관리 - Admin 전용
       // ───────────────────────────────────────────────────────────────────────
@@ -372,12 +378,6 @@ export default function SettingsPage() {
         id: "trial-management",
         label: "체험판 관리",
         icon: <UserCheck className="h-4 w-4" />,
-        permission: "admin-only",
-      },
-      {
-        id: "visitor-analytics",
-        label: "방문자 분석",
-        icon: <Eye className="h-4 w-4" />,
         permission: "admin-only",
       },
       // ───────────────────────────────────────────────────────────────────────

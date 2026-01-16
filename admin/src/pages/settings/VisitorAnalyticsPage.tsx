@@ -81,7 +81,7 @@ import {
   type VisitorFilters,
   type VisitorSession,
 } from "@/lib/api/hooks/visitor-analytics"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
 // ============================================================================
@@ -660,28 +660,11 @@ export function VisitorAnalyticsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [statsDays, setStatsDays] = useState(30)
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | undefined>(undefined)
 
-  // Data fetching
-  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces()
-
-  // Set initial workspace when workspaces are loaded
-  useEffect(() => {
-    if (userWorkspaces && userWorkspaces.length > 0 && !selectedWorkspaceId) {
-      setSelectedWorkspaceId(userWorkspaces[0].id)
-    }
-  }, [userWorkspaces, selectedWorkspaceId])
-
-  const workspaceId = selectedWorkspaceId
-
-  // Reset page and filters when workspace changes
-  const handleWorkspaceChange = (newWorkspaceId: string) => {
-    setSelectedWorkspaceId(newWorkspaceId)
-    setCurrentPage(1)
-    setFilters({})
-    setSearchInput("")
-    setDebouncedSearch("")
-  }
+  // Get workspace from sidebar selection (localStorage)
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
+  const isValidWorkspace = !!(workspaceId && workspaceId !== "all")
 
   // Debounce search
   useEffect(() => {
@@ -778,12 +761,18 @@ export function VisitorAnalyticsPage() {
   }
 
   // No workspace selected
-  if (!workspaceId) {
+  if (!isValidWorkspace) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-bold text-2xl">웹사이트 방문자</h1>
+          <p className="text-muted-foreground text-sm">IP Intelligence 기반 방문자 추적 및 분석</p>
+        </div>
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>워크스페이스를 선택해주세요.</AlertDescription>
+          <AlertDescription>
+            사이드바에서 워크스페이스를 선택해주세요. 방문자 분석은 워크스페이스별로 제공됩니다.
+          </AlertDescription>
         </Alert>
       </div>
     )
@@ -796,44 +785,15 @@ export function VisitorAnalyticsPage() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Workspace Selector */}
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-sm">워크스페이스</span>
-          </div>
-          <Select
-            disabled={isLoadingWorkspaces || !userWorkspaces?.length}
-            onValueChange={handleWorkspaceChange}
-            value={selectedWorkspaceId ?? ""}
-          >
-            <SelectTrigger className="w-[280px]">
-              {isLoadingWorkspaces ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>로딩 중...</span>
-                </div>
-              ) : (
-                <SelectValue placeholder="워크스페이스 선택" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {userWorkspaces?.map((ws) => (
-                <SelectItem key={ws.id} value={ws.id}>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span>{ws.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-bold text-2xl">방문자 분석</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-bold text-2xl">웹사이트 방문자</h1>
+              <Badge className="text-xs" variant="outline">
+                {selectedWorkspace?.name}
+              </Badge>
+            </div>
             <p className="text-muted-foreground text-sm">
               IP Intelligence 기반 방문자 추적 및 분석
             </p>

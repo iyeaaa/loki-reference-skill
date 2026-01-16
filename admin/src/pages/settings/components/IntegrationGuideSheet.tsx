@@ -1403,11 +1403,15 @@ export function IntegrationGuideSheet({
                   {LANGUAGE_GROUPS.map((group) => (
                     <div key={group.name}>
                       <p className="mb-1.5 text-muted-foreground text-xs">{group.name}</p>
-                      <TabsList className="h-auto flex-wrap justify-start gap-1">
+                      <TabsList className="h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
                         {group.languages.map((lang) => {
                           const example = codeExamples[lang as keyof typeof codeExamples]
                           return (
-                            <TabsTrigger className="h-7 px-2 text-xs" key={lang} value={lang}>
+                            <TabsTrigger
+                              className="h-7 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                              key={lang}
+                              value={lang}
+                            >
                               {example.name}
                             </TabsTrigger>
                           )

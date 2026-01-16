@@ -4,6 +4,7 @@ import {
   Camera,
   ClipboardList,
   CreditCard,
+  Eye,
   FlaskConical,
   Globe,
   Key,
@@ -69,6 +70,7 @@ import { OnboardingTest } from "./settings/OnboardingTest"
 import { PaymentTestPage } from "./settings/PaymentTestPage"
 import { TrialManagementPage } from "./settings/trial-management"
 import { UnipileEmailTest } from "./settings/UnipileEmailTest"
+import { VisitorAnalyticsPage } from "./settings/VisitorAnalyticsPage"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
 import WorkspacesPage from "./workspaces/WorkspacesPage"
@@ -370,6 +372,12 @@ export default function SettingsPage() {
         id: "trial-management",
         label: "체험판 관리",
         icon: <UserCheck className="h-4 w-4" />,
+        permission: "admin-only",
+      },
+      {
+        id: "visitor-analytics",
+        label: "방문자 분석",
+        icon: <Eye className="h-4 w-4" />,
         permission: "admin-only",
       },
       // ───────────────────────────────────────────────────────────────────────
@@ -739,6 +747,8 @@ export default function SettingsPage() {
         return <JobLogsPage />
       case "trial-management":
         return <TrialManagementPage />
+      case "visitor-analytics":
+        return <VisitorAnalyticsPage />
       // Billing Pages
       case "billing-products":
         return <ProductsPage />

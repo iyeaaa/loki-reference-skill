@@ -15,7 +15,7 @@ import {
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
-export const contactEnrichmentRoutes = new Elysia({ prefix: "/contact-enrichment" })
+export const contactEnrichmentRoutes = new Elysia({ prefix: "/api/v1/contact-enrichment" })
   /**
    * GET /api/v1/contact-enrichment/check-email-status
    * 선택된 리드들의 이메일 유무 확인

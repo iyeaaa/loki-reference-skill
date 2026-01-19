@@ -157,40 +157,8 @@ export const emailSignatureRoutes = new Elysia({
     },
   )
 
-  // Get signature by ID
-  .get(
-    "/:id",
-    async ({ params }) => {
-      try {
-        const { id } = params
-
-        const [signature] = await db
-          .select()
-          .from(emailSignatures)
-          .where(eq(emailSignatures.id, id))
-          .limit(1)
-
-        if (!signature) {
-          return errorResponse("Email signature not found", ResponseCode.NOT_FOUND)
-        }
-
-        return {
-          code: ResponseCode.SUCCESS,
-          data: signature,
-        }
-      } catch (error) {
-        logger.error({ err: error, id: params.id }, "Failed to fetch email signature")
-        return errorResponse("Failed to fetch email signature")
-      }
-    },
-    {
-      params: t.Object({
-        id: t.String({ format: "uuid" }),
-      }),
-    },
-  )
-
   // Get default signature for current user in a workspace (JWT에서 userId 추출)
+  // NOTE: This route MUST come before /:id to avoid "default" being treated as an ID
   .get(
     "/default",
     async ({ query, headers, set }) => {
@@ -242,6 +210,39 @@ export const emailSignatureRoutes = new Elysia({
     {
       query: t.Object({
         workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get signature by ID
+  .get(
+    "/:id",
+    async ({ params }) => {
+      try {
+        const { id } = params
+
+        const [signature] = await db
+          .select()
+          .from(emailSignatures)
+          .where(eq(emailSignatures.id, id))
+          .limit(1)
+
+        if (!signature) {
+          return errorResponse("Email signature not found", ResponseCode.NOT_FOUND)
+        }
+
+        return {
+          code: ResponseCode.SUCCESS,
+          data: signature,
+        }
+      } catch (error) {
+        logger.error({ err: error, id: params.id }, "Failed to fetch email signature")
+        return errorResponse("Failed to fetch email signature")
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
       }),
     },
   )

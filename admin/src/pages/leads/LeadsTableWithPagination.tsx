@@ -49,6 +49,7 @@ type LeadsTableWithPaginationProps = {
   selectedGroupWorkspaceId?: string
   // Contact Enrichment
   enrichingLeadIds?: Set<string>
+  failedEnrichmentLeadIds?: Set<string>
 }
 
 export function LeadsTableWithPagination({
@@ -67,6 +68,7 @@ export function LeadsTableWithPagination({
   onToggleSelectAll,
   selectedGroupWorkspaceId,
   enrichingLeadIds,
+  failedEnrichmentLeadIds,
 }: LeadsTableWithPaginationProps) {
   const { t } = useTranslation()
 
@@ -401,6 +403,7 @@ export function LeadsTableWithPagination({
       onAutoSizeColumn: autoSizeColumn,
       // Contact Enrichment
       enrichingLeadIds,
+      failedEnrichmentLeadIds,
     },
   })
 

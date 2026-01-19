@@ -1,6 +1,6 @@
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import { formatDistanceToNow } from "date-fns"
-import { CheckCircle, Loader2 } from "lucide-react"
+import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import { ColumnSelector } from "@/components/leads/ColumnSelector"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -81,6 +81,7 @@ type LeadsTableMeta = {
   onReorderColumns?: (fromIndex: number, toIndex: number) => void
   // Contact Enrichment
   enrichingLeadIds?: Set<string>
+  failedEnrichmentLeadIds?: Set<string>
 }
 
 // Helper function to create filter change handler
@@ -288,7 +289,18 @@ export const leadsColumns: ColumnDef<Lead>[] = [
         )
       }
 
+      // Check if enrichment failed for this lead
+      const enrichmentFailed = meta?.failedEnrichmentLeadIds?.has(leadId)
+
       if (!email) {
+        if (enrichmentFailed) {
+          return (
+            <div className="flex items-center gap-2 text-red-500">
+              <XCircle className="h-4 w-4" />
+              <span className="text-sm">탐색 실패</span>
+            </div>
+          )
+        }
         return <span className="text-muted-foreground">-</span>
       }
 

@@ -122,6 +122,7 @@ export default function LeadsPage() {
 
   // Contact Enrichment 상태
   const [enrichingLeadIds, setEnrichingLeadIds] = useState<Set<string>>(new Set())
+  const [failedEnrichmentLeadIds, setFailedEnrichmentLeadIds] = useState<Set<string>>(new Set())
   const [showMissingEmailAlert, setShowMissingEmailAlert] = useState(false)
   const [leadsWithoutEmail, setLeadsWithoutEmail] = useState<
     Array<{ id: string; companyName: string | null; hasEmail: boolean }>
@@ -587,8 +588,9 @@ export default function LeadsPage() {
       return
     }
 
-    // 1. 로딩 상태 시작
+    // 1. 로딩 상태 시작 & 이전 실패 상태 초기화
     setEnrichingLeadIds(new Set(leadIds))
+    setFailedEnrichmentLeadIds(new Set())
 
     try {
       // 2. SSE 연결하여 백그라운드 Enrichment 실행
@@ -610,6 +612,15 @@ export default function LeadsPage() {
               next.delete(data.completedLeadId)
               return next
             })
+
+            // 실패한 리드는 실패 상태에 추가 (이메일을 찾지 못한 경우)
+            if (data.result && !data.result.success) {
+              setFailedEnrichmentLeadIds((prev) => {
+                const next = new Set(prev)
+                next.add(data.completedLeadId)
+                return next
+              })
+            }
           }
 
           if (data.type === "complete") {
@@ -1202,6 +1213,7 @@ export default function LeadsPage() {
             allLeadsSelected={allLeadsSelected}
             columnFilters={columnFilters}
             enrichingLeadIds={enrichingLeadIds}
+            failedEnrichmentLeadIds={failedEnrichmentLeadIds}
             isSelectAllMode={isSelectAllMode}
             onEditLead={setEditingLead}
             onLeadsDataChange={setCurrentLeadsData}

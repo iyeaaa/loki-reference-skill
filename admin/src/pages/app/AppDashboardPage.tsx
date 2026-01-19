@@ -113,7 +113,7 @@ const formatPercent = (value: number | undefined) => {
 
 type JourneyStage = "setup" | "sending" | "open" | "reply" | "meeting" | "deal"
 
-type UpgradeFeature = "meeting" | "deal" | null
+type UpgradeFeature = "meeting" | "deal" | "trial_expired" | null
 
 export default function AppDashboardPage() {
   const [activeTab, setActiveTab] = useState("journey")
@@ -128,6 +128,7 @@ export default function AppDashboardPage() {
     return { from: thirtyDaysAgo, to: today }
   })
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null)
 
   const { selectedWorkspace } = useWorkspace()
 
@@ -151,13 +152,16 @@ export default function AppDashboardPage() {
   const { data: sequences } = useSequencesByWorkspace(workspaceId || "", !!workspaceId)
   const firstSequenceId = generatedSequenceId || sequences?.[0]?.id
 
+  // 선택된 시퀀스 ID (사용자가 드롭다운에서 선택한 것 or 기본값)
+  const activeSequenceId = selectedSequenceId || firstSequenceId
+
   // 시퀀스의 리드 정보 가져오기 (두 가지 방법 모두 시도)
-  const { data: leadsData } = useSequenceLeads(firstSequenceId || "", 1, 1000, !!firstSequenceId)
+  const { data: leadsData } = useSequenceLeads(activeSequenceId || "", 1, 1000, !!activeSequenceId)
   const { data: enrollmentsData } = useSequenceEnrollments(
-    firstSequenceId || "",
+    activeSequenceId || "",
     1,
     1000,
-    !!firstSequenceId,
+    !!activeSequenceId,
   )
 
   // 바이어 수: enrollments, leads, 또는 onboarding의 selectedLeadIds 중 가장 큰 값
@@ -175,8 +179,9 @@ export default function AppDashboardPage() {
   const emailAccount = emailAccounts?.[0]?.email || currentUser?.email || null
 
   // 시퀀스 스텝 정보 가져오기
-  const { data: sequenceSteps } = useSequenceSteps(firstSequenceId || "", !!firstSequenceId)
-  const stepsCount = sequenceSteps?.length || sequences?.[0]?.stepsCount || 0
+  const { data: sequenceSteps } = useSequenceSteps(activeSequenceId || "", !!activeSequenceId)
+  const selectedSequence = sequences?.find((seq) => seq.id === activeSequenceId)
+  const stepsCount = sequenceSteps?.length || selectedSequence?.stepsCount || 0
 
   // 체험판 진행 일수 계산
   const trialDay = useMemo(() => {
@@ -187,8 +192,11 @@ export default function AppDashboardPage() {
     const today = new Date()
     const diffTime = today.getTime() - startDate.getTime()
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1: 시작일을 Day 1로
-    return Math.min(Math.max(diffDays, 1), 14) // 1~14 범위로 제한
+    return Math.max(diffDays, 1) // 최소 1일, 최대 제한 없음
   }, [onboardingProgress?.completedAt])
+
+  // 체험판 만료 여부 (14일 초과)
+  const isTrialExpired = trialDay > 14
 
   // 워크스페이스 전체/선택에 따라 데이터 조회
   const {
@@ -306,6 +314,21 @@ export default function AppDashboardPage() {
     setSelectedCountries((prev) =>
       prev.includes(country) ? prev.filter((c) => c !== country) : [...prev, country],
     )
+  }
+
+  const handleSequenceChange = (sequenceId: string) => {
+    setSelectedSequenceId(sequenceId)
+  }
+
+  const handleStageClick = (stage: JourneyStage) => {
+    // 단계 전환은 항상 수행 (데이터 볼 수 있도록)
+    setSelectedStage(stage)
+
+    // 체험판 만료 시 setup 단계 외에는 결제 안내 팝업 표시
+    if (isTrialExpired && stage !== "setup") {
+      setUpgradeFeature("trial_expired")
+      setShowUpgradeModal(true)
+    }
   }
 
   // Calculate totals and rates (with dummy data for testing)
@@ -457,6 +480,55 @@ export default function AppDashboardPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
+              {/* Campaign Filter */}
+              {sequences && sequences.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="h-8 gap-1.5 text-sm" size="sm" variant="outline">
+                      <Mail className="h-3.5 w-3.5" />
+                      <span className="max-w-[150px] truncate">
+                        {selectedSequence?.name || sequences[0]?.name || "캠페인"}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[280px]">
+                    <DropdownMenuLabel>캠페인 선택</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {sequences.map((sequence) => (
+                      <DropdownMenuCheckboxItem
+                        checked={activeSequenceId === sequence.id}
+                        key={sequence.id}
+                        onCheckedChange={() => handleSequenceChange(sequence.id)}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium">{sequence.name}</span>
+                          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                            <span
+                              className={cn(
+                                "rounded-full px-1.5 py-0.5",
+                                sequence.status === "active" && "bg-green-100 text-green-700",
+                                sequence.status === "paused" && "bg-yellow-100 text-yellow-700",
+                                sequence.status === "draft" && "bg-gray-100 text-gray-600",
+                              )}
+                            >
+                              {sequence.status === "active"
+                                ? "실행중"
+                                : sequence.status === "paused"
+                                  ? "일시정지"
+                                  : "초안"}
+                            </span>
+                            {sequence.customerGroupName && (
+                              <span>· {sequence.customerGroupName}</span>
+                            )}
+                          </div>
+                        </div>
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           )}
         </div>
@@ -473,8 +545,15 @@ export default function AppDashboardPage() {
                 </p>
               </div>
               <div className="flex flex-col items-end">
-                <div className="font-semibold text-blue-600 text-xl">
-                  Day {trialDay} · {14 - trialDay}일 남았어요
+                <div
+                  className={cn(
+                    "font-semibold text-xl",
+                    isTrialExpired ? "text-red-600" : "text-blue-600",
+                  )}
+                >
+                  {isTrialExpired
+                    ? `체험판 종료 (${trialDay - 14}일 경과)`
+                    : `Day ${trialDay} · ${14 - trialDay}일 남았어요`}
                 </div>
               </div>
             </div>
@@ -503,7 +582,7 @@ export default function AppDashboardPage() {
                   {/* 1. 설정완료 (완료) */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
-                    onClick={() => setSelectedStage("setup")}
+                    onClick={() => handleStageClick("setup")}
                     type="button"
                   >
                     <div
@@ -525,7 +604,7 @@ export default function AppDashboardPage() {
                   {/* 2. 발송시작 (진행중) */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
-                    onClick={() => setSelectedStage("sending")}
+                    onClick={() => handleStageClick("sending")}
                     type="button"
                   >
                     <div
@@ -547,7 +626,7 @@ export default function AppDashboardPage() {
                   {/* 3. 첫오픈 */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
-                    onClick={() => setSelectedStage("open")}
+                    onClick={() => handleStageClick("open")}
                     type="button"
                   >
                     <div
@@ -591,7 +670,7 @@ export default function AppDashboardPage() {
                   {/* 4. 첫답장 */}
                   <button
                     className="flex flex-1 flex-col items-center transition-transform hover:scale-105"
-                    onClick={() => setSelectedStage("reply")}
+                    onClick={() => handleStageClick("reply")}
                     type="button"
                   >
                     <div
@@ -1508,11 +1587,13 @@ export default function AppDashboardPage() {
                 프리미엄 기능
               </DialogTitle>
               <DialogDescription>
-                {upgradeFeature === "meeting"
-                  ? "미팅 일정 관리는 프리미엄 플랜에서 사용할 수 있습니다."
-                  : upgradeFeature === "deal"
-                    ? "거래 성사 추적 및 관리는 프리미엄 플랜에서 사용할 수 있습니다."
-                    : "이 기능은 프리미엄 플랜에서 사용할 수 있습니다."}
+                {upgradeFeature === "trial_expired"
+                  ? "체험판이 종료되었습니다. 계속 사용하시려면 결제 후 이용해주세요."
+                  : upgradeFeature === "meeting"
+                    ? "미팅 일정 관리는 프리미엄 플랜에서 사용할 수 있습니다."
+                    : upgradeFeature === "deal"
+                      ? "거래 성사 추적 및 관리는 프리미엄 플랜에서 사용할 수 있습니다."
+                      : "이 기능은 프리미엄 플랜에서 사용할 수 있습니다."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1556,8 +1637,8 @@ export default function AppDashboardPage() {
         </Dialog>
 
         <TabsContent className="space-y-4" value="leads">
-          {firstSequenceId ? (
-            <SequenceLeadsTable sequenceId={firstSequenceId} />
+          {activeSequenceId ? (
+            <SequenceLeadsTable sequenceId={activeSequenceId} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Users className="mb-3 h-10 w-10 text-muted-foreground/30" />
@@ -1570,8 +1651,8 @@ export default function AppDashboardPage() {
         </TabsContent>
 
         <TabsContent className="space-y-4" value="emails">
-          {firstSequenceId ? (
-            <SequenceStepsList isEdit={true} readOnly={false} sequenceId={firstSequenceId} />
+          {activeSequenceId ? (
+            <SequenceStepsList isEdit={true} readOnly={false} sequenceId={activeSequenceId} />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border bg-background py-16">
               <Mail className="mb-3 h-10 w-10 text-muted-foreground/30" />

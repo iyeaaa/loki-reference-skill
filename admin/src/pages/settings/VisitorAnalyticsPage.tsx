@@ -1030,7 +1030,7 @@ export function VisitorAnalyticsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3">
           <StatCard
             color="#64748b"
             description={`최근 ${statsDays}일`}
@@ -1044,13 +1044,6 @@ export function VisitorAnalyticsPage() {
             isLoading={isLoadingStats}
             title="B2B 리드"
             value={statsData?.b2bLeads || 0}
-          />
-          <StatCard
-            color="#0ea5e9"
-            description="회사 식별됨"
-            isLoading={isLoadingStats}
-            title="회사 방문자"
-            value={statsData?.companyVisitors || 0}
           />
           <StatCard
             color="#8b5cf6"

@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   CheckCircle,
+  ChevronDown,
   FileText,
   Globe,
   Info,
@@ -18,19 +19,18 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-// import { Switch } from "@/components/ui/switch" // Temporarily hidden
-// Select 컴포넌트 - 설문 드롭다운 제거로 인해 사용하지 않음
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select"
 import { trackOnboardingStep1Complete } from "@/lib/analytics"
 import { apiFetch } from "@/lib/api/client"
 import {
@@ -58,8 +58,35 @@ type SalesStrategyData = {
   includeSignature: boolean
 }
 
-// 설문 드롭다운 옵션들 - 온보딩 플로우 간소화로 회사정보 UI에서 제거됨
-// 설문 데이터는 이제 온보딩 설문 페이지(/trial/survey)에서만 수집
+// 설문 드롭다운 옵션들
+const INDUSTRY_OPTIONS = {
+  beauty: { ko: "뷰티/화장품", en: "Beauty/Cosmetics" },
+  fashion: { ko: "패션/의류", en: "Fashion/Apparel" },
+  food: { ko: "식품/음료", en: "Food/Beverage" },
+  it_saas: { ko: "IT/SaaS", en: "IT/SaaS" },
+  manufacturing: { ko: "제조업", en: "Manufacturing" },
+  retail: { ko: "소매업", en: "Retail" },
+  healthcare: { ko: "헬스케어", en: "Healthcare" },
+  education: { ko: "교육", en: "Education" },
+  other: { ko: "기타", en: "Other" },
+}
+
+const TARGET_OPTIONS = {
+  b2b: { ko: "기업 대상 (B2B)", en: "Business (B2B)" },
+  b2c: { ko: "소비자 대상 (B2C)", en: "Consumer (B2C)" },
+  both: { ko: "둘 다 (B2B + B2C)", en: "Both (B2B + B2C)" },
+}
+
+const COUNTRY_OPTIONS = {
+  jp: { ko: "일본", en: "Japan" },
+  us: { ko: "미국", en: "United States" },
+  sea: { ko: "동남아시아", en: "Southeast Asia" },
+  eu: { ko: "유럽", en: "Europe" },
+  cn: { ko: "중국", en: "China" },
+  ae: { ko: "UAE", en: "United Arab Emirates" },
+  kr: { ko: "한국", en: "South Korea" },
+  other: { ko: "기타", en: "Other" },
+}
 
 export function StepCompanyInfo() {
   const { i18n } = useTranslation()
@@ -87,6 +114,22 @@ export function StepCompanyInfo() {
       includeSignature: true,
     }
   })
+
+  // Survey 데이터가 없으면 "더보기" 섹션을 자동으로 열기
+  // editedData (strategyData 기반)의 industry, country를 기반으로 판단
+  const isSurveyDataMissing = useMemo(
+    () => !(editedData.industry && editedData.country),
+    [editedData.industry, editedData.country],
+  )
+
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
+
+  // 데이터 로딩 완료 후 survey 데이터가 없으면 섹션 자동 열기
+  useEffect(() => {
+    if (!isLoading && isSurveyDataMissing) {
+      setIsAdvancedOpen(true)
+    }
+  }, [isLoading, isSurveyDataMissing])
 
   // Validation error state
   const [errors, setErrors] = useState<{
@@ -414,7 +457,7 @@ export function StepCompanyInfo() {
       return
     }
 
-    // 필수 필드 검증 (회사명, 회사 소개만 필수 - 설문 데이터는 온보딩 설문 페이지에서 수집됨)
+    // 필수 필드 검증 (회사명, 회사 소개, 산업군, 국가 필수)
     const newErrors: { companyName?: boolean; companyDescription?: boolean } = {}
     const missingFields: string[] = []
 
@@ -426,12 +469,23 @@ export function StepCompanyInfo() {
       newErrors.companyDescription = true
       missingFields.push(isKorean ? "회사 소개" : "Company Description")
     }
+    // 설문 데이터 필수 검증 (백엔드에서 worker 시작에 필요)
+    if (!editedData.industry) {
+      missingFields.push(isKorean ? "산업군" : "Industry")
+    }
+    if (!editedData.country) {
+      missingFields.push(isKorean ? "타겟 국가" : "Target Country")
+    }
 
     // Set error states to highlight fields
     setErrors(newErrors)
 
     if (missingFields.length > 0) {
       console.log("[StepCompanyInfo] ❌ Missing required fields:", missingFields)
+      // 설문 데이터가 빠져있으면 더보기 섹션 열기
+      if (!(editedData.industry && editedData.country)) {
+        setIsAdvancedOpen(true)
+      }
       toast.error(
         isKorean
           ? `다음 필드를 입력해주세요: ${missingFields.join(", ")}`
@@ -956,6 +1010,111 @@ export function StepCompanyInfo() {
               </div>
             </div>
           </div>
+
+          {/* 설문 데이터가 없을 때 표시되는 "더보기" 섹션 */}
+          {isSurveyDataMissing && (
+            <Collapsible
+              className="mt-6 rounded-lg border border-amber-200 bg-amber-50"
+              onOpenChange={setIsAdvancedOpen}
+              open={isAdvancedOpen}
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-600">⚠️</span>
+                  <span className="font-medium text-amber-800 text-sm">
+                    {isKorean ? "설문 정보가 필요해요 (필수)" : "Survey information required"}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-amber-600 transition-transform ${
+                    isAdvancedOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-amber-200 border-t px-4 pb-4">
+                <p className="mb-4 text-amber-700 text-xs">
+                  {isKorean
+                    ? "바이어 찾기에 필요한 정보입니다. 설정해주세요."
+                    : "This information is required for finding buyers."}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* 산업군 */}
+                  <div className="space-y-1.5">
+                    <Label className="font-medium text-gray-700 text-sm">
+                      {isKorean ? "산업군" : "Industry"}
+                      <span className="ml-1 text-red-500 text-xs">*</span>
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        setEditedData((prev) => ({ ...prev, industry: value }))
+                      }
+                      value={editedData.industry}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={isKorean ? "산업군 선택" : "Select industry"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(INDUSTRY_OPTIONS).map(([value, labels]) => (
+                          <SelectItem key={value} value={value}>
+                            {isKorean ? labels.ko : labels.en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 타겟 국가 */}
+                  <div className="space-y-1.5">
+                    <Label className="font-medium text-gray-700 text-sm">
+                      {isKorean ? "타겟 국가" : "Target Country"}
+                      <span className="ml-1 text-red-500 text-xs">*</span>
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        setEditedData((prev) => ({ ...prev, country: value }))
+                      }
+                      value={editedData.country}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={isKorean ? "국가 선택" : "Select country"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(COUNTRY_OPTIONS).map(([value, labels]) => (
+                          <SelectItem key={value} value={value}>
+                            {isKorean ? labels.ko : labels.en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 타겟 고객 */}
+                  <div className="space-y-1.5">
+                    <Label className="font-medium text-gray-700 text-sm">
+                      {isKorean ? "타겟 고객" : "Target Customer"}
+                    </Label>
+                    <Select
+                      onValueChange={(value) =>
+                        setEditedData((prev) => ({ ...prev, target: value }))
+                      }
+                      value={editedData.target}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={isKorean ? "타겟 선택" : "Select target"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TARGET_OPTIONS).map(([value, labels]) => (
+                          <SelectItem key={value} value={value}>
+                            {isKorean ? labels.ko : labels.en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* 하단: 프로필 완성도 + 다음 단계 버튼 */}
           <div className="mt-6 flex items-center justify-between gap-4 border-t pt-4">

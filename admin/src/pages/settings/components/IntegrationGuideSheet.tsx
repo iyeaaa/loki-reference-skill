@@ -17,7 +17,6 @@ import {
   Copy,
   ExternalLink,
   Loader2,
-  Sparkles,
   Zap,
 } from "lucide-react"
 import { useState } from "react"
@@ -1138,7 +1137,7 @@ function CodeBlock({
         </Button>
       </div>
       {/* Code content with syntax highlighting */}
-      <div className="max-h-[400px] overflow-auto">
+      <div className="overflow-x-auto">
         <SyntaxHighlighter
           customStyle={{
             margin: 0,
@@ -1315,12 +1314,9 @@ export function IntegrationGuideSheet({
                 <div className="p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
-                        <p className="font-medium text-slate-500 text-xs uppercase tracking-wide dark:text-slate-400">
-                          연동 워크스페이스
-                        </p>
-                      </div>
+                      <p className="mb-1 font-medium text-slate-500 text-xs uppercase tracking-wide dark:text-slate-400">
+                        연동 워크스페이스
+                      </p>
                       <p className="truncate font-semibold text-slate-900 text-sm dark:text-white">
                         {workspaceName}
                       </p>
@@ -1479,7 +1475,7 @@ export function IntegrationGuideSheet({
             </section>
 
             {/* Divider */}
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-slate-200 border-t dark:border-slate-700" />
               </div>
@@ -1490,7 +1486,7 @@ export function IntegrationGuideSheet({
             {/* ========================================== */}
             <section className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 font-bold text-white text-xs">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
                   2
                 </div>
                 <h3 className="font-semibold text-base">API 엔드포인트</h3>
@@ -1605,7 +1601,7 @@ export function IntegrationGuideSheet({
             </section>
 
             {/* Divider */}
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-slate-200 border-t dark:border-slate-700" />
               </div>
@@ -1617,7 +1613,7 @@ export function IntegrationGuideSheet({
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 font-bold text-white text-xs">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
                     3
                   </div>
                   <h3 className="font-semibold text-base">코드 연동 예제</h3>
@@ -1672,7 +1668,7 @@ export function IntegrationGuideSheet({
             </section>
 
             {/* Divider */}
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-slate-200 border-t dark:border-slate-700" />
               </div>
@@ -1683,7 +1679,7 @@ export function IntegrationGuideSheet({
             {/* ========================================== */}
             <section>
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-xs">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
                   4
                 </div>
                 <h3 className="font-semibold text-base">주의사항</h3>

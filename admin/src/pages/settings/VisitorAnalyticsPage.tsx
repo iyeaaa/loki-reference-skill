@@ -28,10 +28,8 @@ import {
   Landmark,
   Loader2,
   MapPin,
-  RefreshCw,
   Search,
   Server,
-  Target,
   Users,
   Wifi,
   X,
@@ -164,33 +162,37 @@ function VisitorTypeBadge({ type }: { type: VisitorType | null }) {
 function StatCard({
   title,
   value,
-  icon: Icon,
+  color,
   description,
   isLoading,
 }: {
   title: string
   value: string | number
-  icon: React.ElementType
+  color: string
   description?: string
   isLoading?: boolean
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="font-medium text-sm">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        ) : (
-          <>
-            <div className="font-bold text-2xl">{value}</div>
-            {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div className="rounded-lg border bg-background p-4">
+      {isLoading ? (
+        <div className="flex h-[60px] items-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-muted-foreground text-sm">{title}</span>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-semibold text-3xl tabular-nums">{value}</span>
+            </div>
+            {description && <p className="mt-0.5 text-muted-foreground text-sm">{description}</p>}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -709,18 +711,15 @@ export function VisitorAnalyticsPage() {
     data: sessionsData,
     isLoading: isLoadingSessions,
     isFetching: isFetchingSessions,
-    refetch: refetchSessions,
   } = useVisitorSessions(workspaceId, {
     limit: PAGE_SIZE,
     offset: (currentPage - 1) * PAGE_SIZE,
     filters: mergedFilters,
   })
 
-  const {
-    data: statsData,
-    isLoading: isLoadingStats,
-    refetch: refetchStats,
-  } = useVisitorStats(workspaceId, { days: statsDays })
+  const { data: statsData, isLoading: isLoadingStats } = useVisitorStats(workspaceId, {
+    days: statsDays,
+  })
 
   const { data: countriesData, isLoading: isLoadingCountries } = useVisitorCountries(workspaceId)
 
@@ -755,11 +754,6 @@ export function VisitorAnalyticsPage() {
   }, [isExclusionDialogOpen, companiesForExclusion])
 
   // Handlers
-  const handleRefresh = () => {
-    refetchSessions()
-    refetchStats()
-  }
-
   const handleViewDetails = (visitor: VisitorSession) => {
     setSelectedVisitor(visitor)
     setIsDetailOpen(true)
@@ -995,9 +989,6 @@ export function VisitorAnalyticsPage() {
                 </div>
               </PopoverContent>
             </Popover>
-            <Button className="h-8 w-8" onClick={handleRefresh} size="icon" variant="ghost">
-              <RefreshCw className={cn("h-4 w-4", isFetchingSessions && "animate-spin")} />
-            </Button>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1023,31 +1014,31 @@ export function VisitorAnalyticsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
+            color="#64748b"
             description={`최근 ${statsDays}일`}
-            icon={Users}
             isLoading={isLoadingStats}
             title="총 방문자"
             value={statsData?.totalVisitors || 0}
           />
           <StatCard
+            color="#22c55e"
             description="잠재 고객"
-            icon={Target}
             isLoading={isLoadingStats}
             title="B2B 리드"
             value={statsData?.b2bLeads || 0}
           />
           <StatCard
+            color="#0ea5e9"
             description="회사 식별됨"
-            icon={Building2}
             isLoading={isLoadingStats}
             title="회사 방문자"
             value={statsData?.companyVisitors || 0}
           />
           <StatCard
+            color="#8b5cf6"
             description="고유 국가 수"
-            icon={Globe}
             isLoading={isLoadingStats}
             title="국가"
             value={statsData?.uniqueCountries || 0}

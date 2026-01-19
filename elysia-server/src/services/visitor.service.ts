@@ -1044,12 +1044,20 @@ export async function getCompaniesForExclusion(
     .limit(limit)
 
   // Map results with exclusion status
-  return result.map((r) => ({
+  const mapped = result.map((r) => ({
     companyDomain: r.companyDomain ?? "",
     companyName: r.companyName,
     visitorCount: Number(r.visitorCount),
     isExcluded: excludedSet.has((r.companyDomain ?? "").toLowerCase()),
   }))
+
+  // Sort: non-excluded first (by visitorCount desc), then excluded (by visitorCount desc)
+  return mapped.sort((a, b) => {
+    if (a.isExcluded !== b.isExcluded) {
+      return a.isExcluded ? 1 : -1 // excluded goes to bottom
+    }
+    return b.visitorCount - a.visitorCount // within same group, sort by visitor count desc
+  })
 }
 
 export interface BulkExcludeInput {

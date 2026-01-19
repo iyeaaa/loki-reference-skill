@@ -20,7 +20,6 @@ import type {
 import { visitorExcludedCompanies } from "../db/schema/visitor-excluded-companies"
 import type { NewVisitorSession, VisitorSession, VisitorType } from "../db/schema/visitor-sessions"
 import { visitorSessions } from "../db/schema/visitor-sessions"
-import { workspaces } from "../db/schema/workspaces"
 import logger from "../utils/logger"
 import type { IpapiData } from "./ipapi.service"
 import { lookupIp } from "./ipapi.service"
@@ -495,35 +494,24 @@ export async function trackVisitor(input: TrackVisitorInput): Promise<TrackVisit
         companyDomain: newSession.companyDomain,
       })
     ) {
-      // Get workspace name for group creation
-      const workspaceResult = await db
-        .select({ name: workspaces.name })
-        .from(workspaces)
-        .where(eq(workspaces.id, workspaceId))
-        .limit(1)
-
-      const workspace = workspaceResult[0]
-      if (workspace) {
-        // Fire and forget - don't block the response
-        autoSyncVisitorToLead({
-          workspaceId,
-          workspaceName: workspace.name,
-          visitor: {
-            companyDomain: newSession.companyDomain,
-            companyName: newSession.companyName,
-            country: newSession.country,
-            city: newSession.city,
-            region: newSession.region,
-            visitorType: newSession.visitorType,
-            leadScore: newSession.leadScore,
-            visitCount: newSession.visitCount ?? 1,
-            firstVisitAt: newSession.firstVisitAt,
-            lastVisitAt: newSession.lastVisitAt,
-          },
-        }).catch((error) => {
-          logger.error({ workspaceId, error }, "[Visitor] Auto-sync failed (non-blocking)")
-        })
-      }
+      // Fire and forget - don't block the response
+      autoSyncVisitorToLead({
+        workspaceId,
+        visitor: {
+          companyDomain: newSession.companyDomain,
+          companyName: newSession.companyName,
+          country: newSession.country,
+          city: newSession.city,
+          region: newSession.region,
+          visitorType: newSession.visitorType,
+          leadScore: newSession.leadScore,
+          visitCount: newSession.visitCount ?? 1,
+          firstVisitAt: newSession.firstVisitAt,
+          lastVisitAt: newSession.lastVisitAt,
+        },
+      }).catch((error) => {
+        logger.error({ workspaceId, error }, "[Visitor] Auto-sync failed (non-blocking)")
+      })
     }
 
     return {

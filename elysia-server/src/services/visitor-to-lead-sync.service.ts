@@ -58,25 +58,19 @@ const SUSPICIOUS_EXCLUSION_CONDITION = sql`(
 // ============================================================================
 
 /**
- * Generate optimized group name for visitor sync
- * Format: 웹사이트방문자_{WorkspaceName}
- * One group per workspace (no date suffix)
+ * Fixed group name for visitor sync
+ * Each workspace has one group named "웹사이트방문자"
  */
-function generateVisitorGroupName(workspaceName: string): string {
-  // Sanitize workspace name (remove special characters, limit length)
-  const sanitizedName = workspaceName.replace(/[^a-zA-Z0-9가-힣]/g, "").substring(0, 20)
-  return `웹사이트방문자_${sanitizedName}`
-}
+const VISITOR_GROUP_NAME = "웹사이트방문자"
 
 /**
  * Get or create the visitor sync group for a workspace
  */
 async function getOrCreateVisitorGroup(
   workspaceId: string,
-  workspaceName: string,
   userId: string,
 ): Promise<{ id: string; name: string; isNew: boolean }> {
-  const groupName = generateVisitorGroupName(workspaceName)
+  const groupName = VISITOR_GROUP_NAME
 
   // Check if group already exists for today
   const existingGroup = await db
@@ -148,7 +142,6 @@ function mapVisitorTypeToLeadSource(visitorType: string | null): string {
 
 export interface AutoSyncVisitorInput {
   workspaceId: string
-  workspaceName: string
   /** Visitor data to sync */
   visitor: {
     companyDomain: string | null
@@ -211,7 +204,7 @@ export function shouldAutoSyncVisitor(visitor: {
 export async function autoSyncVisitorToLead(
   input: AutoSyncVisitorInput,
 ): Promise<{ success: boolean; leadId?: string; error?: string }> {
-  const { workspaceId, workspaceName, visitor } = input
+  const { workspaceId, visitor } = input
 
   try {
     // Must have company domain
@@ -226,7 +219,7 @@ export async function autoSyncVisitorToLead(
     }
 
     // Get or create the visitor group (using system user for auto-sync)
-    const group = await getOrCreateVisitorGroup(workspaceId, workspaceName, workspaceId)
+    const group = await getOrCreateVisitorGroup(workspaceId, workspaceId)
 
     // Check if lead already exists by domain
     const normalizedDomain = visitor.companyDomain.toLowerCase()
@@ -406,7 +399,7 @@ export async function syncVisitorsToLeads(
     }
 
     // Get or create the visitor group
-    const group = await getOrCreateVisitorGroup(workspaceId, workspace.name, userId)
+    const group = await getOrCreateVisitorGroup(workspaceId, userId)
 
     // Get existing leads by companyDomain (websiteUrl) in this workspace
     const visitorDomains = filteredVisitors

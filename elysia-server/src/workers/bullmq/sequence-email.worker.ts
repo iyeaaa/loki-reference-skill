@@ -610,6 +610,9 @@ async function processSequenceEmailJob(
           leadName: lead.companyName || null,
           leadEmail: toEmail,
           sequenceName: job.data.sequenceName,
+          subject: emailSubject,
+          bodyText: emailBodyText,
+          bodyHtml: emailBodyHtml,
         })
         .where(eq(emails.id, existingDraft.id))
         .returning({ id: emails.id })

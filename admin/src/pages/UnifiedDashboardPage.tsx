@@ -12,7 +12,7 @@ const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"))
  * Unified Dashboard Page
  * - 온보딩 미완료: 로그아웃 후 /auth로 리다이렉트
  * - 온보딩 완료: 대시보드 표시
- * - 관리자/테스트 계정: 온보딩 체크 건너뛰기
+ * - 관리자 (userRole="admin"): 온보딩 체크 건너뛰기
  * - 캠페인 콜아웃은 DashboardLayout에서 전역적으로 관리
  */
 export default function UnifiedDashboardPage() {
@@ -26,13 +26,10 @@ export default function UnifiedDashboardPage() {
       return {}
     }
   }, [])
-
-  // 관리자/테스트 계정 체크 (온보딩 건너뛰기)
-  const isAdminOrTestAccount = useMemo(() => {
-    const email = currentUser?.email || ""
-    return email.endsWith("@grinda.ai") || email.endsWith("@rinda.ai")
-  }, [currentUser?.email])
   const userId = currentUser?.id || ""
+  
+  // 관리자는 온보딩 건너뛰기
+  const isAdmin = currentUser?.userRole === "admin"
 
   // Get user's workspace
   const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
@@ -53,8 +50,8 @@ export default function UnifiedDashboardPage() {
       return
     }
 
-    // 관리자/테스트 계정은 온보딩 체크 건너뛰기
-    if (isAdminOrTestAccount) {
+    // 관리자는 온보딩 체크 건너뛰기
+    if (isAdmin) {
       return
     }
 
@@ -62,14 +59,7 @@ export default function UnifiedDashboardPage() {
     if (!(workspaceId && isOnboardingComplete)) {
       logout()
     }
-  }, [
-    workspaceId,
-    isOnboardingComplete,
-    workspacesLoading,
-    onboardingLoading,
-    isAdminOrTestAccount,
-    logout,
-  ])
+  }, [workspaceId, isOnboardingComplete, workspacesLoading, onboardingLoading, isAdmin, logout])
 
   // Show loading while checking
   if (workspacesLoading || onboardingLoading) {
@@ -77,8 +67,8 @@ export default function UnifiedDashboardPage() {
   }
 
   // If onboarding not complete, show nothing (will redirect)
-  // 단, 관리자/테스트 계정은 예외
-  if (!(isOnboardingComplete || isAdminOrTestAccount)) {
+  // 단, 관리자는 예외
+  if (!(isOnboardingComplete || isAdmin)) {
     return <PageSkeleton />
   }
 

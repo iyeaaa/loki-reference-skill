@@ -27,9 +27,6 @@ export default function UnifiedDashboardPage() {
     }
   }, [])
   const userId = currentUser?.id || ""
-  
-  // 관리자는 온보딩 건너뛰기
-  const isAdmin = currentUser?.userRole === "admin"
 
   // 관리자는 온보딩 건너뛰기
   const isAdmin = currentUser?.userRole === "admin"

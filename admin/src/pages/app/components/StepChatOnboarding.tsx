@@ -892,6 +892,7 @@ export function StepChatOnboarding() {
 
         if (event.data?.type === "EMAIL_CONNECT_SUCCESS") {
           // 연동 성공 - emailAccount 쿼리 즉시 refetch
+          trackOnboardingComplete()
           await queryClient.refetchQueries({
             queryKey: ["emailAccounts", "workspaceAndUser", workspaceId],
           })

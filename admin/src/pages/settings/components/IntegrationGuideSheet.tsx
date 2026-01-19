@@ -5,6 +5,7 @@
  * - 워크스페이스 ID 자동 삽입
  * - 언어별 코드 예제 (점유율 순)
  * - 복사 기능
+ * - Modern 2025 UI with syntax highlighting
  */
 
 import {
@@ -14,10 +15,14 @@ import {
   ChevronUp,
   Code2,
   Copy,
+  ExternalLink,
   Loader2,
-  Play,
+  Sparkles,
+  Zap,
 } from "lucide-react"
 import { useState } from "react"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,8 +35,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { API_BASE_URL } from "@/lib/env"
+import { cn } from "@/lib/utils"
 
 type IntegrationGuideSheetProps = {
   open: boolean
@@ -44,12 +50,33 @@ type IntegrationGuideSheetProps = {
 // API Base URL (production)
 const DEFAULT_API_BASE_URL = "https://api.rinda.ai"
 
+// Language to Prism language mapping
+const LANGUAGE_MAP: Record<string, string> = {
+  javascript: "javascript",
+  typescript: "typescript",
+  python: "python",
+  java: "java",
+  php: "php",
+  csharp: "csharp",
+  go: "go",
+  ruby: "ruby",
+  rust: "rust",
+  cpp: "cpp",
+  jsp: "java",
+  html: "html",
+  react: "jsx",
+  nextjs: "tsx",
+  vue: "html",
+  curl: "bash",
+}
+
 // 언어별 코드 예제 생성 함수들
 const generateCodeExamples = (workspaceId: string, apiBaseUrl: string) => ({
   javascript: {
     name: "JavaScript",
     description: "브라우저 환경 (fetch API)",
     popularity: "1위",
+    icon: "🟨",
     code: `// 방문자 트래킹 스크립트 - 페이지 로드 시 실행
 (function() {
   fetch('${apiBaseUrl}/api/v1/visitors/track', {
@@ -79,6 +106,7 @@ const generateCodeExamples = (workspaceId: string, apiBaseUrl: string) => ({
     name: "TypeScript",
     description: "Node.js / Deno 환경",
     popularity: "2위",
+    icon: "🔷",
     code: `import axios from 'axios';
 
 interface TrackVisitorRequest {
@@ -140,6 +168,7 @@ console.log(result);`,
     name: "Python",
     description: "requests 라이브러리",
     popularity: "3위",
+    icon: "🐍",
     code: `import requests
 from typing import Optional, TypedDict
 
@@ -198,6 +227,7 @@ if __name__ == "__main__":
     name: "Java",
     description: "HttpClient (Java 11+)",
     popularity: "4위",
+    icon: "☕",
     code: `import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -254,6 +284,7 @@ public class VisitorTracker {
     name: "PHP",
     description: "cURL",
     popularity: "5위",
+    icon: "🐘",
     code: `<?php
 
 /**
@@ -320,6 +351,7 @@ try {
     name: "C#",
     description: ".NET HttpClient",
     popularity: "6위",
+    icon: "🟣",
     code: `using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -397,6 +429,7 @@ public class VisitorTracker
     name: "Go",
     description: "net/http 표준 라이브러리",
     popularity: "7위",
+    icon: "🐹",
     code: `package main
 
 import (
@@ -473,6 +506,7 @@ func main() {
     name: "Ruby",
     description: "Net::HTTP 표준 라이브러리",
     popularity: "8위",
+    icon: "💎",
     code: `require 'net/http'
 require 'uri'
 require 'json'
@@ -536,6 +570,7 @@ end
     name: "Rust",
     description: "reqwest 크레이트",
     popularity: "9위",
+    icon: "🦀",
     code: `use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -613,6 +648,7 @@ async fn main() {
     name: "C++",
     description: "cpr 라이브러리 (libcurl 래퍼)",
     popularity: "10위",
+    icon: "⚡",
     code: `#include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -690,6 +726,7 @@ int main() {
     name: "JSP / Servlet",
     description: "Java HttpURLConnection",
     popularity: "11위",
+    icon: "📄",
     code: `<%@ page import="java.io.*, java.net.*" %>
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%!
@@ -741,33 +778,14 @@ int main() {
 
     // 결과를 세션에 저장하거나 로그로 기록
     application.log("Visitor tracked: " + result);
-%>
-
-<!--
-Servlet으로 구현 시:
-
-@WebServlet("/track")
-public class VisitorTrackingServlet extends HttpServlet {
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-        String landingPage = req.getRequestURL().toString();
-        String referrer = req.getHeader("Referer");
-        String clientIp = req.getHeader("X-Forwarded-For");
-        if (clientIp == null) {
-            clientIp = req.getRemoteAddr();
-        }
-
-        // trackVisitor 메서드 호출
-        trackVisitor(landingPage, referrer, clientIp);
-    }
-}
--->`,
+%>`,
   },
 
   html: {
     name: "HTML Script Tag",
     description: "가장 간단한 연동 방법",
     popularity: "빠른 시작",
+    icon: "🌐",
     code: `<!--
   방문자 트래킹 스크립트
   이 스크립트를 </body> 태그 바로 위에 추가하세요.
@@ -811,6 +829,7 @@ public class VisitorTrackingServlet extends HttpServlet {
     name: "React",
     description: "useEffect Hook 활용",
     popularity: "프론트엔드",
+    icon: "⚛️",
     code: `import { useEffect } from 'react';
 
 const WORKSPACE_ID = '${workspaceId}';
@@ -865,17 +884,6 @@ function App() {
       {/* 앱 내용 */}
     </div>
   );
-}
-
-// 또는 특정 랜딩 페이지에서만 사용:
-function LandingPage() {
-  useVisitorTracking();
-
-  return (
-    <main>
-      <h1>Welcome!</h1>
-    </main>
-  );
 }`,
   },
 
@@ -883,6 +891,7 @@ function LandingPage() {
     name: "Next.js",
     description: "App Router / Pages Router",
     popularity: "프론트엔드",
+    icon: "▲",
     code: `// app/layout.tsx (App Router)
 'use client';
 
@@ -925,27 +934,6 @@ export default function RootLayout({
 }
 
 // -------------------------------------------
-// pages/_app.tsx (Pages Router)
-import { useEffect } from 'react';
-import type { AppProps } from 'next/app';
-
-export default function App({ Component, pageProps }: AppProps) {
-  useEffect(() => {
-    fetch('${apiBaseUrl}/api/v1/visitors/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        workspaceId: '${workspaceId}',
-        landingPage: window.location.href,
-        referrer: document.referrer || null,
-      }),
-    }).catch(() => {});
-  }, []);
-
-  return <Component {...pageProps} />;
-}
-
-// -------------------------------------------
 // 서버 사이드에서 트래킹 (API Route)
 // app/api/track/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -972,6 +960,7 @@ export async function POST(request: NextRequest) {
     name: "Vue.js",
     description: "Composition API",
     popularity: "프론트엔드",
+    icon: "💚",
     code: `<!-- composables/useVisitorTracking.ts -->
 <script setup lang="ts">
 import { onMounted } from 'vue';
@@ -1013,38 +1002,14 @@ useVisitorTracking();
   <div id="app">
     <router-view />
   </div>
-</template>
-
-<!-- 또는 플러그인으로 등록 (plugins/visitor-tracking.ts) -->
-<script lang="ts">
-import type { App } from 'vue';
-
-export default {
-  install(app: App) {
-    app.mixin({
-      mounted() {
-        if (this.$options.name === 'App') {
-          fetch('${apiBaseUrl}/api/v1/visitors/track', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workspaceId: '${workspaceId}',
-              landingPage: window.location.href,
-              referrer: document.referrer || null,
-            }),
-          }).catch(() => {});
-        }
-      },
-    });
-  },
-};
-</script>`,
+</template>`,
   },
 
   curl: {
     name: "cURL",
     description: "터미널에서 테스트",
     popularity: "테스트",
+    icon: "🔧",
     code: `# 기본 요청
 curl -X POST '${apiBaseUrl}/api/v1/visitors/track' \\
   -H 'Content-Type: application/json' \\
@@ -1115,7 +1080,16 @@ const LANGUAGE_GROUPS = [
   },
 ]
 
-function CodeBlock({ code, onCopy }: { code: string; onCopy: () => void }) {
+// Modern Code Block with Syntax Highlighting
+function CodeBlock({
+  code,
+  language,
+  onCopy,
+}: {
+  code: string
+  language: string
+  onCopy: () => void
+}) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -1125,23 +1099,62 @@ function CodeBlock({ code, onCopy }: { code: string; onCopy: () => void }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const prismLanguage = LANGUAGE_MAP[language] || "text"
+
   return (
-    <div className="relative">
-      <Button
-        className="absolute top-2 right-2 h-7 w-7 bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800"
-        onClick={handleCopy}
-        size="icon"
-        variant="outline"
-      >
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-green-600" />
-        ) : (
-          <Copy className="h-3.5 w-3.5" />
-        )}
-      </Button>
-      <pre className="overflow-x-auto rounded-lg border bg-slate-50 p-4 text-slate-800 text-sm dark:bg-slate-900 dark:text-slate-200">
-        <code>{code}</code>
-      </pre>
+    <div className="group relative overflow-hidden rounded-xl border border-slate-700/50 bg-[#282c34] shadow-2xl">
+      {/* Header bar with file type indicator */}
+      <div className="flex items-center justify-between border-slate-700/50 border-b bg-slate-800/50 px-4 py-2">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="h-3 w-3 rounded-full bg-red-500/80" />
+            <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
+            <div className="h-3 w-3 rounded-full bg-green-500/80" />
+          </div>
+          <span className="ml-2 font-mono text-slate-400 text-xs">{prismLanguage}</span>
+        </div>
+        <Button
+          className={cn(
+            "h-8 gap-1.5 rounded-lg border-0 px-3 font-medium text-xs transition-all duration-200",
+            copied
+              ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+              : "bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-white",
+          )}
+          onClick={handleCopy}
+          size="sm"
+          variant="ghost"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              복사됨
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" />
+              복사
+            </>
+          )}
+        </Button>
+      </div>
+      {/* Code content with syntax highlighting */}
+      <div className="max-h-[400px] overflow-auto">
+        <SyntaxHighlighter
+          customStyle={{
+            margin: 0,
+            padding: "1rem",
+            background: "transparent",
+            fontSize: "0.8125rem",
+            lineHeight: "1.6",
+          }}
+          language={prismLanguage}
+          showLineNumbers
+          style={oneDark}
+          wrapLongLines
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
     </div>
   )
 }
@@ -1166,6 +1179,33 @@ type ApiTestResult = {
   }
   error?: string
   responseTime?: number
+}
+
+// Modern Language Button
+function LanguageButton({
+  example,
+  isSelected,
+  onClick,
+}: {
+  example: { name: string; icon: string }
+  isSelected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium text-xs transition-all duration-200",
+        isSelected
+          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25 shadow-lg"
+          : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-blue-600 dark:hover:bg-blue-950/50 dark:hover:text-blue-400",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{example.icon}</span>
+      <span>{example.name}</span>
+    </button>
+  )
 }
 
 export function IntegrationGuideSheet({
@@ -1248,226 +1288,345 @@ export function IntegrationGuideSheet({
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent className="w-full sm:max-w-2xl" side="right">
         <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <Code2 className="h-5 w-5" />
+          <SheetTitle className="flex items-center gap-2.5 text-lg">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/25 shadow-lg">
+              <Code2 className="h-4 w-4 text-white" />
+            </div>
             방문자 트래킹 연동 가이드
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-sm">
             아래 코드를 웹사이트에 추가하면 방문자 데이터 수집이 시작됩니다.
           </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-180px)] pr-4">
-          <div className="space-y-6">
-            {/* 워크스페이스 정보 + API 테스트 통합 */}
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">연동 워크스페이스</p>
-                  <p className="truncate font-medium text-sm">{workspaceName}</p>
-                  <p className="font-mono text-muted-foreground text-xs">{workspaceId}</p>
+          <div className="space-y-8">
+            {/* ========================================== */}
+            {/* 1. 연동 테스트 */}
+            {/* ========================================== */}
+            <section>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 font-bold text-white text-xs">
+                  1
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    onClick={() => setShowTestInputs(!showTestInputs)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    {showTestInputs ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    disabled={isTestLoading}
-                    onClick={handleApiTest}
-                    size="sm"
-                    variant={testResult?.success ? "outline" : "default"}
-                  >
-                    {isTestLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : testResult?.success ? (
-                      <>
-                        <CheckCircle2 className="mr-1.5 h-4 w-4 text-green-600" />
-                        연동 성공
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-1.5 h-4 w-4" />
-                        연동 테스트
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <h3 className="font-semibold text-base">연동 테스트</h3>
               </div>
-
-              {/* 테스트 입력 필드 */}
-              {showTestInputs && (
-                <div className="mt-3 space-y-3 border-t pt-3">
-                  <p className="text-muted-foreground text-xs">
-                    테스트할 값을 입력하세요. 비워두면 기본값이 사용됩니다.
-                  </p>
-                  <div className="grid gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs" htmlFor="test-ip">
-                        IP 주소
-                      </Label>
-                      <Input
-                        className="h-8 text-sm"
-                        id="test-ip"
-                        onChange={(e) => setTestIpAddress(e.target.value)}
-                        placeholder="예: 166.104.168.42"
-                        value={testIpAddress}
-                      />
+              <div className="overflow-hidden rounded-xl border border-slate-200/50 bg-gradient-to-br from-slate-50 to-slate-100/50 shadow-sm dark:border-slate-700/50 dark:from-slate-800/50 dark:to-slate-900/50">
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        <p className="font-medium text-slate-500 text-xs uppercase tracking-wide dark:text-slate-400">
+                          연동 워크스페이스
+                        </p>
+                      </div>
+                      <p className="truncate font-semibold text-slate-900 text-sm dark:text-white">
+                        {workspaceName}
+                      </p>
+                      <p className="font-mono text-slate-500 text-xs dark:text-slate-400">
+                        {workspaceId}
+                      </p>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs" htmlFor="test-landing">
-                        랜딩 페이지
-                      </Label>
-                      <Input
-                        className="h-8 text-sm"
-                        id="test-landing"
-                        onChange={(e) => setTestLandingPage(e.target.value)}
-                        placeholder="예: https://rinda.ai/features"
-                        value={testLandingPage}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs" htmlFor="test-referrer">
-                        유입 경로 (Referrer)
-                      </Label>
-                      <Input
-                        className="h-8 text-sm"
-                        id="test-referrer"
-                        onChange={(e) => setTestReferrer(e.target.value)}
-                        placeholder="예: https://www.google.com"
-                        value={testReferrer}
-                      />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        className="h-8 w-8 rounded-lg"
+                        onClick={() => setShowTestInputs(!showTestInputs)}
+                        size="icon"
+                        variant="ghost"
+                      >
+                        {showTestInputs ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        className={cn(
+                          "h-9 gap-2 rounded-lg font-medium text-sm shadow-lg transition-all duration-300",
+                          testResult?.success
+                            ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-500/25 hover:from-green-600 hover:to-emerald-600"
+                            : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700",
+                        )}
+                        disabled={isTestLoading}
+                        onClick={handleApiTest}
+                      >
+                        {isTestLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : testResult?.success ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4" />
+                            연동 성공
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-4 w-4" />
+                            테스트 실행
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* 테스트 결과 - 컴팩트 표시 */}
-              {testResult && (
-                <div className="mt-3 border-t pt-3">
-                  {testResult.success ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-green-600">●</span>
-                        <span className="text-muted-foreground">
-                          {testResult.data?.skipped
-                            ? `ISP 필터링: ${testResult.data.skipReason}`
-                            : testResult.data?.isNewVisitor
-                              ? "새 방문자 등록됨"
-                              : "기존 방문자 업데이트"}
-                        </span>
-                        {testResult.responseTime && (
-                          <span className="text-muted-foreground">
-                            · {testResult.responseTime}ms
-                          </span>
-                        )}
+                  {/* 테스트 입력 필드 */}
+                  {showTestInputs && (
+                    <div className="mt-4 space-y-3 border-slate-200/50 border-t pt-4 dark:border-slate-700/50">
+                      <p className="text-slate-500 text-xs dark:text-slate-400">
+                        테스트할 값을 입력하세요. 비워두면 기본값이 사용됩니다.
+                      </p>
+                      <div className="grid gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="font-medium text-xs" htmlFor="test-ip">
+                            IP 주소
+                          </Label>
+                          <Input
+                            className="h-9 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                            id="test-ip"
+                            onChange={(e) => setTestIpAddress(e.target.value)}
+                            placeholder="예: 166.104.168.42"
+                            value={testIpAddress}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="font-medium text-xs" htmlFor="test-landing">
+                            랜딩 페이지
+                          </Label>
+                          <Input
+                            className="h-9 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                            id="test-landing"
+                            onChange={(e) => setTestLandingPage(e.target.value)}
+                            placeholder="예: https://rinda.ai/features"
+                            value={testLandingPage}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="font-medium text-xs" htmlFor="test-referrer">
+                            유입 경로 (Referrer)
+                          </Label>
+                          <Input
+                            className="h-9 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                            id="test-referrer"
+                            onChange={(e) => setTestReferrer(e.target.value)}
+                            placeholder="예: https://www.google.com"
+                            value={testReferrer}
+                          />
+                        </div>
                       </div>
-                      {testResult.data?.visitor && !testResult.data.skipped && (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                          <span>
-                            <span className="text-muted-foreground">IP:</span>{" "}
-                            {testResult.data.visitor.ipAddress}
-                          </span>
-                          <span>
-                            <span className="text-muted-foreground">위치:</span>{" "}
-                            {testResult.data.visitor.city || testResult.data.visitor.country}
-                          </span>
-                          {testResult.data.visitor.companyName && (
-                            <span>
-                              <span className="text-muted-foreground">회사:</span>{" "}
-                              {testResult.data.visitor.companyName}
+                    </div>
+                  )}
+
+                  {/* 테스트 결과 - Modern Style */}
+                  {testResult && (
+                    <div className="mt-4 border-slate-200/50 border-t pt-4 dark:border-slate-700/50">
+                      {testResult.success ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/10">
+                              <div className="h-2 w-2 rounded-full bg-green-500" />
+                            </div>
+                            <span className="font-medium text-green-600 dark:text-green-400">
+                              {testResult.data?.skipped
+                                ? `ISP 필터링: ${testResult.data.skipReason}`
+                                : testResult.data?.isNewVisitor
+                                  ? "새 방문자 등록됨"
+                                  : "기존 방문자 업데이트"}
                             </span>
+                            {testResult.responseTime && (
+                              <Badge className="ml-auto" variant="secondary">
+                                {testResult.responseTime}ms
+                              </Badge>
+                            )}
+                          </div>
+                          {testResult.data?.visitor && !testResult.data.skipped && (
+                            <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-3 text-xs dark:bg-slate-800">
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400">IP:</span>{" "}
+                                <span className="font-medium">
+                                  {testResult.data.visitor.ipAddress}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400">위치:</span>{" "}
+                                <span className="font-medium">
+                                  {testResult.data.visitor.city || testResult.data.visitor.country}
+                                </span>
+                              </div>
+                              {testResult.data.visitor.companyName && (
+                                <div className="col-span-2">
+                                  <span className="text-slate-500 dark:text-slate-400">회사:</span>{" "}
+                                  <span className="font-medium">
+                                    {testResult.data.visitor.companyName}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/10">
+                            <div className="h-2 w-2 rounded-full bg-red-500" />
+                          </div>
+                          <span className="font-medium text-red-600 dark:text-red-400">
+                            {testResult.error}
+                          </span>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-destructive">●</span>
-                      <span className="text-destructive">{testResult.error}</span>
-                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            </section>
 
-            {/* API 엔드포인트 정보 */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm">API 엔드포인트</h3>
-              <div className="flex items-center gap-2 rounded-lg border bg-slate-950 p-3">
-                <Badge className="bg-green-600">POST</Badge>
-                <code className="text-slate-50 text-sm">{apiBaseUrl}/api/v1/visitors/track</code>
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-slate-200 border-t dark:border-slate-700" />
               </div>
             </div>
 
-            {/* 필수/선택 파라미터 */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm">요청 파라미터</h3>
-              <div className="rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-2 text-left">필드</th>
-                      <th className="px-3 py-2 text-left">필수</th>
-                      <th className="px-3 py-2 text-left">설명</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="px-3 py-2 font-mono text-xs">workspaceId</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="destructive">필수</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">워크스페이스 UUID</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="px-3 py-2 font-mono text-xs">landingPage</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="secondary">선택</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">현재 페이지 URL</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="px-3 py-2 font-mono text-xs">referrer</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="secondary">선택</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">유입 경로 URL</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="px-3 py-2 font-mono text-xs">ipAddress</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="secondary">선택</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        서버 환경에서만 전달 (브라우저는 자동 감지)
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-3 py-2 font-mono text-xs">userAgent</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="secondary">선택</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">브라우저 User-Agent</td>
-                    </tr>
-                  </tbody>
-                </table>
+            {/* ========================================== */}
+            {/* 2. API 엔드포인트 */}
+            {/* ========================================== */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 font-bold text-white text-xs">
+                  2
+                </div>
+                <h3 className="font-semibold text-base">API 엔드포인트</h3>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 p-4 shadow-xl">
+                <Badge className="shrink-0 rounded-md bg-gradient-to-r from-green-500 to-emerald-500 px-2.5 py-1 font-bold text-white text-xs shadow-green-500/25 shadow-lg">
+                  POST
+                </Badge>
+                <code className="overflow-hidden text-ellipsis text-slate-100 text-sm">
+                  {apiBaseUrl}/api/v1/visitors/track
+                </code>
+                <a
+                  className="ml-auto shrink-0 text-slate-400 hover:text-white"
+                  href={`${apiBaseUrl}/api/v1/visitors/track`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+
+              {/* 필수/선택 파라미터 - Modern Table */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-slate-600 text-sm dark:text-slate-400">
+                  요청 파라미터
+                </h4>
+                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide dark:text-slate-300">
+                          필드
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide dark:text-slate-300">
+                          필수
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide dark:text-slate-300">
+                          설명
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td className="px-4 py-3 font-mono text-blue-600 text-xs dark:text-blue-400">
+                          workspaceId
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="rounded-md bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-sm">
+                            필수
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          워크스페이스 UUID
+                        </td>
+                      </tr>
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td className="px-4 py-3 font-mono text-blue-600 text-xs dark:text-blue-400">
+                          landingPage
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="rounded-md" variant="secondary">
+                            선택
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          현재 페이지 URL
+                        </td>
+                      </tr>
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td className="px-4 py-3 font-mono text-blue-600 text-xs dark:text-blue-400">
+                          referrer
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="rounded-md" variant="secondary">
+                            선택
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          유입 경로 URL
+                        </td>
+                      </tr>
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td className="px-4 py-3 font-mono text-blue-600 text-xs dark:text-blue-400">
+                          ipAddress
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="rounded-md" variant="secondary">
+                            선택
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          서버 환경에서만 전달
+                        </td>
+                      </tr>
+                      <tr className="bg-white dark:bg-slate-900">
+                        <td className="px-4 py-3 font-mono text-blue-600 text-xs dark:text-blue-400">
+                          userAgent
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="rounded-md" variant="secondary">
+                            선택
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          브라우저 User-Agent
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-slate-200 border-t dark:border-slate-700" />
               </div>
             </div>
 
-            {/* 언어별 코드 예제 */}
-            <div className="space-y-3">
+            {/* ========================================== */}
+            {/* 3. 코드 연동 예제 */}
+            {/* ========================================== */}
+            <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">코드 예제</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 font-bold text-white text-xs">
+                    3
+                  </div>
+                  <h3 className="font-semibold text-base">코드 연동 예제</h3>
+                </div>
                 {copiedCount > 0 && (
-                  <span className="text-muted-foreground text-xs">{copiedCount}회 복사됨</span>
+                  <Badge className="gap-1 rounded-full" variant="secondary">
+                    <Copy className="h-3 w-3" />
+                    {copiedCount}회 복사됨
+                  </Badge>
                 )}
               </div>
 
@@ -1476,57 +1635,83 @@ export function IntegrationGuideSheet({
                 onValueChange={setSelectedLanguage}
                 value={selectedLanguage}
               >
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {LANGUAGE_GROUPS.map((group) => (
                     <div key={group.name}>
-                      <p className="mb-1.5 text-muted-foreground text-xs">{group.name}</p>
-                      <TabsList className="h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
+                      <p className="mb-2 font-medium text-slate-500 text-xs uppercase tracking-wide dark:text-slate-400">
+                        {group.name}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
                         {group.languages.map((lang) => {
                           const example = codeExamples[lang as keyof typeof codeExamples]
                           return (
-                            <TabsTrigger
-                              className="h-7 rounded-md border border-input bg-background px-2.5 text-xs shadow-sm data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            <LanguageButton
+                              example={example}
+                              isSelected={selectedLanguage === lang}
                               key={lang}
-                              value={lang}
-                            >
-                              {example.name}
-                            </TabsTrigger>
+                              onClick={() => setSelectedLanguage(lang)}
+                            />
                           )
                         })}
-                      </TabsList>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 {Object.entries(codeExamples).map(([lang, example]) => (
                   <TabsContent className="mt-4" key={lang} value={lang}>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{example.popularity}</Badge>
-                        <span className="text-muted-foreground text-sm">{example.description}</span>
-                      </div>
-                      <CodeBlock code={example.code} onCopy={handleCopy} />
+                    <div className="space-y-3">
+                      <p className="text-slate-600 text-sm dark:text-slate-400">
+                        {example.description}
+                      </p>
+                      <CodeBlock code={example.code} language={lang} onCopy={handleCopy} />
                     </div>
                   </TabsContent>
                 ))}
               </Tabs>
+            </section>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-slate-200 border-t dark:border-slate-700" />
+              </div>
             </div>
 
-            {/* 주의사항 */}
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-950">
-              <h4 className="mb-2 font-semibold text-sm text-yellow-800 dark:text-yellow-200">
-                주의사항
-              </h4>
-              <ul className="space-y-1 text-xs text-yellow-700 dark:text-yellow-300">
-                <li>
-                  • 브라우저에서 호출 시 IP는 자동으로 감지됩니다 (X-Forwarded-For,
-                  CF-Connecting-IP)
-                </li>
-                <li>• 서버 환경에서는 클라이언트 IP를 직접 전달해야 합니다</li>
-                <li>• ISP 트래픽 (가정용 인터넷)은 자동으로 필터링되어 기업 방문자만 수집됩니다</li>
-                <li>• 워크스페이스 ID가 변경되면 코드를 업데이트해야 합니다</li>
-              </ul>
-            </div>
+            {/* ========================================== */}
+            {/* 4. 주의사항 */}
+            {/* ========================================== */}
+            <section>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 font-bold text-white text-xs">
+                  4
+                </div>
+                <h3 className="font-semibold text-base">주의사항</h3>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-amber-200/50 bg-gradient-to-br from-amber-50 to-yellow-50/50 dark:border-amber-900/50 dark:from-amber-950/50 dark:to-yellow-950/30">
+                <div className="p-4">
+                  <ul className="space-y-1.5 text-amber-700 text-xs dark:text-amber-300">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      브라우저에서 호출 시 IP는 자동으로 감지됩니다 (X-Forwarded-For,
+                      CF-Connecting-IP)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      서버 환경에서는 클라이언트 IP를 직접 전달해야 합니다
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      ISP 트래픽 (가정용 인터넷)은 자동으로 필터링되어 기업 방문자만 수집됩니다
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      워크스페이스 고유 ID를 기반으로 방문자 트래픽이 관리됩니다
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </section>
           </div>
         </ScrollArea>
       </SheetContent>

@@ -14,9 +14,9 @@ import {
 import { customerGroups } from "./customer-groups"
 import { userEmailAccounts } from "./email-accounts"
 import { emailTemplates } from "./email-templates"
+import { generationModeEnum } from "./enums"
 import { leads } from "./leads"
 import { users } from "./users"
-import { generationModeEnum } from "./workflow-emails"
 import { workspaces } from "./workspaces"
 
 // Enums

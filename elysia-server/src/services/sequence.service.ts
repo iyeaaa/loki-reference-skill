@@ -1550,23 +1550,11 @@ export async function countEnrollments(
   return result[0]?.count ?? 0
 }
 
-// HasAnyEnrollments - Check if sequence has any enrollments (step-based or workflow-based)
+// HasAnyEnrollments - Check if sequence has any enrollments
 export async function hasAnyEnrollments(sequenceId: string) {
   // Check step-based enrollments
   const stepBasedCount = await countEnrollments(sequenceId)
-  if (stepBasedCount > 0) {
-    return true
-  }
-
-  // Check workflow-based enrollments
-  const { workflowEnrollments } = await import("../db/schema/workflow-executions")
-  const workflowResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(workflowEnrollments)
-    .where(eq(workflowEnrollments.sequenceId, sequenceId))
-
-  const workflowCount = workflowResult[0]?.count ?? 0
-  return workflowCount > 0
+  return stepBasedCount > 0
 }
 
 // ====================================

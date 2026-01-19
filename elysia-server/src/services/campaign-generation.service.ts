@@ -2,7 +2,7 @@
  * Campaign Generation Service
  *
  * Generates AI-powered email campaigns with 6-step template
- * Creates personalized drafts for each lead in workflow_generated_emails table
+ * Email content is stored in sequence_steps table and personalized at send time
  */
 
 import { eq, inArray } from "drizzle-orm"
@@ -22,10 +22,9 @@ import {
   sequenceSteps,
   sequences,
 } from "../db/schema/sequences"
-import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
+// NOTE: workflowGeneratedEmails table removed - per-lead personalization will be reimplemented
 import { workspaces } from "../db/schema/workspaces"
 import { mastra } from "../shared/mastra"
-import { model } from "../shared/mastra/shell/agents/sequence-email-agent/constants"
 import type { CampaignStepsResponse } from "../shared/mastra/shell/workflows/steps-generation/types"
 import logger from "../utils/logger"
 
@@ -516,8 +515,6 @@ export async function generateAICampaign(data: {
     const totalExecutions = 0
     let totalDrafts = 0
 
-    const currentTime = new Date()
-
     logger.info(
       { totalLeads: leadsInfo.length },
       "📝 [CAMPAIGN-GEN] Starting email draft generation (enrollments disabled)",
@@ -617,43 +614,9 @@ ${
           }
 
           if (result.success && result.subject && result.bodyText) {
-            // Store draft in workflow_generated_emails
-            console.log("sequenceId", data.sequenceId)
-            console.log("STEP", step)
-            console.log("result.subject", result.subject)
-            console.log("result.bodyText", result.bodyText)
-
-            await db.insert(workflowGeneratedEmails).values({
-              sequenceId: data.sequenceId,
-              nodeId: step.id, // nodeId = stepId (we use stepId as nodeId for step-based sequences)
-              leadId: leadInfo.id,
-              subject: result.subject,
-              bodyText: result.bodyText,
-              bodyHtml: null,
-              status: "generated",
-              generationMode: "ai",
-              aiPrompt: additionalContext,
-              aiModel: model,
-              contextSnapshot: {
-                companyName: leadInfo.companyName,
-                contactName: leadInfo.contactName,
-                industry: leadInfo.industry,
-                businessType: leadInfo.businessType,
-                websiteUrl: leadInfo.websiteUrl,
-                description: leadInfo.description,
-                workspaceCompany: workspace.companyName,
-                workspaceIndustry: workspace.industry,
-                // Enriched context
-                contacts: leadInfo.contacts,
-                socialMedia: leadInfo.socialMedia,
-                products: leadInfo.products,
-                businessSectors: leadInfo.businessSectors,
-                productCategories: leadInfo.productCategories,
-                industryTypes: leadInfo.industryTypes,
-              },
-              generatedAt: currentTime,
-            })
-
+            // NOTE: Per-lead personalized drafts storage (workflowGeneratedEmails) was removed
+            // The email content is stored in sequence_steps table and will be personalized at send time
+            // using template variable replacement
             totalDrafts++
 
             logger.info(
@@ -663,7 +626,7 @@ ${
                 emailType: stepTemplate.emailType,
                 subject: result.subject,
               },
-              "✅ [CAMPAIGN-GEN] Generated AI draft with sequence email workflow",
+              "✅ [CAMPAIGN-GEN] Generated AI draft - stored in sequence_steps",
             )
           } else {
             logger.error(

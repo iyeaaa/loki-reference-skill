@@ -46,7 +46,6 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   "/sequences/create": { resource: IAM_RESOURCES.SEQUENCES, action: IAM_ACTIONS.CREATE },
   "/sequences/edit": { resource: IAM_RESOURCES.SEQUENCES, action: IAM_ACTIONS.UPDATE },
   "/sequences/:id": { resource: IAM_RESOURCES.SEQUENCES, action: IAM_ACTIONS.READ },
-  "/sequences/:id/designer": { resource: IAM_RESOURCES.SEQUENCES, action: IAM_ACTIONS.UPDATE },
 
   // ─────────────────────────────────────────────────────────────────────────
   // Email (메뉴: 인박스)
@@ -92,7 +91,6 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermission> = {
   // ─────────────────────────────────────────────────────────────────────────
   // Test & Dev Pages (Admin Only)
   // ─────────────────────────────────────────────────────────────────────────
-  "/email-send-test": "admin-only",
   "/tailwind-test": "admin-only",
   "/test/filters": "admin-only",
   "/test/sse": "admin-only",

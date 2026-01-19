@@ -128,6 +128,18 @@ export type VisitorCountry = {
   count: number
 }
 
+export type ExcludedCompany = {
+  id: string
+  workspaceId: string
+  companyDomain: string
+  companyName: string | null
+  excludedBy: string
+  excludedAt: string
+  reason: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 // Note: apiFetch auto-unwraps { success, data } responses, so we define the inner data type
 type ListVisitorsData = {
   sessions: VisitorSession[]
@@ -158,6 +170,8 @@ export const visitorQueryKeys = {
   countries: (workspaceId: string) => [...visitorQueryKeys.all, "countries", workspaceId] as const,
   detail: (workspaceId: string, visitorId: string) =>
     [...visitorQueryKeys.all, "detail", workspaceId, visitorId] as const,
+  excludedCompanies: (workspaceId: string) =>
+    [...visitorQueryKeys.all, "excluded-companies", workspaceId] as const,
 }
 
 // ============================================================================
@@ -291,6 +305,66 @@ export function useCleanupVisitorSessions(workspaceId: string | undefined) {
     },
     onSuccess: () => {
       // Invalidate visitor queries to refetch data
+      queryClient.invalidateQueries({ queryKey: visitorQueryKeys.all })
+    },
+  })
+}
+
+// ============================================================================
+// Excluded Companies Hooks
+// ============================================================================
+
+/**
+ * Fetch excluded companies list
+ */
+export function useExcludedCompanies(workspaceId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: visitorQueryKeys.excludedCompanies(workspaceId || ""),
+    queryFn: async () =>
+      apiFetch<ExcludedCompany[]>(`/api/v1/workspaces/${workspaceId}/visitors/excluded-companies`),
+    enabled: enabled && !!workspaceId,
+    staleTime: 60 * 1000, // 1 minute
+  })
+}
+
+/**
+ * Add company to exclusion list
+ */
+export function useAddExcludedCompany(workspaceId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: {
+      companyDomain: string
+      companyName?: string
+      reason?: string
+      excludedBy: string
+    }) =>
+      apiFetch<ExcludedCompany>(`/api/v1/workspaces/${workspaceId}/visitors/excluded-companies`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      // Invalidate all visitor queries to refetch with new exclusion
+      queryClient.invalidateQueries({ queryKey: visitorQueryKeys.all })
+    },
+  })
+}
+
+/**
+ * Remove company from exclusion list
+ */
+export function useRemoveExcludedCompany(workspaceId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (excludedCompanyId: string) =>
+      apiFetch<{ id: string }>(
+        `/api/v1/workspaces/${workspaceId}/visitors/excluded-companies/${excludedCompanyId}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: () => {
+      // Invalidate all visitor queries to refetch without exclusion
       queryClient.invalidateQueries({ queryKey: visitorQueryKeys.all })
     },
   })

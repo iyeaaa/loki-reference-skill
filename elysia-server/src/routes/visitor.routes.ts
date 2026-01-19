@@ -13,11 +13,14 @@
 import { Elysia, t } from "elysia"
 import { visitorFirewall } from "../plugins/visitor-firewall.plugin"
 import {
+  addExcludedCompany,
   deleteOldSessions,
+  getExcludedCompanies,
   getVisitorCountries,
   getVisitorSession,
   getVisitorStats,
   listVisitorSessions,
+  removeExcludedCompany,
   trackVisitor,
   type VisitorFilters,
 } from "../services/visitor.service"
@@ -426,6 +429,114 @@ export const visitorProtectedRoutes = new Elysia({
         tags: ["visitors"],
         summary: "Delete old visitor sessions",
         description: "Delete visitor sessions older than specified days for GDPR compliance.",
+      },
+    },
+  )
+
+  // ============================================================================
+  // Excluded Companies Management
+  // ============================================================================
+
+  /**
+   * Get excluded companies list
+   * GET /api/v1/workspaces/:id/visitors/excluded-companies
+   */
+  .get(
+    "/excluded-companies",
+    async ({ params }) => {
+      const { id: workspaceId } = params
+      const excludedCompanies = await getExcludedCompanies(workspaceId)
+      return successResponse(excludedCompanies, "Excluded companies retrieved")
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Get excluded companies",
+        description: "Get list of companies excluded from visitor analytics for this workspace.",
+      },
+    },
+  )
+
+  /**
+   * Add company to exclusion list
+   * POST /api/v1/workspaces/:id/visitors/excluded-companies
+   */
+  .post(
+    "/excluded-companies",
+    async ({ params, body, set }) => {
+      const { id: workspaceId } = params
+      const { companyDomain, companyName, reason, excludedBy } = body
+
+      try {
+        const excludedCompany = await addExcludedCompany({
+          workspaceId,
+          companyDomain,
+          companyName,
+          reason,
+          excludedBy,
+        })
+
+        return successResponse(excludedCompany, "Company added to exclusion list")
+      } catch (error) {
+        // Handle unique constraint violation
+        if (
+          error instanceof Error &&
+          error.message.includes("visitor_excluded_companies_workspace_domain_unique")
+        ) {
+          set.status = 409
+          return errorResponse("Company domain already excluded", ResponseCode.CONFLICT)
+        }
+        throw error
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        companyDomain: t.String({ description: "Company domain to exclude" }),
+        companyName: t.Optional(t.String({ description: "Company name for display" })),
+        reason: t.Optional(t.String({ description: "Reason for exclusion" })),
+        excludedBy: t.String({ format: "uuid", description: "User ID who excluded this company" }),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Add company to exclusion list",
+        description: "Add a company domain to the exclusion list for visitor analytics.",
+      },
+    },
+  )
+
+  /**
+   * Remove company from exclusion list
+   * DELETE /api/v1/workspaces/:id/visitors/excluded-companies/:excludedId
+   */
+  .delete(
+    "/excluded-companies/:excludedId",
+    async ({ params, set }) => {
+      const { id: workspaceId, excludedId } = params
+
+      const removed = await removeExcludedCompany(workspaceId, excludedId)
+
+      if (!removed) {
+        set.status = 404
+        return errorResponse("Excluded company not found", ResponseCode.NOT_FOUND)
+      }
+
+      return successResponse({ id: excludedId }, "Company removed from exclusion list")
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        excludedId: t.String({ format: "uuid" }),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Remove company from exclusion list",
+        description: "Remove a company from the exclusion list for visitor analytics.",
       },
     },
   )

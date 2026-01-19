@@ -54,6 +54,7 @@ export * from "./schema/users"
 // ============================================================================
 // Visitor Analytics (방문자 분석)
 // ============================================================================
+export * from "./schema/visitor-excluded-companies"
 export * from "./schema/visitor-sessions"
 export * from "./schema/websets"
 export * from "./schema/workflow-emails"

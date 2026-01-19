@@ -10,9 +10,14 @@
  * - Full ipapi.is field extraction
  */
 
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, ilike, inArray, lte, notInArray, or, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
+import type {
+  NewVisitorExcludedCompany,
+  VisitorExcludedCompany,
+} from "../db/schema/visitor-excluded-companies"
+import { visitorExcludedCompanies } from "../db/schema/visitor-excluded-companies"
 import type { NewVisitorSession, VisitorSession, VisitorType } from "../db/schema/visitor-sessions"
 import { visitorSessions } from "../db/schema/visitor-sessions"
 import logger from "../utils/logger"
@@ -485,6 +490,19 @@ export async function listVisitorSessions(
     conditions.push(ISP_EXCLUSION_CONDITION)
   }
 
+  // Apply excluded companies filter
+  const excludedDomains = await getExcludedCompanyDomains(workspaceId)
+  if (excludedDomains.length > 0) {
+    // Exclude visitors where companyDomain matches any excluded domain
+    const exclusionCondition = or(
+      sql`${visitorSessions.companyDomain} IS NULL`,
+      notInArray(visitorSessions.companyDomain, excludedDomains),
+    )
+    if (exclusionCondition) {
+      conditions.push(exclusionCondition)
+    }
+  }
+
   if (filters) {
     // Search filter (IP, company name, domain, ASN org)
     if (filters.search) {
@@ -601,6 +619,27 @@ export async function listVisitorSessions(
 export async function getVisitorCountries(
   workspaceId: string,
 ): Promise<{ countryCode: string; country: string; count: number }[]> {
+  // Get excluded company domains
+  const excludedDomains = await getExcludedCompanyDomains(workspaceId)
+
+  // Build conditions
+  const conditions = [
+    eq(visitorSessions.workspaceId, workspaceId),
+    sql`${visitorSessions.countryCode} IS NOT NULL`,
+    ISP_EXCLUSION_CONDITION,
+  ]
+
+  // Apply excluded companies filter
+  if (excludedDomains.length > 0) {
+    const companyExclusionCondition = or(
+      sql`${visitorSessions.companyDomain} IS NULL`,
+      notInArray(visitorSessions.companyDomain, excludedDomains),
+    )
+    if (companyExclusionCondition) {
+      conditions.push(companyExclusionCondition)
+    }
+  }
+
   const result = await db
     .select({
       countryCode: visitorSessions.countryCode,
@@ -608,13 +647,7 @@ export async function getVisitorCountries(
       count: sql<number>`count(*)::int`,
     })
     .from(visitorSessions)
-    .where(
-      and(
-        eq(visitorSessions.workspaceId, workspaceId),
-        sql`${visitorSessions.countryCode} IS NOT NULL`,
-        ISP_EXCLUSION_CONDITION,
-      ),
-    )
+    .where(and(...conditions))
     .groupBy(visitorSessions.countryCode, visitorSessions.country)
     .orderBy(sql`count(*) desc`)
 
@@ -632,6 +665,18 @@ export async function getVisitorCountries(
  */
 export async function getVisitorStats(workspaceId: string, days = 30): Promise<VisitorStats> {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+  // Get excluded company domains
+  const excludedDomains = await getExcludedCompanyDomains(workspaceId)
+
+  // Build exclusion condition for SQL
+  const exclusionCondition =
+    excludedDomains.length > 0
+      ? sql`(${visitorSessions.companyDomain} IS NULL OR ${visitorSessions.companyDomain} NOT IN (${sql.join(
+          excludedDomains.map((d) => sql`${d}`),
+          sql`, `,
+        )}))`
+      : sql`1=1`
 
   // Run optimized queries in parallel
   // ISP traffic is excluded from all stats (Snitcher-style filtering)
@@ -658,6 +703,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           eq(visitorSessions.workspaceId, workspaceId),
           gte(visitorSessions.firstVisitAt, startDate),
           ISP_EXCLUSION_CONDITION,
+          exclusionCondition,
         ),
       ),
 
@@ -674,6 +720,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           gte(visitorSessions.firstVisitAt, startDate),
           sql`${visitorSessions.country} is not null`,
           ISP_EXCLUSION_CONDITION,
+          exclusionCondition,
         ),
       )
       .groupBy(visitorSessions.country)
@@ -693,6 +740,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           gte(visitorSessions.firstVisitAt, startDate),
           sql`(${visitorSessions.companyName} is not null OR ${visitorSessions.asnOrg} is not null)`,
           ISP_EXCLUSION_CONDITION,
+          exclusionCondition,
         ),
       )
       .groupBy(sql`coalesce(${visitorSessions.companyName}, ${visitorSessions.asnOrg})`)
@@ -711,16 +759,23 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           eq(visitorSessions.workspaceId, workspaceId),
           gte(visitorSessions.firstVisitAt, startDate),
           ISP_EXCLUSION_CONDITION,
+          exclusionCondition,
         ),
       )
       .groupBy(visitorSessions.visitorType)
       .orderBy(sql`count(*) desc`),
 
-    // Recent visitors (also exclude ISP)
+    // Recent visitors (also exclude ISP and excluded companies)
     db
       .select()
       .from(visitorSessions)
-      .where(and(eq(visitorSessions.workspaceId, workspaceId), ISP_EXCLUSION_CONDITION))
+      .where(
+        and(
+          eq(visitorSessions.workspaceId, workspaceId),
+          ISP_EXCLUSION_CONDITION,
+          exclusionCondition,
+        ),
+      )
       .orderBy(desc(visitorSessions.lastVisitAt))
       .limit(10),
   ])
@@ -772,4 +827,100 @@ export async function deleteOldSessions(workspaceId: string, daysOld = 90): Prom
   )
 
   return result.length
+}
+
+// ============================================================================
+// Excluded Companies Management
+// ============================================================================
+
+/**
+ * Get list of excluded companies for a workspace
+ */
+export async function getExcludedCompanies(workspaceId: string): Promise<VisitorExcludedCompany[]> {
+  const result = await db
+    .select()
+    .from(visitorExcludedCompanies)
+    .where(eq(visitorExcludedCompanies.workspaceId, workspaceId))
+    .orderBy(desc(visitorExcludedCompanies.excludedAt))
+
+  return result
+}
+
+/**
+ * Get excluded company domains for query filtering
+ */
+export async function getExcludedCompanyDomains(workspaceId: string): Promise<string[]> {
+  const result = await db
+    .select({ domain: visitorExcludedCompanies.companyDomain })
+    .from(visitorExcludedCompanies)
+    .where(eq(visitorExcludedCompanies.workspaceId, workspaceId))
+
+  return result.map((r) => r.domain)
+}
+
+/**
+ * Add a company to the exclusion list
+ */
+export async function addExcludedCompany(
+  input: Omit<NewVisitorExcludedCompany, "id" | "createdAt" | "updatedAt" | "excludedAt">,
+): Promise<VisitorExcludedCompany> {
+  const results = await db.insert(visitorExcludedCompanies).values(input).returning()
+  const result = results[0]
+
+  if (!result) {
+    throw new Error("Failed to insert excluded company")
+  }
+
+  logger.info(
+    { workspaceId: input.workspaceId, companyDomain: input.companyDomain },
+    "[Visitor] Added excluded company",
+  )
+
+  return result
+}
+
+/**
+ * Remove a company from the exclusion list
+ */
+export async function removeExcludedCompany(
+  workspaceId: string,
+  excludedCompanyId: string,
+): Promise<boolean> {
+  const result = await db
+    .delete(visitorExcludedCompanies)
+    .where(
+      and(
+        eq(visitorExcludedCompanies.id, excludedCompanyId),
+        eq(visitorExcludedCompanies.workspaceId, workspaceId),
+      ),
+    )
+    .returning({ id: visitorExcludedCompanies.id })
+
+  if (result.length > 0) {
+    logger.info({ workspaceId, excludedCompanyId }, "[Visitor] Removed excluded company")
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Check if a company domain is excluded
+ */
+export async function isCompanyExcluded(
+  workspaceId: string,
+  companyDomain: string,
+): Promise<boolean> {
+  const result = await db
+    .select({ id: visitorExcludedCompanies.id })
+    .from(visitorExcludedCompanies)
+    .where(
+      and(
+        eq(visitorExcludedCompanies.workspaceId, workspaceId),
+        eq(visitorExcludedCompanies.companyDomain, companyDomain),
+      ),
+    )
+    .limit(1)
+
+  return result.length > 0
 }

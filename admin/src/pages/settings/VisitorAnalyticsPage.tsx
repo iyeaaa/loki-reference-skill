@@ -21,6 +21,7 @@ import {
   Code2,
   ExternalLink,
   Eye,
+  EyeOff,
   Filter,
   Globe,
   GraduationCap,
@@ -30,10 +31,7 @@ import {
   RefreshCw,
   Search,
   Server,
-  Shield,
-  Star,
   Target,
-  Trash2,
   Users,
   Wifi,
   X,
@@ -79,7 +77,9 @@ import {
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  useCleanupVisitorSessions,
+  useAddExcludedCompany,
+  useExcludedCompanies,
+  useRemoveExcludedCompany,
   useVisitorCountries,
   useVisitorSessions,
   useVisitorStats,
@@ -87,6 +87,7 @@ import {
   type VisitorSession,
   type VisitorType,
 } from "@/lib/api/hooks/visitor-analytics"
+import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { IntegrationGuideSheet } from "./components/IntegrationGuideSheet"
@@ -96,18 +97,6 @@ import { IntegrationGuideSheet } from "./components/IntegrationGuideSheet"
 // ============================================================================
 
 const PAGE_SIZE = 50
-
-const SECURITY_FLAGS = [
-  { id: "vpn", label: "VPN", color: "yellow" },
-  { id: "proxy", label: "Proxy", color: "yellow" },
-  { id: "tor", label: "Tor", color: "red" },
-  { id: "datacenter", label: "Datacenter", color: "blue" },
-  { id: "mobile", label: "Mobile", color: "gray" },
-  { id: "crawler", label: "Crawler", color: "orange" },
-  { id: "abuser", label: "Abuser", color: "red" },
-] as const
-
-type SecurityFlag = (typeof SECURITY_FLAGS)[number]["id"]
 
 const VISITOR_TYPES = [
   { id: "business" as VisitorType, label: "기업", icon: Building2, color: "bg-blue-500" },
@@ -206,10 +195,14 @@ function VisitorDetailModal({
   visitor,
   open,
   onClose,
+  onExcludeCompany,
+  isExcluding,
 }: {
   visitor: VisitorSession | null
   open: boolean
   onClose: () => void
+  onExcludeCompany?: (domain: string, name: string | null) => void
+  isExcluding?: boolean
 }) {
   if (!visitor) {
     return null
@@ -287,7 +280,24 @@ function VisitorDetailModal({
           {/* Company Info */}
           {visitor.companyName ? (
             <div>
-              <h4 className="mb-2 font-semibold text-sm">회사 정보</h4>
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="font-semibold text-sm">회사 정보</h4>
+                {visitor.companyDomain && onExcludeCompany && (
+                  <Button
+                    disabled={isExcluding}
+                    onClick={() => onExcludeCompany(visitor.companyDomain!, visitor.companyName)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isExcluding ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : (
+                      <EyeOff className="mr-1.5 h-3 w-3" />
+                    )}
+                    이 회사 제외
+                  </Button>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">회사명:</span> {visitor.companyName}
@@ -425,54 +435,6 @@ function CountryMultiSelect({
                   <Badge className="ml-2" variant="secondary">
                     {c.count}
                   </Badge>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function SecurityFlagMultiSelect({
-  selectedFlags,
-  onChange,
-}: {
-  selectedFlags: SecurityFlag[]
-  onChange: (flags: SecurityFlag[]) => void
-}) {
-  const [open, setOpen] = useState(false)
-
-  const toggleFlag = (flag: SecurityFlag) => {
-    if (selectedFlags.includes(flag)) {
-      onChange(selectedFlags.filter((f) => f !== flag))
-    } else {
-      onChange([...selectedFlags, flag])
-    }
-  }
-
-  return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger asChild>
-        <Button className="h-9 justify-between" role="combobox" variant="outline">
-          {selectedFlags.length > 0 ? `${selectedFlags.length}개 플래그 선택` : "보안 플래그..."}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-[200px] p-0">
-        <Command>
-          <CommandList>
-            <CommandGroup>
-              {SECURITY_FLAGS.map((flag) => (
-                <CommandItem key={flag.id} onSelect={() => toggleFlag(flag.id)} value={flag.id}>
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedFlags.includes(flag.id) ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {flag.label}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -663,23 +625,6 @@ function ActiveFilters({
         </Badge>
       ))}
 
-      {filters.hasCompany !== undefined && (
-        <Badge className="gap-1" variant="secondary">
-          회사: {filters.hasCompany ? "있음" : "없음"}
-          <X className="h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter("hasCompany")} />
-        </Badge>
-      )}
-
-      {filters.securityFlags?.map((flag) => (
-        <Badge className="gap-1" key={flag} variant="secondary">
-          {SECURITY_FLAGS.find((f) => f.id === flag)?.label}
-          <X
-            className="h-3 w-3 cursor-pointer"
-            onClick={() => onRemoveFilter("securityFlags", flag)}
-          />
-        </Badge>
-      ))}
-
       {(filters.dateFrom || filters.dateTo) && (
         <Badge className="gap-1" variant="secondary">
           기간: {filters.dateFrom || "~"} ~ {filters.dateTo || "~"}
@@ -716,6 +661,10 @@ export function VisitorAnalyticsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(false)
   const [excludeIsp, setExcludeIsp] = useState(true) // Default: exclude ISP traffic
+  const [isExclusionDialogOpen, setIsExclusionDialogOpen] = useState(false)
+
+  // Auth
+  const { user } = useAuth()
 
   // Get workspace from sidebar selection (localStorage)
   const { selectedWorkspace } = useWorkspace()
@@ -760,7 +709,11 @@ export function VisitorAnalyticsPage() {
 
   const { data: countriesData, isLoading: isLoadingCountries } = useVisitorCountries(workspaceId)
 
-  const cleanupMutation = useCleanupVisitorSessions(workspaceId)
+  const { data: excludedCompanies, isLoading: isLoadingExcluded } =
+    useExcludedCompanies(workspaceId)
+
+  const addExclusionMutation = useAddExcludedCompany(workspaceId)
+  const removeExclusionMutation = useRemoveExcludedCompany(workspaceId)
 
   // Handlers
   const handleRefresh = () => {
@@ -773,9 +726,30 @@ export function VisitorAnalyticsPage() {
     setIsDetailOpen(true)
   }
 
-  const handleCleanup = async () => {
-    if (window.confirm("90일 이상 된 방문자 데이터를 삭제하시겠습니까?")) {
-      await cleanupMutation.mutateAsync(90)
+  const handleExcludeCompany = async (domain: string, name: string | null) => {
+    if (!user?.id) {
+      return
+    }
+
+    if (window.confirm(`"${name || domain}" 회사를 분석에서 제외하시겠습니까?`)) {
+      try {
+        await addExclusionMutation.mutateAsync({
+          companyDomain: domain,
+          companyName: name || undefined,
+          excludedBy: user.id,
+        })
+        setIsDetailOpen(false)
+      } catch (error) {
+        console.error("Failed to exclude company:", error)
+      }
+    }
+  }
+
+  const handleRemoveExclusion = async (exclusionId: string) => {
+    try {
+      await removeExclusionMutation.mutateAsync(exclusionId)
+    } catch (error) {
+      console.error("Failed to remove exclusion:", error)
     }
   }
 
@@ -879,21 +853,32 @@ export function VisitorAnalyticsPage() {
             <Button className="h-8 w-8" onClick={handleRefresh} size="icon" variant="ghost">
               <RefreshCw className={cn("h-4 w-4", isFetchingSessions && "animate-spin")} />
             </Button>
-            <Button
-              className="h-8"
-              disabled={cleanupMutation.isPending}
-              onClick={handleCleanup}
-              size="sm"
-              variant="ghost"
-            >
-              <Trash2 className="mr-1.5 h-4 w-4" />
-              정리
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-8"
+                  onClick={() => setIsExclusionDialogOpen(true)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <EyeOff className="mr-1.5 h-4 w-4" />
+                  제외 회사
+                  {excludedCompanies && excludedCompanies.length > 0 && (
+                    <Badge className="ml-1.5" variant="secondary">
+                      {excludedCompanies.length}
+                    </Badge>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>분석에서 제외된 회사 관리</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
-        {/* Stats Cards - Row 1 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             description={`최근 ${statsDays}일`}
             icon={Users}
@@ -909,13 +894,6 @@ export function VisitorAnalyticsPage() {
             value={statsData?.b2bLeads || 0}
           />
           <StatCard
-            description="평균 점수"
-            icon={Star}
-            isLoading={isLoadingStats}
-            title="리드 스코어"
-            value={statsData?.avgLeadScore || 0}
-          />
-          <StatCard
             description="회사 식별됨"
             icon={Building2}
             isLoading={isLoadingStats}
@@ -928,13 +906,6 @@ export function VisitorAnalyticsPage() {
             isLoading={isLoadingStats}
             title="국가"
             value={statsData?.uniqueCountries || 0}
-          />
-          <StatCard
-            description="VPN/Proxy 감지"
-            icon={Shield}
-            isLoading={isLoadingStats}
-            title="VPN 사용자"
-            value={statsData?.vpnVisitors || 0}
           />
         </div>
 
@@ -1057,49 +1028,6 @@ export function VisitorAnalyticsPage() {
                         }}
                         selectedCountries={filters.countries || []}
                       />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">보안 플래그</Label>
-                      <SecurityFlagMultiSelect
-                        onChange={(flags) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            securityFlags: flags.length > 0 ? flags : undefined,
-                          }))
-                          setCurrentPage(1)
-                        }}
-                        selectedFlags={filters.securityFlags || []}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">회사 식별</Label>
-                      <Select
-                        onValueChange={(v) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            hasCompany: v === "all" ? undefined : v === "true",
-                          }))
-                          setCurrentPage(1)
-                        }}
-                        value={
-                          filters.hasCompany === undefined
-                            ? "all"
-                            : filters.hasCompany
-                              ? "true"
-                              : "false"
-                        }
-                      >
-                        <SelectTrigger className="h-9 w-[130px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">전체</SelectItem>
-                          <SelectItem value="true">회사 있음</SelectItem>
-                          <SelectItem value="false">회사 없음</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     <div className="space-y-1">
@@ -1313,10 +1241,79 @@ export function VisitorAnalyticsPage() {
 
         {/* Detail Modal */}
         <VisitorDetailModal
+          isExcluding={addExclusionMutation.isPending}
           onClose={() => setIsDetailOpen(false)}
+          onExcludeCompany={handleExcludeCompany}
           open={isDetailOpen}
           visitor={selectedVisitor}
         />
+
+        {/* Excluded Companies Management Dialog */}
+        <Dialog onOpenChange={setIsExclusionDialogOpen} open={isExclusionDialogOpen}>
+          <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <EyeOff className="h-5 w-5" />
+                제외 회사 관리
+              </DialogTitle>
+              <DialogDescription>
+                분석에서 제외된 회사 목록입니다. 제외된 회사의 방문자는 통계와 목록에 표시되지
+                않습니다.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {isLoadingExcluded ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : excludedCompanies && excludedCompanies.length > 0 ? (
+                <div className="space-y-2">
+                  {excludedCompanies.map((exclusion) => (
+                    <div
+                      className="flex items-center justify-between rounded-lg border p-3"
+                      key={exclusion.id}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {exclusion.companyName || exclusion.companyDomain}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-muted-foreground text-xs">
+                          {exclusion.companyDomain}
+                          {exclusion.reason && ` - ${exclusion.reason}`}
+                        </div>
+                        <div className="mt-1 text-muted-foreground text-xs">
+                          {new Date(exclusion.excludedAt).toLocaleDateString("ko-KR")} 제외됨
+                        </div>
+                      </div>
+                      <Button
+                        disabled={removeExclusionMutation.isPending}
+                        onClick={() => handleRemoveExclusion(exclusion.id)}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        {removeExclusionMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  <EyeOff className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p>제외된 회사가 없습니다.</p>
+                  <p className="text-sm">방문자 상세에서 회사를 제외할 수 있습니다.</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Integration Guide Sheet */}
         <IntegrationGuideSheet

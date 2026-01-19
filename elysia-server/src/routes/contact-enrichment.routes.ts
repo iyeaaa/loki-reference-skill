@@ -125,15 +125,15 @@ export const contactEnrichmentRoutes = new Elysia({ prefix: "/api/v1/contact-enr
       return createSSEResponse(async (session) => {
         try {
           await enrichLeadsBatch(leadIds, (progress: EnrichmentProgress) => {
+            // Note: Don't set event name - use data.type instead
+            // Named events require addEventListener on frontend, but we use onmessage
             session.push({
-              event: progress.type,
               data: progress,
             })
           })
         } catch (error) {
           logger.error({ error }, "[contact-enrichment] Batch enrichment failed")
           session.push({
-            event: "error",
             data: {
               type: "error",
               error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",

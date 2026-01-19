@@ -144,16 +144,17 @@ export default function AppDashboardPage() {
   // workspaceId: "all"이면 undefined로 전체 조회
   const workspaceId = selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id
 
-  // 온보딩 진행 상황 가져오기 (생성된 시퀀스 ID)
+  // 온보딩 진행 상황 가져오기
   const { data: onboardingProgress } = useOnboardingProgress(workspaceId || "", !!workspaceId)
-  const generatedSequenceId = onboardingProgress?.generatedSequenceId
 
-  // 바이어 목록, 이메일 캠페인 탭에서 사용할 첫 번째 시퀀스 ID
+  // 바이어 목록, 이메일 캠페인 탭에서 사용할 시퀀스 목록
   const { data: sequences } = useSequencesByWorkspace(workspaceId || "", !!workspaceId)
-  const firstSequenceId = generatedSequenceId || sequences?.[0]?.id
 
-  // 선택된 시퀀스 ID (사용자가 드롭다운에서 선택한 것 or 기본값)
-  const activeSequenceId = selectedSequenceId || firstSequenceId
+  // 선택된 시퀀스 ID (사용자가 드롭다운에서 명시적으로 선택한 것만 사용)
+  const activeSequenceId = selectedSequenceId
+
+  // 선택된 시퀀스 정보
+  const selectedSequence = sequences?.find((seq) => seq.id === activeSequenceId)
 
   // 시퀀스의 리드 정보 가져오기 (두 가지 방법 모두 시도)
   const { data: leadsData } = useSequenceLeads(activeSequenceId || "", 1, 1000, !!activeSequenceId)
@@ -164,13 +165,14 @@ export default function AppDashboardPage() {
     !!activeSequenceId,
   )
 
-  // 바이어 수: enrollments, leads, 또는 onboarding의 selectedLeadIds 중 가장 큰 값
-  const leadsCount =
-    enrollmentsData?.total ||
-    leadsData?.total ||
-    onboardingProgress?.selectedLeadIds?.length ||
-    sequences?.[0]?.enrollmentsCount ||
-    0
+  // 바이어 수: 캠페인이 선택되었을 때만 표시
+  const leadsCount = activeSequenceId
+    ? enrollmentsData?.total ||
+      leadsData?.total ||
+      onboardingProgress?.selectedLeadIds?.length ||
+      selectedSequence?.enrollmentsCount ||
+      0
+    : 0
 
   // 워크스페이스의 이메일 계정 가져오기
   const { data: emailAccounts } = useEmailAccountsByWorkspace(workspaceId || "", !!workspaceId)
@@ -180,7 +182,6 @@ export default function AppDashboardPage() {
 
   // 시퀀스 스텝 정보 가져오기
   const { data: sequenceSteps } = useSequenceSteps(activeSequenceId || "", !!activeSequenceId)
-  const selectedSequence = sequences?.find((seq) => seq.id === activeSequenceId)
   const stepsCount = sequenceSteps?.length || selectedSequence?.stepsCount || 0
 
   // 체험판 진행 일수 계산
@@ -488,7 +489,7 @@ export default function AppDashboardPage() {
                     <Button className="h-8 gap-1.5 text-sm" size="sm" variant="outline">
                       <Mail className="h-3.5 w-3.5" />
                       <span className="max-w-[150px] truncate">
-                        {selectedSequence?.name || sequences[0]?.name || "캠페인"}
+                        {selectedSequence?.name || "캠페인 선택"}
                       </span>
                       <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                     </Button>

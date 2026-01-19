@@ -115,21 +115,20 @@ export function StepCompanyInfo() {
     }
   })
 
-  // Survey 데이터가 없으면 "더보기" 섹션을 자동으로 열기
-  // editedData (strategyData 기반)의 industry, country를 기반으로 판단
-  const isSurveyDataMissing = useMemo(
-    () => !(editedData.industry && editedData.country),
-    [editedData.industry, editedData.country],
-  )
-
+  // Survey 섹션 표시 여부 (초기 로딩 시 데이터가 없었으면 계속 표시)
+  const [showSurveySection, setShowSurveySection] = useState(false)
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
 
-  // 데이터 로딩 완료 후 survey 데이터가 없으면 섹션 자동 열기
+  // 데이터 로딩 완료 후 survey 데이터가 없으면 섹션 표시 & 자동 열기
   useEffect(() => {
-    if (!isLoading && isSurveyDataMissing) {
-      setIsAdvancedOpen(true)
+    if (!isLoading) {
+      const isMissing = !(editedData.industry && editedData.country)
+      if (isMissing) {
+        setShowSurveySection(true)
+        setIsAdvancedOpen(true)
+      }
     }
-  }, [isLoading, isSurveyDataMissing])
+  }, [isLoading, editedData.industry, editedData.country])
 
   // Validation error state
   const [errors, setErrors] = useState<{
@@ -482,8 +481,9 @@ export function StepCompanyInfo() {
 
     if (missingFields.length > 0) {
       console.log("[StepCompanyInfo] ❌ Missing required fields:", missingFields)
-      // 설문 데이터가 빠져있으면 더보기 섹션 열기
+      // 설문 데이터가 빠져있으면 더보기 섹션 표시 & 열기
       if (!(editedData.industry && editedData.country)) {
+        setShowSurveySection(true)
         setIsAdvancedOpen(true)
       }
       toast.error(
@@ -1012,7 +1012,7 @@ export function StepCompanyInfo() {
           </div>
 
           {/* 설문 데이터가 없을 때 표시되는 "더보기" 섹션 */}
-          {isSurveyDataMissing && (
+          {showSurveySection && (
             <Collapsible
               className="mt-6 rounded-lg border border-amber-200 bg-amber-50"
               onOpenChange={setIsAdvancedOpen}

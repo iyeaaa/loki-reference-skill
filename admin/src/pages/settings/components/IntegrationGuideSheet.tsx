@@ -1184,7 +1184,7 @@ export function IntegrationGuideSheet({
   const [showTestInputs, setShowTestInputs] = useState(false)
 
   // 테스트 입력 필드 (프로덕션 예시 데이터 기본값)
-  const [testIpAddress, setTestIpAddress] = useState("203.248.252.2") // 예시: 한국 기업 네트워크 (삼성SDS)
+  const [testIpAddress, setTestIpAddress] = useState("166.104.168.42") // 예시: 한양대학교 (education)
   const [testLandingPage, setTestLandingPage] = useState("https://rinda.ai/features")
   const [testReferrer, setTestReferrer] = useState("https://www.google.com")
 
@@ -1317,7 +1317,7 @@ export function IntegrationGuideSheet({
                         className="h-8 text-sm"
                         id="test-ip"
                         onChange={(e) => setTestIpAddress(e.target.value)}
-                        placeholder="예: 203.248.252.2"
+                        placeholder="예: 166.104.168.42"
                         value={testIpAddress}
                       />
                     </div>

@@ -1237,17 +1237,6 @@ export function VisitorAnalyticsPage() {
                   <Table className="min-w-[1100px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[130px]">IP 주소</TableHead>
-                        <TableHead className="w-[80px]">유형</TableHead>
-                        <TableHead
-                          className="w-[100px] cursor-pointer"
-                          onClick={() => handleSortChange("country")}
-                        >
-                          위치
-                          {filters.sortBy === "country" && (
-                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
-                          )}
-                        </TableHead>
                         <TableHead
                           className="w-[180px] cursor-pointer"
                           onClick={() => handleSortChange("companyName")}
@@ -1257,7 +1246,18 @@ export function VisitorAnalyticsPage() {
                             <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
                           )}
                         </TableHead>
+                        <TableHead
+                          className="w-[100px] cursor-pointer"
+                          onClick={() => handleSortChange("country")}
+                        >
+                          위치
+                          {filters.sortBy === "country" && (
+                            <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </TableHead>
+                        <TableHead className="w-[80px]">유형</TableHead>
                         <TableHead className="w-[150px]">웹사이트</TableHead>
+                        <TableHead className="w-[130px]">IP 주소</TableHead>
                         <TableHead
                           className="w-[50px] cursor-pointer text-center"
                           onClick={() => handleSortChange("visitCount")}
@@ -1292,22 +1292,6 @@ export function VisitorAnalyticsPage() {
                       ) : (
                         sessions.map((visitor) => (
                           <TableRow key={visitor.id}>
-                            <TableCell className="font-mono text-xs">{visitor.ipAddress}</TableCell>
-                            <TableCell>
-                              <VisitorTypeBadge type={visitor.visitorType} />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                {visitor.countryCode && (
-                                  <span className="text-base">
-                                    {getFlagEmoji(visitor.countryCode)}
-                                  </span>
-                                )}
-                                <span className="truncate text-sm">
-                                  {visitor.city || visitor.country || "-"}
-                                </span>
-                              </div>
-                            </TableCell>
                             <TableCell>
                               {visitor.companyName || visitor.asnOrg ? (
                                 <Tooltip>
@@ -1334,6 +1318,21 @@ export function VisitorAnalyticsPage() {
                               )}
                             </TableCell>
                             <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                {visitor.countryCode && (
+                                  <span className="text-base">
+                                    {getFlagEmoji(visitor.countryCode)}
+                                  </span>
+                                )}
+                                <span className="truncate text-sm">
+                                  {visitor.city || visitor.country || "-"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <VisitorTypeBadge type={visitor.visitorType} />
+                            </TableCell>
+                            <TableCell>
                               {visitor.companyDomain || visitor.asnDomain ? (
                                 <a
                                   className="inline-flex items-center gap-1 text-blue-600 text-sm hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
@@ -1350,6 +1349,7 @@ export function VisitorAnalyticsPage() {
                                 <span className="text-muted-foreground">-</span>
                               )}
                             </TableCell>
+                            <TableCell className="font-mono text-xs">{visitor.ipAddress}</TableCell>
                             <TableCell className="text-center">
                               <Badge variant="secondary">{visitor.visitCount}</Badge>
                             </TableCell>

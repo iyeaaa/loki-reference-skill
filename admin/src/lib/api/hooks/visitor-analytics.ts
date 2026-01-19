@@ -458,3 +458,45 @@ export function useBulkUpdateExcludedCompanies(workspaceId: string | undefined) 
     },
   })
 }
+
+// ============================================================================
+// Visitor to Customer Group Sync
+// ============================================================================
+
+export type SyncVisitorsToLeadsInput = {
+  userId: string
+  days?: number
+}
+
+export type SyncVisitorsToLeadsResult = {
+  groupId: string
+  groupName: string
+  leadsCreated: number
+  leadsAddedToGroup: number
+  skipped: number
+  totalFilteredVisitors: number
+}
+
+/**
+ * Sync filtered visitors to customer group as leads
+ * Creates leads from filtered visitors (noise filtered + excluded companies)
+ * and adds them to a customer group.
+ */
+export function useSyncVisitorsToLeads(workspaceId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: SyncVisitorsToLeadsInput) =>
+      apiFetch<SyncVisitorsToLeadsResult>(
+        `/api/v1/workspaces/${workspaceId}/visitors/sync-to-leads`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      // Invalidate customer groups queries to show new group
+      queryClient.invalidateQueries({ queryKey: ["customer-groups"] })
+    },
+  })
+}

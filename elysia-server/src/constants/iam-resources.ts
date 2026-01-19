@@ -82,6 +82,12 @@ export const IAM_RESOURCES = {
   AI_SEARCH: "ai:search",
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Visitor Analytics (메뉴: 설정 > 웹사이트 방문자)
+  // ─────────────────────────────────────────────────────────────────────────
+  /** 방문자 분석 */
+  VISITORS: "visitors",
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Settings & Workspace (메뉴: 설정)
   // ─────────────────────────────────────────────────────────────────────────
   /** 설정 전체 */
@@ -263,6 +269,7 @@ export const ALL_RESOURCES: string[] = [
   "bulk-email",
   "ai:chatbot",
   "ai:search",
+  "visitors",
   "settings",
   "settings:profile",
   "settings:workspace",

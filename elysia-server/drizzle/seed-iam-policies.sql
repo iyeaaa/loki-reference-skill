@@ -71,9 +71,9 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
  ARRAY['*'],
  200),
 
--- 거부: Pro 기능 (고객탐색, 고객관리, 캠페인)
+-- 거부: Pro 기능 (고객탐색, 고객관리, 캠페인, 방문자분석)
 ('00000000-0000-0000-0003-000000000001', 'TrialDenyProFeatures', 'deny',
- ARRAY['leads:discovery', 'leads', 'leads:*', 'customer-groups', 'sequences', 'sequences:*'],
+ ARRAY['leads:discovery', 'leads', 'leads:*', 'customer-groups', 'sequences', 'sequences:*', 'visitors'],
  ARRAY['*'],
  200),
 
@@ -107,9 +107,9 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
  ARRAY['read', 'update'],
  100),
 
--- 거부: Pro 기능
+-- 거부: Pro 기능 (고객탐색, 고객관리, 캠페인, 방문자분석)
 ('00000000-0000-0000-0003-000000000002', 'BasicDenyProFeatures', 'deny',
- ARRAY['leads:discovery', 'leads', 'leads:*', 'customer-groups', 'sequences', 'sequences:*'],
+ ARRAY['leads:discovery', 'leads', 'leads:*', 'customer-groups', 'sequences', 'sequences:*', 'visitors'],
  ARRAY['*'],
  200),
 
@@ -152,6 +152,12 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
 -- 허용: 이메일
 ('00000000-0000-0000-0003-000000000003', 'ProEmails', 'allow',
  ARRAY['emails', 'emails:*', 'email-templates', 'email-accounts', 'bulk-email'],
+ ARRAY['*'],
+ 100),
+
+-- 허용: 방문자 분석
+('00000000-0000-0000-0003-000000000003', 'ProVisitors', 'allow',
+ ARRAY['visitors'],
  ARRAY['*'],
  100),
 
@@ -203,6 +209,12 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
  ARRAY['*'],
  100),
 
+-- 허용: 방문자 분석
+('00000000-0000-0000-0003-000000000004', 'EnterpriseVisitors', 'allow',
+ ARRAY['visitors'],
+ ARRAY['*'],
+ 100),
+
 -- 허용: AI 챗봇 (Enterprise 전용)
 ('00000000-0000-0000-0003-000000000004', 'EnterpriseChatbot', 'allow',
  ARRAY['ai:chatbot', 'ai:search'],
@@ -242,6 +254,7 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
    'sequences', 'sequences:*',
    'emails', 'emails:*', 'email-templates', 'email-accounts', 'bulk-email',
    'ai:chatbot', 'ai:search',
+   'visitors',
    'settings', 'settings:*'
  ],
  ARRAY['*'],
@@ -345,6 +358,7 @@ INSERT INTO iam_policy_statements (policy_id, sid, effect, resources, actions, p
    'leads', 'customer-groups',
    'sequences',
    'emails',
+   'visitors',
    'settings'
  ],
  ARRAY['read', 'list'],

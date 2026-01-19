@@ -35,6 +35,7 @@ import {
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { UpgradePlanModal } from "@/components/UpgradePlanModal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -89,7 +90,9 @@ import {
   type VisitorType,
 } from "@/lib/api/hooks/visitor-analytics"
 import { useAuth } from "@/lib/auth-provider"
+import { IAM_ACTIONS, IAM_RESOURCES } from "@/lib/constants/iam-resources"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { useHasPermission } from "@/lib/permission"
 import { cn } from "@/lib/utils"
 import { IntegrationGuideSheet } from "./components/IntegrationGuideSheet"
 
@@ -667,6 +670,7 @@ export function VisitorAnalyticsPage() {
   const [statsDays, setStatsDays] = useState(30)
   const [showFilters, setShowFilters] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(false)
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
   // Noise exclusion filters (all default to true)
   const [excludeIsp, setExcludeIsp] = useState(true)
   const [excludeHosting, setExcludeHosting] = useState(true)
@@ -679,6 +683,18 @@ export function VisitorAnalyticsPage() {
 
   // Auth
   const { user } = useAuth()
+
+  // Permission check for visitors (Pro+ only)
+  const hasVisitorsPermission = useHasPermission(IAM_RESOURCES.VISITORS, IAM_ACTIONS.READ)
+
+  // Handler for integration guide button - check permission first
+  const handleOpenIntegrationGuide = useCallback(() => {
+    if (hasVisitorsPermission) {
+      setIsGuideOpen(true)
+    } else {
+      setIsUpgradeModalOpen(true)
+    }
+  }, [hasVisitorsPermission])
 
   // Get workspace from sidebar selection (localStorage)
   const { selectedWorkspace } = useWorkspace()
@@ -899,7 +915,7 @@ export function VisitorAnalyticsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setIsGuideOpen(true)} size="sm" variant="outline">
+            <Button onClick={handleOpenIntegrationGuide} size="sm" variant="outline">
               <Code2 className="mr-1.5 h-4 w-4" />
               연동 가이드
             </Button>
@@ -1529,6 +1545,9 @@ export function VisitorAnalyticsPage() {
           workspaceId={workspaceId}
           workspaceName={selectedWorkspace?.name || ""}
         />
+
+        {/* Upgrade Modal for non-Pro users */}
+        <UpgradePlanModal onOpenChange={setIsUpgradeModalOpen} open={isUpgradeModalOpen} />
       </div>
     </TooltipProvider>
   )

@@ -27,6 +27,7 @@ import {
   trackVisitor,
   type VisitorFilters,
 } from "../services/visitor.service"
+import { syncVisitorsToLeads } from "../services/visitor-to-lead-sync.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
 
@@ -666,6 +667,73 @@ export const visitorProtectedRoutes = new Elysia({
         summary: "Bulk update excluded companies",
         description:
           "Add and/or remove multiple companies from exclusion list in one request. Useful for the exclusion settings modal.",
+      },
+    },
+  )
+
+  // ============================================================================
+  // Visitor to Customer Group Sync
+  // ============================================================================
+
+  /**
+   * Sync filtered visitors to customer group as leads
+   * POST /api/v1/workspaces/:id/visitors/sync-to-leads
+   *
+   * Creates leads from filtered visitors and adds them to a customer group.
+   * Applies all noise filters (ISP, hosting, datacenter, suspicious) and excluded companies.
+   */
+  .post(
+    "/sync-to-leads",
+    async ({ params, body, set }) => {
+      const { id: workspaceId } = params
+      const { userId, days } = body
+
+      logger.info({ workspaceId, userId, days }, "[VisitorSync] Sync request received")
+
+      const result = await syncVisitorsToLeads({
+        workspaceId,
+        userId,
+        days,
+      })
+
+      if (!result.success) {
+        set.status = 500
+        return errorResponse(result.error || "Failed to sync visitors", ResponseCode.INTERNAL_ERROR)
+      }
+
+      return successResponse(
+        {
+          groupId: result.groupId,
+          groupName: result.groupName,
+          leadsCreated: result.leadsCreated,
+          leadsAddedToGroup: result.leadsAddedToGroup,
+          skipped: result.skipped,
+          totalFilteredVisitors: result.totalFilteredVisitors,
+        },
+        result.totalFilteredVisitors === 0
+          ? "No filtered visitors found to sync"
+          : `Synced ${result.leadsAddedToGroup} visitors to customer group "${result.groupName}"`,
+      )
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        userId: t.String({ format: "uuid", description: "User ID performing the sync" }),
+        days: t.Optional(
+          t.Number({
+            description: "Number of days to look back for visitors (default: 30)",
+            minimum: 1,
+            maximum: 365,
+          }),
+        ),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Sync filtered visitors to customer group",
+        description:
+          "Creates leads from filtered visitors (noise filtered + excluded companies) and adds them to a customer group. Group is auto-created if it doesn't exist.",
       },
     },
   )

@@ -14,7 +14,10 @@ import { Elysia, t } from "elysia"
 import { visitorFirewall } from "../plugins/visitor-firewall.plugin"
 import {
   addExcludedCompany,
+  bulkAddExcludedCompanies,
+  bulkRemoveExcludedCompanies,
   deleteOldSessions,
+  getCompaniesForExclusion,
   getExcludedCompanies,
   getVisitorCountries,
   getVisitorSession,
@@ -537,6 +540,108 @@ export const visitorProtectedRoutes = new Elysia({
         tags: ["visitors"],
         summary: "Remove company from exclusion list",
         description: "Remove a company from the exclusion list for visitor analytics.",
+      },
+    },
+  )
+
+  /**
+   * Get companies available for exclusion (for dropdown selection)
+   * GET /api/v1/workspaces/:id/visitors/companies-for-exclusion
+   */
+  .get(
+    "/companies-for-exclusion",
+    async ({ params, query }) => {
+      const { id: workspaceId } = params
+      const search = query.search || undefined
+      const limit = query.limit ? Math.min(parseInt(query.limit, 10), 200) : 100
+
+      const companies = await getCompaniesForExclusion(workspaceId, { search, limit })
+      return successResponse(companies, "Companies for exclusion retrieved")
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      query: t.Object({
+        search: t.Optional(t.String({ description: "Search by company name or domain" })),
+        limit: t.Optional(t.String({ description: "Max results (default: 100, max: 200)" })),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Get companies available for exclusion",
+        description:
+          "Get list of companies from visitor data for exclusion dropdown. Returns companies with visitor count and current exclusion status.",
+      },
+    },
+  )
+
+  /**
+   * Bulk update excluded companies (add and remove in one request)
+   * POST /api/v1/workspaces/:id/visitors/excluded-companies/bulk
+   */
+  .post(
+    "/excluded-companies/bulk",
+    async ({ params, body }) => {
+      const { id: workspaceId } = params
+      const { toAdd, toRemove, excludedBy, reason } = body
+
+      let added: { domain: string; name?: string }[] = []
+      let removedCount = 0
+
+      // Add new exclusions
+      if (toAdd && toAdd.length > 0) {
+        const addedResults = await bulkAddExcludedCompanies({
+          workspaceId,
+          excludedBy,
+          companyDomains: toAdd,
+          reason,
+        })
+        added = addedResults.map((r) => ({
+          domain: r.companyDomain,
+          name: r.companyName || undefined,
+        }))
+      }
+
+      // Remove exclusions
+      if (toRemove && toRemove.length > 0) {
+        removedCount = await bulkRemoveExcludedCompanies(workspaceId, toRemove)
+      }
+
+      return successResponse(
+        {
+          added: added.length,
+          removed: removedCount,
+          addedDomains: added.map((a) => a.domain),
+          removedDomains: toRemove || [],
+        },
+        `Updated exclusion list: ${added.length} added, ${removedCount} removed`,
+      )
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        toAdd: t.Optional(
+          t.Array(
+            t.Object({
+              domain: t.String({ description: "Company domain to exclude" }),
+              name: t.Optional(t.String({ description: "Company name for display" })),
+            }),
+            { description: "Companies to add to exclusion list" },
+          ),
+        ),
+        toRemove: t.Optional(
+          t.Array(t.String(), { description: "Company domains to remove from exclusion list" }),
+        ),
+        excludedBy: t.String({ format: "uuid", description: "User ID performing the action" }),
+        reason: t.Optional(t.String({ description: "Reason for exclusion" })),
+      }),
+      detail: {
+        tags: ["visitors"],
+        summary: "Bulk update excluded companies",
+        description:
+          "Add and/or remove multiple companies from exclusion list in one request. Useful for the exclusion settings modal.",
       },
     },
   )

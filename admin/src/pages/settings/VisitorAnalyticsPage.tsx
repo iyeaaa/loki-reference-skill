@@ -41,6 +41,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Command,
   CommandEmpty,
@@ -53,6 +54,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -78,8 +80,9 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   useAddExcludedCompany,
+  useBulkUpdateExcludedCompanies,
+  useCompaniesForExclusion,
   useExcludedCompanies,
-  useRemoveExcludedCompany,
   useVisitorCountries,
   useVisitorSessions,
   useVisitorStats,
@@ -285,7 +288,9 @@ function VisitorDetailModal({
                 {visitor.companyDomain && onExcludeCompany && (
                   <Button
                     disabled={isExcluding}
-                    onClick={() => onExcludeCompany(visitor.companyDomain!, visitor.companyName)}
+                    onClick={() =>
+                      onExcludeCompany(visitor.companyDomain ?? "", visitor.companyName)
+                    }
                     size="sm"
                     variant="outline"
                   >
@@ -662,6 +667,9 @@ export function VisitorAnalyticsPage() {
   const [isGuideOpen, setIsGuideOpen] = useState(false)
   const [excludeIsp, setExcludeIsp] = useState(true) // Default: exclude ISP traffic
   const [isExclusionDialogOpen, setIsExclusionDialogOpen] = useState(false)
+  const [excludeSearchTerm, setExcludeSearchTerm] = useState("")
+  const [debouncedExcludeSearch, setDebouncedExcludeSearch] = useState("")
+  const [pendingExclusions, setPendingExclusions] = useState<Set<string>>(new Set())
 
   // Auth
   const { user } = useAuth()
@@ -709,11 +717,35 @@ export function VisitorAnalyticsPage() {
 
   const { data: countriesData, isLoading: isLoadingCountries } = useVisitorCountries(workspaceId)
 
-  const { data: excludedCompanies, isLoading: isLoadingExcluded } =
-    useExcludedCompanies(workspaceId)
+  const { data: excludedCompanies } = useExcludedCompanies(workspaceId)
+
+  // Companies for exclusion dropdown
+  const { data: companiesForExclusion, isLoading: isLoadingCompaniesForExclusion } =
+    useCompaniesForExclusion(workspaceId, {
+      search: debouncedExcludeSearch || undefined,
+      enabled: isExclusionDialogOpen,
+    })
 
   const addExclusionMutation = useAddExcludedCompany(workspaceId)
-  const removeExclusionMutation = useRemoveExcludedCompany(workspaceId)
+  const bulkUpdateExclusionsMutation = useBulkUpdateExcludedCompanies(workspaceId)
+
+  // Debounce exclude search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedExcludeSearch(excludeSearchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [excludeSearchTerm])
+
+  // Initialize pending exclusions when dialog opens
+  useEffect(() => {
+    if (isExclusionDialogOpen && companiesForExclusion) {
+      const excluded = new Set(
+        companiesForExclusion.filter((c) => c.isExcluded).map((c) => c.companyDomain),
+      )
+      setPendingExclusions(excluded)
+    }
+  }, [isExclusionDialogOpen, companiesForExclusion])
 
   // Handlers
   const handleRefresh = () => {
@@ -745,11 +777,55 @@ export function VisitorAnalyticsPage() {
     }
   }
 
-  const handleRemoveExclusion = async (exclusionId: string) => {
+  const togglePendingExclusion = (domain: string) => {
+    setPendingExclusions((prev) => {
+      const next = new Set(prev)
+      if (next.has(domain)) {
+        next.delete(domain)
+      } else {
+        next.add(domain)
+      }
+      return next
+    })
+  }
+
+  const handleApplyExclusions = async () => {
+    if (!(user?.id && companiesForExclusion)) {
+      return
+    }
+
+    // Find what to add and remove
+    const currentlyExcluded = new Set(
+      companiesForExclusion.filter((c) => c.isExcluded).map((c) => c.companyDomain),
+    )
+
+    const toAdd = companiesForExclusion
+      .filter(
+        (c) => pendingExclusions.has(c.companyDomain) && !currentlyExcluded.has(c.companyDomain),
+      )
+      .map((c) => ({ domain: c.companyDomain, name: c.companyName || undefined }))
+
+    const toRemove = companiesForExclusion
+      .filter(
+        (c) => !pendingExclusions.has(c.companyDomain) && currentlyExcluded.has(c.companyDomain),
+      )
+      .map((c) => c.companyDomain)
+
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      setIsExclusionDialogOpen(false)
+      return
+    }
+
     try {
-      await removeExclusionMutation.mutateAsync(exclusionId)
+      await bulkUpdateExclusionsMutation.mutateAsync({
+        toAdd: toAdd.length > 0 ? toAdd : undefined,
+        toRemove: toRemove.length > 0 ? toRemove : undefined,
+        excludedBy: user.id,
+      })
+      setIsExclusionDialogOpen(false)
+      setExcludeSearchTerm("")
     } catch (error) {
-      console.error("Failed to remove exclusion:", error)
+      console.error("Failed to update exclusions:", error)
     }
   }
 
@@ -1248,70 +1324,140 @@ export function VisitorAnalyticsPage() {
           visitor={selectedVisitor}
         />
 
-        {/* Excluded Companies Management Dialog */}
+        {/* Excluded Companies Management Dialog - Improved UI */}
         <Dialog onOpenChange={setIsExclusionDialogOpen} open={isExclusionDialogOpen}>
-          <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <EyeOff className="h-5 w-5" />
-                제외 회사 관리
+                방문자 분석 제외 설정
               </DialogTitle>
               <DialogDescription>
-                분석에서 제외된 회사 목록입니다. 제외된 회사의 방문자는 통계와 목록에 표시되지
-                않습니다.
+                선택한 회사는 방문자 분석 통계에서 제외됩니다. 테스트 트래픽이나 내부 방문자를
+                제외할 때 유용합니다.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              {isLoadingExcluded ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : excludedCompanies && excludedCompanies.length > 0 ? (
-                <div className="space-y-2">
-                  {excludedCompanies.map((exclusion) => (
-                    <div
-                      className="flex items-center justify-between rounded-lg border p-3"
-                      key={exclusion.id}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {exclusion.companyName || exclusion.companyDomain}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-muted-foreground text-xs">
-                          {exclusion.companyDomain}
-                          {exclusion.reason && ` - ${exclusion.reason}`}
-                        </div>
-                        <div className="mt-1 text-muted-foreground text-xs">
-                          {new Date(exclusion.excludedAt).toLocaleDateString("ko-KR")} 제외됨
-                        </div>
-                      </div>
-                      <Button
-                        disabled={removeExclusionMutation.isPending}
-                        onClick={() => handleRemoveExclusion(exclusion.id)}
-                        size="sm"
-                        variant="ghost"
-                      >
-                        {removeExclusionMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4" />
+            {/* Search */}
+            <div className="py-2">
+              <div className="relative">
+                <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-8"
+                  onChange={(e) => setExcludeSearchTerm(e.target.value)}
+                  placeholder="회사명, 도메인으로 검색..."
+                  value={excludeSearchTerm}
+                />
+              </div>
+            </div>
+
+            {/* Company List with Checkboxes */}
+            <div className="max-h-[50vh] overflow-y-auto rounded-md border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background">
+                  <TableRow>
+                    <TableHead className="w-[50px]">제외</TableHead>
+                    <TableHead>회사명</TableHead>
+                    <TableHead className="w-[100px] text-center">방문자</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingCompaniesForExclusion ? (
+                    <TableRow>
+                      <TableCell className="py-8 text-center" colSpan={3}>
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                      </TableCell>
+                    </TableRow>
+                  ) : companiesForExclusion && companiesForExclusion.length > 0 ? (
+                    companiesForExclusion.map((company) => (
+                      <TableRow
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/50",
+                          company.isExcluded && "bg-muted/30",
                         )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <EyeOff className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                  <p>제외된 회사가 없습니다.</p>
-                  <p className="text-sm">방문자 상세에서 회사를 제외할 수 있습니다.</p>
-                </div>
+                        key={company.companyDomain}
+                        onClick={() => togglePendingExclusion(company.companyDomain)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={pendingExclusions.has(company.companyDomain)}
+                            onCheckedChange={() => togglePendingExclusion(company.companyDomain)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate font-medium">
+                                  {company.companyName || company.companyDomain}
+                                </span>
+                                {company.isExcluded && (
+                                  <Badge className="shrink-0" variant="secondary">
+                                    기존 제외
+                                  </Badge>
+                                )}
+                              </div>
+                              {company.companyName && (
+                                <div className="truncate text-muted-foreground text-xs">
+                                  {company.companyDomain}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{company.visitorCount}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell className="py-8 text-center text-muted-foreground" colSpan={3}>
+                        {excludeSearchTerm
+                          ? "검색 결과가 없습니다"
+                          : "방문자 데이터에서 식별된 회사가 없습니다"}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Selected Count */}
+            <div className="text-muted-foreground text-sm">
+              {pendingExclusions.size}개 선택됨
+              {excludedCompanies && pendingExclusions.size !== excludedCompanies.length && (
+                <span className="ml-2 text-amber-600">
+                  (현재 저장된 제외 목록: {excludedCompanies.length}개)
+                </span>
               )}
             </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  setIsExclusionDialogOpen(false)
+                  setExcludeSearchTerm("")
+                }}
+                variant="outline"
+              >
+                취소
+              </Button>
+              <Button
+                disabled={bulkUpdateExclusionsMutation.isPending}
+                onClick={handleApplyExclusions}
+              >
+                {bulkUpdateExclusionsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  "적용하기"
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

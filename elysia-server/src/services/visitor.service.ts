@@ -924,3 +924,148 @@ export async function isCompanyExcluded(
 
   return result.length > 0
 }
+
+// ============================================================================
+// Companies for Exclusion (Dropdown Selection)
+// ============================================================================
+
+export interface CompanyForExclusion {
+  companyDomain: string
+  companyName: string | null
+  visitorCount: number
+  isExcluded: boolean
+}
+
+/**
+ * Get list of companies available for exclusion
+ * Returns unique companies from visitor sessions with exclusion status
+ */
+export async function getCompaniesForExclusion(
+  workspaceId: string,
+  options?: { search?: string; limit?: number },
+): Promise<CompanyForExclusion[]> {
+  const { search, limit = 100 } = options || {}
+
+  // Get excluded domains first
+  const excludedDomains = await getExcludedCompanyDomains(workspaceId)
+  const excludedSet = new Set(excludedDomains.map((d) => d.toLowerCase()))
+
+  // Build query conditions
+  const conditions = [
+    eq(visitorSessions.workspaceId, workspaceId),
+    sql`${visitorSessions.companyDomain} IS NOT NULL`,
+    sql`${visitorSessions.companyDomain} != ''`,
+  ]
+
+  // Add search filter
+  if (search) {
+    const searchCondition = or(
+      ilike(visitorSessions.companyName, `%${search}%`),
+      ilike(visitorSessions.companyDomain, `%${search}%`),
+    )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
+  }
+
+  // Get unique companies with visitor count
+  const result = await db
+    .select({
+      companyDomain: visitorSessions.companyDomain,
+      companyName: sql<string>`MAX(${visitorSessions.companyName})`.as("companyName"),
+      visitorCount: sql<number>`COUNT(DISTINCT ${visitorSessions.ipAddress})`.as("visitorCount"),
+    })
+    .from(visitorSessions)
+    .where(and(...conditions))
+    .groupBy(visitorSessions.companyDomain)
+    .orderBy(desc(sql`COUNT(DISTINCT ${visitorSessions.ipAddress})`))
+    .limit(limit)
+
+  // Map results with exclusion status
+  return result.map((r) => ({
+    companyDomain: r.companyDomain ?? "",
+    companyName: r.companyName,
+    visitorCount: Number(r.visitorCount),
+    isExcluded: excludedSet.has((r.companyDomain ?? "").toLowerCase()),
+  }))
+}
+
+export interface BulkExcludeInput {
+  workspaceId: string
+  excludedBy: string
+  companyDomains: { domain: string; name?: string }[]
+  reason?: string
+}
+
+/**
+ * Bulk add companies to exclusion list
+ * Returns newly added exclusions (skips already excluded)
+ */
+export async function bulkAddExcludedCompanies(
+  input: BulkExcludeInput,
+): Promise<VisitorExcludedCompany[]> {
+  const { workspaceId, excludedBy, companyDomains, reason } = input
+
+  if (companyDomains.length === 0) {
+    return []
+  }
+
+  // Get already excluded domains to avoid duplicates
+  const existingDomains = await getExcludedCompanyDomains(workspaceId)
+  const existingSet = new Set(existingDomains.map((d) => d.toLowerCase()))
+
+  // Filter out already excluded domains
+  const newDomains = companyDomains.filter((d) => !existingSet.has(d.domain.toLowerCase()))
+
+  if (newDomains.length === 0) {
+    return []
+  }
+
+  // Insert new exclusions
+  const valuesToInsert = newDomains.map((d) => ({
+    workspaceId,
+    companyDomain: d.domain,
+    companyName: d.name || null,
+    excludedBy,
+    reason: reason || null,
+  }))
+
+  const results = await db.insert(visitorExcludedCompanies).values(valuesToInsert).returning()
+
+  logger.info(
+    { workspaceId, addedCount: results.length, domains: newDomains.map((d) => d.domain) },
+    "[Visitor] Bulk added excluded companies",
+  )
+
+  return results
+}
+
+/**
+ * Bulk remove companies from exclusion list
+ * Returns count of removed exclusions
+ */
+export async function bulkRemoveExcludedCompanies(
+  workspaceId: string,
+  companyDomains: string[],
+): Promise<number> {
+  if (companyDomains.length === 0) {
+    return 0
+  }
+
+  const result = await db
+    .delete(visitorExcludedCompanies)
+    .where(
+      and(
+        eq(visitorExcludedCompanies.workspaceId, workspaceId),
+        inArray(visitorExcludedCompanies.companyDomain, companyDomains),
+      ),
+    )
+    .returning({ id: visitorExcludedCompanies.id })
+
+  logger.info(
+    { workspaceId, removedCount: result.length, domains: companyDomains },
+    "[Visitor] Bulk removed excluded companies",
+  )
+
+  return result.length
+}

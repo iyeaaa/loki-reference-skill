@@ -369,3 +369,80 @@ export function useRemoveExcludedCompany(workspaceId: string | undefined) {
     },
   })
 }
+
+// ============================================================================
+// Companies for Exclusion (Dropdown Selection)
+// ============================================================================
+
+export type CompanyForExclusion = {
+  companyDomain: string
+  companyName: string | null
+  visitorCount: number
+  isExcluded: boolean
+}
+
+/**
+ * Fetch companies available for exclusion dropdown
+ */
+export function useCompaniesForExclusion(
+  workspaceId: string | undefined,
+  options?: { search?: string; limit?: number; enabled?: boolean },
+) {
+  const { search, limit = 100, enabled = true } = options || {}
+
+  return useQuery({
+    queryKey: [...visitorQueryKeys.all, "companies-for-exclusion", workspaceId, { search, limit }],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (search) {
+        params.set("search", search)
+      }
+      if (limit) {
+        params.set("limit", limit.toString())
+      }
+
+      const queryString = params.toString()
+      return apiFetch<CompanyForExclusion[]>(
+        `/api/v1/workspaces/${workspaceId}/visitors/companies-for-exclusion${queryString ? `?${queryString}` : ""}`,
+      )
+    },
+    enabled: enabled && !!workspaceId,
+    staleTime: 30 * 1000, // 30 seconds
+  })
+}
+
+export type BulkUpdateExclusionsInput = {
+  toAdd?: { domain: string; name?: string }[]
+  toRemove?: string[]
+  excludedBy: string
+  reason?: string
+}
+
+export type BulkUpdateExclusionsResult = {
+  added: number
+  removed: number
+  addedDomains: string[]
+  removedDomains: string[]
+}
+
+/**
+ * Bulk update excluded companies (add and remove in one request)
+ */
+export function useBulkUpdateExcludedCompanies(workspaceId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: BulkUpdateExclusionsInput) =>
+      apiFetch<BulkUpdateExclusionsResult>(
+        `/api/v1/workspaces/${workspaceId}/visitors/excluded-companies/bulk`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      // Invalidate all visitor queries to refetch with new exclusion settings
+      queryClient.invalidateQueries({ queryKey: visitorQueryKeys.all })
+    },
+  })
+}

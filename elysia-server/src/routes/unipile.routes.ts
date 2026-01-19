@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { config } from "../config"
 import { db } from "../db/index"
-import { emailReplies, emails } from "../db/schema/emails"
+import { emailEvents, emailReplies, emails } from "../db/schema/emails"
 import {
   createEmailAccount,
   deleteEmailAccount,
@@ -11,6 +11,7 @@ import {
 import * as unipileService from "../services/unipile.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import { getUserIdFromToken } from "../utils/auth.util"
+import { isAutomatedClick, isAutomatedOpen } from "../utils/bot-detection"
 import logger from "../utils/logger"
 
 // Safe limits mode - when true, uses conservative sending limits
@@ -651,6 +652,10 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           tracking_id?: string // Unipile tracking ID (if this was sent via Unipile)
           role?: string
           origin?: string
+          // Tracking event fields (for open/click events)
+          ip?: string // Recipient's IP address
+          user_agent?: string // Recipient's browser user agent
+          url?: string // Clicked URL (for click events)
         }
 
         // Handle case where body might be incorrectly parsed
@@ -796,20 +801,46 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           })
 
           if (email) {
-            await db
-              .update(emails)
-              .set({
-                status: "opened",
-                openedAt: new Date(),
-                openCount: sql`${emails.openCount} + 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(emails.id, email.id))
+            const openedAt = new Date()
+            const ip = webhookBody.ip as string | undefined
+            const userAgent = webhookBody.user_agent as string | undefined
 
-            logger.info(
-              { emailId: email.id, trackingId },
-              "[Unipile Webhook] ✅ Email opened event processed",
-            )
+            // 봇 감지
+            const possiblyBot = isAutomatedOpen({ ip, userAgent })
+
+            // 이벤트 기록 (항상, 봇 여부와 관계없이)
+            await db.insert(emailEvents).values({
+              emailId: email.id,
+              eventType: "open",
+              timestamp: openedAt,
+              ipAddress: ip,
+              userAgent: userAgent,
+              rawEventData: webhookBody as unknown as Record<string, unknown>,
+              possiblyBot,
+            })
+
+            // 봇이 아닌 경우에만 상태/카운트 업데이트
+            if (!possiblyBot) {
+              await db
+                .update(emails)
+                .set({
+                  status: "opened",
+                  openedAt,
+                  openCount: sql`${emails.openCount} + 1`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(emails.id, email.id))
+
+              logger.info(
+                { emailId: email.id, trackingId },
+                "[Unipile Webhook] ✅ Email opened event processed",
+              )
+            } else {
+              logger.info(
+                { emailId: email.id, trackingId, ip, userAgent },
+                "[Unipile Webhook] Email opened event skipped (bot detected)",
+              )
+            }
           } else {
             logger.warn({ trackingId, emailId }, "[Unipile Webhook] Email not found for open event")
           }
@@ -829,20 +860,48 @@ export const unipileRoutes = new Elysia({ prefix: "/api/v1/unipile" })
           })
 
           if (email) {
-            await db
-              .update(emails)
-              .set({
-                status: "clicked",
-                clickedAt: new Date(),
-                clickCount: sql`${emails.clickCount} + 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(emails.id, email.id))
+            const clickedAt = new Date()
+            const ip = webhookBody.ip as string | undefined
+            const userAgent = webhookBody.user_agent as string | undefined
+            const clickedUrl = webhookBody.url as string | undefined
 
-            logger.info(
-              { emailId: email.id, trackingId },
-              "[Unipile Webhook] ✅ Email clicked event processed",
-            )
+            // 봇 감지
+            const possiblyBot = isAutomatedClick({ ip, userAgent })
+
+            // 이벤트 기록 (항상, 봇 여부와 관계없이)
+            await db.insert(emailEvents).values({
+              emailId: email.id,
+              eventType: "click",
+              timestamp: clickedAt,
+              url: clickedUrl || "",
+              ipAddress: ip,
+              userAgent: userAgent,
+              rawEventData: webhookBody as unknown as Record<string, unknown>,
+              possiblyBot,
+            })
+
+            // 봇이 아닌 경우에만 상태/카운트 업데이트
+            if (!possiblyBot) {
+              await db
+                .update(emails)
+                .set({
+                  status: "clicked",
+                  clickedAt,
+                  clickCount: sql`${emails.clickCount} + 1`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(emails.id, email.id))
+
+              logger.info(
+                { emailId: email.id, trackingId },
+                "[Unipile Webhook] ✅ Email clicked event processed",
+              )
+            } else {
+              logger.info(
+                { emailId: email.id, trackingId, ip, userAgent },
+                "[Unipile Webhook] Email clicked event skipped (bot detected)",
+              )
+            }
           } else {
             logger.warn(
               { trackingId, emailId },

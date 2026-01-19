@@ -3,6 +3,10 @@ import Nylas from "nylas"
 import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emails } from "../db/schema/emails"
+import {
+  isAutomatedClick as isAutomatedClickUtil,
+  isAutomatedOpen as isAutomatedOpenUtil,
+} from "../utils/bot-detection"
 import logger from "../utils/logger"
 
 /**
@@ -465,40 +469,25 @@ async function findEmailByMessageId(messageId: string) {
 }
 
 /**
- * Detect automated opens (bots, security scanners)
+ * Detect automated open events (wrapper for shared utility)
  */
 function isAutomatedOpen(recent?: { ip?: string; user_agent?: string }): boolean {
   if (!recent) return false
-  const ip = recent.ip || ""
-  const microsoftATPIpPatterns = [
-    /^4\.182\./, // Azure ATP / Safe Links
-    /^57\.155\./, // Microsoft ATP
-    /^72\.145\./, // Defender for Office 365
-    /^48\.209\./, // Azure security services
-    /^4\.204\./, // Azure
-  ]
-  return microsoftATPIpPatterns.some((pattern) => pattern.test(ip))
+  return isAutomatedOpenUtil({
+    ip: recent.ip,
+    userAgent: recent.user_agent,
+  })
 }
 
 /**
- * Detect security scanner clicks
+ * Detect security scanner clicks (wrapper for shared utility)
  */
 function isSecurityScannerClick(recent?: { ip?: string; user_agent?: string }): boolean {
   if (!recent) return false
-  const userAgent = recent.user_agent || ""
-  const ip = recent.ip || ""
-
-  const scannerPatterns = [
-    /Chrome\/130\.0\.0\.0/, // Microsoft ATP / Safe Links
-    /Chrome\/113\.0\.0\.0/, // Microsoft ATP (older)
-    /python-requests/i, // Python-based bots
-    /aiohttp/i, // Python async HTTP
-    /SCMGUARD/i, // Security scanners
-  ]
-  if (scannerPatterns.some((pattern) => pattern.test(userAgent))) return true
-
-  const ipPatterns = [/^57\.155\./, /^4\.182\./, /^72\.145\./, /^74\.240\./]
-  return ipPatterns.some((pattern) => pattern.test(ip))
+  return isAutomatedClickUtil({
+    ip: recent.ip,
+    userAgent: recent.user_agent,
+  })
 }
 
 /**

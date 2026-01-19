@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emailReplies, emails } from "../db/schema/emails"
+import { isAutomatedClick, isAutomatedOpen } from "../utils/bot-detection"
 import logger from "../utils/logger"
 
 // Note: sendEmailOpenNotification은 순환 의존성 방지를 위해 동적 import 사용
@@ -1262,49 +1263,62 @@ async function handleEmailOpened(event: Record<string, unknown>): Promise<void> 
     }
 
     const openedAt = new Date()
+    const ip = event.ip as string | undefined
+    const userAgent = event.user_agent as string | undefined
 
-    // Update email status and increment open count
-    await db
-      .update(emails)
-      .set({
-        status: "opened",
-        openedAt,
-        openCount: sql`${emails.openCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(emails.id, email.id))
+    // 봇 감지
+    const possiblyBot = isAutomatedOpen({ ip, userAgent })
 
-    // Record event
+    // Record event (항상 기록, 봇 여부와 관계없이)
     await db.insert(emailEvents).values({
       emailId: email.id,
       eventType: "open",
       timestamp: openedAt,
-      ipAddress: event.ip as string | undefined,
-      userAgent: event.user_agent as string | undefined,
+      ipAddress: ip,
+      userAgent: userAgent,
       rawEventData: event as Record<string, unknown>,
+      possiblyBot,
     })
 
-    logger.info({ emailId: email.id, trackingId }, "Email opened event processed")
+    // 봇이 아닌 경우에만 이메일 상태 및 카운트 업데이트
+    if (!possiblyBot) {
+      await db
+        .update(emails)
+        .set({
+          status: "opened",
+          openedAt,
+          openCount: sql`${emails.openCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(emails.id, email.id))
 
-    // 체험판 사용자에게 이메일 오픈 알림 발송 (비동기, fire-and-forget)
-    // - 최초 오픈인 경우에만 발송 (openCount가 0에서 1이 된 경우)
-    // - 동적 import로 순환 의존성 방지
-    if (email.openCount === 0) {
-      import("./email-open-notification.service")
-        .then(({ sendEmailOpenNotification }) => {
-          sendEmailOpenNotification(email.id, openedAt).catch((err) => {
+      logger.info({ emailId: email.id, trackingId }, "Email opened event processed")
+
+      // 체험판 사용자에게 이메일 오픈 알림 발송 (비동기, fire-and-forget)
+      // - 최초 오픈인 경우에만 발송 (openCount가 0에서 1이 된 경우)
+      // - 동적 import로 순환 의존성 방지
+      if (email.openCount === 0) {
+        import("./email-open-notification.service")
+          .then(({ sendEmailOpenNotification }) => {
+            sendEmailOpenNotification(email.id, openedAt).catch((err) => {
+              logger.error(
+                { error: err, emailId: email.id },
+                "Failed to send email open notification",
+              )
+            })
+          })
+          .catch((err) => {
             logger.error(
               { error: err, emailId: email.id },
-              "Failed to send email open notification",
+              "Failed to import email-open-notification.service",
             )
           })
-        })
-        .catch((err) => {
-          logger.error(
-            { error: err, emailId: email.id },
-            "Failed to import email-open-notification.service",
-          )
-        })
+      }
+    } else {
+      logger.info(
+        { emailId: email.id, trackingId, ip, userAgent },
+        "Email opened event skipped (bot detected)",
+      )
     }
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email opened event")
@@ -1347,27 +1361,47 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
       return
     }
 
-    await db
-      .update(emails)
-      .set({
-        status: "clicked",
-        clickedAt: new Date(),
-        clickCount: sql`${emails.clickCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(emails.id, email.id))
+    const clickedAt = new Date()
+    const ip = event.ip as string | undefined
+    const userAgent = event.user_agent as string | undefined
 
+    // 봇 감지
+    const possiblyBot = isAutomatedClick({ ip, userAgent })
+
+    // Record event (항상 기록, 봇 여부와 관계없이)
     await db.insert(emailEvents).values({
       emailId: email.id,
       eventType: "click",
-      timestamp: new Date(),
+      timestamp: clickedAt,
       url: clickedUrl || "",
-      ipAddress: event.ip as string | undefined,
-      userAgent: event.user_agent as string | undefined,
+      ipAddress: ip,
+      userAgent: userAgent,
       rawEventData: event as Record<string, unknown>,
+      possiblyBot,
     })
 
-    logger.info({ emailId: email.id, trackingId, url: clickedUrl }, "Email clicked event processed")
+    // 봇이 아닌 경우에만 이메일 상태 및 카운트 업데이트
+    if (!possiblyBot) {
+      await db
+        .update(emails)
+        .set({
+          status: "clicked",
+          clickedAt,
+          clickCount: sql`${emails.clickCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(emails.id, email.id))
+
+      logger.info(
+        { emailId: email.id, trackingId, url: clickedUrl },
+        "Email clicked event processed",
+      )
+    } else {
+      logger.info(
+        { emailId: email.id, trackingId, ip, userAgent },
+        "Email clicked event skipped (bot detected)",
+      )
+    }
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email clicked event")
   }

@@ -6,6 +6,7 @@ import { leadContacts } from "../db/schema/lead-details"
 import { sequenceEnrollments, sequences } from "../db/schema/sequences"
 import type { Email, FileData, SendGridInboundPayload } from "../models/email.model"
 import { emails } from "../types/email-storage"
+import { isAutomatedClick, isAutomatedOpen } from "../utils/bot-detection"
 import {
   extractEmailAddress,
   parseEmailAttachments,
@@ -1260,9 +1261,14 @@ class WebhookService {
     if (!email) return
 
     // 2-a. 봇/보안 스캐너에 의한 open/click 이벤트는 카운트에서 제외
+    const eventData = {
+      ip: event.ip,
+      userAgent: event.useragent,
+      sgMachineOpen: event.sg_machine_open,
+    }
     const possiblyBot =
-      (event.event === "open" && this.isAutomatedOpen(event, email.sentAt)) ||
-      (event.event === "click" && this.isSecurityScannerClick(event))
+      (event.event === "open" && isAutomatedOpen(eventData)) ||
+      (event.event === "click" && isAutomatedClick(eventData))
 
     // 2. email_events 테이블에 이벤트 저장 (사람/봇 모두 기록)
     await db.insert(emailEvents).values({
@@ -1363,71 +1369,6 @@ class WebhookService {
         "Email status updated",
       )
     }
-  }
-
-  /**
-   * 보안 스캐너/이미지 프록시/자동 프리페치에 의한 오픈인지 판별
-   * - SendGrid의 sg_machine_open 필드를 주요 판단 기준으로 사용
-   * - Microsoft/Azure IP 대역은 추가 필터로 유지
-   */
-  private isAutomatedOpen(event: SendGridEvent, _sentAt: Date | null): boolean {
-    // 1. SendGrid가 봇이라고 판단하면 → 봇
-    if (event.sg_machine_open === true) {
-      return true
-    }
-
-    // 2. SendGrid가 사람이라고 판단해도 Microsoft/Azure IP는 봇으로 처리
-    const ip = event.ip || ""
-    const microsoftATPIpPatterns = [
-      /^4\.182\./, // Azure ATP / Safe Links
-      /^57\.155\./, // Microsoft ATP
-      /^72\.145\./, // Defender for Office 365
-      /^48\.209\./, // Azure 보안 서비스
-      /^4\.204\./, // Azure
-    ]
-
-    if (ip && microsoftATPIpPatterns.some((pattern) => pattern.test(ip))) {
-      return true
-    }
-
-    return false
-  }
-
-  /**
-   * 보안 스캐너/자동화 봇에 의한 클릭인지 판별
-   * - User-Agent 패턴 (Chrome 130, python-requests, aiohttp 등)
-   * - Microsoft ATP / Defender IP 대역
-   *
-   * open-rate-analysis.md / click-analysis.md 에서 분석한 패턴을 기반으로 함
-   */
-  private isSecurityScannerClick(event: SendGridEvent): boolean {
-    const userAgent = event.useragent || ""
-    const ip = event.ip || ""
-
-    const scannerUserAgentPatterns = [
-      /Chrome\/130\.0\.0\.0/, // Microsoft ATP / Safe Links
-      /Chrome\/113\.0\.0\.0/, // Microsoft ATP (구버전)
-      /python-requests/i, // Python 기반 보안/봇
-      /aiohttp/i, // Python 비동기 HTTP 클라이언트
-      /SCMGUARD/i, // 기타 보안 스캐너
-    ]
-
-    if (userAgent && scannerUserAgentPatterns.some((pattern) => pattern.test(userAgent))) {
-      return true
-    }
-
-    const microsoftATPIpPatterns = [
-      /^57\.155\./, // Azure ATP
-      /^4\.182\./, // Azure Safe Links
-      /^72\.145\./, // Defender for Office 365
-      /^74\.240\./, // 기타 Microsoft 보안 서비스
-    ]
-
-    if (ip && microsoftATPIpPatterns.some((pattern) => pattern.test(ip))) {
-      return true
-    }
-
-    return false
   }
 
   private async updateSequenceStepExecutionStatus(

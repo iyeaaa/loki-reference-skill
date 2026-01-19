@@ -1079,7 +1079,7 @@ export default function LeadsPage() {
 
               {/* 정보 보강 버튼 */}
               <Button
-                className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md transition-all hover:from-emerald-700 hover:to-emerald-800 hover:shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
                 disabled={
                   (selectedLeads.length === 0 && !allLeadsSelected) || enrichingLeadIds.size > 0
                 }

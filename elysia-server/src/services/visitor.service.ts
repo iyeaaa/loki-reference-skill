@@ -75,6 +75,10 @@ export interface VisitorFilters {
   minLeadScore?: number
   // ISP filter (default: true = exclude ISP traffic from list/stats)
   excludeIsp?: boolean
+  // Additional noise filters (default: true = exclude)
+  excludeHosting?: boolean // Exclude hosting/cloud providers (default: true)
+  excludeDatacenter?: boolean // Exclude datacenter IPs (default: true)
+  excludeSuspicious?: boolean // Exclude proxy/abuser/tor (default: true)
 }
 
 // ============================================================================
@@ -87,6 +91,28 @@ export interface VisitorFilters {
  * Condition: visitorType != 'isp'
  */
 const ISP_EXCLUSION_CONDITION = sql`(${visitorSessions.visitorType} IS NULL OR ${visitorSessions.visitorType} != 'isp')`
+
+/**
+ * Hosting exclusion condition
+ * Excludes cloud/hosting providers (likely bots or automation)
+ */
+const HOSTING_EXCLUSION_CONDITION = sql`(${visitorSessions.visitorType} IS NULL OR ${visitorSessions.visitorType} != 'hosting')`
+
+/**
+ * Datacenter exclusion condition
+ * Excludes datacenter IPs (likely bots, crawlers, or automation)
+ */
+const DATACENTER_EXCLUSION_CONDITION = sql`(${visitorSessions.isDatacenter} IS NULL OR ${visitorSessions.isDatacenter} = false)`
+
+/**
+ * Suspicious traffic exclusion condition
+ * Excludes proxy, abuser, and tor traffic
+ */
+const SUSPICIOUS_EXCLUSION_CONDITION = sql`(
+  (${visitorSessions.isProxy} IS NULL OR ${visitorSessions.isProxy} = false)
+  AND (${visitorSessions.isAbuser} IS NULL OR ${visitorSessions.isAbuser} = false)
+  AND (${visitorSessions.isTor} IS NULL OR ${visitorSessions.isTor} = false)
+)`
 
 // ============================================================================
 // B2B Intelligence Functions
@@ -490,6 +516,24 @@ export async function listVisitorSessions(
     conditions.push(ISP_EXCLUSION_CONDITION)
   }
 
+  // Hosting traffic exclusion (default: true = exclude hosting/cloud)
+  const excludeHosting = filters?.excludeHosting !== false
+  if (excludeHosting) {
+    conditions.push(HOSTING_EXCLUSION_CONDITION)
+  }
+
+  // Datacenter traffic exclusion (default: true = exclude datacenter IPs)
+  const excludeDatacenter = filters?.excludeDatacenter !== false
+  if (excludeDatacenter) {
+    conditions.push(DATACENTER_EXCLUSION_CONDITION)
+  }
+
+  // Suspicious traffic exclusion (default: true = exclude proxy/abuser/tor)
+  const excludeSuspicious = filters?.excludeSuspicious !== false
+  if (excludeSuspicious) {
+    conditions.push(SUSPICIOUS_EXCLUSION_CONDITION)
+  }
+
   // Apply excluded companies filter
   const excludedDomains = await getExcludedCompanyDomains(workspaceId)
   if (excludedDomains.length > 0) {
@@ -622,11 +666,14 @@ export async function getVisitorCountries(
   // Get excluded company domains
   const excludedDomains = await getExcludedCompanyDomains(workspaceId)
 
-  // Build conditions
+  // Build conditions with all noise filters
   const conditions = [
     eq(visitorSessions.workspaceId, workspaceId),
     sql`${visitorSessions.countryCode} IS NOT NULL`,
     ISP_EXCLUSION_CONDITION,
+    HOSTING_EXCLUSION_CONDITION,
+    DATACENTER_EXCLUSION_CONDITION,
+    SUSPICIOUS_EXCLUSION_CONDITION,
   ]
 
   // Apply excluded companies filter
@@ -679,7 +726,7 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
       : sql`1=1`
 
   // Run optimized queries in parallel
-  // ISP traffic is excluded from all stats (Snitcher-style filtering)
+  // All noise traffic is excluded from stats (ISP, hosting, datacenter, suspicious)
   const [
     aggregatedStats,
     topCountriesResult,
@@ -703,6 +750,9 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           eq(visitorSessions.workspaceId, workspaceId),
           gte(visitorSessions.firstVisitAt, startDate),
           ISP_EXCLUSION_CONDITION,
+          HOSTING_EXCLUSION_CONDITION,
+          DATACENTER_EXCLUSION_CONDITION,
+          SUSPICIOUS_EXCLUSION_CONDITION,
           exclusionCondition,
         ),
       ),
@@ -720,6 +770,9 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           gte(visitorSessions.firstVisitAt, startDate),
           sql`${visitorSessions.country} is not null`,
           ISP_EXCLUSION_CONDITION,
+          HOSTING_EXCLUSION_CONDITION,
+          DATACENTER_EXCLUSION_CONDITION,
+          SUSPICIOUS_EXCLUSION_CONDITION,
           exclusionCondition,
         ),
       )
@@ -740,6 +793,9 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           gte(visitorSessions.firstVisitAt, startDate),
           sql`(${visitorSessions.companyName} is not null OR ${visitorSessions.asnOrg} is not null)`,
           ISP_EXCLUSION_CONDITION,
+          HOSTING_EXCLUSION_CONDITION,
+          DATACENTER_EXCLUSION_CONDITION,
+          SUSPICIOUS_EXCLUSION_CONDITION,
           exclusionCondition,
         ),
       )
@@ -759,13 +815,16 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
           eq(visitorSessions.workspaceId, workspaceId),
           gte(visitorSessions.firstVisitAt, startDate),
           ISP_EXCLUSION_CONDITION,
+          HOSTING_EXCLUSION_CONDITION,
+          DATACENTER_EXCLUSION_CONDITION,
+          SUSPICIOUS_EXCLUSION_CONDITION,
           exclusionCondition,
         ),
       )
       .groupBy(visitorSessions.visitorType)
       .orderBy(sql`count(*) desc`),
 
-    // Recent visitors (also exclude ISP and excluded companies)
+    // Recent visitors (also exclude all noise and excluded companies)
     db
       .select()
       .from(visitorSessions)
@@ -773,6 +832,9 @@ export async function getVisitorStats(workspaceId: string, days = 30): Promise<V
         and(
           eq(visitorSessions.workspaceId, workspaceId),
           ISP_EXCLUSION_CONDITION,
+          HOSTING_EXCLUSION_CONDITION,
+          DATACENTER_EXCLUSION_CONDITION,
+          SUSPICIOUS_EXCLUSION_CONDITION,
           exclusionCondition,
         ),
       )

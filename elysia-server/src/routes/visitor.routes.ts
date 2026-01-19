@@ -288,9 +288,18 @@ export const visitorProtectedRoutes = new Elysia({
       if (query.dateTo) filters.dateTo = query.dateTo
       if (query.sortBy) filters.sortBy = query.sortBy as VisitorFilters["sortBy"]
       if (query.sortOrder) filters.sortOrder = query.sortOrder as VisitorFilters["sortOrder"]
-      // ISP exclusion filter (default: true = exclude ISP)
+      // Noise exclusion filters (default: true = exclude on backend if not provided)
       if (query.excludeIsp !== undefined) {
         filters.excludeIsp = query.excludeIsp === "true"
+      }
+      if (query.excludeHosting !== undefined) {
+        filters.excludeHosting = query.excludeHosting === "true"
+      }
+      if (query.excludeDatacenter !== undefined) {
+        filters.excludeDatacenter = query.excludeDatacenter === "true"
+      }
+      if (query.excludeSuspicious !== undefined) {
+        filters.excludeSuspicious = query.excludeSuspicious === "true"
       }
 
       const result = await listVisitorSessions(workspaceId, limit, offset, filters)
@@ -335,6 +344,21 @@ export const visitorProtectedRoutes = new Elysia({
         excludeIsp: t.Optional(
           t.String({
             description: "Exclude ISP traffic (true/false, default: true)",
+          }),
+        ),
+        excludeHosting: t.Optional(
+          t.String({
+            description: "Exclude hosting/cloud providers (true/false, default: true)",
+          }),
+        ),
+        excludeDatacenter: t.Optional(
+          t.String({
+            description: "Exclude datacenter IPs (true/false, default: true)",
+          }),
+        ),
+        excludeSuspicious: t.Optional(
+          t.String({
+            description: "Exclude proxy/abuser/tor traffic (true/false, default: true)",
           }),
         ),
       }),

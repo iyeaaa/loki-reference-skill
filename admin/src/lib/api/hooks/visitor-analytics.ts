@@ -118,8 +118,11 @@ export type VisitorFilters = {
   visitorTypes?: VisitorType[]
   isB2bLead?: boolean
   minLeadScore?: number
-  // ISP filter (default: true = exclude ISP traffic)
-  excludeIsp?: boolean
+  // Noise exclusion filters (default: true = exclude)
+  excludeIsp?: boolean // ISP traffic (default: true)
+  excludeHosting?: boolean // Hosting/cloud providers (default: true)
+  excludeDatacenter?: boolean // Datacenter IPs (default: true)
+  excludeSuspicious?: boolean // Proxy/Abuser/Tor traffic (default: true)
 }
 
 export type VisitorCountry = {
@@ -224,9 +227,18 @@ export function useVisitorSessions(
         if (filters.sortOrder) {
           params.set("sortOrder", filters.sortOrder)
         }
-        // ISP exclusion filter (default: true on backend if not provided)
+        // Noise exclusion filters (default: true on backend if not provided)
         if (filters.excludeIsp !== undefined) {
           params.set("excludeIsp", filters.excludeIsp.toString())
+        }
+        if (filters.excludeHosting !== undefined) {
+          params.set("excludeHosting", filters.excludeHosting.toString())
+        }
+        if (filters.excludeDatacenter !== undefined) {
+          params.set("excludeDatacenter", filters.excludeDatacenter.toString())
+        }
+        if (filters.excludeSuspicious !== undefined) {
+          params.set("excludeSuspicious", filters.excludeSuspicious.toString())
         }
       }
 

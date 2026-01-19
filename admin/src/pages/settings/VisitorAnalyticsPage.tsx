@@ -665,7 +665,11 @@ export function VisitorAnalyticsPage() {
   const [statsDays, setStatsDays] = useState(30)
   const [showFilters, setShowFilters] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(false)
-  const [excludeIsp, setExcludeIsp] = useState(true) // Default: exclude ISP traffic
+  // Noise exclusion filters (all default to true)
+  const [excludeIsp, setExcludeIsp] = useState(true)
+  const [excludeHosting, setExcludeHosting] = useState(true)
+  const [excludeDatacenter, setExcludeDatacenter] = useState(true)
+  const [excludeSuspicious, setExcludeSuspicious] = useState(true)
   const [isExclusionDialogOpen, setIsExclusionDialogOpen] = useState(false)
   const [excludeSearchTerm, setExcludeSearchTerm] = useState("")
   const [debouncedExcludeSearch, setDebouncedExcludeSearch] = useState("")
@@ -688,14 +692,17 @@ export function VisitorAnalyticsPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Merged filters with search and ISP exclusion
+  // Merged filters with search and noise exclusions
   const mergedFilters = useMemo<VisitorFilters>(
     () => ({
       ...filters,
       search: debouncedSearch || undefined,
       excludeIsp,
+      excludeHosting,
+      excludeDatacenter,
+      excludeSuspicious,
     }),
-    [filters, debouncedSearch, excludeIsp],
+    [filters, debouncedSearch, excludeIsp, excludeHosting, excludeDatacenter, excludeSuspicious],
   )
 
   const {
@@ -913,19 +920,81 @@ export function VisitorAnalyticsPage() {
                 <SelectItem value="365">최근 1년</SelectItem>
               </SelectContent>
             </Select>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5">
-                  <Switch checked={excludeIsp} id="exclude-isp" onCheckedChange={setExcludeIsp} />
-                  <Label className="cursor-pointer whitespace-nowrap text-xs" htmlFor="exclude-isp">
-                    ISP 제외
-                  </Label>
+            {/* Noise Exclusion Filters */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button className="h-8" size="sm" variant="outline">
+                  <Filter className="mr-1.5 h-3.5 w-3.5" />
+                  노이즈 필터
+                  <Badge className="ml-1.5" variant="secondary">
+                    {
+                      [excludeIsp, excludeHosting, excludeDatacenter, excludeSuspicious].filter(
+                        Boolean,
+                      ).length
+                    }
+                    /4
+                  </Badge>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72">
+                <div className="space-y-3">
+                  <div className="font-medium text-sm">노이즈 트래픽 제외</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="cursor-pointer text-sm" htmlFor="exclude-isp">
+                        ISP 트래픽
+                      </Label>
+                      <Switch
+                        checked={excludeIsp}
+                        id="exclude-isp"
+                        onCheckedChange={setExcludeIsp}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">KT, SKT, LG U+ 등 일반 사용자</p>
+
+                    <div className="flex items-center justify-between">
+                      <Label className="cursor-pointer text-sm" htmlFor="exclude-hosting">
+                        호스팅/클라우드
+                      </Label>
+                      <Switch
+                        checked={excludeHosting}
+                        id="exclude-hosting"
+                        onCheckedChange={setExcludeHosting}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      AWS, GCP, 네이버 클라우드 등 봇 가능성
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <Label className="cursor-pointer text-sm" htmlFor="exclude-datacenter">
+                        데이터센터
+                      </Label>
+                      <Switch
+                        checked={excludeDatacenter}
+                        id="exclude-datacenter"
+                        onCheckedChange={setExcludeDatacenter}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">데이터센터 IP (크롤러, 자동화)</p>
+
+                    <div className="flex items-center justify-between">
+                      <Label className="cursor-pointer text-sm" htmlFor="exclude-suspicious">
+                        의심 트래픽
+                      </Label>
+                      <Switch
+                        checked={excludeSuspicious}
+                        id="exclude-suspicious"
+                        onCheckedChange={setExcludeSuspicious}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Proxy, Tor, Abuser 플래그 트래픽
+                    </p>
+                  </div>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>ISP(KT, SKT, LG U+) 트래픽 제외</p>
-              </TooltipContent>
-            </Tooltip>
+              </PopoverContent>
+            </Popover>
             <Button className="h-8 w-8" onClick={handleRefresh} size="icon" variant="ghost">
               <RefreshCw className={cn("h-4 w-4", isFetchingSessions && "animate-spin")} />
             </Button>

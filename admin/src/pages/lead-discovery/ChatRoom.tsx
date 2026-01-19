@@ -257,7 +257,7 @@ export function ChatRoom() {
   const [streamingState, setStreamingState] = useAtom(streamingStateAtom)
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
-  const [searchMode, setSearchMode] = useState<SearchMode>("website")
+  const [searchMode, setSearchMode] = useState<SearchMode>("criteria_input")
   const [showSessionManager, setShowSessionManager] = useState(false)
   const sessions = useAtomValue(searchSessionsAtom)
   const analysisSettings = useAtomValue(analysisSettingsAtom)

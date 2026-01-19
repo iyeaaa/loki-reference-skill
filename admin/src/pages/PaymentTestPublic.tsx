@@ -403,8 +403,8 @@ export default function PaymentTestPublic() {
       // Request billing auth (카드 등록창)
       await payment.requestBillingAuth({
         method: "CARD",
-        successUrl: `${window.location.origin}/payment-test`,
-        failUrl: `${window.location.origin}/payment-test`,
+        successUrl: `${window.location.origin}/payment`,
+        failUrl: `${window.location.origin}/payment`,
         customerEmail: "pg-test@example.com",
         customerName: "PG심사테스트",
       })

@@ -1,10 +1,8 @@
 import { Check, ExternalLink, Sparkles } from "lucide-react"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
 type Plan = {
@@ -68,7 +66,6 @@ type UpgradePlanModalProps = {
 
 export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) {
   const { t } = useTranslation()
-  const [isYearly, setIsYearly] = useState(true)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("ko-KR").format(price)
 
@@ -88,18 +85,8 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
         </DialogHeader>
 
         <div className="p-6">
-          {/* Billing Toggle */}
-          <div className="mb-8 flex items-center justify-center gap-3">
-            <div className="flex items-center gap-2">
-              <Switch checked={isYearly} onCheckedChange={setIsYearly} />
-              <span className="font-medium text-sm">{t("upgrade.modal.yearly")}</span>
-              {isYearly && (
-                <Badge className="bg-green-100 text-green-700" variant="secondary">
-                  17% {t("upgrade.modal.discount")}
-                </Badge>
-              )}
-            </div>
-            <span className="text-muted-foreground">|</span>
+          {/* Learn More Link */}
+          <div className="mb-8 flex items-center justify-center">
             <a
               className="flex items-center gap-1 text-blue-600 text-sm hover:underline"
               href={CONTACT_URL}
@@ -149,17 +136,10 @@ export function UpgradePlanModal({ open, onOpenChange }: UpgradePlanModalProps) 
                     <>
                       <div className="flex items-baseline gap-1">
                         <span className="font-bold text-3xl">
-                          ₩{formatPrice(isYearly ? plan.yearlyMonthlyPrice : plan.monthlyPrice)}
+                          ₩{formatPrice(plan.monthlyPrice)}
                         </span>
                         <span className="text-muted-foreground">/{t("upgrade.modal.month")}</span>
                       </div>
-                      {isYearly && (
-                        <p className="mt-1 text-muted-foreground text-sm">
-                          {t("upgrade.modal.billedYearly", {
-                            price: formatPrice(plan.yearlyPrice),
-                          })}
-                        </p>
-                      )}
                       <p className="mt-1 text-muted-foreground text-xs">부가세 별도</p>
                     </>
                   )}

@@ -298,8 +298,6 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
       return t("layout.page.workspaceManagement")
     case "/users":
       return t("layout.page.userManagement")
-    case "/email-send-test":
-      return t("layout.page.emailSendTest")
     case "/chatbot":
       return t("sidebar.menu.aiSalesAutomation")
     case "/settings":

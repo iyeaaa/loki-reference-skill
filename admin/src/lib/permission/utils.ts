@@ -17,7 +17,7 @@ export function getRoutePermission(path: string): RoutePermission {
     return ROUTE_PERMISSIONS[path]
   }
 
-  // 동적 라우트 패턴 매칭 (예: /sequences/:id/designer)
+  // 동적 라우트 패턴 매칭 (예: /sequences/:id)
   for (const [pattern, permission] of Object.entries(ROUTE_PERMISSIONS)) {
     if (pattern.includes(":")) {
       const regex = new RegExp(`^${pattern.replace(/:[^/]+/g, "[^/]+")}$`)

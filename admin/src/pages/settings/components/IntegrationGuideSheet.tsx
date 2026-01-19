@@ -7,10 +7,21 @@
  * - 복사 기능
  */
 
-import { Check, CheckCircle2, Code2, Copy, ExternalLink, Loader2, Play } from "lucide-react"
+import {
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Code2,
+  Copy,
+  Loader2,
+  Play,
+} from "lucide-react"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Sheet,
@@ -1170,6 +1181,12 @@ export function IntegrationGuideSheet({
   // API 테스트 상태
   const [isTestLoading, setIsTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<ApiTestResult | null>(null)
+  const [showTestInputs, setShowTestInputs] = useState(false)
+
+  // 테스트 입력 필드 (프로덕션 예시 데이터 기본값)
+  const [testIpAddress, setTestIpAddress] = useState("203.248.252.2") // 예시: 한국 기업 네트워크 (삼성SDS)
+  const [testLandingPage, setTestLandingPage] = useState("https://rinda.ai/features")
+  const [testReferrer, setTestReferrer] = useState("https://www.google.com")
 
   const codeExamples = generateCodeExamples(workspaceId, apiBaseUrl)
 
@@ -1193,8 +1210,9 @@ export function IntegrationGuideSheet({
         },
         body: JSON.stringify({
           workspaceId,
-          landingPage: window.location.href,
-          referrer: document.referrer || null,
+          ipAddress: testIpAddress || undefined,
+          landingPage: testLandingPage || window.location.href,
+          referrer: testReferrer || document.referrer || null,
         }),
       })
 
@@ -1249,28 +1267,87 @@ export function IntegrationGuideSheet({
                   <p className="truncate font-medium text-sm">{workspaceName}</p>
                   <p className="font-mono text-muted-foreground text-xs">{workspaceId}</p>
                 </div>
-                <Button
-                  className="shrink-0"
-                  disabled={isTestLoading}
-                  onClick={handleApiTest}
-                  size="sm"
-                  variant={testResult?.success ? "outline" : "default"}
-                >
-                  {isTestLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : testResult?.success ? (
-                    <>
-                      <CheckCircle2 className="mr-1.5 h-4 w-4 text-green-600" />
-                      연동 성공
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-1.5 h-4 w-4" />
-                      연동 테스트
-                    </>
-                  )}
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    onClick={() => setShowTestInputs(!showTestInputs)}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    {showTestInputs ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    disabled={isTestLoading}
+                    onClick={handleApiTest}
+                    size="sm"
+                    variant={testResult?.success ? "outline" : "default"}
+                  >
+                    {isTestLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : testResult?.success ? (
+                      <>
+                        <CheckCircle2 className="mr-1.5 h-4 w-4 text-green-600" />
+                        연동 성공
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-1.5 h-4 w-4" />
+                        연동 테스트
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {/* 테스트 입력 필드 */}
+              {showTestInputs && (
+                <div className="mt-3 space-y-3 border-t pt-3">
+                  <p className="text-muted-foreground text-xs">
+                    테스트할 값을 입력하세요. 비워두면 기본값이 사용됩니다.
+                  </p>
+                  <div className="grid gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs" htmlFor="test-ip">
+                        IP 주소
+                      </Label>
+                      <Input
+                        className="h-8 text-sm"
+                        id="test-ip"
+                        onChange={(e) => setTestIpAddress(e.target.value)}
+                        placeholder="예: 203.248.252.2"
+                        value={testIpAddress}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs" htmlFor="test-landing">
+                        랜딩 페이지
+                      </Label>
+                      <Input
+                        className="h-8 text-sm"
+                        id="test-landing"
+                        onChange={(e) => setTestLandingPage(e.target.value)}
+                        placeholder="예: https://rinda.ai/features"
+                        value={testLandingPage}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs" htmlFor="test-referrer">
+                        유입 경로 (Referrer)
+                      </Label>
+                      <Input
+                        className="h-8 text-sm"
+                        id="test-referrer"
+                        onChange={(e) => setTestReferrer(e.target.value)}
+                        placeholder="예: https://www.google.com"
+                        value={testReferrer}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 테스트 결과 - 컴팩트 표시 */}
               {testResult && (
@@ -1449,20 +1526,6 @@ export function IntegrationGuideSheet({
                 <li>• ISP 트래픽 (가정용 인터넷)은 자동으로 필터링되어 기업 방문자만 수집됩니다</li>
                 <li>• 워크스페이스 ID가 변경되면 코드를 업데이트해야 합니다</li>
               </ul>
-            </div>
-
-            {/* 문서 링크 */}
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline">
-                <a
-                  href="https://docs.rinda.ai/api/visitors"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  API 문서 보기
-                </a>
-              </Button>
             </div>
           </div>
         </ScrollArea>

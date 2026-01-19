@@ -925,7 +925,7 @@ export function VisitorAnalyticsPage() {
               <PopoverTrigger asChild>
                 <Button className="h-8" size="sm" variant="outline">
                   <Filter className="mr-1.5 h-3.5 w-3.5" />
-                  노이즈 필터
+                  노이즈 트래픽 필터
                   <Badge className="ml-1.5" variant="secondary">
                     {
                       [excludeIsp, excludeHosting, excludeDatacenter, excludeSuspicious].filter(

@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db"
 import { emailEvents, emailReplies, emails } from "../db/schema/emails"
+import { sequenceEnrollments, sequenceStepExecutions } from "../db/schema/sequences"
 import { isAutomatedClick, isAutomatedOpen } from "../utils/bot-detection"
 import logger from "../utils/logger"
 
@@ -1210,7 +1211,8 @@ export async function processUnipileWebhook(payload: unknown): Promise<{ success
         await handleEmailClicked(event)
         break
       case "email.bounced":
-        // Handle email bounced
+      case "mail_bounced":
+        await handleEmailBounced(event)
         break
       case "email.replied":
         await handleEmailReplied(event)
@@ -1404,6 +1406,174 @@ async function handleEmailClicked(event: Record<string, unknown>): Promise<void>
     }
   } catch (error) {
     logger.error({ err: error, trackingId, emailId }, "Error handling email clicked event")
+  }
+}
+
+/**
+ * Stop enrollment for bounced or failed emails
+ * This prevents subsequent sequence steps from being sent to invalid email addresses
+ */
+async function stopEnrollmentForBounceOrFailed(
+  emailId: string,
+  reason: "bounced" | "stopped",
+  errorMessage: string,
+): Promise<void> {
+  try {
+    // Find the email to get leadId
+    const emailResult = await db
+      .select({ leadId: emails.leadId })
+      .from(emails)
+      .where(eq(emails.id, emailId))
+      .limit(1)
+
+    const leadId = emailResult[0]?.leadId
+    if (!leadId) {
+      logger.debug({ emailId }, "[UNIPILE] No leadId found for email, skipping enrollment stop")
+      return
+    }
+
+    // Find active enrollments for this lead
+    const activeEnrollments = await db
+      .select({
+        id: sequenceEnrollments.id,
+        sequenceId: sequenceEnrollments.sequenceId,
+      })
+      .from(sequenceEnrollments)
+      .where(and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")))
+
+    if (activeEnrollments.length === 0) {
+      logger.debug({ emailId, leadId }, "[UNIPILE] No active enrollments found for lead")
+      return
+    }
+
+    logger.info({
+      msg: `🛑 [UNIPILE] Stopping active enrollments for lead (${reason})`,
+      leadId,
+      reason,
+      errorMessage,
+      activeEnrollmentsCount: activeEnrollments.length,
+      enrollmentIds: activeEnrollments.map((e) => e.id),
+    })
+
+    // Stop all active enrollments
+    await db
+      .update(sequenceEnrollments)
+      .set({
+        status: reason,
+        stoppedAt: new Date(),
+      })
+      .where(and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")))
+
+    // Skip pending step executions
+    for (const enrollment of activeEnrollments) {
+      await db
+        .update(sequenceStepExecutions)
+        .set({
+          status: "skipped",
+          errorMessage: `Skipped due to ${reason}: ${errorMessage}`,
+        })
+        .where(
+          and(
+            eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+            eq(sequenceStepExecutions.status, "pending"),
+          ),
+        )
+    }
+
+    logger.info({
+      msg: `✅ [UNIPILE] Enrollments stopped and pending steps skipped (${reason})`,
+      leadId,
+      stoppedCount: activeEnrollments.length,
+    })
+  } catch (error) {
+    logger.error(
+      { error, emailId, reason },
+      "[UNIPILE] Failed to stop enrollment for bounce/failed, but email event was still processed",
+    )
+  }
+}
+
+/**
+ * Handle email bounced webhook
+ * Updates email status to bounced and records bounce information
+ */
+async function handleEmailBounced(event: Record<string, unknown>): Promise<void> {
+  const trackingId = event.tracking_id as string | undefined
+  const emailId = event.email_id as string | undefined
+  const bounceType = event.bounce_type as string | undefined
+  const bounceReason = event.reason as string | undefined
+
+  if (!trackingId && !emailId) {
+    logger.warn({ event }, "Email bounced event missing tracking_id and email_id")
+    return
+  }
+
+  try {
+    // Find email by tracking_id or email_id (stored in sendgridMessageId field)
+    const email = await db.query.emails.findFirst({
+      where: (emails, { or, eq }) =>
+        or(
+          eq(emails.sendgridMessageId, trackingId || ""),
+          eq(emails.sendgridMessageId, emailId || ""),
+        ),
+      columns: { id: true, status: true, stepId: true },
+    })
+
+    if (!email) {
+      logger.warn({ trackingId, emailId }, "Email not found for bounced event")
+      return
+    }
+
+    // Determine bounce type (hard = permanent, soft = temporary)
+    const isHardBounce = bounceType === "hard" || bounceType === "permanent"
+
+    // Update email status to bounced
+    await db
+      .update(emails)
+      .set({
+        status: "bounced",
+        bounceType: isHardBounce ? "hard" : "soft",
+        bounceReason: bounceReason || "Unknown bounce reason",
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    // Record event
+    await db.insert(emailEvents).values({
+      emailId: email.id,
+      eventType: "bounce",
+      timestamp: new Date(),
+      rawEventData: event as Record<string, unknown>,
+    })
+
+    // Update sequence step execution status to failed if this is a sequence email
+    if (email.stepId) {
+      const execution = await db.query.sequenceStepExecutions.findFirst({
+        where: (executions, { eq }) => eq(executions.emailId, email.id),
+        columns: { id: true },
+      })
+
+      if (execution) {
+        await db
+          .update(sequenceStepExecutions)
+          .set({
+            status: "failed",
+            errorMessage: `Email bounced: ${bounceReason || "Unknown reason"}`,
+            executedAt: new Date(),
+          })
+          .where(eq(sequenceStepExecutions.id, execution.id))
+      }
+    }
+
+    // Stop enrollment for bounced emails (prevent subsequent steps)
+    await stopEnrollmentForBounceOrFailed(email.id, "bounced", bounceReason || "Email bounced")
+
+    logger.info(
+      { emailId: email.id, trackingId, bounceType: isHardBounce ? "hard" : "soft", bounceReason },
+      "✅ [UNIPILE] Email bounced event processed",
+    )
+  } catch (error) {
+    logger.error({ err: error, trackingId, emailId }, "Error handling email bounced event")
   }
 }
 

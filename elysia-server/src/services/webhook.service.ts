@@ -1338,6 +1338,12 @@ class WebhookService {
           "failed",
           `Bounced: ${event.reason || "Unknown reason"}`,
         )
+        // Stop enrollment for bounced emails (prevent subsequent steps)
+        await this.stopEnrollmentForBounceOrFailed(
+          email.id,
+          "bounced",
+          event.reason || "Email bounced",
+        )
         break
       case "dropped":
       case "deferred":
@@ -1347,6 +1353,12 @@ class WebhookService {
         await this.updateSequenceStepExecutionStatus(
           email.id,
           "failed",
+          event.reason || "Email dropped or deferred",
+        )
+        // Stop enrollment for dropped/deferred emails (prevent subsequent steps)
+        await this.stopEnrollmentForBounceOrFailed(
+          email.id,
+          "stopped",
           event.reason || "Email dropped or deferred",
         )
         break
@@ -1399,6 +1411,96 @@ class WebhookService {
       }
     } catch (error) {
       logger.error({ error, emailId, status }, "Failed to update sequence step execution status")
+    }
+  }
+
+  /**
+   * Stop enrollment for bounced or failed emails
+   * This prevents subsequent sequence steps from being sent to invalid email addresses
+   */
+  private async stopEnrollmentForBounceOrFailed(
+    emailId: string,
+    reason: "bounced" | "stopped",
+    errorMessage: string,
+  ) {
+    try {
+      const { sequenceStepExecutions } = await import("../db/schema/sequences")
+
+      // Find the email to get leadId
+      const emailResult = await db
+        .select({ leadId: emailsTable.leadId })
+        .from(emailsTable)
+        .where(eq(emailsTable.id, emailId))
+        .limit(1)
+
+      const leadId = emailResult[0]?.leadId
+      if (!leadId) {
+        logger.debug({ emailId }, "[WEBHOOK] No leadId found for email, skipping enrollment stop")
+        return
+      }
+
+      // Find active enrollments for this lead
+      const activeEnrollments = await db
+        .select({
+          id: sequenceEnrollments.id,
+          sequenceId: sequenceEnrollments.sequenceId,
+        })
+        .from(sequenceEnrollments)
+        .where(
+          and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")),
+        )
+
+      if (activeEnrollments.length === 0) {
+        logger.debug({ emailId, leadId }, "[WEBHOOK] No active enrollments found for lead")
+        return
+      }
+
+      logger.info({
+        msg: `🛑 [WEBHOOK] Stopping active enrollments for lead (${reason})`,
+        leadId,
+        reason,
+        errorMessage,
+        activeEnrollmentsCount: activeEnrollments.length,
+        enrollmentIds: activeEnrollments.map((e) => e.id),
+      })
+
+      // Stop all active enrollments
+      await db
+        .update(sequenceEnrollments)
+        .set({
+          status: reason,
+          stoppedAt: new Date(),
+        })
+        .where(
+          and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")),
+        )
+
+      // Skip pending step executions
+      for (const enrollment of activeEnrollments) {
+        await db
+          .update(sequenceStepExecutions)
+          .set({
+            status: "skipped",
+            errorMessage: `Skipped due to ${reason}: ${errorMessage}`,
+          })
+          .where(
+            and(
+              eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+              eq(sequenceStepExecutions.status, "pending"),
+            ),
+          )
+      }
+
+      logger.info({
+        msg: `✅ [WEBHOOK] Enrollments stopped and pending steps skipped (${reason})`,
+        leadId,
+        stoppedCount: activeEnrollments.length,
+      })
+    } catch (error) {
+      logger.error(
+        { error, emailId, reason },
+        "[WEBHOOK] Failed to stop enrollment for bounce/failed, but email event was still processed",
+      )
     }
   }
 

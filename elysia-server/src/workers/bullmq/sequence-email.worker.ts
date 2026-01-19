@@ -715,7 +715,18 @@ async function processSequenceEmailJob(
         "[SequenceEmailWorker] Permanent error - marking as failed without retry",
       )
       await sequenceService.updateStepExecutionStatus(executionId, "failed", errorMessage)
-      await sequenceService.checkAndCompleteEnrollmentIfLastStep(enrollmentId, stepOrder)
+
+      // Stop enrollment for permanent errors (bounced, failed, etc.)
+      // Determine status based on error type
+      const isBounced = errorMessage.toLowerCase().includes("bounced")
+      const isUnsubscribed = errorMessage.toLowerCase().includes("unsubscribed")
+      const enrollmentStatus = isBounced ? "bounced" : isUnsubscribed ? "unsubscribed" : "stopped"
+
+      logger.info(
+        { jobId, enrollmentId, errorMessage, enrollmentStatus },
+        `[SequenceEmailWorker] Stopping enrollment due to permanent error`,
+      )
+      await sequenceService.updateEnrollmentStatus(enrollmentId, enrollmentStatus)
 
       // Return failure instead of throwing - prevents retry for permanent errors
       return {

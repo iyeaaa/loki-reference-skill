@@ -616,16 +616,10 @@ export default function LeadsPage() {
             // 3. React Query 캐시 무효화 → 자동으로 새 이메일 표시
             queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
 
-            // 4. 토스트 알림
+            // 4. 토스트 알림 (성공 시에만)
             const { stats } = data
-            if (stats.success > 0 && stats.failed === 0) {
+            if (stats.success > 0) {
               toast.success(`${stats.success}개 리드에서 이메일을 찾았어요!`)
-            } else if (stats.success > 0) {
-              toast(
-                `${stats.success}개 리드에서 이메일을 찾았어요. ${stats.failed}개는 찾지 못했습니다.`,
-              )
-            } else {
-              toast.error("이메일을 찾지 못했습니다.")
             }
 
             eventSource.close()
@@ -636,7 +630,7 @@ export default function LeadsPage() {
           }
 
           if (data.type === "error") {
-            toast.error(data.error || "정보 보강 중 오류가 발생했습니다.")
+            // 오류는 조용히 처리 (토스트 없음)
             eventSource.close()
             setEnrichingLeadIds(new Set())
           }
@@ -647,13 +641,13 @@ export default function LeadsPage() {
 
       eventSource.onerror = (error) => {
         console.error("SSE connection error:", error)
-        toast.error("정보 보강 연결 중 오류가 발생했습니다.")
+        // 오류는 조용히 처리 (토스트 없음)
         eventSource.close()
         setEnrichingLeadIds(new Set())
       }
     } catch (error) {
       console.error("Failed to start enrichment:", error)
-      toast.error("정보 보강을 시작하지 못했습니다.")
+      // 오류는 조용히 처리 (토스트 없음)
       setEnrichingLeadIds(new Set())
     }
   }

@@ -286,3 +286,19 @@ addLead.addToExistingGroup,기존 그룹에 추가됩니다,Add to existing grou
 addLead.addToNewGroup,새 그룹 {{name}}에 추가됩니다,Add to new group {{name}}
 file.noName,이름 없음,No name
 button.createCampaign,린다에게 영업 맡기기,Let Rinda Handle Sales
+enrichment.button,정보 보강,Enrich Contacts
+enrichment.buttonLoading,정보 보강 중...,Enriching...
+enrichment.title,정보를 찾고 있어요,Finding contact info
+enrichment.complete,정보 보강 완료!,Enrichment complete!
+enrichment.found,{{count}}개 리드에서 이메일을 찾았어요,Found emails for {{count}} leads
+enrichment.notFound,이메일을 찾지 못했어요,Could not find email
+enrichment.partialSuccess,{{success}}개 리드에서 이메일을 찾았어요. {{failed}}개는 찾지 못했습니다.,Found emails for {{success}} leads. Could not find for {{failed}} leads.
+enrichment.error,정보 보강 중 오류가 발생했습니다,Error occurred during enrichment
+enrichment.connectionError,정보 보강 연결 중 오류가 발생했습니다,Connection error during enrichment
+enrichment.startError,정보 보강을 시작하지 못했습니다,Failed to start enrichment
+enrichment.searching,정보 찾는 중...,Finding info...
+missingEmail.title,{{count}}개 리드에 이메일이 없어요,{{count}} leads have no email
+missingEmail.description,이메일이 있어야 영업 메일을 보낼 수 있어요. 정보 보강을 통해 이메일을 찾아보세요!,Email is required to send sales emails. Try enriching contacts to find emails!
+missingEmail.enrichFirst,정보 보강 후 진행,Enrich First
+missingEmail.proceedWithValid,이메일 있는 리드만 진행,Proceed with valid leads only
+missingEmail.proceedWithValidCount,이메일 있는 {{count}}개 리드만 진행,Proceed with {{count}} valid leads only

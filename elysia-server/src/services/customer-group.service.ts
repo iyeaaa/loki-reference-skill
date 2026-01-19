@@ -690,13 +690,12 @@ export async function getGroupMembersWithEmails(groupId: string) {
       businessType: leads.businessType,
       leadSource: leads.leadSource,
       employeeCount: leads.employeeCount,
-      primaryEmail: sql<string>`COALESCE(
-        (SELECT contact_value FROM ${leadContacts}
-         WHERE ${leadContacts.leadId} = ${leads.id}
-         AND ${leadContacts.contactType} = 'email'
-         AND ${leadContacts.isPrimary} = true
-         LIMIT 1),
-        LOWER(REPLACE(${leads.companyName}, ' ', '.')) || '@example.com'
+      primaryEmail: sql<string | null>`(
+        SELECT contact_value FROM ${leadContacts}
+        WHERE ${leadContacts.leadId} = ${leads.id}
+        AND ${leadContacts.contactType} = 'email'
+        AND ${leadContacts.isPrimary} = true
+        LIMIT 1
       )`.as("primaryEmail"),
       hasReplied: sql<boolean>`EXISTS (
         SELECT 1 FROM ${emails}

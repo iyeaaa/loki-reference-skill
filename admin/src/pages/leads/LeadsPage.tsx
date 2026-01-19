@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { Download, Edit2, Plus, Send, Trash2, Users } from "lucide-react"
+import { Download, Edit2, Loader2, Plus, Send, Sparkles, Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { AddLeadSheet } from "@/components/leads/AddLeadSheet"
+import { MissingEmailAlertModal } from "@/components/leads/MissingEmailAlertModal"
 import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -36,6 +37,7 @@ import {
   useUpdateCustomerGroup,
 } from "@/lib/api/hooks/customer-groups"
 import {
+  leadKeys,
   useBulkDeleteLeads,
   useBulkUpdateLeadBusinessType,
   useBulkUpdateLeadStatus,
@@ -44,6 +46,7 @@ import {
   useUpdateLead,
 } from "@/lib/api/hooks/leads"
 import { useAllUsers } from "@/lib/api/hooks/users"
+import { contactEnrichmentApi } from "@/lib/api/services/contact-enrichment"
 import { customerGroupsApi } from "@/lib/api/services/customer-groups"
 import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
@@ -116,6 +119,17 @@ export default function LeadsPage() {
   // 시퀀스 발송 모달 상태
   const [showSequenceLaunchModal, setShowSequenceLaunchModal] = useState(false)
   const [sequenceLaunchGroup, setSequenceLaunchGroup] = useState<CustomerGroup | null>(null)
+
+  // Contact Enrichment 상태
+  const [enrichingLeadIds, setEnrichingLeadIds] = useState<Set<string>>(new Set())
+  const [showMissingEmailAlert, setShowMissingEmailAlert] = useState(false)
+  const [leadsWithoutEmail, setLeadsWithoutEmail] = useState<
+    Array<{ id: string; companyName: string | null; hasEmail: boolean }>
+  >([])
+  const [pendingCampaignAction, setPendingCampaignAction] = useState<{
+    targetGroupId: string
+    targetGroupName: string
+  } | null>(null)
 
   const queryClient = useQueryClient()
   const createLead = useCreateLead()
@@ -566,6 +580,220 @@ export default function LeadsPage() {
     }
   }
 
+  // Contact Enrichment 실행 함수
+  const handleEnrichLeads = async (leadIds: string[], options?: { onComplete?: () => void }) => {
+    if (leadIds.length === 0) {
+      toast.error("보강할 리드를 선택해주세요.")
+      return
+    }
+
+    // 1. 로딩 상태 시작
+    setEnrichingLeadIds(new Set(leadIds))
+
+    try {
+      // 2. SSE 연결하여 백그라운드 Enrichment 실행
+      const params = new URLSearchParams()
+      params.append("leadIds", leadIds.join(","))
+
+      const eventSource = new EventSource(
+        `/api/v1/contact-enrichment/enrich-leads?${params.toString()}`,
+      )
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.type === "progress" && data.completedLeadId) {
+            // 완료된 리드는 로딩 상태에서 제거
+            setEnrichingLeadIds((prev) => {
+              const next = new Set(prev)
+              next.delete(data.completedLeadId)
+              return next
+            })
+          }
+
+          if (data.type === "complete") {
+            // 3. React Query 캐시 무효화 → 자동으로 새 이메일 표시
+            queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+
+            // 4. 토스트 알림
+            const { stats } = data
+            if (stats.success > 0 && stats.failed === 0) {
+              toast.success(`${stats.success}개 리드에서 이메일을 찾았어요!`)
+            } else if (stats.success > 0) {
+              toast(
+                `${stats.success}개 리드에서 이메일을 찾았어요. ${stats.failed}개는 찾지 못했습니다.`,
+              )
+            } else {
+              toast.error("이메일을 찾지 못했습니다.")
+            }
+
+            eventSource.close()
+            setEnrichingLeadIds(new Set())
+
+            // onComplete 콜백 실행
+            options?.onComplete?.()
+          }
+
+          if (data.type === "error") {
+            toast.error(data.error || "정보 보강 중 오류가 발생했습니다.")
+            eventSource.close()
+            setEnrichingLeadIds(new Set())
+          }
+        } catch (parseError) {
+          console.error("Failed to parse SSE data:", parseError)
+        }
+      }
+
+      eventSource.onerror = (error) => {
+        console.error("SSE connection error:", error)
+        toast.error("정보 보강 연결 중 오류가 발생했습니다.")
+        eventSource.close()
+        setEnrichingLeadIds(new Set())
+      }
+    } catch (error) {
+      console.error("Failed to start enrichment:", error)
+      toast.error("정보 보강을 시작하지 못했습니다.")
+      setEnrichingLeadIds(new Set())
+    }
+  }
+
+  // 정보 보강 버튼 클릭 핸들러 (전체 선택 모드 지원)
+  const handleEnrichButtonClick = async () => {
+    try {
+      const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
+
+      if (!workspaceId) {
+        toast.error(t("leads.error.noWorkspaceSelected"))
+        return
+      }
+
+      let targetLeadIds: string[] = []
+
+      if (allLeadsSelected) {
+        // 전체 선택 모드 - 모든 리드를 가져옴
+        const allLeadsResponse = await leadsApi.list({
+          page: 1,
+          limit: 10_000,
+          workspaceIds: [workspaceId],
+          customerGroupId: selectedCustomerGroup || undefined,
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
+        })
+        targetLeadIds = allLeadsResponse.leads.map((lead) => lead.id)
+      } else if (selectedLeads.length > 0) {
+        targetLeadIds = selectedLeads
+      } else {
+        toast.error("보강할 리드를 선택해주세요.")
+        return
+      }
+
+      // 이메일 없는 리드만 필터링하여 enrichment 실행
+      const emailStatus = await contactEnrichmentApi.checkEmailStatus(targetLeadIds)
+      const leadsToEnrich = emailStatus.leads.filter((l) => !l.hasEmail).map((l) => l.id)
+
+      if (leadsToEnrich.length === 0) {
+        toast.success("모든 리드에 이미 이메일이 있어요!")
+        return
+      }
+
+      await handleEnrichLeads(leadsToEnrich)
+    } catch (error) {
+      console.error("Failed to start enrichment:", error)
+      toast.error("정보 보강을 시작하지 못했습니다.")
+    }
+  }
+
+  // 이메일 없는 리드만 Enrichment 후 캠페인 생성 진행
+  const handleEnrichAndCreateCampaign = async () => {
+    setShowMissingEmailAlert(false)
+
+    if (!pendingCampaignAction) {
+      return
+    }
+
+    // 이메일 없는 리드들만 Enrichment 실행
+    const leadIdsToEnrich = leadsWithoutEmail.filter((l) => !l.hasEmail).map((l) => l.id)
+
+    if (leadIdsToEnrich.length > 0) {
+      await handleEnrichLeads(leadIdsToEnrich, {
+        onComplete: () => {
+          // 완료 후 캠페인 생성 진행
+          proceedWithCampaignCreation(
+            pendingCampaignAction.targetGroupId,
+            pendingCampaignAction.targetGroupName,
+          )
+        },
+      })
+    } else {
+      // 이미 모든 리드에 이메일이 있음
+      proceedWithCampaignCreation(
+        pendingCampaignAction.targetGroupId,
+        pendingCampaignAction.targetGroupName,
+      )
+    }
+  }
+
+  // 이메일 있는 리드만으로 캠페인 생성 진행
+  const handleProceedWithValidLeads = async () => {
+    setShowMissingEmailAlert(false)
+
+    if (!pendingCampaignAction) {
+      return
+    }
+
+    proceedWithCampaignCreation(
+      pendingCampaignAction.targetGroupId,
+      pendingCampaignAction.targetGroupName,
+    )
+  }
+
+  // 캠페인 생성 실제 진행
+  const proceedWithCampaignCreation = async (targetGroupId: string, targetGroupName: string) => {
+    try {
+      const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
+
+      if (!workspaceId) {
+        toast.error(t("leads.error.noWorkspaceSelected"))
+        return
+      }
+
+      // Create more descriptive campaign name based on context
+      let campaignName: string
+      let campaignDescription: string
+
+      if (selectedCustomerGroup && allLeadsSelected) {
+        campaignName = `${targetGroupName} - 캠페인`
+        campaignDescription = `${targetGroupName} 전체 리드를 위한 캠페인`
+      } else if (selectedCustomerGroup && selectedLeads.length > 0) {
+        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+        const baseGroupName = group?.name || "Group"
+        campaignName = `${baseGroupName} (선택 ${selectedLeads.length}명) - 캠페인`
+        campaignDescription = `${baseGroupName}에서 선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
+      } else if (!selectedCustomerGroup && allLeadsSelected) {
+        const totalCount = totalLeadsCount || 0
+        campaignName = `전체 리드 (${totalCount}명) - 캠페인`
+        campaignDescription = `전체 ${totalCount}명의 리드를 위한 캠페인`
+      } else {
+        campaignName = `선택된 리드 (${selectedLeads.length}명) - 캠페인`
+        campaignDescription = `선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
+      }
+
+      const newSequence = await sequencesApi.create({
+        workspaceId,
+        name: campaignName,
+        description: campaignDescription,
+        status: "draft",
+        customerGroupId: targetGroupId,
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      navigate(`/sequences/create?id=${newSequence.id}`)
+    } catch (error) {
+      console.error("Failed to create campaign:", error)
+      toast.error("캠페인 생성 중 오류가 발생했습니다.")
+    }
+  }
+
   // Handle Create New Campaign button click
   const handleCreateCampaign = async () => {
     try {
@@ -575,6 +803,29 @@ export default function LeadsPage() {
         toast.error(t("leads.error.noWorkspaceSelected"))
         return
       }
+
+      // 대상 리드 ID 목록 결정
+      let targetLeadIds: string[] = []
+
+      if (allLeadsSelected) {
+        // 전체 선택 모드 - 모든 리드를 가져옴
+        const allLeadsResponse = await leadsApi.list({
+          page: 1,
+          limit: 10_000,
+          workspaceIds: [workspaceId],
+          customerGroupId: selectedCustomerGroup || undefined,
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
+        })
+        targetLeadIds = allLeadsResponse.leads.map((lead) => lead.id)
+      } else if (selectedLeads.length > 0) {
+        targetLeadIds = selectedLeads
+      } else {
+        toast.error("리드를 선택하거나 전체 선택 모드를 활성화해주세요.")
+        return
+      }
+
+      // 이메일 상태 확인
+      const emailStatus = await contactEnrichmentApi.checkEmailStatus(targetLeadIds)
 
       let targetGroupId: string
       let targetGroupName: string
@@ -618,28 +869,18 @@ export default function LeadsPage() {
       }
       // Case 3: In "All", Select All Leads mode
       else if (!selectedCustomerGroup && allLeadsSelected) {
-        // Get all leads
-        const allLeadsResponse = await leadsApi.list({
-          page: 1,
-          limit: 10_000,
-          workspaceIds: [workspaceId],
-          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
-        })
-
-        const allLeadIds = allLeadsResponse.leads.map((lead) => lead.id)
-
         // Create "All Leads" group
         const newGroup = await createCustomerGroup.mutateAsync({
           workspaceId,
           name: "All Leads",
-          description: `전체 ${allLeadIds.length}개의 리드`,
+          description: `전체 ${targetLeadIds.length}개의 리드`,
           isDynamic: false,
         })
 
         // Add all leads to the group
         await bulkAddGroupMembers.mutateAsync({
           groupId: newGroup.id,
-          leadIds: allLeadIds,
+          leadIds: targetLeadIds,
         })
 
         targetGroupId = newGroup.id
@@ -682,57 +923,16 @@ export default function LeadsPage() {
         queryKey: customerGroupKeys.all,
       })
 
-      // Create new campaign (sequence) as draft
-      // Create more descriptive campaign name based on context
-      let campaignName: string
-      let campaignDescription: string
-
-      if (selectedCustomerGroup && allLeadsSelected) {
-        // Case 1: All leads in a specific group
-        campaignName = `${targetGroupName} - 캠페인`
-        campaignDescription = `${targetGroupName} 전체 리드를 위한 캠페인`
-      } else if (selectedCustomerGroup && selectedLeads.length > 0) {
-        // Case 2: Some leads from a specific group
-        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
-        const baseGroupName = group?.name || "Group"
-        campaignName = `${baseGroupName} (선택 ${selectedLeads.length}명) - 캠페인`
-        campaignDescription = `${baseGroupName}에서 선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
-      } else if (!selectedCustomerGroup && allLeadsSelected) {
-        // Case 3: All leads
-        const totalCount = totalLeadsCount || 0
-        campaignName = `전체 리드 (${totalCount}명) - 캠페인`
-        campaignDescription = `전체 ${totalCount}명의 리드를 위한 캠페인`
-      } else {
-        // Case 4: Some leads from all
-        campaignName = `선택된 리드 (${selectedLeads.length}명) - 캠페인`
-        campaignDescription = `선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
+      // 이메일 없는 리드가 있으면 알림 모달 표시
+      if (emailStatus.withoutEmail > 0) {
+        setLeadsWithoutEmail(emailStatus.leads)
+        setPendingCampaignAction({ targetGroupId, targetGroupName })
+        setShowMissingEmailAlert(true)
+        return
       }
 
-      console.log("🎯 Creating sequence with:", {
-        workspaceId,
-        name: campaignName,
-        customerGroupId: targetGroupId,
-        targetGroupName,
-        selectedLeadsCount: selectedLeads.length,
-        allLeadsSelected,
-      })
-
-      const newSequence = await sequencesApi.create({
-        workspaceId,
-        name: campaignName,
-        description: campaignDescription,
-        status: "draft",
-        customerGroupId: targetGroupId,
-      })
-
-      console.log("✅ Sequence created:", newSequence)
-      console.log("✅ Sequence customerGroupId:", newSequence.customerGroupId)
-
-      // Small delay to ensure cache is updated
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      // Navigate to campaign page with the new sequence ID
-      navigate(`/sequences/create?id=${newSequence.id}`)
+      // 모든 리드에 이메일이 있으면 바로 캠페인 생성 진행
+      await proceedWithCampaignCreation(targetGroupId, targetGroupName)
     } catch (error) {
       console.error("Failed to create campaign:", error)
       toast.error("캠페인 생성 중 오류가 발생했습니다.")
@@ -883,6 +1083,30 @@ export default function LeadsPage() {
                   : t("leads.button.selectAllMode")}
               </Button>
 
+              {/* 정보 보강 버튼 */}
+              <Button
+                className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md transition-all hover:from-emerald-700 hover:to-emerald-800 hover:shadow-lg"
+                disabled={
+                  (selectedLeads.length === 0 && !allLeadsSelected) || enrichingLeadIds.size > 0
+                }
+                onClick={handleEnrichButtonClick}
+                size="sm"
+              >
+                {enrichingLeadIds.size > 0 ? (
+                  <>
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    <span className="hidden lg:inline">정보 보강 중...</span>
+                    <span className="lg:hidden">...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 h-4 w-4" />
+                    <span className="hidden lg:inline">정보 보강</span>
+                    <span className="lg:hidden">Enrich</span>
+                  </>
+                )}
+              </Button>
+
               {/* 캠페인 생성 버튼 - 하이라이트 */}
               <Button
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
@@ -983,6 +1207,7 @@ export default function LeadsPage() {
           <LeadsTableWithPagination
             allLeadsSelected={allLeadsSelected}
             columnFilters={columnFilters}
+            enrichingLeadIds={enrichingLeadIds}
             isSelectAllMode={isSelectAllMode}
             onEditLead={setEditingLead}
             onLeadsDataChange={setCurrentLeadsData}
@@ -1132,6 +1357,18 @@ export default function LeadsPage() {
         open={showAddLeadSheet}
         selectedCustomerGroupId={selectedCustomerGroup || undefined}
         workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
+      />
+
+      {/* Missing Email Alert Modal */}
+      <MissingEmailAlertModal
+        isOpen={showMissingEmailAlert}
+        leadsWithoutEmail={leadsWithoutEmail}
+        onClose={() => {
+          setShowMissingEmailAlert(false)
+          setPendingCampaignAction(null)
+        }}
+        onEnrichFirst={handleEnrichAndCreateCampaign}
+        onProceedWithValid={handleProceedWithValidLeads}
       />
     </div>
   )

@@ -24,6 +24,7 @@ import {
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
 import { bullmqTestRoutes } from "./routes/bullmq-test.routes"
 import { chatbotRoutes } from "./routes/chatbot.routes"
+import { contactEnrichmentRoutes } from "./routes/contact-enrichment.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
 import { dashboardRoutes } from "./routes/dashboard.routes"
 import { departmentsRoutes } from "./routes/departments.routes"
@@ -215,6 +216,7 @@ const app = new Elysia()
   .use(geminiFileSearchRoutes)
   .use(bigquerySearchRoutes)
   .use(leadEnrichmentRoutes)
+  .use(contactEnrichmentRoutes)
   .use(nylasRoutes)
   .use(unipileRoutes)
   .use(leadDiscoveryRoutes)

@@ -1,5 +1,6 @@
 import type { Column, ColumnDef, RowData } from "@tanstack/react-table"
 import { formatDistanceToNow } from "date-fns"
+import { CheckCircle, Loader2 } from "lucide-react"
 import { ColumnSelector } from "@/components/leads/ColumnSelector"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -78,6 +79,8 @@ type LeadsTableMeta = {
   onAddColumn?: (columnId: string) => void
   onRemoveColumn?: (columnId: string) => void
   onReorderColumns?: (fromIndex: number, toIndex: number) => void
+  // Contact Enrichment
+  enrichingLeadIds?: Set<string>
 }
 
 // Helper function to create filter change handler
@@ -267,10 +270,34 @@ export const leadsColumns: ColumnDef<Lead>[] = [
         operators: ["contains", "equals", "isEmpty", "isNotEmpty"],
       } as ColumnFilterConfig,
     },
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as LeadsTableMeta | undefined
+      const leadId = row.original.id
       const emailContact = row.original.contacts?.find((c) => c.contactType === "email")
       const email = emailContact?.contactValue || row.original.createdByEmail
-      return email || "-"
+
+      // Check if this lead is being enriched
+      const isEnriching = meta?.enrichingLeadIds?.has(leadId)
+
+      if (isEnriching) {
+        return (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span className="text-sm">정보 찾는 중...</span>
+          </div>
+        )
+      }
+
+      if (!email) {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      return (
+        <div className="flex items-center gap-1">
+          <span className="truncate">{email}</span>
+          {emailContact?.isVerified && <CheckCircle className="h-3 w-3 shrink-0 text-green-500" />}
+        </div>
+      )
     },
   },
   {

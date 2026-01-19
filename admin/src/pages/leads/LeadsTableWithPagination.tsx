@@ -47,6 +47,8 @@ type LeadsTableWithPaginationProps = {
   allLeadsSelected?: boolean
   onToggleSelectAll?: () => void
   selectedGroupWorkspaceId?: string
+  // Contact Enrichment
+  enrichingLeadIds?: Set<string>
 }
 
 export function LeadsTableWithPagination({
@@ -64,6 +66,7 @@ export function LeadsTableWithPagination({
   allLeadsSelected = false,
   onToggleSelectAll,
   selectedGroupWorkspaceId,
+  enrichingLeadIds,
 }: LeadsTableWithPaginationProps) {
   const { t } = useTranslation()
 
@@ -396,6 +399,8 @@ export function LeadsTableWithPagination({
       onReorderColumns: handleReorderColumns,
       // Auto-sizing
       onAutoSizeColumn: autoSizeColumn,
+      // Contact Enrichment
+      enrichingLeadIds,
     },
   })
 

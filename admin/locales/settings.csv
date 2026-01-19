@@ -261,14 +261,14 @@ emailDraftTest.error.draft,AI 이메일 답장 생성에 실패했습니다,Fail
 emailDraftTest.error.template,AI 이메일 템플릿 생성에 실패했습니다,Failed to generate AI email template
 emailDraftTest.error.followup,AI 후속 이메일 생성에 실패했습니다,Failed to generate AI follow-up email
 emailDraftTest.error.summary,AI 대화 요약 생성에 실패했습니다,Failed to generate AI conversation summary
-emailDraftTest.error.draft,[NO TRANSLATION] settings.emailDraftTest.error.draft,[NO TRANSLATION] settings.emailDraftTest.error.draft
-emailDraftTest.error.followup,[NO TRANSLATION] settings.emailDraftTest.error.followup,[NO TRANSLATION] settings.emailDraftTest.error.followup
-emailDraftTest.error.summary,[NO TRANSLATION] settings.emailDraftTest.error.summary,[NO TRANSLATION] settings.emailDraftTest.error.summary
-emailDraftTest.error.template,[NO TRANSLATION] settings.emailDraftTest.error.template,[NO TRANSLATION] settings.emailDraftTest.error.template
-emailDraftTest.success.draft,[NO TRANSLATION] settings.emailDraftTest.success.draft,[NO TRANSLATION] settings.emailDraftTest.success.draft
-emailDraftTest.success.followup,[NO TRANSLATION] settings.emailDraftTest.success.followup,[NO TRANSLATION] settings.emailDraftTest.success.followup
-emailDraftTest.success.summary,[NO TRANSLATION] settings.emailDraftTest.success.summary,[NO TRANSLATION] settings.emailDraftTest.success.summary
-emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template,[NO TRANSLATION] settings.emailDraftTest.success.template
+emailDraftTest.error.draft,AI 이메일 답장 생성에 실패했습니다,Failed to generate AI email reply
+emailDraftTest.error.followup,AI 후속 이메일 생성에 실패했습니다,Failed to generate AI follow-up email
+emailDraftTest.error.summary,AI 대화 요약 생성에 실패했습니다,Failed to generate AI conversation summary
+emailDraftTest.error.template,AI 이메일 템플릿 생성에 실패했습니다,Failed to generate AI email template
+emailDraftTest.success.draft,AI 이메일 답장이 생성되었습니다,AI email reply has been generated
+emailDraftTest.success.followup,AI 후속 이메일이 생성되었습니다,AI follow-up email has been generated
+emailDraftTest.success.summary,AI 대화 요약이 생성되었습니다,AI conversation summary has been generated
+emailDraftTest.success.template,AI 이메일 템플릿이 생성되었습니다,AI email template has been generated
 language.description,앱에서 사용할 언어를 선택합니다,Select the language to use in the app
 language.title,언어 설정,Language Settings
 workspace.autoTranslated,자동 번역됨,Auto-translated
@@ -283,4 +283,4 @@ account.termsOfService,서비스 이용약관,Terms of Service
 account.title,계정,Account
 workspaces.createDescription,새 워크스페이스를 생성합니다,Create a new workspace
 workspaces.editDescription,워크스페이스 정보를 수정합니다,Edit workspace information
-account.loggingOut,[NO TRANSLATION] settings.account.loggingOut,[NO TRANSLATION] settings.account.loggingOut
+account.loggingOut,로그아웃 중...,Logging out...

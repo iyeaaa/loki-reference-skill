@@ -1,7 +1,7 @@
 key,ko,en
-sentiment.interested,[NO TRANSLATION] filters.sentiment.interested,[NO TRANSLATION] filters.sentiment.interested
-sentiment.negative,[NO TRANSLATION] filters.sentiment.negative,[NO TRANSLATION] filters.sentiment.negative
-sentiment.neutral,[NO TRANSLATION] filters.sentiment.neutral,[NO TRANSLATION] filters.sentiment.neutral
-sentiment.notInterested,[NO TRANSLATION] filters.sentiment.notInterested,[NO TRANSLATION] filters.sentiment.notInterested
-sentiment.pending,[NO TRANSLATION] filters.sentiment.pending,[NO TRANSLATION] filters.sentiment.pending
-sentiment.positive,[NO TRANSLATION] filters.sentiment.positive,[NO TRANSLATION] filters.sentiment.positive
+sentiment.interested,관심있음,interested
+sentiment.negative,부정적,negative
+sentiment.neutral,중립,neutral
+sentiment.notInterested,관심없음,notInterested
+sentiment.pending,보류,pending
+sentiment.positive,긍정적,positive

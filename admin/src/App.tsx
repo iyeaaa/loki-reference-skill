@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { NuqsAdapter } from "nuqs/adapters/react-router"
 import { RouterProvider } from "react-router-dom"
+import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary"
 import { useInitPersistence } from "@/lib/hooks/use-lead-discovery-persistence"
 import { router } from "./router"
 
@@ -11,11 +12,13 @@ function App() {
   useInitPersistence()
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <NuqsAdapter>
-        <RouterProvider router={router} />
-      </NuqsAdapter>
-    </QueryClientProvider>
+    <ChunkErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <NuqsAdapter>
+          <RouterProvider router={router} />
+        </NuqsAdapter>
+      </QueryClientProvider>
+    </ChunkErrorBoundary>
   )
 }
 

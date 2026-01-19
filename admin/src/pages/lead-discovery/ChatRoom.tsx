@@ -1843,29 +1843,6 @@ export function ChatRoom() {
                     role="tablist"
                   >
                     <button
-                      aria-controls="website-search-panel"
-                      aria-selected={searchMode === "website"}
-                      className={tabButtonClass(searchMode === "website")}
-                      id="website-tab"
-                      onClick={() => setSearchMode("website")}
-                      onKeyDown={(e) => {
-                        if (e.key === "ArrowRight") {
-                          e.preventDefault()
-                          setSearchMode("criteria_input")
-                        }
-                        if (e.key === "ArrowLeft") {
-                          e.preventDefault()
-                          setSearchMode("criteria_click")
-                        }
-                      }}
-                      role="tab"
-                      tabIndex={searchMode === "website" ? 0 : -1}
-                      type="button"
-                    >
-                      <Globe aria-hidden="true" className="h-4 w-4" />
-                      웹사이트로 시작
-                    </button>
-                    <button
                       aria-controls="criteria-input-panel"
                       aria-selected={searchMode === "criteria_input"}
                       className={tabButtonClass(searchMode === "criteria_input")}
@@ -1910,6 +1887,29 @@ export function ChatRoom() {
                     >
                       <MousePointerClick aria-hidden="true" className="h-4 w-4" />
                       클릭하여 찾기
+                    </button>
+                    <button
+                      aria-controls="website-search-panel"
+                      aria-selected={searchMode === "website"}
+                      className={tabButtonClass(searchMode === "website")}
+                      id="website-tab"
+                      onClick={() => setSearchMode("website")}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight") {
+                          e.preventDefault()
+                          setSearchMode("criteria_input")
+                        }
+                        if (e.key === "ArrowLeft") {
+                          e.preventDefault()
+                          setSearchMode("criteria_click")
+                        }
+                      }}
+                      role="tab"
+                      tabIndex={searchMode === "website" ? 0 : -1}
+                      type="button"
+                    >
+                      <Globe aria-hidden="true" className="h-4 w-4" />
+                      웹사이트로 시작
                     </button>
                   </div>
                 </div>

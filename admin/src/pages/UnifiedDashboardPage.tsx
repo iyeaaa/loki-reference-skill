@@ -31,6 +31,9 @@ export default function UnifiedDashboardPage() {
   // 관리자는 온보딩 건너뛰기
   const isAdmin = currentUser?.userRole === "admin"
 
+  // 관리자는 온보딩 건너뛰기
+  const isAdmin = currentUser?.userRole === "admin"
+
   // Get user's workspace
   const { data: userWorkspaces, isLoading: workspacesLoading } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""

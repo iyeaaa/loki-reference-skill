@@ -1454,7 +1454,7 @@ export function VisitorAnalyticsPage() {
                                 </span>
                                 {company.isExcluded && (
                                   <Badge className="shrink-0" variant="secondary">
-                                    기존 제외
+                                    제외됨
                                   </Badge>
                                 )}
                               </div>

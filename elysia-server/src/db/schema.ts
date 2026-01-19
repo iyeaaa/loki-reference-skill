@@ -57,6 +57,7 @@ export * from "./schema/users"
 export * from "./schema/visitor-excluded-companies"
 export * from "./schema/visitor-sessions"
 export * from "./schema/websets"
-// NOTE: workflow-emails and workflow-executions removed - tables were removed
+export * from "./schema/workflow-emails"
+export * from "./schema/workflow-executions"
 export * from "./schema/workspace-products"
 export * from "./schema/workspaces"

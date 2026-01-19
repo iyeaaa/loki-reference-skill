@@ -75,18 +75,6 @@ export const planIntervalEnum = pgEnum("plan_interval_enum", ["day", "week", "mo
 export const policyEffectEnum = pgEnum("policy_effect_enum", ["allow", "deny"])
 
 // ============================================================================
-// Sequence/Email Enums (시퀀스/이메일 관련)
-// ============================================================================
-
-/**
- * 이메일 생성 방식
- * - ai: AI 자동 생성
- * - manual: 수동 작성
- * - template: 템플릿 기반
- */
-export const generationModeEnum = pgEnum("generation_mode_enum", ["ai", "manual", "template"])
-
-// ============================================================================
 // Type Exports (타입 내보내기)
 // ============================================================================
 
@@ -95,4 +83,3 @@ export type SubscriptionStatus = (typeof subscriptionStatusEnum.enumValues)[numb
 export type PlanType = (typeof planTypeEnum.enumValues)[number]
 export type PlanInterval = (typeof planIntervalEnum.enumValues)[number]
 export type PolicyEffect = (typeof policyEffectEnum.enumValues)[number]
-export type GenerationMode = (typeof generationModeEnum.enumValues)[number]

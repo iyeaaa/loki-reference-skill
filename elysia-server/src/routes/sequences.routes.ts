@@ -217,31 +217,97 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         }
       }
 
-      // 활성화 상태로 변경 시 처리
-      // NOTE: 워크플로우 디자이너 제거됨 - 모든 시퀀스는 스텝 기반으로 동작
+      // 활성화 상태로 변경 시 워크플로우 검증 및 자동 시작
       if (body.status === "active") {
-        // 일시정지에서 재개하는 경우만 허용
-        if (currentSequence.status === "paused") {
-          // pending execution을 BullMQ에 재등록
-          try {
-            const enqueueResult = await enqueueExistingPendingExecutions(id)
-            logger.info(
-              { sequenceId: id, ...enqueueResult },
-              "✅ [Sync] Re-enqueued pending executions on sequence resume",
-            )
-          } catch (error) {
-            logger.warn(
-              { sequenceId: id, error },
-              "⚠️ [Sync] Failed to re-enqueue pending executions",
+        // 스텝 기반 시퀀스인지 확인
+        const steps = await sequenceService.getSequenceSteps(id)
+        const isStepBased = steps.length > 0
+
+        // 스텝 기반 시퀀스는 activate-step-based API를 사용해야 함
+        if (isStepBased) {
+          set.status = 400
+          return errorResponse(
+            "스텝 기반 시퀀스는 활성화 토글 버튼을 사용해주세요.",
+            ResponseCode.BAD_REQUEST,
+          )
+        }
+
+        // 워크플로우 기반 시퀀스만 검증
+        const workflowDataToValidate = body.workflowData || currentSequence.workflowData
+        if (workflowDataToValidate) {
+          const { parseAndValidateWorkflow } = await import(
+            "../services/workflow-validation.service"
+          )
+          const validation = parseAndValidateWorkflow(workflowDataToValidate)
+
+          if (!validation.valid) {
+            set.status = 400
+            return errorResponse(
+              `워크플로우 검증 실패: ${validation.errors.map((e) => e.message).join(", ")}`,
+              ResponseCode.BAD_REQUEST,
             )
           }
         } else {
-          // 초기 활성화는 activate-step-based API 사용
           set.status = 400
           return errorResponse(
-            "시퀀스 활성화는 activate-step-based API를 사용해주세요.",
+            "워크플로우가 설정되지 않았습니다. 먼저 워크플로우를 디자인해주세요.",
             ResponseCode.BAD_REQUEST,
           )
+        }
+
+        // 활성화 시 고객그룹의 모든 리드를 워크플로우에 자동 등록
+        if (currentSequence.customerGroupId && currentSequence.status !== "active") {
+          const customerGroupId = currentSequence.customerGroupId
+
+          // 워크스페이스의 첫 번째 이메일 계정 조회 (기본값)
+          const [defaultEmailAccount] = await db
+            .select({ id: userEmailAccounts.id })
+            .from(userEmailAccounts)
+            .where(eq(userEmailAccounts.workspaceId, currentSequence.workspaceId))
+            .limit(1)
+
+          if (!defaultEmailAccount) {
+            set.status = 400
+            return errorResponse(
+              "이메일 계정이 없습니다. 먼저 이메일 계정을 추가해주세요.",
+              ResponseCode.BAD_REQUEST,
+            )
+          }
+          // 백그라운드에서 비동기로 리드 등록 및 워크플로우 실행
+          // await 없이 실행하여 응답을 즉시 반환
+          ;(async () => {
+            try {
+              const { bulkEnrollInWorkflow, executeWorkflow } = await import(
+                "../services/workflow-execution.service"
+              )
+
+              const enrollResult = await bulkEnrollInWorkflow({
+                sequenceId: id,
+                customerGroupId,
+                userEmailAccountId: defaultEmailAccount.id,
+              })
+
+              logger.info(
+                { enrolledCount: enrollResult.enrolledCount },
+                "Enrolled leads to workflow",
+              )
+
+              // 등록 후 즉시 워크플로우 실행 (시작 노드 다음부터)
+              for (const enrollment of enrollResult.enrollments) {
+                await executeWorkflow(enrollment.id)
+              }
+
+              logger.info(
+                { enrollmentCount: enrollResult.enrollments.length },
+                "Successfully executed workflows",
+              )
+            } catch (error) {
+              logger.error({ err: error }, "Background process failed")
+              // 백그라운드 프로세스이므로 에러를 로깅만 하고 계속 진행
+            }
+          })()
+
+          logger.info({ sequenceId: id }, "Started background enrollment")
         }
       }
 
@@ -258,6 +324,19 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
             { sequenceId: id, error },
             "⚠️ [Sync] Failed to cancel BullMQ jobs, but continuing with pause",
           )
+        }
+      }
+
+      // 일시정지에서 활성화로 변경 시 pending execution을 BullMQ에 재등록
+      if (body.status === "active" && currentSequence.status === "paused") {
+        try {
+          const enqueueResult = await enqueueExistingPendingExecutions(id)
+          logger.info(
+            { sequenceId: id, ...enqueueResult },
+            "✅ [Sync] Re-enqueued pending executions on sequence resume",
+          )
+        } catch (error) {
+          logger.warn({ sequenceId: id, error }, "⚠️ [Sync] Failed to re-enqueue pending executions")
         }
       }
 

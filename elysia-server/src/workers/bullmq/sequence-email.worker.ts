@@ -31,8 +31,8 @@ import * as leadService from "../../services/lead.service"
 import { extractWebsiteContent, summarizeCompanyInfo } from "../../services/lead-enrichment.service"
 import * as sequenceService from "../../services/sequence.service"
 import { checkAndNotifyStepCompletion } from "../../services/sequence-notification.service"
+import * as workflowEmailService from "../../services/workflow-email.service"
 import logger from "../../utils/logger"
-import { replaceTemplateVariables } from "../../utils/template-variables"
 
 // ============================================================================
 // Configuration
@@ -514,12 +514,12 @@ async function processSequenceEmailJob(
       senderEmail: emailAccount.emailAddress || "",
     }
 
-    emailSubject = replaceTemplateVariables(emailSubject, templateData)
+    emailSubject = workflowEmailService.replaceTemplateVariables(emailSubject, templateData)
     if (emailBodyHtml) {
-      emailBodyHtml = replaceTemplateVariables(emailBodyHtml, templateData)
+      emailBodyHtml = workflowEmailService.replaceTemplateVariables(emailBodyHtml, templateData)
     }
     if (emailBodyText) {
-      emailBodyText = replaceTemplateVariables(emailBodyText, templateData)
+      emailBodyText = workflowEmailService.replaceTemplateVariables(emailBodyText, templateData)
     }
 
     // ========================================

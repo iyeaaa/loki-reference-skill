@@ -1,0 +1,1017 @@
+/**
+ * Email Sequence Worker V2
+ *
+ * This worker processes pending sequence step executions.
+ * It checks for pre-generated drafts in the emails table (status="draft"),
+ * and falls back to template variable replacement if no draft exists.
+ */
+
+import { and, eq, sql } from "drizzle-orm"
+import pLimit from "p-limit"
+import { config } from "../config"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
+import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
+import { sequenceEnrollments, sequences } from "../db/schema/sequences"
+import { emailService } from "../services/email.service"
+import { searchDomainAllEmails } from "../services/hunterio-domain-search.service"
+import { verifyEmail } from "../services/hunterio-email-verifier.service"
+import * as leadService from "../services/lead.service"
+import { extractWebsiteContent, summarizeCompanyInfo } from "../services/lead-enrichment.service"
+import * as sequenceService from "../services/sequence.service"
+import * as workflowEmailService from "../services/workflow-email.service"
+import logger, { emailWorkerLogger, generateTraceId } from "../utils/logger"
+
+/**
+ * Parallel processing concurrency limit
+ * Based on Hunter.io Email Verifier API rate limit: 10 requests/second
+ * See: https://help.hunter.io/en/articles/1970956-hunter-api
+ */
+const PARALLEL_CONCURRENCY = 10
+
+interface EmailSendResult {
+  success: boolean
+  messageId?: string
+  emailRecordId?: string // UUID from emails table
+  error?: string
+}
+
+/**
+ * Extract domain from URL
+ */
+function extractDomain(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const urlWithProtocol = url.startsWith("http") ? url : `https://${url}`
+    const parsed = new URL(urlWithProtocol)
+    return parsed.hostname.replace(/^www\./, "")
+  } catch {
+    return (
+      url
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .split("/")[0] || null
+    )
+  }
+}
+
+async function sendSequenceEmail(execution: {
+  executionId: string
+  enrollmentId: string
+  stepOrder: number
+  leadId: string
+  leadCompanyName: string | null
+  emailAccountId: string
+  emailSubject: string
+  emailBodyText: string | null
+  emailBodyHtml: string | null
+  sequenceName: string
+  sequenceId: string
+  stepId: string
+  workspaceId: string
+  userId: string | null
+  attachments?: Array<{ filename: string; type: string; content: string }> | null
+}): Promise<EmailSendResult> {
+  try {
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        leadId: execution.leadId,
+        leadCompanyName: execution.leadCompanyName,
+      },
+      "🔍 [STEP-WORKER-V2] Processing email",
+    )
+
+    // Get lead's primary email and contact name (include id for updates)
+    const [leadContact] =
+      (await db
+        .select({
+          id: leadContacts.id,
+          email: leadContacts.contactValue,
+          contactName: leadContacts.contactName,
+        })
+        .from(leadContacts)
+        .where(
+          and(
+            eq(leadContacts.leadId, execution.leadId),
+            eq(leadContacts.contactType, "email"),
+            eq(leadContacts.isPrimary, true),
+          ),
+        )
+        .limit(1)) ||
+      (await db // fallback to non-primary email
+        .select({
+          id: leadContacts.id,
+          email: leadContacts.contactValue,
+          contactName: leadContacts.contactName,
+        })
+        .from(leadContacts)
+        .where(
+          and(eq(leadContacts.leadId, execution.leadId), eq(leadContacts.contactType, "email")),
+        )
+        .limit(1))
+
+    if (!leadContact) {
+      logger.error(
+        { executionId: execution.executionId, leadId: execution.leadId },
+        "❌ [STEP-WORKER-V2] Lead email not found",
+      )
+      return {
+        success: false,
+        error: "Lead email not found",
+      }
+    }
+
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        toEmail: leadContact.email,
+        contactName: leadContact.contactName,
+      },
+      "✅ [STEP-WORKER-V2] Found lead email and contact",
+    )
+
+    // Get full lead information (needed for verification fallback enrichment)
+    const [lead] = await db
+      .select({
+        companyName: leads.companyName,
+        websiteUrl: leads.websiteUrl,
+        businessType: leads.businessType,
+        description: leads.description,
+        address: leads.address,
+        country: leads.country,
+        city: leads.city,
+        state: leads.state,
+        foundedYear: leads.foundedYear,
+        employeeCount: leads.employeeCount,
+        leadSource: leads.leadSource,
+        leadStatus: leads.leadStatus,
+        leadScore: leads.leadScore,
+      })
+      .from(leads)
+      .where(eq(leads.id, execution.leadId))
+      .limit(1)
+
+    if (!lead) {
+      logger.error(
+        { executionId: execution.executionId, leadId: execution.leadId },
+        "❌ [STEP-WORKER-V2] Lead not found",
+      )
+      return {
+        success: false,
+        error: "Lead not found",
+      }
+    }
+
+    // Verify email deliverability before sending
+    const verificationResult = await verifyEmail(leadContact.email)
+
+    if (verificationResult?.result === "undeliverable") {
+      logger.warn(
+        {
+          executionId: execution.executionId,
+          leadId: execution.leadId,
+          email: leadContact.email,
+        },
+        "⚠️ [STEP-WORKER-V2] Email is undeliverable, trying to find replacement...",
+      )
+
+      let newEmail: string | null = null
+      const domain = extractDomain(lead.websiteUrl)
+      let geminiEnrichmentData: {
+        description: string
+        industry?: string
+        products?: string
+        attachedEmailValue?: string
+        attachedEmailType?: string
+      } | null = null
+
+      // 1. Try Gemini enrichment first
+      if (lead.websiteUrl) {
+        try {
+          logger.debug(
+            { executionId: execution.executionId, websiteUrl: lead.websiteUrl },
+            "[STEP-WORKER-V2] Trying Gemini enrichment...",
+          )
+          const websiteContent = await extractWebsiteContent(lead.websiteUrl)
+          if (websiteContent.content) {
+            geminiEnrichmentData = await summarizeCompanyInfo(
+              websiteContent.content,
+              lead.companyName || domain || "",
+              config.gemini.apiKey,
+            )
+            if (
+              geminiEnrichmentData.attachedEmailValue &&
+              geminiEnrichmentData.attachedEmailValue !== "example@example.com"
+            ) {
+              const geminiVerification = await verifyEmail(geminiEnrichmentData.attachedEmailValue)
+              if (geminiVerification?.result !== "undeliverable") {
+                newEmail = geminiEnrichmentData.attachedEmailValue
+                logger.info(
+                  { executionId: execution.executionId, email: newEmail },
+                  "✅ [STEP-WORKER-V2] Found valid email via Gemini",
+                )
+              } else {
+                logger.debug(
+                  {
+                    executionId: execution.executionId,
+                    email: geminiEnrichmentData.attachedEmailValue,
+                  },
+                  "[STEP-WORKER-V2] Gemini email is also undeliverable",
+                )
+              }
+            }
+          }
+        } catch (error) {
+          logger.debug(
+            { executionId: execution.executionId, error },
+            "[STEP-WORKER-V2] Gemini enrichment failed",
+          )
+        }
+      }
+
+      // 2. Fallback to Hunter.io domain search if no valid email from Gemini
+      if (!newEmail && domain) {
+        try {
+          logger.debug(
+            { executionId: execution.executionId, domain },
+            "[STEP-WORKER-V2] Trying Hunter.io domain search...",
+          )
+          const hunterResult = await searchDomainAllEmails(domain, 5)
+          for (const hunterEmail of hunterResult.emails) {
+            const hunterVerification = await verifyEmail(hunterEmail.value)
+            if (hunterVerification?.result !== "undeliverable") {
+              newEmail = hunterEmail.value
+              logger.info(
+                { executionId: execution.executionId, email: newEmail },
+                "✅ [STEP-WORKER-V2] Found valid email via Hunter.io",
+              )
+              break
+            }
+          }
+        } catch (error) {
+          logger.debug(
+            { executionId: execution.executionId, error },
+            "[STEP-WORKER-V2] Hunter.io domain search failed",
+          )
+        }
+      }
+
+      // 3. Update lead contact and lead table, or delete everything
+      if (newEmail) {
+        // Update lead contact with new email
+        await db
+          .update(leadContacts)
+          .set({ contactValue: newEmail, isVerified: true })
+          .where(eq(leadContacts.id, leadContact.id))
+
+        // Update lead table with enrichment data from Gemini (if available)
+        if (geminiEnrichmentData) {
+          const leadUpdates: Record<string, unknown> = {}
+          if (geminiEnrichmentData.description && !lead.description) {
+            leadUpdates.description = geminiEnrichmentData.description
+          }
+          if (geminiEnrichmentData.industry && !lead.businessType) {
+            leadUpdates.businessType = geminiEnrichmentData.industry
+          }
+          if (Object.keys(leadUpdates).length > 0) {
+            leadUpdates.updatedAt = new Date()
+            await db.update(leads).set(leadUpdates).where(eq(leads.id, execution.leadId))
+            logger.debug(
+              { executionId: execution.executionId, updates: Object.keys(leadUpdates) },
+              "[STEP-WORKER-V2] Updated lead with Gemini enrichment data",
+            )
+          }
+        }
+
+        leadContact.email = newEmail
+        logger.info(
+          { executionId: execution.executionId, newEmail },
+          "✅ [STEP-WORKER-V2] Updated lead with new email, continuing to send",
+        )
+      } else {
+        // No valid email found - delete lead and all related records
+        logger.warn(
+          { executionId: execution.executionId, leadId: execution.leadId },
+          "❌ [STEP-WORKER-V2] No valid email found - deleting lead and cleaning up",
+        )
+
+        // 1. Remove from sequences.selectedLeadIds
+        const sequencesWithLead = await db
+          .select({ id: sequences.id, selectedLeadIds: sequences.selectedLeadIds })
+          .from(sequences)
+          .where(
+            sql`${sequences.selectedLeadIds}::jsonb @> ${JSON.stringify([execution.leadId])}::jsonb`,
+          )
+
+        for (const seq of sequencesWithLead) {
+          const leadIds = JSON.parse(seq.selectedLeadIds || "[]") as string[]
+          const updated = leadIds.filter((id) => id !== execution.leadId)
+          await db
+            .update(sequences)
+            .set({ selectedLeadIds: JSON.stringify(updated), updatedAt: new Date() })
+            .where(eq(sequences.id, seq.id))
+        }
+
+        // 2. Delete enrollment (cascade handles step_executions)
+        await db.delete(sequenceEnrollments).where(eq(sequenceEnrollments.leadId, execution.leadId))
+
+        // 3. Nullify leadId in emails table
+        await db.update(emails).set({ leadId: null }).where(eq(emails.leadId, execution.leadId))
+
+        // 4. Delete lead (cascade handles lead_contacts)
+        await db.delete(leads).where(eq(leads.id, execution.leadId))
+
+        logger.info(
+          { executionId: execution.executionId, leadId: execution.leadId },
+          "✅ [STEP-WORKER-V2] Lead and related records deleted",
+        )
+
+        return {
+          success: false,
+          error: "Email undeliverable, lead deleted",
+        }
+      }
+    } else {
+      logger.debug(
+        {
+          executionId: execution.executionId,
+          email: leadContact.email,
+          verificationStatus: verificationResult?.result || verificationResult?.status,
+        },
+        "✅ [STEP-WORKER-V2] Email verification passed",
+      )
+    }
+
+    // Get industry types for this lead
+    const industries = await db
+      .select({
+        industryName: leadIndustryTypes.industryName,
+      })
+      .from(leadIndustryTypes)
+      .where(eq(leadIndustryTypes.leadId, execution.leadId))
+
+    const industryString = industries.map((i) => i.industryName).join(", ")
+
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        leadCompanyName: lead.companyName,
+        industries: industryString,
+      },
+      "✅ [STEP-WORKER-V2] Found lead info",
+    )
+
+    // ====================================
+    // CHECK FOR EXISTING DRAFT IN EMAILS TABLE
+    // ====================================
+    let personalizedSubject: string
+    let personalizedBodyText: string | null
+    let personalizedBodyHtml: string | null
+    let existingDraftId: string | null = null
+
+    // Step 1: Check for existing draft in emails table
+    const [existingDraft] = await db
+      .select({
+        id: emails.id,
+        subject: emails.subject,
+        bodyText: emails.bodyText,
+        bodyHtml: emails.bodyHtml,
+      })
+      .from(emails)
+      .where(
+        and(
+          eq(emails.sequenceId, execution.sequenceId),
+          eq(emails.stepId, execution.stepId),
+          eq(emails.leadId, execution.leadId),
+          eq(emails.status, "draft"),
+        ),
+      )
+      .limit(1)
+
+    if (existingDraft) {
+      // Use pre-generated draft from emails table
+      personalizedSubject = existingDraft.subject || execution.emailSubject
+      personalizedBodyText = existingDraft.bodyText
+      personalizedBodyHtml = existingDraft.bodyHtml
+      existingDraftId = existingDraft.id
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          draftId: existingDraft.id,
+          sequenceId: execution.sequenceId,
+          stepId: execution.stepId,
+          leadId: execution.leadId,
+        },
+        "📝 [STEP-WORKER-V2] Using existing draft from emails table",
+      )
+    } else {
+      // No draft found - fall back to template variable replacement
+      logger.info(
+        {
+          executionId: execution.executionId,
+          sequenceId: execution.sequenceId,
+          stepId: execution.stepId,
+          leadId: execution.leadId,
+        },
+        "🔄 [STEP-WORKER-V2] No draft found, using template with variable replacement",
+      )
+
+      // Prepare lead context for variable replacement
+      const leadContext = {
+        companyName: lead.companyName || "",
+        contactName: leadContact.contactName || "",
+        contactEmail: leadContact.email || "",
+        industry: industryString || "",
+        businessType: lead.businessType || "",
+        website: lead.websiteUrl || "",
+        description: lead.description || "",
+        address: lead.address || "",
+        country: lead.country || "",
+        city: lead.city || "",
+        state: lead.state || "",
+        foundedYear: lead.foundedYear?.toString() || "",
+        employeeCount: lead.employeeCount || "",
+        leadSource: lead.leadSource || "",
+        leadStatus: lead.leadStatus || "",
+        leadScore: lead.leadScore?.toString() || "",
+      }
+
+      // Replace template variables with actual values
+      personalizedSubject = workflowEmailService.replaceTemplateVariables(
+        execution.emailSubject,
+        leadContext,
+      )
+      personalizedBodyText = execution.emailBodyText
+        ? workflowEmailService.replaceTemplateVariables(execution.emailBodyText, leadContext)
+        : null
+      personalizedBodyHtml = execution.emailBodyHtml
+        ? workflowEmailService.replaceTemplateVariables(execution.emailBodyHtml, leadContext)
+        : null
+
+      logger.debug(
+        {
+          executionId: execution.executionId,
+          originalSubject: execution.emailSubject,
+          personalizedSubject,
+        },
+        "✅ [STEP-WORKER-V2] Personalized email content from template",
+      )
+    }
+
+    // Get email account details (including provider for correct routing)
+    const [emailAccount] = await db
+      .select({
+        emailAddress: userEmailAccounts.emailAddress,
+        displayName: userEmailAccounts.displayName,
+        apiKey: userEmailAccounts.apiKey,
+        provider: userEmailAccounts.provider,
+      })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.id, execution.emailAccountId))
+      .limit(1)
+
+    if (!emailAccount) {
+      logger.error(
+        {
+          executionId: execution.executionId,
+          emailAccountId: execution.emailAccountId,
+        },
+        "❌ [STEP-WORKER-V2] Email account not found",
+      )
+      return {
+        success: false,
+        error: "Email account not found",
+      }
+    }
+
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        fromEmail: emailAccount.emailAddress,
+        displayName: emailAccount.displayName,
+        provider: emailAccount.provider,
+      },
+      "✅ [STEP-WORKER-V2] Found email account",
+    )
+
+    // Use account-specific API key (or Unipile accountId for unipile provider)
+    const apiKey = emailAccount.apiKey
+    if (!apiKey) {
+      logger.error(
+        { executionId: execution.executionId, provider: emailAccount.provider },
+        "❌ [STEP-WORKER-V2] Email account API key/token not configured",
+      )
+      return {
+        success: false,
+        error: "Email account API key/token not configured",
+      }
+    }
+
+    // Get enrollment for threading
+    const [enrollment] = await db
+      .select({
+        firstThreadId: sequenceEnrollments.firstThreadId,
+      })
+      .from(sequenceEnrollments)
+      .where(eq(sequenceEnrollments.id, execution.enrollmentId))
+      .limit(1)
+
+    if (!enrollment) {
+      logger.error(
+        { executionId: execution.executionId, enrollmentId: execution.enrollmentId },
+        "❌ [STEP-WORKER-V2] Enrollment not found",
+      )
+      return {
+        success: false,
+        error: "Enrollment not found",
+      }
+    }
+
+    // Determine if this is the first email in the sequence
+    const isFirstEmail = execution.stepOrder === 1
+    let inReplyTo: string | undefined
+    let references: string[] | undefined
+
+    if (isFirstEmail) {
+      logger.info(
+        {
+          executionId: execution.executionId,
+          stepOrder: execution.stepOrder,
+        },
+        "📧 [STEP-WORKER-V2] First email in sequence - no threading headers",
+      )
+    } else {
+      // Follow-up email: use firstThreadId for threading
+      if (enrollment.firstThreadId) {
+        inReplyTo = enrollment.firstThreadId
+        references = [enrollment.firstThreadId]
+        logger.info(
+          {
+            executionId: execution.executionId,
+            stepOrder: execution.stepOrder,
+            firstThreadId: enrollment.firstThreadId,
+          },
+          "🧵 [STEP-WORKER-V2] Follow-up email - using thread headers",
+        )
+      } else {
+        logger.warn(
+          {
+            executionId: execution.executionId,
+            stepOrder: execution.stepOrder,
+          },
+          "⚠️ [STEP-WORKER-V2] Follow-up email but no firstThreadId found",
+        )
+      }
+    }
+
+    logger.info(
+      {
+        executionId: execution.executionId,
+        from: emailAccount.emailAddress,
+        to: leadContact.email,
+        subject: personalizedSubject,
+        stepOrder: execution.stepOrder,
+        isFirstEmail,
+        hasThreading: !!inReplyTo,
+        usedDraft: !!existingDraftId,
+        provider: emailAccount.provider,
+      },
+      `📤 [STEP-WORKER-V2] Sending email via ${emailAccount.provider}`,
+    )
+
+    // Prepare attachments for SendGrid
+    let sendGridAttachments:
+      | Array<{
+          content: string
+          filename: string
+          type: string
+          disposition: "attachment"
+        }>
+      | undefined
+    if (execution.attachments && execution.attachments.length > 0) {
+      sendGridAttachments = execution.attachments.map((att) => ({
+        content: att.content,
+        filename: att.filename,
+        type: att.type,
+        disposition: "attachment" as const,
+      }))
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          attachmentCount: sendGridAttachments.length,
+        },
+        "📎 [STEP-WORKER-V2] Including attachments in email",
+      )
+    }
+
+    // Send email using EmailService (provider determines routing: sendgrid/nylas/unipile)
+    const sendResult = await emailService.sendEmail({
+      fromEmail: emailAccount.emailAddress,
+      fromName: emailAccount.displayName || emailAccount.emailAddress,
+      toEmail: leadContact.email,
+      subject: personalizedSubject,
+      bodyText: personalizedBodyText || undefined,
+      bodyHtml: personalizedBodyHtml || undefined,
+      inReplyTo,
+      references,
+      attachments: sendGridAttachments,
+      includeSignature: false,
+      userId: execution.userId || undefined,
+      workspaceId: execution.workspaceId,
+      apiKey: apiKey,
+      provider: emailAccount.provider,
+    })
+
+    if (!sendResult.success) {
+      logger.error(
+        {
+          executionId: execution.executionId,
+          error: sendResult.error,
+        },
+        "❌ [STEP-WORKER-V2] Email send failed",
+      )
+      return {
+        success: false,
+        error: sendResult.error || "Failed to send email",
+      }
+    }
+
+    const sendgridMessageId = sendResult.sendgridMessageId || sendResult.nylasMessageId
+    const messageId = sendResult.messageId || sendResult.nylasMessageId // RFC 2822 Message-ID
+    const nylasThreadId = sendResult.nylasThreadId // Nylas thread ID (if sent via Nylas)
+
+    logger.info(
+      {
+        executionId: execution.executionId,
+        messageId,
+        sendgridMessageId,
+        nylasThreadId,
+      },
+      "✅ [STEP-WORKER-V2] Email sent successfully",
+    )
+
+    // Determine the thread ID to use:
+    // - For Nylas: use nylasThreadId from send result
+    // - For SendGrid first email: messageId becomes threadId
+    // - For SendGrid follow-up: use firstThreadId from enrollment
+    const threadId = nylasThreadId || (isFirstEmail ? messageId : enrollment.firstThreadId)
+
+    // If this is the first email, save the thread ID as firstThreadId for follow-up emails
+    if (isFirstEmail && threadId) {
+      await db
+        .update(sequenceEnrollments)
+        .set({ firstThreadId: threadId })
+        .where(eq(sequenceEnrollments.id, execution.enrollmentId))
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          enrollmentId: execution.enrollmentId,
+          firstThreadId: threadId,
+          isNylasThread: !!nylasThreadId,
+        },
+        "🧵 [STEP-WORKER-V2] Saved firstThreadId for enrollment",
+      )
+    }
+
+    let emailRecordId: string
+
+    if (existingDraftId) {
+      // Update existing draft to sent status
+      const updatedEmails = await db
+        .update(emails)
+        .set({
+          status: "sent",
+          sendgridMessageId,
+          messageId,
+          threadId,
+          inReplyTo: inReplyTo || undefined,
+          sentAt: new Date(),
+          updatedAt: new Date(),
+          // Update denormalized fields
+          leadName: lead.companyName || undefined,
+          leadEmail: leadContact.email,
+          sequenceName: execution.sequenceName,
+        })
+        .where(eq(emails.id, existingDraftId))
+        .returning({ id: emails.id })
+
+      const updatedEmail = updatedEmails[0]
+      if (!updatedEmail) {
+        logger.error(
+          { executionId: execution.executionId, draftId: existingDraftId },
+          "❌ [STEP-WORKER-V2] Failed to update draft in database",
+        )
+        return {
+          success: false,
+          error: "Failed to update draft in database",
+        }
+      }
+
+      emailRecordId = updatedEmail.id
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          emailId: emailRecordId,
+          sendgridMessageId,
+          threadId,
+          isFirstEmail,
+        },
+        "✅ [STEP-WORKER-V2] Updated draft to sent in database",
+      )
+    } else {
+      // Create new email record in database
+      const [emailRecord] = await db
+        .insert(emails)
+        .values({
+          workspaceId: execution.workspaceId,
+          userEmailAccountId: execution.emailAccountId,
+          leadId: execution.leadId,
+          sequenceId: execution.sequenceId,
+          stepId: execution.stepId,
+          direction: "outbound",
+          fromEmail: emailAccount.emailAddress,
+          toEmail: leadContact.email,
+          subject: personalizedSubject,
+          bodyText: personalizedBodyText || undefined,
+          bodyHtml: personalizedBodyHtml || undefined,
+          status: "sent",
+          sendgridMessageId,
+          messageId,
+          threadId,
+          inReplyTo: inReplyTo || undefined,
+          sentAt: new Date(),
+          // Denormalized fields for performance
+          leadName: lead.companyName || undefined,
+          leadEmail: leadContact.email,
+          sequenceName: execution.sequenceName,
+        })
+        .returning({ id: emails.id })
+
+      if (!emailRecord) {
+        logger.error(
+          { executionId: execution.executionId, sendgridMessageId },
+          "❌ [STEP-WORKER-V2] Failed to create email record in database",
+        )
+        return {
+          success: false,
+          error: "Failed to create email record in database",
+        }
+      }
+
+      emailRecordId = emailRecord.id
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          emailId: emailRecordId,
+          sendgridMessageId,
+          threadId,
+          isFirstEmail,
+        },
+        "✅ [STEP-WORKER-V2] Created email record in database",
+      )
+    }
+
+    return {
+      success: true,
+      messageId: sendgridMessageId,
+      emailRecordId,
+    }
+  } catch (error: unknown) {
+    logger.error(
+      {
+        err: error,
+        leadId: execution.leadId,
+        executionId: execution.executionId,
+      },
+      "💥 [STEP-WORKER-V2] Error sending sequence email",
+    )
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+// Track if a batch is currently being processed to prevent overlapping
+let isProcessingBatch = false
+
+async function _processSequenceEmails() {
+  const startTime = Date.now()
+  const traceId = generateTraceId()
+
+  // Prevent overlapping batch processing (race condition prevention)
+  if (isProcessingBatch) {
+    logger.debug({ traceId }, "[email-worker] Previous batch still processing, skipping this cycle")
+    return
+  }
+
+  isProcessingBatch = true
+
+  try {
+    // CRITICAL FIX: Use atomic claim to prevent race conditions
+    // This atomically:
+    // 1. Finds pending executions with FOR UPDATE SKIP LOCKED
+    // 2. Updates their status to 'processing' in a single transaction
+    // 3. Returns only the successfully claimed executions
+    //
+    // Batch size: 100 (optimized for)
+    // - Hunter.io rate limits (100 × 2s avg = ~3 min processing time)
+    // - Server crash recovery (100 max in 'processing' state)
+    // - Real-time monitoring visibility
+    // - Memory usage optimization
+    const claimedExecutions = await sequenceService.claimPendingStepExecutions(100)
+
+    if (claimedExecutions.length === 0) {
+      return
+    }
+
+    // Single log for batch start - no individual execution details
+    emailWorkerLogger.batchStart(traceId, claimedExecutions.length)
+
+    let successCount = 0
+    let failureCount = 0
+
+    // Parallel processing with concurrency limit (Hunter.io rate limit: 10 req/sec)
+    // Using p-limit for controlled concurrency instead of sequential for loop
+    const limit = pLimit(PARALLEL_CONCURRENCY)
+
+    logger.info(
+      {
+        traceId,
+        totalExecutions: claimedExecutions.length,
+        concurrency: PARALLEL_CONCURRENCY,
+      },
+      "[email-worker] Starting parallel batch processing",
+    )
+
+    // Process executions in parallel with concurrency limit
+    const results = await Promise.allSettled(
+      claimedExecutions.map((execution) =>
+        limit(async () => {
+          // Individual execution logged at debug level only
+          logger.debug(
+            {
+              traceId,
+              component: "email-worker",
+              executionId: execution.executionId,
+              leadCompanyName: execution.leadCompanyName,
+              stepOrder: execution.stepOrder,
+            },
+            "[email-worker] Processing execution",
+          )
+
+          // Send email (checks for draft first, falls back to template)
+          const result = await sendSequenceEmail(execution)
+
+          if (result.success) {
+            // Update execution status to 'sent' with email record UUID
+            await sequenceService.updateStepExecutionStatus(
+              execution.executionId,
+              "sent",
+              undefined,
+              result.emailRecordId,
+            )
+
+            // Update enrollment progress
+            await sequenceService.updateEnrollmentProgress(
+              execution.enrollmentId,
+              execution.stepOrder,
+            )
+
+            // Update lead status to 'contacted' (debug level - not critical)
+            try {
+              await leadService.updateLead(execution.leadId, {
+                leadStatus: "contacted",
+                lastContactedAt: new Date(),
+              })
+            } catch (leadUpdateError) {
+              logger.debug(
+                {
+                  traceId,
+                  leadId: execution.leadId,
+                  error: leadUpdateError,
+                },
+                "[email-worker] Failed to update lead status",
+              )
+            }
+
+            // Success logged at debug level - summary will be at info level
+            emailWorkerLogger.emailSent(
+              {
+                traceId,
+                enrollmentId: execution.enrollmentId,
+                sequenceId: execution.sequenceId,
+                stepOrder: execution.stepOrder,
+                leadCompany: execution.leadCompanyName || undefined,
+              },
+              result.messageId || "",
+            )
+
+            return { success: true as const, execution }
+          } else {
+            // Update execution status to 'failed'
+            await sequenceService.updateStepExecutionStatus(
+              execution.executionId,
+              "failed",
+              result.error,
+            )
+
+            // Check if enrollment should be completed (only if this was the last step)
+            // Unlike success case, we don't update lastEmailSentAt/firstEmailSentAt
+            await sequenceService.checkAndCompleteEnrollmentIfLastStep(
+              execution.enrollmentId,
+              execution.stepOrder,
+            )
+
+            // Failures logged at warn level
+            emailWorkerLogger.emailFailed(
+              {
+                traceId,
+                enrollmentId: execution.enrollmentId,
+                sequenceId: execution.sequenceId,
+                stepOrder: execution.stepOrder,
+                leadCompany: execution.leadCompanyName || undefined,
+              },
+              result.error || "Unknown error",
+            )
+
+            return { success: false as const, execution, error: result.error }
+          }
+        }),
+      ),
+    )
+
+    // Count successes and failures from Promise.allSettled results
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        if (result.value.success) {
+          successCount++
+        } else {
+          failureCount++
+        }
+      } else {
+        // Promise rejected (unexpected error)
+        failureCount++
+        logger.error(
+          { traceId, error: result.reason },
+          "[email-worker] Unexpected error in parallel execution",
+        )
+      }
+    }
+
+    // Single summary log at the end
+    const durationMs = Date.now() - startTime
+    emailWorkerLogger.batchComplete(traceId, {
+      total: claimedExecutions.length,
+      sent: successCount,
+      failed: failureCount,
+      durationMs,
+    })
+  } catch (error) {
+    logger.error({ traceId, err: error }, "[email-worker] Error in batch processing")
+  } finally {
+    // Always release the lock, even if an error occurred
+    isProcessingBatch = false
+  }
+}
+
+// Run worker every minute
+export async function startEmailSequenceWorker() {
+  logger.info("✅ [STEP-WORKER-V2] Email sequence worker V2 started")
+
+  // Recover any stuck 'processing' executions from previous crashes
+  // On single-instance startup, ALL processing executions are considered stuck
+  try {
+    const recovered = await sequenceService.recoverStuckProcessingExecutions()
+    if (recovered > 0) {
+      logger.info(
+        { recoveredCount: recovered },
+        "✅ [STEP-WORKER-V2] Recovered stuck executions on startup",
+      )
+    }
+  } catch (error) {
+    logger.error({ err: error }, "❌ [STEP-WORKER-V2] Failed to recover stuck executions")
+  }
+
+  // Run immediately
+  _processSequenceEmails()
+
+  // Then run every minute
+  const intervalId = setInterval(_processSequenceEmails, 60 * 1000) // 60 seconds
+
+  // Return function to stop worker
+  return () => {
+    logger.info("Stopping email sequence worker V2")
+    clearInterval(intervalId)
+  }
+}
+
+export const processSequenceEmails = _processSequenceEmails

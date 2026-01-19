@@ -33,7 +33,9 @@ const SettingsPage = lazy(() => import("../pages/settings"))
 
 // 부가 페이지 - Lazy Loading
 const CustomerGroupsPage = lazy(() => import("../pages/customer-groups"))
+const EmailSendTestPage = lazy(() => import("../pages/email-send-test"))
 const EmailTemplatesPage = lazy(() => import("../pages/email-templates"))
+const SequenceDesigner = lazy(() => import("../pages/sequences/designer/SequenceDesigner"))
 const UsersPage = lazy(() => import("../pages/users/UsersPage"))
 const WorkspacesPage = lazy(() => import("../pages/workspaces"))
 const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestPage"))
@@ -361,6 +363,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "sequences/:id/designer",
+            element: (
+              <RouteGuard>
+                <SequenceDesigner />
+              </RouteGuard>
+            ),
+          },
+          {
             path: "email-templates",
             element: (
               <RouteGuard>
@@ -405,6 +415,14 @@ export const router = createBrowserRouter([
             element: (
               <RouteGuard>
                 <ActivityLogsPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "email-send-test",
+            element: (
+              <RouteGuard>
+                <EmailSendTestPage />
               </RouteGuard>
             ),
           },

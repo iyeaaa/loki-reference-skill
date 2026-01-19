@@ -66,12 +66,25 @@ import { visitorProtectedRoutes, visitorPublicRoutes } from "./routes/visitor.ro
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
 import { websetRoutes } from "./routes/websets.routes"
-// NOTE: workflow routes removed - tables were removed
+import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
+import { workflowExecutionRoutes } from "./routes/workflow-execution.routes"
 import { adminWorkspaceRoutes, workspaceRoutes } from "./routes/workspaces.routes"
 import logger from "./utils/logger"
+// NOTE: 60-second email sequence worker removed - replaced by BullMQ worker
+// import { startEmailSequenceWorker } from "./workers/email-sequence-worker-v2"
+import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
+import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 
-// NOTE: All email sequence processing is handled by BullMQ worker (src/worker.ts)
-// See: src/workers/bullmq/sequence-email.worker.ts
+// Start workers
+// NOTE: Email sequence worker is now handled by BullMQ worker process (src/worker.ts)
+// Only workflow and scheduled email workers run in the API server process
+if (!isDevelopment) {
+  // Email sequence emails are now processed by BullMQ worker (SequenceEmailWorker)
+  // See: src/workers/bullmq/sequence-email.worker.ts
+  startWorkflowExecutionWorker()
+  startScheduledEmailWorker()
+  logger.info("[Worker] workflow, scheduled-email started (sequence emails handled by BullMQ)")
+}
 
 const app = new Elysia()
   // Core plugins (order matters)
@@ -206,7 +219,8 @@ const app = new Elysia()
   .use(adminLeadRoutes)
   .use(sequenceRoutes)
   .use(adminSequenceRoutes)
-  // NOTE: workflow routes removed - tables were removed
+  .use(workflowEmailRoutes)
+  .use(workflowExecutionRoutes)
   .use(activityLogRoutes)
   .use(leadImportRoutes)
   .use(openaiApiKeysRoutes)

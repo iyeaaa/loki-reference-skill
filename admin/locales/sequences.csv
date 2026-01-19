@@ -901,6 +901,33 @@ bulkAction.status.draft,초안,Draft
 bulkAction.status.noResponse,응답 없음,No Response
 bulkAction.status.paused,일시정지,Paused
 bulkAction.statusToChange,변경할 상태,Status to Change
+designer.commentNode.cancel,취소,Cancel
+designer.commentNode.delete,삭제,Delete
+designer.commentNode.edit,편집,Edit
+designer.commentNode.placeholder,메모를 입력하세요...,Enter memo...
+designer.commentNode.save,저장,Save
+designer.commentNode.writeMemo,메모 작성,Write Memo
+designer.startNode.addEmailDraft,이메일 초안 추가,Add Email Draft
+designer.startNode.addNode,노드 추가,Add Node
+designer.startNode.description,워크플로우 시작점,Workflow Start Point
+designer.startNode.start,시작,Start
+designer.timerNode.addEmailDraft,이메일 초안 추가,Add Email Draft
+designer.timerNode.addNode,노드 추가,Add Node
+designer.timerNode.cancel,취소,Cancel
+designer.timerNode.days,일,days
+designer.timerNode.description,답장이 없으면 다음 노드 실행,Execute next node if no reply
+designer.timerNode.edit,편집,Edit
+designer.timerNode.enterInDays,일 단위로 입력,Enter in days
+designer.timerNode.noReplyDescription,이 시간 동안 답장이 없으면 다음 노드가 실행됩니다,Next node will execute if no reply during this time
+designer.timerNode.realtimeStats,실시간 통계,Real-time Statistics
+designer.timerNode.replied,답장,Replied
+designer.timerNode.save,저장,Save
+designer.timerNode.sent,발송,Sent
+designer.timerNode.timer,타이머,Timer
+designer.timerNode.timerSettings,타이머 설정,Timer Settings
+designer.timerNode.waitTime,대기 시간,Wait Time
+designer.timerNode.waitTimeDays,대기 시간 (일),Wait Time (days)
+designer.timerNode.waiting,대기,Waiting
 table.column.timeline,타임라인,Timeline
 table.pagination.goTo,페이지 이동,Go to Page
 table.timeline.future,예정,Future

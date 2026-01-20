@@ -140,7 +140,7 @@ function TrialRedirect() {
 }
 
 export const router = createBrowserRouter([
-  // Public Payment Page (No auth required - for PG inspection)
+  // Public Payment Page (No auth required)
   {
     path: "/payment",
     element: (

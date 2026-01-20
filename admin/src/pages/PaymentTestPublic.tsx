@@ -1,12 +1,12 @@
 /**
- * Public Payment Test Page
+ * Public Payment Page
  *
- * PG 심사용 공개 결제 테스트 페이지
+ * 공개 결제 페이지
  * - 로그인 없이 접근 가능
  * - TossPayments 정기결제(빌링) SDK 사용
  * - 빌링키 발급 → 자동결제 방식
  *
- * 경로: /payment-test
+ * 경로: /payment
  */
 
 import { useMutation } from "@tanstack/react-query"
@@ -405,8 +405,8 @@ export default function PaymentTestPublic() {
         method: "CARD",
         successUrl: `${window.location.origin}/payment`,
         failUrl: `${window.location.origin}/payment`,
-        customerEmail: "pg-test@example.com",
-        customerName: "PG심사테스트",
+        customerEmail: "customer@example.com",
+        customerName: "고객",
       })
     } catch (err) {
       console.error("[Billing] Error:", err)
@@ -486,11 +486,8 @@ export default function PaymentTestPublic() {
             <span className="text-blue-400">|</span>
             <span className="text-blue-600 text-sm">해외 바이어 발굴 · 글로벌 세일즈 자동화</span>
           </div>
-          <h1 className="mb-2 font-bold text-2xl">PG 정기결제 테스트</h1>
-          <p className="text-gray-500">토스페이먼츠 빌링(자동결제) SDK 심사용 테스트 페이지</p>
-          <Badge className="mt-3" variant="outline">
-            테스트 모드
-          </Badge>
+          <h1 className="mb-2 font-bold text-2xl">정기결제 등록</h1>
+          <p className="text-gray-500">Rinda AI 요금제 결제 페이지</p>
         </div>
 
         <Tabs className="space-y-6" defaultValue="billing">
@@ -842,7 +839,7 @@ export default function PaymentTestPublic() {
                         )}
                         <Button className="w-full" onClick={handleReset} variant="outline">
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          다시 테스트
+                          다시 시도
                         </Button>
                       </div>
                     </div>

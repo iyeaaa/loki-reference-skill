@@ -17,16 +17,18 @@ import type {
 // ============================================================================
 
 /**
- * 바이어 인텔리전스 생성 프롬프트
+ * 바이어 인텔리전스 생성 프롬프트 (제한된 정보 기반 바이어 매칭 추론 프레임워크)
  */
 export function buildIntelligencePrompt(input: BuyerSearchInput): string {
   const industryHint = INDUSTRY_HINTS[input.industry]
   const countries = input.country.map((c) => COUNTRY_NAMES[c]).join(", ")
   const companySizeLabel = COMPANY_SIZE_LABELS[input.companySize]
 
-  return `You are a B2B/B2C export buyer matching expert.
+  return `You are a B2B/B2C export buyer matching expert using a limited information-based inference framework.
 
-[Seller Info]
+📋 STEP 0: Information Collection & Classification
+
+**Seller Basic Information:**
 - Company Name: ${input.companyName}
 - Company Description: ${input.companyDescription}
 - Industry: ${input.industry} (${industryHint})
@@ -40,73 +42,120 @@ export function buildIntelligencePrompt(input: BuyerSearchInput): string {
   }
 - Target Countries: ${countries}
 
-Analyze the types of buyers most likely to purchase or distribute the products/services of the company above.
+🔍 STEP 1: Primary Inference
+
+Analyze the seller based on the provided information:
+
+**1.1 Company Scale Estimation**
+- Infer actual business scale from: employee count, office/factory size, product range, market presence
+- Classification: Startup / Small / Medium / Large / Enterprise
+
+**1.2 Business Classification**
+[Stage 1] Major Category
+□ B2C Consumer Goods
+□ B2B Industrial Goods
+□ B2B2C (Both possible)
+□ Service/Platform
+
+[Stage 2] Sub-category
+Identify specific industry (e.g., Food/Beverage, Beauty/Cosmetics, Fashion, Electronics, etc.)
+
+[Stage 3] Price Positioning
+- Budget (value-focused)
+- Mid-range (reasonable premium)
+- Premium (luxury/artisan)
+
+**1.3 International Experience**
+- Evidence: overseas partners, exhibition participation, export contracts, international awards
+- Level: None / Initial / Active
+
+**1.4 Business Model**
+- Manufacturing (own production)
+- OEM/ODM specialist
+- Distribution/Trading
+- Brand company
+- Mixed model
+
+🎯 STEP 2: Buyer Profile Derivation
+
+**Question 1: What buyer scale fits our company scale?**
+
+Our Scale → Suitable Buyer Scale (with reasoning)
+- Small companies → Small to medium buyers (flexible terms, fast decisions)
+- Medium companies → Medium to large buyers (balanced conditions, growth partnership)
+- Large companies → Large to global buyers (stable volume, global network)
+
+**Exceptions to consider:**
+- IF small + innovative product + patents THEN large buyers possible
+- IF medium + OEM specialist + low cost THEN large corporate PL supply possible
+
+**Question 2: What countries fit our products?**
+
+Consider:
+- Certification-based filtering (FDA → US, CE → EU, Halal → Middle East)
+- Product characteristics matching (Premium food → Japan/Singapore, Budget goods → Southeast Asia/Latin America)
+- Logistics & entry barriers (Experience = None → nearby countries, Experience = High → major markets)
+
+**Question 3: What buyer business types are suitable?**
+
+IF we = Manufacturing (OEM/ODM capable)
+THEN buyers = Retailers with private brands, Distributors developing PL, Brand companies outsourcing production
+
+IF we = Brand company (own products only)
+THEN buyers = Distributors, Retailers (online/offline), Trading companies
+LIMIT: Avoid buyers with manufacturing (potential competitors)
+
+IF we = Distribution (handling other brands)
+THEN buyers = End retailers, Secondary wholesalers
+LIMIT: Avoid buyers handling same brands (conflict)
+
+🎯 STEP 4: Final Buyer Search ICP Priority Guide
+
+Based on the analysis above, generate buyer personas and search strategy.
 
 Respond in the following JSON format:
 
 {
-  "productSummary": "Summary of analyzed key product/service (1-2 sentences in Korean)",
-  
+  "productSummary": "Analyzed key product/service summary (1-2 sentences in Korean)",
+
   "buyerPersonas": [
     {
-      "type": "Buyer type name (English, e.g. Industrial Equipment Distributor)",
-      "typeKo": "Buyer type name (Korean, e.g. 산업용 장비 유통사)",
-      "description": "Why this type is a suitable buyer (2-3 sentences in Korean)",
-      "decisionMakers": ["Purchasing Manager", "CEO", "Director of Operations"],
+      "type": "Buyer type name (English)",
+      "typeKo": "Buyer type name (Korean)",
+      "description": "Why suitable (2-3 sentences in Korean)",
+      "decisionMakers": ["Job titles"],
       "targetCompanySize": ["startup", "small"],
       "searchKeywords": {
-        "en": ["keyword1", "keyword2", "keyword3"],
+        "en": ["keyword1", "keyword2"],
         "local": {
-          "Japan": ["キーワード1", "キーワード2"],
-          "China": ["关键词1", "关键词2"]
+          "Japan": ["keyword1", "keyword2"]
         }
       }
     }
   ],
-  
+
   "industryFilters": {
     "keywords": ["industry keyword1", "keyword2"],
     "excludeKeywords": ["competitor keyword", "unrelated keyword"]
   },
-  
+
   "searchStrategy": {
     "priorityPersonas": ["Highest priority persona types"],
-    "notes": "Notes on country-specific details or search strategy (in Korean)"
+    "notes": "Search strategy notes (in Korean)"
   }
 }
 
-Requirements:
-- Generate EXACTLY 5 personas with company size targeting strategy:
-  
-  **Persona 1**: Similar-sized companies + Very specific/niche
-    - targetCompanySize: [seller's size, one adjacent size]
-    - Type: Very specific niche relevant to seller's product (High relevance, lower volume)
-    - Example for "startup" seller: ["startup", "small"] + "Organic Vegan Lip Balm Distributor"
-    
-  **Persona 2**: Similar-sized companies + Specific
-    - targetCompanySize: [seller's size, two adjacent sizes]
-    - Type: Specific but slightly broader (High relevance, medium volume)
-    - Example for "startup" seller: ["startup", "small", "medium"] + "Natural Cosmetics Distributor"
-    
-  **Persona 3**: Flexible size + Medium scope
-    - targetCompanySize: [all sizes except extremely large if seller is small]
-    - Type: Medium scope, good relevance (Good relevance, medium volume)
-    - Example for "startup" seller: ["startup", "small", "medium", "large"] + "Cosmetics Wholesaler"
-    
-  **Persona 4**: All sizes + Broader scope
-    - targetCompanySize: ["startup", "small", "medium", "large", "enterprise"]
-    - Type: Broader industry category (Moderate relevance, high volume)
-    - Example: "Beauty Products Distributor"
-    
-  **Persona 5**: All sizes + Very broad
-    - targetCompanySize: ["startup", "small", "medium", "large", "enterprise"]
-    - Type: Very broad, catch-all (Lower relevance, highest volume)
-    - Example: "General Consumer Goods Importer"
-
-- If target is B2B, focus on distributors/wholesalers/manufacturers. If B2C, focus on retailers/e-commerce.
-- In 'searchKeywords.local', include only local language keywords for the target countries.
-  (Japan: Japanese, China: Chinese, Southeast Asia: English, Europe: English, Middle East: English, USA: English)
-- Output only JSON, no other text.`
+**Critical Instructions:**
+- Generate EXACTLY 5 buyer personas following the size targeting strategy (Persona 1: specific+similar size → Persona 5: broad+all sizes)
+- For each persona:
+  * Persona 1: Most specific + similar size (high relevance, lower volume)
+  * Persona 2: Specific + slightly broader size range
+  * Persona 3: Medium scope + flexible size
+  * Persona 4: Broader category + all sizes
+  * Persona 5: Very broad catch-all + all sizes
+- Focus on RESELLERS/REDISTRIBUTORS, not end-users (except for bulk buyers)
+- Include local language keywords for target countries
+- Output ONLY valid JSON with no markdown, no explanation, no extra text`
 }
 
 // ============================================================================

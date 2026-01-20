@@ -518,10 +518,19 @@ ${sequenceSection}
 CRITICAL RULES:
 1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
 2. VARIABLES: Use {{company_name}} for recipient company. Use appropriate greeting for target language (no contact name).
-3. STRUCTURE:
-   - Hook (13 words): Personalized opener about THEM
-   - Bridge: Connect their situation to value (NO fabricated stats/numbers)
-   - Ask: One simple question, low-friction CTA
+3. STRUCTURE (8-12 sentences in 4 paragraphs):
+   - Opening (2-3) sentences): Personalized greeting and compelling opener about THEM
+   - Problem/Context (2-3 sentences): Show understanding of their challenges or industry situation
+   - Value Proposition (2-3 sentences): Explain how you can help with specific value
+   - Clear Ask (2-3 sentence): One simple question or low-friction CTA
+   
+4. FORMATTING: Use \\n\\n between each paragraph for clear readability
+
+WRITING STYLE:
+✅ Professional yet conversational tone
+✅ Specific and personalized details
+✅ Clear paragraph breaks with \\n\\n
+✅ Concise but substantive content
 
 AVOID:
 ❌ "I hope this finds you well" / generic openers
@@ -543,14 +552,16 @@ OUTPUT (JSON only):
 {
   "language": "en",
   "subject": "concise subject with {{company_name}}",
-  "body": "Hook here.\\n\\nBridge here.\\n\\nAsk here?"
+  "body": "Opening paragraph.\\n\\nProblem paragraph.\\n\\nValue paragraph.\\n\\nAsk?"
 }`
 
-        const userMessage = `Write a cold email for prospects in "${country}".
+        const userMessage = `Write a concise cold email for prospects in "${country}".
 
 Requirements: ${config.userPrompt}
 
 Key points:
+- Write 5-7 sentences total in 4 clear paragraphs
+- Use \\n\\n between paragraphs for readability
 - Use {{company_name}} variable
 - Use appropriate greeting for "${country}" (${isEnglishTarget ? 'e.g., "Hi there," or "Hello,"' : "use natural greeting in target language"})
 - No signature
@@ -750,10 +761,19 @@ ${sequenceSection}
 CRITICAL RULES:
 1. LANGUAGE: ${targetLanguageInstruction} NO mixing languages (e.g., no Korean in English emails).
 2. VARIABLES: Use {{company_name}} for recipient company. Use appropriate greeting for target language (no contact name).
-3. STRUCTURE:
-   - Hook (13 words): Personalized opener about THEM
-   - Bridge: Connect their situation to value (NO fabricated stats/numbers)
-   - Ask: One simple question, low-friction CTA
+3. STRUCTURE (5-7 sentences in 4 paragraphs):
+   - Opening (1-2 sentences): Personalized greeting and compelling opener about THEM
+   - Problem/Context (1-2 sentences): Show understanding of their challenges or industry situation
+   - Value Proposition (1-2 sentences): Explain how you can help with specific value
+   - Clear Ask (1 sentence): One simple question or low-friction CTA
+   
+4. FORMATTING: Use \\n\\n between each paragraph for clear readability
+
+WRITING STYLE:
+✅ Professional yet conversational tone
+✅ Specific and personalized details
+✅ Clear paragraph breaks with \\n\\n
+✅ Concise but substantive content
 
 AVOID:
 ❌ "I hope this finds you well" / generic openers
@@ -775,14 +795,16 @@ OUTPUT (JSON only):
 {
   "language": "en",
   "subject": "concise subject with {{company_name}}",
-  "body": "Hook here.\\n\\nBridge here.\\n\\nAsk here?"
+  "body": "Opening paragraph.\\n\\nProblem paragraph.\\n\\nValue paragraph.\\n\\nAsk?"
 }`
 
-      const userMessage = `Write a cold email for prospects in "${country}".
+      const userMessage = `Write a concise cold email for prospects in "${country}".
 
 Requirements: ${userPrompt}
 
 Key points:
+- Write 5-7 sentences total in 4 clear paragraphs
+- Use \\n\\n between paragraphs for readability
 - Use {{company_name}} variable
 - Use appropriate greeting for "${country}" (${isEnglishTarget ? 'e.g., "Hi there," or "Hello,"' : "use natural greeting in target language"})
 - No signature

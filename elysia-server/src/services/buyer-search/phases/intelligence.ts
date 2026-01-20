@@ -10,7 +10,7 @@ import { buildIntelligencePrompt } from "../prompts"
 import type { BuyerIntelligence, BuyerSearchInput, ProgressEvent } from "../types"
 
 const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-3-flash-preview",
+  model: "gemini-3-pro-preview",
   temperature: 0.7,
   apiKey: config.gemini.apiKey,
 })
@@ -39,7 +39,7 @@ function parseIntelligenceResponse(response: string): BuyerIntelligence | null {
     const jsonStr = cleaned.substring(startIdx, endIdx + 1)
     const parsed = JSON.parse(jsonStr) as BuyerIntelligence
 
-    // 기본 검증
+    // 기본 검증 (필수 필드만 체크, 새로 추가된 필드는 선택적)
     if (
       !parsed.productSummary ||
       !parsed.buyerPersonas ||
@@ -49,6 +49,7 @@ function parseIntelligenceResponse(response: string): BuyerIntelligence | null {
       return null
     }
 
+    // 새로운 필드들은 존재하면 그대로 사용, 없으면 undefined (타입에 맞게)
     return parsed
   } catch (error) {
     logger.error({ error }, "[Intelligence] JSON 파싱 실패")

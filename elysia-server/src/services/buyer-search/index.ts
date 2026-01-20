@@ -10,6 +10,7 @@ import { enrichWithEmails } from "./phases/enrichment"
 import { selectFinal30 } from "./phases/finalizing"
 import { generateBuyerIntelligence } from "./phases/intelligence"
 import { scoreAndRankCompanies } from "./phases/scoring"
+import { searchWithGemini } from "./phases/search-gemini"
 import { searchWithPerplexity } from "./phases/search-perplexity"
 import type { Buyer, BuyerSearchInput, BuyerSearchResult, ProgressEvent } from "./types"
 
@@ -67,126 +68,61 @@ export async function searchBuyers(
     // ========================================================================
     const countryText = input.country.join(", ")
 
-    // 2A: Perplexity (15% → 30%)
+    // 2A & 2B: Perplexity + Gemini 병렬 검색 (15% → 35%)
     onProgress?.({
       phase: "search_perplexity",
       progress: PHASE_PROGRESS_RANGES.search_perplexity.start,
-      message: "Searching buyer databases and web...",
-      messageKr: "바이어 DB와 웹에서 검색 중...",
+      message: "Searching with AI engines (Perplexity + Gemini)...",
+      messageKr: "AI 검색 엔진으로 검색 중 (Perplexity + Gemini)...",
       reasoning: {
-        step: "Searching buyer databases and web...",
-        stepKr: "바이어 DB와 웹에서 검색 중...",
+        step: "Starting parallel AI search...",
+        stepKr: "AI 병렬 검색 시작 중...",
         details: countryText,
         detailsKr: `${countryText} 시장`,
       },
     })
 
+    // 병렬 실행
     const perplexityPromise = searchWithPerplexity(intelligence, input.country)
+    const geminiPromise = searchWithGemini(intelligence, input.country)
+
+    // 다른 검색 소스들 (임시 비활성화)
+    const apolloPromise = Promise.resolve([])
+    const serperPromise = Promise.resolve([])
+    const placesPromise = Promise.resolve([])
+
+    // 병렬 검색 완료 대기
+    const [perplexityResults, geminiResults, apolloResults, serperResults, placesResults] =
+      await Promise.all([
+        perplexityPromise,
+        geminiPromise,
+        apolloPromise,
+        serperPromise,
+        placesPromise,
+      ])
 
     onProgress?.({
-      phase: "search_perplexity",
-      progress: PHASE_PROGRESS_RANGES.search_perplexity.end,
-      message: "Searching buyer databases and web complete",
-      messageKr: "바이어 DB와 웹에서 검색을 완료했어요",
+      phase: "search_gemini",
+      progress: PHASE_PROGRESS_RANGES.search_gemini.end,
+      message: "AI search complete",
+      messageKr: "AI 검색을 완료했어요",
       reasoning: {
-        step: "Searching buyer databases and web complete",
-        stepKr: "바이어 DB와 웹에서 검색을 완료했어요",
+        step: "AI search complete",
+        stepKr: "AI 검색을 완료했어요",
+        details: `Found ${perplexityResults.length + geminiResults.length} companies`,
+        detailsKr: `${perplexityResults.length + geminiResults.length}개 회사 발견`,
       },
     })
 
-    // 2B: Apollo (30% → 45%) - 임시 비활성화
-    // onProgress?.({
-    //   phase: "search_apollo",
-    //   progress: PHASE_PROGRESS_RANGES.search_apollo.start,
-    //   message: "Searching B2B databases...",
-    //   messageKr: "B2B 데이터베이스 검색 중...",
-    //   reasoning: {
-    //     step: "Searching B2B databases...",
-    //     stepKr: "B2B 데이터베이스 검색 중...",
-    //   },
-    // })
-
-    // TODO: API 키 설정 후 활성화
-    // const apolloPromise = searchWithApollo(intelligence, input.country, input.target)
-    const apolloPromise = Promise.resolve([])
-
-    // onProgress?.({
-    //   phase: "search_apollo",
-    //   progress: PHASE_PROGRESS_RANGES.search_apollo.end,
-    //   message: "B2B database search complete",
-    //   messageKr: "B2B 데이터베이스 검색 완료",
-    //   reasoning: {
-    //     step: "B2B database search complete",
-    //     stepKr: "B2B 데이터베이스 검색 완료",
-    //   },
-    // })
-
     // 2C: Serper (45% → 55%) - 임시 비활성화
-    // onProgress?.({
-    //   phase: "search_serper",
-    //   progress: PHASE_PROGRESS_RANGES.search_serper.start,
-    //   message: "Additional web search...",
-    //   messageKr: "추가 웹 검색 중...",
-    //   reasoning: {
-    //     step: "Additional web search...",
-    //     stepKr: "추가 웹 검색 중...",
-    //   },
-    // })
 
-    // TODO: API 키 설정 후 활성화
-    // const serperPromise = searchWithSerper(intelligence, input.country)
-    const serperPromise = Promise.resolve([])
-
-    // onProgress?.({
-    //   phase: "search_serper",
-    //   progress: PHASE_PROGRESS_RANGES.search_serper.end,
-    //   message: "Additional search complete",
-    //   messageKr: "추가 검색 완료",
-    //   reasoning: {
-    //     step: "Additional search complete",
-    //     stepKr: "추가 검색 완료",
-    //   },
-    // })
-
-    // 2D: Google Places (55% → 65%) - 임시 비활성화
-    // onProgress?.({
-    //   phase: "search_places",
-    //   progress: PHASE_PROGRESS_RANGES.search_places.start,
-    //   message: "Searching local businesses...",
-    //   messageKr: "로컬 비즈니스 검색 중...",
-    //   reasoning: {
-    //     step: "Searching local businesses...",
-    //     stepKr: "로컬 비즈니스 검색 중...",
-    //   },
-    // })
-
-    // TODO: API 키 설정 후 활성화
-    // let placesPromise = Promise.resolve([])
-    // if (shouldUseGooglePlaces(input.target, input.industry)) {
-    //   placesPromise = searchWithGooglePlaces(intelligence, input.country, input.industry)
-    // }
-    const placesPromise = Promise.resolve([])
-
-    // onProgress?.({
-    //   phase: "search_places",
-    //   progress: PHASE_PROGRESS_RANGES.search_places.end,
-    //   message: "Local business search complete",
-    //   messageKr: "로컬 비즈니스 검색 완료",
-    //   reasoning: {
-    //     step: "Local business search complete",
-    //     stepKr: "로컬 비즈니스 검색 완료",
-    //   },
-    // })
-
-    // 모든 검색 완료 대기
-    const [perplexityResults, apolloResults, serperResults, placesResults] = await Promise.all([
-      perplexityPromise,
-      apolloPromise,
-      serperPromise,
-      placesPromise,
-    ])
-
-    const rawPool = [...perplexityResults, ...apolloResults, ...serperResults, ...placesResults]
+    const rawPool = [
+      ...perplexityResults,
+      ...geminiResults,
+      ...apolloResults,
+      ...serperResults,
+      ...placesResults,
+    ]
 
     logger.info(`[BuyerSearch] 원시 검색 결과: ${rawPool.length}개`)
 
@@ -367,7 +303,7 @@ export async function searchBuyers(
         totalSearched: rawPool.length,
         totalWithEmail: enrichedPool.length,
         searchTimeSeconds: Math.round(searchTimeSeconds * 10) / 10,
-        sources: ["perplexity", "apollo", "serper", "places"],
+        sources: ["perplexity", "gemini", "apollo", "serper", "places"],
       },
     }
 

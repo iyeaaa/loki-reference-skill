@@ -62,7 +62,7 @@ export async function searchWithPerplexity(
             idealCustomerTypes,
             country: countryName,
             excludeTypes,
-            count: 15, // 페르소나당 15개 목표
+            count: 9, // 페르소나당 9개 목표 (15 x 0.6, Gemini와 병렬)
             targetCompanySize: persona.targetCompanySize, // 페르소나별 타겟 규모 전달
           })
 
@@ -102,7 +102,7 @@ export async function searchWithPerplexity(
   // Fallback Logic: 결과가 부족할 경우 포괄적인 검색 수행
   // ========================================================================
   const uniqueCount = new Set(allResults.map((c) => c.website)).size
-  if (uniqueCount < 40) {
+  if (uniqueCount < 30) {
     logger.info(`[Perplexity] 결과 부족 (${uniqueCount}개), 포괄적 검색(Fallback) 실행...`)
 
     const fallbackPromises: Promise<void>[] = []

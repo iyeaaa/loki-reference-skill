@@ -145,10 +145,11 @@ export const INDUSTRY_TO_PLACE_TYPE: Record<Industry, string> = {
  * 검색 소스별 기대 결과 수
  */
 export const EXPECTED_RESULTS_PER_SOURCE = {
-  perplexity: 40, // 페르소나 × 국가당 10-15개
-  apollo: 60, // 구조화된 B2B DB
-  serper: 30, // Google 검색 결과
-  places: 20, // 로컬 비즈니스 (B2C만)
+  perplexity: 24, // 페르소나 × 국가당 9개 (40 * 0.6)
+  gemini: 24, // 페르소나 × 국가당 9개 (신규, Perplexity와 병렬)
+  apollo: 36, // 구조화된 B2B DB (60 * 0.6)
+  serper: 18, // Google 검색 결과 (30 * 0.6)
+  places: 12, // 로컬 비즈니스 (20 * 0.6, B2C만)
 }
 
 /**
@@ -156,10 +157,11 @@ export const EXPECTED_RESULTS_PER_SOURCE = {
  */
 export const PHASE_PROGRESS_RANGES = {
   intelligence: { start: 0, end: 15 },
-  search_perplexity: { start: 15, end: 30 },
-  search_apollo: { start: 30, end: 45 },
-  search_serper: { start: 45, end: 55 },
-  search_places: { start: 55, end: 65 },
+  search_perplexity: { start: 15, end: 25 },
+  search_gemini: { start: 25, end: 35 }, // 신규 추가
+  search_apollo: { start: 35, end: 48 },
+  search_serper: { start: 48, end: 58 },
+  search_places: { start: 58, end: 65 },
   dedup: { start: 65, end: 70 },
   enrichment: { start: 70, end: 85 },
   scoring: { start: 85, end: 92 },
@@ -183,7 +185,8 @@ export const SCORING_WEIGHTS = {
 export const SOURCE_RELIABILITY: Record<string, number> = {
   apollo: 1.0, // 구조화된 B2B DB
   hunter: 0.9, // 검증된 이메일
-  perplexity: 0.8, // AI 웹 검색
+  perplexity: 0.8, // AI 웹 검색 (Perplexity)
+  gemini: 0.8, // AI 웹 검색 (Gemini)
   serper: 0.7, // 웹 검색
   places: 0.6, // 로컬 비즈니스
 }
@@ -197,6 +200,17 @@ export const MAX_PER_PERSONA = 10
  * 최종 바이어 수
  */
 export const FINAL_BUYER_COUNT = 30
+
+/**
+ * 우선순위 페르소나(1-2번) 최소 선정 수 (전체의 절반 이상)
+ */
+export const MIN_PRIORITY_PERSONA_COUNT = 15
+
+/**
+ * 우선순위 페르소나 선정 시 최소 점수 기준 (0-1)
+ * 이 점수 이상인 바이어만 우선순위 페르소나로 선정
+ */
+export const MIN_PRIORITY_PERSONA_SCORE = 0.6
 
 /**
  * LLM 배치 크기 (스코어링 시)

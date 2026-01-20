@@ -13,7 +13,7 @@ import {
   // Sparkles, // TODO: Gemini Search 기능 완성 후 주석 해제
   UserCheck,
 } from "lucide-react"
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { UpgradePlanModal } from "@/components/UpgradePlanModal"
@@ -33,6 +33,7 @@ import {
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { iconRotateVariants, shouldReduceMotion } from "@/lib/animations"
+import { useWorkspaceSubscription } from "@/lib/api/hooks/workspaces"
 import { useAuth } from "@/lib/auth-provider"
 import {
   IAM_ACTIONS,
@@ -215,14 +216,51 @@ export function AppSidebar({
   // 권한 컨텍스트
   const { isAdmin, hasPermission, isLoading: permissionLoading } = usePermissions()
 
+  // 워크스페이스 구독 정보 조회
+  const { data: subscriptionData, isLoading: isLoadingSubscription } = useWorkspaceSubscription(
+    selectedWorkspace,
+    !!selectedWorkspace,
+  )
+
+  // Tier 정보 캐싱 (깜박임 방지)
+  const [cachedTier, setCachedTier] = useState<string | null>(() => {
+    if (selectedWorkspace) {
+      return sessionStorage.getItem(`workspace_tier_${selectedWorkspace}`)
+    }
+    return null
+  })
+  const [cachedPlanName, setCachedPlanName] = useState<string | null>(() => {
+    if (selectedWorkspace) {
+      return sessionStorage.getItem(`workspace_plan_${selectedWorkspace}`)
+    }
+    return null
+  })
+
+  // 구독 정보가 로드되면 캐시 업데이트
+  useEffect(() => {
+    if (!isLoadingSubscription && subscriptionData?.subscription && selectedWorkspace) {
+      const newTier = subscriptionData.subscription.tier
+      const newPlanName = subscriptionData.subscription.product.name
+
+      setCachedTier(newTier)
+      setCachedPlanName(newPlanName)
+      sessionStorage.setItem(`workspace_tier_${selectedWorkspace}`, newTier)
+      sessionStorage.setItem(`workspace_plan_${selectedWorkspace}`, newPlanName)
+    }
+  }, [subscriptionData, isLoadingSubscription, selectedWorkspace])
+
+  const tier = subscriptionData?.subscription?.tier || cachedTier
+  const planName = subscriptionData?.subscription?.product?.name || cachedPlanName
+
   // 메뉴 아이템들 가져오기
   const allMenuItems = getMainMenuItems(t)
 
-  // 권한에 따라 메뉴 필터링
+  // 권한에 따라 메뉴 필터링 (Tier 필터링 제거 - 대시보드 탭에서만 처리)
   const mainMenuItems = useMemo(() => {
-    // 권한 로딩 중이면 빈 배열 (깜박임 방지)
+    // 권한 로딩 중일 때 - public 메뉴는 표시 (UX 개선)
     if (permissionLoading) {
-      return []
+      // 로딩 중에는 public 메뉴만 표시
+      return allMenuItems.filter((item) => item.permission === "public")
     }
 
     // Admin은 모든 메뉴 표시
@@ -344,11 +382,21 @@ export function AppSidebar({
                   </span>
                   {user &&
                     (() => {
-                      const tier = getUserDisplayTier(user)
-                      return tier ? <UserTierBadge size="sm" tier={tier} /> : null
+                      const userTier = getUserDisplayTier(user)
+                      return userTier ? <UserTierBadge size="sm" tier={userTier} /> : null
                     })()}
                 </div>
-                <span className="truncate text-muted-foreground text-xs">{user?.email}</span>
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-muted-foreground text-xs">{user?.email}</span>
+                  {!isLoadingSubscription && planName && (
+                    <>
+                      <span className="shrink-0 text-muted-foreground text-xs">•</span>
+                      <span className="shrink-0 font-medium text-muted-foreground text-xs">
+                        {planName}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
               <Link
                 className={cn(
@@ -362,16 +410,18 @@ export function AppSidebar({
               </Link>
             </div>
           </SidebarMenuItem>
-          {/* 업그레이드 CTA (펼쳐졌을 때) */}
-          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-            <Button
-              className="h-9 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
-              onClick={() => setIsUpgradeModalOpen(true)}
-              size="sm"
-            >
-              {t("sidebar.upgrade.button")}
-            </Button>
-          </SidebarMenuItem>
+          {/* 업그레이드 CTA (펼쳐졌을 때) - Enterprise는 숨김, 로딩 중에는 표시 */}
+          {(isLoadingSubscription || tier !== "enterprise") && (
+            <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+              <Button
+                className="h-9 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
+                onClick={() => setIsUpgradeModalOpen(true)}
+                size="sm"
+              >
+                {t("sidebar.upgrade.button")}
+              </Button>
+            </SidebarMenuItem>
+          )}
           {/* 설정 아이콘만 (접혔을 때) */}
           <div className="hidden group-data-[collapsible=icon]:block">
             <CustomMenuItem

@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { DateRange } from "react-day-picker"
 import {
   Area,
@@ -66,6 +66,7 @@ import {
   useSequenceSteps,
   useSequencesByWorkspace,
 } from "@/lib/api/hooks/sequences"
+import { useWorkspaceSubscription } from "@/lib/api/hooks/workspaces"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { SequenceLeadsTable } from "@/pages/sequences/SequenceLeadsTable"
@@ -116,7 +117,6 @@ type JourneyStage = "setup" | "sending" | "open" | "reply" | "meeting" | "deal"
 type UpgradeFeature = "meeting" | "deal" | "trial_expired" | null
 
 export default function AppDashboardPage() {
-  const [activeTab, setActiveTab] = useState("journey")
   const [selectedStage, setSelectedStage] = useState<JourneyStage>("setup")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeFeature, setUpgradeFeature] = useState<UpgradeFeature>(null)
@@ -146,6 +146,63 @@ export default function AppDashboardPage() {
 
   // 온보딩 진행 상황 가져오기
   const { data: onboardingProgress } = useOnboardingProgress(workspaceId || "", !!workspaceId)
+
+  // 워크스페이스 구독 정보 조회 (tier 확인용)
+  const { data: subscriptionData, isLoading: isLoadingSubscription } = useWorkspaceSubscription(
+    workspaceId || "",
+    !!workspaceId,
+  )
+
+  // Tier 정보 캐싱 (깜박임 방지)
+  const [cachedTier, setCachedTier] = useState<string | null>(() => {
+    if (workspaceId) {
+      return sessionStorage.getItem(`workspace_tier_${workspaceId}`)
+    }
+    return null
+  })
+
+  // 구독 정보가 로드되면 tier 캐시 업데이트
+  useEffect(() => {
+    if (!isLoadingSubscription && subscriptionData?.subscription?.tier && workspaceId) {
+      const newTier = subscriptionData.subscription.tier
+      setCachedTier(newTier)
+      sessionStorage.setItem(`workspace_tier_${workspaceId}`, newTier)
+    }
+  }, [subscriptionData, isLoadingSubscription, workspaceId])
+
+  // 실제 tier 또는 캐시된 tier 사용 (깜박임 방지)
+  const tier = subscriptionData?.subscription?.tier || cachedTier || "trial"
+
+  // Tier에 따라 기본 탭 설정
+  const defaultTab = useMemo(() => {
+    if (tier === "pro" || tier === "enterprise") {
+      return "performance" // Pro/Enterprise는 영업 성과만
+    }
+    if (tier === "basic") {
+      return "leads" // Basic은 바이어 목록부터
+    }
+    return "journey" // Trial은 여정부터
+  }, [tier])
+
+  const [activeTab, setActiveTab] = useState(defaultTab)
+
+  // tier가 변경되면 activeTab도 변경 (로딩 완료 후에만)
+  useEffect(() => {
+    if (isLoadingSubscription) {
+      return
+    }
+
+    // 현재 탭이 tier에 맞지 않으면 기본 탭으로 변경
+    if (tier === "pro" || tier === "enterprise") {
+      if (activeTab !== "performance") {
+        setActiveTab("performance")
+      }
+    } else if (tier === "basic") {
+      if (activeTab === "journey") {
+        setActiveTab("leads")
+      }
+    }
+  }, [tier, activeTab, isLoadingSubscription])
 
   // 바이어 목록, 이메일 캠페인 탭에서 사용할 시퀀스 목록
   const { data: sequences } = useSequencesByWorkspace(workspaceId || "", !!workspaceId)
@@ -369,18 +426,28 @@ export default function AppDashboardPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <TabsList className="h-9 rounded-lg bg-muted p-1">
-              <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="journey">
-                <MapPin className="h-3.5 w-3.5" />
-                여정
-              </TabsTrigger>
-              <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="leads">
-                <Users className="h-3.5 w-3.5" />
-                바이어 목록
-              </TabsTrigger>
-              <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="emails">
-                <Mail className="h-3.5 w-3.5" />
-                이메일 목록
-              </TabsTrigger>
+              {/* 여정 탭 - Trial만 */}
+              {tier === "trial" && (
+                <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="journey">
+                  <MapPin className="h-3.5 w-3.5" />
+                  여정
+                </TabsTrigger>
+              )}
+              {/* 바이어 목록 탭 - Trial, Basic */}
+              {(tier === "trial" || tier === "basic") && (
+                <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="leads">
+                  <Users className="h-3.5 w-3.5" />
+                  바이어 목록
+                </TabsTrigger>
+              )}
+              {/* 이메일 목록 탭 - Trial, Basic */}
+              {(tier === "trial" || tier === "basic") && (
+                <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="emails">
+                  <Mail className="h-3.5 w-3.5" />
+                  이메일 목록
+                </TabsTrigger>
+              )}
+              {/* 영업 성과 탭 - 모든 tier */}
               <TabsTrigger className="h-7 gap-1.5 px-3 text-sm" value="performance">
                 <TrendingUp className="h-3.5 w-3.5" />
                 영업 성과

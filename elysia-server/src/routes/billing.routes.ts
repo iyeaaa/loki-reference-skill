@@ -519,6 +519,75 @@ export const subscriptionsRoutes = new Elysia({ prefix: "/api/v1/billing/subscri
         set.status = 404
         return errorResponse("구독을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
+
+      // 구독 변경 시 유료 플랜 온보딩 자동 완료 (planId가 변경되었을 때)
+      if (body.planId || body.status === "active") {
+        try {
+          // 업데이트된 구독 정보로 tier 확인
+          const { db } = await import("../db")
+          const { subscriptions, billingPlans, billingProducts } = await import("../db/schema")
+          const { eq } = await import("drizzle-orm")
+          const logger = (await import("../utils/logger")).default
+
+          // 구독에서 tier 확인
+          const [subWithTier] = await db
+            .select({
+              workspaceId: subscriptions.workspaceId,
+              tier: billingProducts.tier,
+              status: subscriptions.status,
+            })
+            .from(subscriptions)
+            .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+            .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+            .where(eq(subscriptions.id, id))
+            .limit(1)
+
+          // active 상태이고 trial이 아닌 경우 온보딩 자동 완료
+          if (subWithTier && subWithTier.status === "active" && subWithTier.tier !== "trial") {
+            logger.info(
+              {
+                subscriptionId: id,
+                workspaceId: subWithTier.workspaceId,
+                tier: subWithTier.tier,
+              },
+              "[Billing] Processing paid subscription update",
+            )
+
+            // 온보딩 자동 완료 (미완료 시)
+            const { onboardingProgress } = await import("../db/schema/onboarding")
+            const [onboarding] = await db
+              .select({ id: onboardingProgress.id, completedAt: onboardingProgress.completedAt })
+              .from(onboardingProgress)
+              .where(eq(onboardingProgress.workspaceId, subWithTier.workspaceId))
+              .limit(1)
+
+            // 온보딩이 있고, 완료되지 않았으면 자동 완료
+            if (onboarding && !onboarding.completedAt) {
+              await db
+                .update(onboardingProgress)
+                .set({
+                  status: "completed",
+                  completedAt: new Date(),
+                  updatedAt: new Date(),
+                })
+                .where(eq(onboardingProgress.id, onboarding.id))
+
+              logger.info(
+                { workspaceId: subWithTier.workspaceId, tier: subWithTier.tier },
+                "[Billing] Auto-completed onboarding for paid subscription",
+              )
+            }
+          }
+        } catch (error) {
+          // 에러가 나도 구독 업데이트는 성공으로 처리
+          const logger = (await import("../utils/logger")).default
+          logger.error(
+            { error, subscriptionId: id },
+            "[Billing] Failed to auto-complete onboarding",
+          )
+        }
+      }
+
       return subscription
     },
     {

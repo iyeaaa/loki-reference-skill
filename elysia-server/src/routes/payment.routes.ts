@@ -924,6 +924,63 @@ export const paymentRoutes = new Elysia({ prefix: "/api/v1/payments" })
           )
         }
 
+        // 10.5. 유료 플랜 온보딩 자동 완료 (온보딩 미완료 시)
+        if (subscription?.status === "active") {
+          try {
+            // workspaceId로 구독 조회 → planId → productId → tier 확인
+            const workspaceSubscription = await db
+              .select({
+                subscriptionId: subscriptions.id,
+                planId: subscriptions.planId,
+                tier: billingProducts.tier,
+              })
+              .from(subscriptions)
+              .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+              .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+              .where(
+                and(
+                  eq(subscriptions.workspaceId, workspaceId),
+                  eq(subscriptions.isPrimary, true),
+                  eq(subscriptions.status, "active"),
+                ),
+              )
+              .limit(1)
+
+            // trial이 아닌 경우 온보딩 자동 완료
+            if (workspaceSubscription[0] && workspaceSubscription[0].tier !== "trial") {
+              const { onboardingProgress } = await import("../db/schema/onboarding")
+              const [onboarding] = await db
+                .select({ id: onboardingProgress.id, completedAt: onboardingProgress.completedAt })
+                .from(onboardingProgress)
+                .where(eq(onboardingProgress.workspaceId, workspaceId))
+                .limit(1)
+
+              // 온보딩이 있고, 완료되지 않았으면 자동 완료
+              if (onboarding && !onboarding.completedAt) {
+                await db
+                  .update(onboardingProgress)
+                  .set({
+                    status: "completed",
+                    completedAt: new Date(),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(onboardingProgress.id, onboarding.id))
+
+                logger.info(
+                  { workspaceId, tier: workspaceSubscription[0].tier },
+                  "[Payment] Auto-completed onboarding for paid subscription",
+                )
+              }
+            }
+          } catch (error) {
+            // 에러가 나도 결제 프로세스는 계속 진행
+            logger.error(
+              { error, workspaceId },
+              "[Payment] Failed to auto-complete onboarding, continuing",
+            )
+          }
+        }
+
         // 11. 성공 결과 생성 및 Idempotency 저장
         const successResult = {
           success: true,

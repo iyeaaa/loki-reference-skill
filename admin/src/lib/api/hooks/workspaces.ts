@@ -24,6 +24,8 @@ export const workspaceKeys = {
   products: (workspaceId: string) => [...workspaceKeys.all, "products", workspaceId] as const,
   product: (workspaceId: string, productId: string) =>
     [...workspaceKeys.all, "products", workspaceId, productId] as const,
+  subscription: (workspaceId: string) =>
+    [...workspaceKeys.all, "subscription", workspaceId] as const,
 }
 
 // 2. Queries
@@ -91,6 +93,17 @@ export function useWorkspaceMembers(workspaceId: string, enabled = true) {
     enabled,
     staleTime: 0, // 즉시 반영
     gcTime: 5 * 60 * 1000,
+  })
+}
+
+export function useWorkspaceSubscription(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: workspaceKeys.subscription(workspaceId),
+    queryFn: () => workspacesApi.getSubscription(workspaceId),
+    enabled: enabled && !!workspaceId,
+    staleTime: 30 * 1000, // 30초 캐시
+    gcTime: 10 * 60 * 1000,
+    retry: 1, // 구독이 없을 수 있으므로 재시도 최소화
   })
 }
 

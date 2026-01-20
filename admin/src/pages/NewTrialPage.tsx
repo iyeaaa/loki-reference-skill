@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -38,6 +39,7 @@ export default function NewTrialPage() {
   const { t } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
+  const queryClient = useQueryClient()
 
   // Ref to prevent duplicate OAuth processing
   const processedCodeRef = useRef<string | null>(null)
@@ -46,7 +48,7 @@ export default function NewTrialPage() {
    * OAuth/Email 로그인 성공 후 처리
    */
   const handleLoginSuccess = useCallback(
-    (response: GoogleAuthResponse) => {
+    async (response: GoogleAuthResponse) => {
       const authUser = {
         id: response.user.id,
         email: response.user.email,
@@ -61,8 +63,11 @@ export default function NewTrialPage() {
       // Store auth data
       authApi.storeAuthData(response.token, authUser)
 
-      // Update auth context
-      login(response.token, authUser, true)
+      // Update auth context (await로 state 업데이트 완료 대기)
+      await login(response.token, authUser, true)
+
+      // React Query 캐시 무효화 (모든 데이터 새로 로드)
+      queryClient.invalidateQueries()
 
       // 📊 Analytics: Trial 로그인 추적
       trackLogin("google")
@@ -76,10 +81,62 @@ export default function NewTrialPage() {
       // Clear survey data from localStorage after successful login
       clearSurveyStorage()
 
-      // Navigate directly to /company (skip TrialResultPage)
-      navigate("/company")
+      // React Query 캐시 사전 로드 (navigate 전에 필요한 데이터 미리 로드)
+      try {
+        // 사용자의 워크스페이스 조회 및 캐시 저장
+        const workspacesResponse = await apiFetch<Array<{ id: string }>>("/api/v1/workspaces/user")
+        const workspaceId = workspacesResponse?.[0]?.id
+
+        // workspaces 쿼리 캐시에 미리 저장
+        queryClient.setQueryData(["workspaces", "user"], workspacesResponse)
+
+        if (workspaceId) {
+          // 병렬로 데이터 로드 (속도 향상)
+          const [onboardingResponse, permissionsResponse] = await Promise.all([
+            // 온보딩 진행 상태 확인
+            apiFetch<{
+              data: { completedAt: string | null }
+            }>(`/api/v1/onboarding/workspace/${workspaceId}`),
+            // 권한 정보 미리 로드
+            apiFetch<{
+              isAdmin: boolean
+              memberId: string | null
+              roles: Array<{ id: string; name: string }>
+              permissions: Array<{ resource: string; action: string }>
+            }>(`/api/v1/iam/my-permissions?workspaceId=${workspaceId}`).catch(() => null),
+          ])
+
+          // onboarding 쿼리 캐시에 미리 저장
+          queryClient.setQueryData(
+            ["onboarding", "workspace", workspaceId],
+            onboardingResponse.data,
+          )
+
+          // permissions 쿼리 캐시에 미리 저장
+          if (permissionsResponse) {
+            queryClient.setQueryData(["iam", "my-permissions", workspaceId], permissionsResponse)
+          }
+
+          // 온보딩 완료 여부에 따라 리다이렉트
+          if (onboardingResponse.data?.completedAt) {
+            console.log("[NewTrialPage] Onboarding completed, redirecting to dashboard")
+            // 강제 새로고침으로 모든 데이터 확실히 로드
+            window.location.href = "/dashboard"
+          } else {
+            console.log("[NewTrialPage] Onboarding not completed, redirecting to company")
+            window.location.href = "/company"
+          }
+        } else {
+          // 워크스페이스가 없으면 온보딩 페이지로
+          window.location.href = "/company"
+        }
+      } catch (error) {
+        // 에러 발생 시 기본 동작: 온보딩 페이지로
+        console.error("[NewTrialPage] Failed to check onboarding status:", error)
+        window.location.href = "/company"
+      }
     },
-    [login, navigate],
+    [login, queryClient],
   )
 
   /**
@@ -112,7 +169,7 @@ export default function NewTrialPage() {
           body: JSON.stringify(requestBody),
         })
 
-        handleLoginSuccess(response)
+        await handleLoginSuccess(response)
       } catch (error) {
         console.error("[NewTrialPage] Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")

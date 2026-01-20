@@ -96,6 +96,29 @@ export const workspacesApi = {
   // Get single workspace
   get: async (id: string): Promise<Workspace> => apiFetch<Workspace>(`/api/v1/workspaces/${id}`),
 
+  // Get workspace subscription info (tier, plan, status)
+  getSubscription: async (
+    id: string,
+  ): Promise<{
+    subscription: {
+      id: string
+      status: string
+      tier: "trial" | "basic" | "pro" | "enterprise"
+      plan: {
+        id: string
+        name: string
+        amount: number
+      }
+      product: {
+        id: string
+        name: string
+      }
+      currentPeriodStart: string | null
+      currentPeriodEnd: string | null
+      trialEnd: string | null
+    }
+  }> => apiFetch(`/api/v1/workspaces/${id}/subscription`),
+
   // Create workspace
   create: async (data: CreateWorkspaceData): Promise<Workspace> =>
     apiFetch<Workspace>("/api/v1/workspaces", {

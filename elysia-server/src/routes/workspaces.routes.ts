@@ -139,6 +139,74 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
     },
   )
 
+  // Get workspace subscription info (tier, plan, status)
+  .get(
+    "/:id/subscription",
+    async ({ params: { id }, set }) => {
+      try {
+        const { db } = await import("../db")
+        const { subscriptions, billingPlans, billingProducts } = await import("../db/schema")
+        const { and, eq } = await import("drizzle-orm")
+
+        // 워크스페이스의 primary 구독 조회
+        const [subscription] = await db
+          .select({
+            subscriptionId: subscriptions.id,
+            status: subscriptions.status,
+            tier: billingProducts.tier,
+            planId: billingPlans.id,
+            planName: billingPlans.name,
+            planAmount: billingPlans.amount,
+            productId: billingProducts.id,
+            productName: billingProducts.name,
+            currentPeriodStart: subscriptions.currentPeriodStart,
+            currentPeriodEnd: subscriptions.currentPeriodEnd,
+            trialEnd: subscriptions.trialEnd,
+          })
+          .from(subscriptions)
+          .innerJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+          .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+          .where(and(eq(subscriptions.workspaceId, id), eq(subscriptions.isPrimary, true)))
+          .limit(1)
+
+        if (!subscription) {
+          set.status = 404
+          return errorResponse("구독 정보를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+
+        return {
+          subscription: {
+            id: subscription.subscriptionId,
+            status: subscription.status,
+            tier: subscription.tier,
+            plan: {
+              id: subscription.planId,
+              name: subscription.planName,
+              amount: subscription.planAmount,
+            },
+            product: {
+              id: subscription.productId,
+              name: subscription.productName,
+            },
+            currentPeriodStart: subscription.currentPeriodStart,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            trialEnd: subscription.trialEnd,
+          },
+        }
+      } catch (error) {
+        const logger = (await import("../utils/logger")).default
+        logger.error({ error, workspaceId: id }, "Failed to get workspace subscription")
+        set.status = 500
+        return errorResponse("구독 정보를 가져오는데 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
   // Check if user can create workspace (admin bypass + trial limit validation)
   .get("/can-create/:ownerId", async ({ params: { ownerId }, set }) => {
     try {

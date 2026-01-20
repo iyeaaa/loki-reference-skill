@@ -86,7 +86,7 @@ function DashboardContent({ children }: DashboardContentProps) {
   const isTrialUser = Boolean(currentUser?.trialStatus?.isTrialActive)
 
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
-  const { data: userWorkspaces } = useUserWorkspaces(!!userId)
+  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(!!userId)
   const workspaceId = userWorkspaces?.[0]?.id || ""
 
   // 온보딩 진행 상황 가져오기 (캠페인 콜아웃 표시용)
@@ -123,15 +123,33 @@ function DashboardContent({ children }: DashboardContentProps) {
   }, [isTrialUser, onboardingProgress, sequence, location.pathname])
 
   // Workspace를 WorkspaceOption으로 변환 (메모이제이션으로 무한 루프 방지)
-  const workspaces: WorkspaceOption[] = useMemo(
-    () =>
-      userWorkspaces?.map((ws) => ({
+  // 로딩 중일 때는 이전 캐시된 워크스페이스 정보 사용
+  const workspaces: WorkspaceOption[] = useMemo(() => {
+    // 로딩 중이고 데이터가 없으면 localStorage에서 캐시 복원
+    if (isLoadingWorkspaces && (!userWorkspaces || userWorkspaces.length === 0)) {
+      try {
+        const cached = localStorage.getItem("cached_workspaces")
+        if (cached) {
+          return JSON.parse(cached)
+        }
+      } catch {
+        // 캐시 파싱 실패 시 무시
+      }
+    }
+
+    // 데이터가 있으면 변환하고 캐시에 저장
+    if (userWorkspaces && userWorkspaces.length > 0) {
+      const mapped = userWorkspaces.map((ws) => ({
         value: ws.id,
         label: ws.name,
         sublabel: ws.description || "",
-      })) || [],
-    [userWorkspaces],
-  )
+      }))
+      localStorage.setItem("cached_workspaces", JSON.stringify(mapped))
+      return mapped
+    }
+
+    return []
+  }, [userWorkspaces, isLoadingWorkspaces])
 
   const isSidebarCollapsed = state === "collapsed"
 
@@ -192,6 +210,23 @@ function DashboardContent({ children }: DashboardContentProps) {
       }
     }
   }, [workspaces, selectedWorkspace, isTrialUser])
+
+  // 초기 로딩 중이면 스켈레톤 표시 (워크스페이스 데이터 필수)
+  if (isLoadingWorkspaces && workspaces.length === 0) {
+    return (
+      <>
+        <AppSidebar
+          hideWorkspaceSelector={hideWorkspaceSelector}
+          onWorkspaceChange={setSelectedWorkspace}
+          selectedWorkspace={selectedWorkspace}
+          workspaces={[]}
+        />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <PageSkeleton />
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

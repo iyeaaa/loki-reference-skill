@@ -999,3 +999,30 @@ campaignOverview.sentiment.neutral,중립,Neutral
 campaignOverview.intent,의도,Intent
 viewMode.cardViewAria,카드 뷰,Card View
 viewMode.listViewAria,리스트 뷰,List View
+designer.commentNode.cancel,[NO TRANSLATION] sequences.designer.commentNode.cancel,[NO TRANSLATION] sequences.designer.commentNode.cancel
+designer.commentNode.delete,[NO TRANSLATION] sequences.designer.commentNode.delete,[NO TRANSLATION] sequences.designer.commentNode.delete
+designer.commentNode.edit,[NO TRANSLATION] sequences.designer.commentNode.edit,[NO TRANSLATION] sequences.designer.commentNode.edit
+designer.commentNode.placeholder,[NO TRANSLATION] sequences.designer.commentNode.placeholder,[NO TRANSLATION] sequences.designer.commentNode.placeholder
+designer.commentNode.save,[NO TRANSLATION] sequences.designer.commentNode.save,[NO TRANSLATION] sequences.designer.commentNode.save
+designer.commentNode.writeMemo,[NO TRANSLATION] sequences.designer.commentNode.writeMemo,[NO TRANSLATION] sequences.designer.commentNode.writeMemo
+designer.startNode.addEmailDraft,[NO TRANSLATION] sequences.designer.startNode.addEmailDraft,[NO TRANSLATION] sequences.designer.startNode.addEmailDraft
+designer.startNode.addNode,[NO TRANSLATION] sequences.designer.startNode.addNode,[NO TRANSLATION] sequences.designer.startNode.addNode
+designer.startNode.description,[NO TRANSLATION] sequences.designer.startNode.description,[NO TRANSLATION] sequences.designer.startNode.description
+designer.startNode.start,[NO TRANSLATION] sequences.designer.startNode.start,[NO TRANSLATION] sequences.designer.startNode.start
+designer.timerNode.addEmailDraft,[NO TRANSLATION] sequences.designer.timerNode.addEmailDraft,[NO TRANSLATION] sequences.designer.timerNode.addEmailDraft
+designer.timerNode.addNode,[NO TRANSLATION] sequences.designer.timerNode.addNode,[NO TRANSLATION] sequences.designer.timerNode.addNode
+designer.timerNode.cancel,[NO TRANSLATION] sequences.designer.timerNode.cancel,[NO TRANSLATION] sequences.designer.timerNode.cancel
+designer.timerNode.days,[NO TRANSLATION] sequences.designer.timerNode.days,[NO TRANSLATION] sequences.designer.timerNode.days
+designer.timerNode.description,[NO TRANSLATION] sequences.designer.timerNode.description,[NO TRANSLATION] sequences.designer.timerNode.description
+designer.timerNode.edit,[NO TRANSLATION] sequences.designer.timerNode.edit,[NO TRANSLATION] sequences.designer.timerNode.edit
+designer.timerNode.enterInDays,[NO TRANSLATION] sequences.designer.timerNode.enterInDays,[NO TRANSLATION] sequences.designer.timerNode.enterInDays
+designer.timerNode.noReplyDescription,[NO TRANSLATION] sequences.designer.timerNode.noReplyDescription,[NO TRANSLATION] sequences.designer.timerNode.noReplyDescription
+designer.timerNode.realtimeStats,[NO TRANSLATION] sequences.designer.timerNode.realtimeStats,[NO TRANSLATION] sequences.designer.timerNode.realtimeStats
+designer.timerNode.replied,[NO TRANSLATION] sequences.designer.timerNode.replied,[NO TRANSLATION] sequences.designer.timerNode.replied
+designer.timerNode.save,[NO TRANSLATION] sequences.designer.timerNode.save,[NO TRANSLATION] sequences.designer.timerNode.save
+designer.timerNode.sent,[NO TRANSLATION] sequences.designer.timerNode.sent,[NO TRANSLATION] sequences.designer.timerNode.sent
+designer.timerNode.timer,[NO TRANSLATION] sequences.designer.timerNode.timer,[NO TRANSLATION] sequences.designer.timerNode.timer
+designer.timerNode.timerSettings,[NO TRANSLATION] sequences.designer.timerNode.timerSettings,[NO TRANSLATION] sequences.designer.timerNode.timerSettings
+designer.timerNode.waitTime,[NO TRANSLATION] sequences.designer.timerNode.waitTime,[NO TRANSLATION] sequences.designer.timerNode.waitTime
+designer.timerNode.waitTimeDays,[NO TRANSLATION] sequences.designer.timerNode.waitTimeDays,[NO TRANSLATION] sequences.designer.timerNode.waitTimeDays
+designer.timerNode.waiting,[NO TRANSLATION] sequences.designer.timerNode.waiting,[NO TRANSLATION] sequences.designer.timerNode.waiting

@@ -18,18 +18,18 @@ import { atomWithStorage, createJSONStorage } from "jotai/utils"
 // ====================================
 
 export type SurveyData = {
-  industry: string | null
+  industry: string[] | null
   target: string | null
-  country: string | null
+  country: string[] | null
   experience: string | null
   lang?: string
 }
 
 /** 유효성 검증을 통과한 설문 데이터 (industry, country만 필수) */
 export type ValidSurveyData = {
-  industry: string
+  industry: string[]
   target: string | null
-  country: string
+  country: string[]
   experience: string | null
   lang?: string
 }
@@ -159,7 +159,7 @@ export const isSurveyCompleteAtom = atom((get) => {
  * Type guard: 검증 통과 시 ValidSurveyData로 타입 좁힘
  */
 export function isValidSurveyData(data: SurveyData | null): data is ValidSurveyData {
-  return !!(data?.industry && data?.country)
+  return !!(data?.industry && data.industry.length > 0 && data?.country && data.country.length > 0)
 }
 
 /**
@@ -174,9 +174,14 @@ export function isSurveyStepComplete(data: SurveyData | null, step: number): boo
 
   switch (step) {
     case 1:
-      return !!data.industry
+      return !!(data.industry && data.industry.length > 0)
     case 2:
-      return !!data.industry && !!data.country
+      return !!(
+        data.industry &&
+        data.industry.length > 0 &&
+        data.country &&
+        data.country.length > 0
+      )
     default:
       return false
   }
@@ -189,10 +194,10 @@ export function getLastCompletedStep(data: SurveyData | null): number {
   if (!data) {
     return 0
   }
-  if (data.country) {
+  if (data.country && data.country.length > 0) {
     return 2
   }
-  if (data.industry) {
+  if (data.industry && data.industry.length > 0) {
     return 1
   }
   return 0

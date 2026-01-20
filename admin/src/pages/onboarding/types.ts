@@ -24,9 +24,9 @@ export type TargetCountry = "jp" | "us" | "sea" | "eu" | "ae"
 export type ExportExperience = "none" | "some" | "experienced"
 
 export type OnboardingData = {
-  industry: Industry | null
+  industry: Industry[] | null
   target: TargetCustomer | null
-  country: TargetCountry | null
+  country: TargetCountry[] | null
   experience: ExportExperience | null
 }
 

@@ -158,8 +158,13 @@ export default function NewTrialPage() {
         const requestBody: Record<string, string> = { code }
 
         if (isValidSurveyData(surveyData)) {
-          requestBody.industry = surveyData.industry
-          requestBody.country = surveyData.country
+          // 배열의 첫 번째 값만 전송 (백엔드는 단일 문자열만 처리)
+          requestBody.industry = Array.isArray(surveyData.industry)
+            ? surveyData.industry[0]
+            : surveyData.industry
+          requestBody.country = Array.isArray(surveyData.country)
+            ? surveyData.country[0]
+            : surveyData.country
           // 기본값 적용: 설문에서 수집하지 않는 필드는 기본값 사용
           requestBody.target = surveyData.target || "b2b"
           requestBody.experience = surveyData.experience || "none"

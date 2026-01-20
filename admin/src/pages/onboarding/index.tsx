@@ -89,12 +89,15 @@ export default function OnboardingPage() {
   const [data, setData] = useState<OnboardingData>(() => {
     const stored = getSurveyFromStorage()
     return {
-      industry: (stored?.industry as Industry[]) ?? null,
+      industry: (stored?.industry as Industry) ?? null,
       target: (stored?.target as TargetCustomer) ?? null,
-      country: (stored?.country as TargetCountry[]) ?? null,
+      country: (stored?.country as TargetCountry) ?? null,
       experience: (stored?.experience as ExportExperience) ?? null,
     }
   })
+
+  // 다중클릭 방지 state
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // 기존 로그인 체크 (Step 1에서만, 팝업 없이)
   const autoCheckRef = useRef(false)
@@ -186,53 +189,52 @@ export default function OnboardingPage() {
 
   const canProceed = () => {
     if (currentStep === 1) {
-      return data.industry && data.industry.length > 0
+      return !!data.industry
     }
     if (currentStep === 2) {
-      return data.country && data.country.length > 0
+      return !!data.country
     }
     return false
   }
 
   const handleNext = () => {
-    if (currentStep === 1 && data.industry && data.industry.length > 0) {
+    // 다중클릭 방지
+    if (isSubmitting) {
+      return
+    }
+
+    if (currentStep === 1 && data.industry) {
+      setIsSubmitting(true)
       trackSurveyStep(1, TOTAL_STEPS, { industry: data.industry })
       exitIntent.reset()
       navigate("/trial/survey/2")
-    } else if (currentStep === 2 && data.country && data.country.length > 0) {
+      // 페이지 이동 후 상태 초기화
+      setTimeout(() => setIsSubmitting(false), 500)
+    } else if (currentStep === 2 && data.country) {
+      setIsSubmitting(true)
       trackSurveyStep(2, TOTAL_STEPS, { country: data.country })
       exitIntent.reset()
       navigate("/trial")
+      // 페이지 이동 후 상태 초기화
+      setTimeout(() => setIsSubmitting(false), 500)
     }
   }
 
   const handleSelectIndustry = (industry: Industry) => {
     setData((prev) => {
-      const currentIndustries = prev.industry ?? []
-      const isSelected = currentIndustries.includes(industry)
-      const newIndustries = isSelected
-        ? currentIndustries.filter((i) => i !== industry)
-        : [...currentIndustries, industry]
-
-      const updated = mergeSurveyData({ industry: newIndustries, lang: i18n.language })
+      const updated = mergeSurveyData({ industry, lang: i18n.language })
       setSurveyData(updated)
 
-      return { ...prev, industry: newIndustries }
+      return { ...prev, industry }
     })
   }
 
   const handleSelectCountry = (country: TargetCountry) => {
     setData((prev) => {
-      const currentCountries = prev.country ?? []
-      const isSelected = currentCountries.includes(country)
-      const newCountries = isSelected
-        ? currentCountries.filter((c) => c !== country)
-        : [...currentCountries, country]
-
-      const updated = mergeSurveyData({ country: newCountries, lang: i18n.language })
+      const updated = mergeSurveyData({ country, lang: i18n.language })
       setSurveyData(updated)
 
-      return { ...prev, country: newCountries }
+      return { ...prev, country }
     })
   }
 
@@ -357,7 +359,7 @@ export default function OnboardingPage() {
             <div className="mt-6 flex items-center justify-center gap-3 lg:hidden">
               <Button
                 className="h-10 min-w-[100px] border-gray-300"
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || isSubmitting}
                 onClick={handleBack}
                 variant="outline"
               >
@@ -366,16 +368,22 @@ export default function OnboardingPage() {
               </Button>
               <Button
                 className="h-10 min-w-[100px] bg-blue-600 hover:bg-blue-700"
-                disabled={!canProceed()}
+                disabled={!canProceed() || isSubmitting}
                 onClick={handleNext}
               >
-                {currentStep === TOTAL_STEPS
-                  ? isKorean
-                    ? "제출"
-                    : "Submit"
-                  : isKorean
-                    ? "다음"
-                    : "Next"}
+                {isSubmitting ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : currentStep === TOTAL_STEPS ? (
+                  isKorean ? (
+                    "제출"
+                  ) : (
+                    "Submit"
+                  )
+                ) : isKorean ? (
+                  "다음"
+                ) : (
+                  "Next"
+                )}
               </Button>
             </div>
           </div>
@@ -388,7 +396,7 @@ export default function OnboardingPage() {
             <div className="mt-6 flex items-center justify-center gap-3">
               <Button
                 className="h-10 min-w-[100px] border-gray-300"
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || isSubmitting}
                 onClick={handleBack}
                 variant="outline"
               >
@@ -397,16 +405,22 @@ export default function OnboardingPage() {
               </Button>
               <Button
                 className="h-10 min-w-[100px] bg-blue-600 hover:bg-blue-700"
-                disabled={!canProceed()}
+                disabled={!canProceed() || isSubmitting}
                 onClick={handleNext}
               >
-                {currentStep === TOTAL_STEPS
-                  ? isKorean
-                    ? "제출"
-                    : "Submit"
-                  : isKorean
-                    ? "다음"
-                    : "Next"}
+                {isSubmitting ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : currentStep === TOTAL_STEPS ? (
+                  isKorean ? (
+                    "제출"
+                  ) : (
+                    "Submit"
+                  )
+                ) : isKorean ? (
+                  "다음"
+                ) : (
+                  "Next"
+                )}
               </Button>
             </div>
           </div>
@@ -439,7 +453,7 @@ function Step1({
   onSelect,
   isKorean,
 }: {
-  selected: Industry[] | null
+  selected: Industry | null
   onSelect: (industry: Industry) => void
   isKorean: boolean
 }) {
@@ -462,14 +476,14 @@ function Step1({
           </CardTitle>
           <CardDescription>
             {isKorean
-              ? "분야에 맞는 바이어를 찾아드릴게요 (복수 선택 가능)"
-              : "We'll find buyers that match your industry (multiple selection)"}
+              ? "분야에 맞는 바이어를 찾아드릴게요"
+              : "We'll find buyers that match your industry"}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
             {INDUSTRIES.map((industry) => {
-              const isSelected = selected?.includes(industry) ?? false
+              const isSelected = selected === industry
               return (
                 <Button
                   className={cn(
@@ -699,7 +713,7 @@ function Step3({
   onSelect,
   isKorean,
 }: {
-  selected: TargetCountry[] | null
+  selected: TargetCountry | null
   onSelect: (country: TargetCountry) => void
   isKorean: boolean
 }) {
@@ -720,14 +734,14 @@ function Step3({
         </CardTitle>
         <CardDescription>
           {isKorean
-            ? "해당 시장의 바이어를 찾아드릴게요 (복수 선택 가능)"
-            : "We'll find buyers in that market for you (multiple selection)"}
+            ? "해당 시장의 바이어를 찾아드릴게요"
+            : "We'll find buyers in that market for you"}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
         <div className="grid grid-cols-2 gap-3 md:gap-5">
           {TARGET_COUNTRIES.map((country) => {
-            const isSelected = selected?.includes(country) ?? false
+            const isSelected = selected === country
             return (
               <Button
                 className={cn(

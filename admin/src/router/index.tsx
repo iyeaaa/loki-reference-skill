@@ -140,22 +140,38 @@ function TrialRedirect() {
 }
 
 export const router = createBrowserRouter([
-  // Trial Pages (No auth or license required)
+  // Trial Pages (No auth or license required, but AuthProvider available for login functionality)
   {
     path: "/trial",
-    element: <TrialRedirect />,
+    element: (
+      <AuthWrapper>
+        <TrialRedirect />
+      </AuthWrapper>
+    ),
   },
   {
     path: "/trial/survey",
-    element: <Navigate replace to="/trial/survey/1" />,
+    element: (
+      <AuthWrapper>
+        <Navigate replace to="/trial/survey/1" />
+      </AuthWrapper>
+    ),
   },
   {
     path: "/trial/survey/:step",
-    element: <OnboardingPage />,
+    element: (
+      <AuthWrapper>
+        <OnboardingPage />
+      </AuthWrapper>
+    ),
   },
   {
     path: "/trial/result",
-    element: <TrialResultPage />,
+    element: (
+      <AuthWrapper>
+        <TrialResultPage />
+      </AuthWrapper>
+    ),
   },
   // Public Payment Page (No auth required)
   {

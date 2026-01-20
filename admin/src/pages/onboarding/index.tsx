@@ -139,20 +139,8 @@ export default function OnboardingPage() {
         }
       }
 
-      // 로그인 안 됨 - 최근 로그인 이메일 확인
-      const recentEmail = localStorage.getItem("recent_google_email")
-
-      if (recentEmail) {
-        // 최근 로그인 기록 있음 - /trial로 리다이렉트
-        console.log("[Survey] Recent email found - redirecting to /trial")
-        setIsRedirecting(true)
-        setTimeout(() => {
-          window.location.href = "/trial"
-        }, 300)
-      } else {
-        // 완전 신규 사용자 - 설문 계속
-        console.log("[Survey] New user - continue survey")
-      }
+      // 로그인 안 됨 - 설문 계속
+      console.log("[Survey] Not logged in - continue survey")
     }
 
     checkAndRedirect()

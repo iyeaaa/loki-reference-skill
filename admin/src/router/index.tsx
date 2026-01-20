@@ -140,6 +140,23 @@ function TrialRedirect() {
 }
 
 export const router = createBrowserRouter([
+  // Trial Pages (No auth or license required)
+  {
+    path: "/trial",
+    element: <TrialRedirect />,
+  },
+  {
+    path: "/trial/survey",
+    element: <Navigate replace to="/trial/survey/1" />,
+  },
+  {
+    path: "/trial/survey/:step",
+    element: <OnboardingPage />,
+  },
+  {
+    path: "/trial/result",
+    element: <TrialResultPage />,
+  },
   // Public Payment Page (No auth required)
   {
     path: "/payment",
@@ -230,22 +247,6 @@ export const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginRedirect />,
-      },
-      {
-        path: "trial",
-        element: <TrialRedirect />,
-      },
-      {
-        path: "trial/survey",
-        element: <Navigate replace to="/trial/survey/1" />,
-      },
-      {
-        path: "trial/survey/:step",
-        element: <OnboardingPage />,
-      },
-      {
-        path: "trial/result",
-        element: <TrialResultPage />,
       },
       {
         path: "onboarding",

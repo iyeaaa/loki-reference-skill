@@ -263,7 +263,17 @@ export async function searchWithGemini(
 
           logger.info(`[Gemini] ${countryName} - ${persona.typeKo} 검색 중...`)
 
-          const response = await llm.invoke(searchPrompt)
+          // 60초 timeout 추가 - Gemini API가 응답하지 않으면 무한 대기 방지
+          const GEMINI_TIMEOUT_MS = 60000
+          const response = await Promise.race([
+            llm.invoke(searchPrompt),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error(`Gemini timeout after ${GEMINI_TIMEOUT_MS / 1000}s`)),
+                GEMINI_TIMEOUT_MS,
+              ),
+            ),
+          ])
           const responseText = (response.content as string).trim()
 
           const companies = parseGeminiResponse(responseText)

@@ -10,6 +10,7 @@ import type {
   CompanySize,
   EnrichedCompany,
   ScoredCompany,
+  SearchMode,
 } from "./types"
 
 // ============================================================================
@@ -18,12 +19,145 @@ import type {
 
 /**
  * 바이어 인텔리전스 생성 프롬프트 (제한된 정보 기반 바이어 매칭 추론 프레임워크)
+ * searchMode에 따라 다른 프롬프트 생성:
+ * - "seller" (기본값): 내 회사 정보 → 적합한 바이어 페르소나 생성
+ * - "direct": 검색 쿼리 → 타겟 기업 특성 도출
  */
 export function buildIntelligencePrompt(input: BuyerSearchInput): string {
+  const searchMode: SearchMode = input.searchMode || "seller"
   const industryHint = INDUSTRY_HINTS[input.industry]
   const countries = input.country.map((c) => COUNTRY_NAMES[c]).join(", ")
   const companySizeLabel = COMPANY_SIZE_LABELS[input.companySize]
 
+  // Direct 모드: 검색 쿼리를 분석하여 타겟 기업 특성 도출
+  if (searchMode === "direct") {
+    return buildDirectModeIntelligencePrompt(input, industryHint, countries, companySizeLabel)
+  }
+
+  // Seller 모드 (기본값): 기존 로직 - 판매자 분석 → 바이어 페르소나 생성
+  return buildSellerModeIntelligencePrompt(input, industryHint, countries, companySizeLabel)
+}
+
+/**
+ * Direct 모드 인텔리전스 프롬프트
+ * 검색 쿼리를 분석하여 찾고자 하는 기업 유형 도출
+ */
+function buildDirectModeIntelligencePrompt(
+  input: BuyerSearchInput,
+  industryHint: string,
+  countries: string,
+  companySizeLabel: string,
+): string {
+  return `You are an international company search expert.
+
+📋 STEP 0: Search Query Analysis
+
+**Search Query:**
+"${input.companyDescription}"
+
+**Search Parameters:**
+- Target Countries: ${countries}
+- Industry: ${input.industry} (${industryHint})
+- Company Size Preference: ${companySizeLabel}
+- Business Type: ${
+    input.target === "b2b"
+      ? "B2B (Business to Business)"
+      : input.target === "b2c"
+        ? "B2C (Business to Consumer)"
+        : "B2B + B2C (Both)"
+  }
+
+🔍 STEP 1: Query Interpretation
+
+Analyze the search query to understand:
+
+**1.1 Target Company Characteristics**
+- What type of company is the user looking for?
+- What role do they play in the supply chain? (Manufacturer, Distributor, Retailer, Service Provider)
+- What products/services do they handle?
+
+**1.2 Industry Classification**
+- Primary industry
+- Sub-categories
+- Related industries that might be relevant
+
+**1.3 Size & Scale Requirements**
+- Preferred company size (if specified)
+- Capacity indicators (e.g., "대규모", "소규모", "스타트업")
+
+🎯 STEP 2: Search Keyword Generation
+
+Generate search keywords that will find the target companies:
+
+**2.1 Primary Keywords**
+- Direct descriptors of the target company type
+- Industry-specific terms
+
+**2.2 Alternative Keywords**
+- Synonyms and variations
+- Related business types
+
+**2.3 Exclusion Keywords**
+- Types of companies to exclude (competitors, irrelevant industries)
+
+🎯 STEP 3: Company Profile Generation
+
+Generate company profiles (personas) that match the search query.
+
+Respond in the following JSON format:
+
+{
+  "productSummary": "찾고자 하는 기업 유형 요약 (1-2 sentences in Korean)",
+
+  "buyerPersonas": [
+    {
+      "type": "Target company type name (English)",
+      "typeKo": "타겟 기업 유형명 (Korean)",
+      "description": "이런 기업을 찾는 이유 (2-3 sentences in Korean)",
+      "decisionMakers": ["Job titles for contact"],
+      "targetCompanySize": ["startup", "small", "medium"],
+      "searchKeywords": {
+        "en": ["keyword1", "keyword2"],
+        "local": {
+          "Japan": ["keyword1", "keyword2"]
+        }
+      }
+    }
+  ],
+
+  "industryFilters": {
+    "keywords": ["industry keyword1", "keyword2"],
+    "excludeKeywords": ["irrelevant keyword", "competitor keyword"]
+  },
+
+  "searchStrategy": {
+    "priorityPersonas": ["Highest priority company types"],
+    "notes": "검색 전략 메모 (in Korean)"
+  }
+}
+
+**Critical Instructions:**
+- Generate EXACTLY 5 company profiles matching the search query
+- For each profile:
+  * Profile 1: Most specific match to the query
+  * Profile 2: Slightly broader interpretation
+  * Profile 3: Medium scope
+  * Profile 4: Broader related category
+  * Profile 5: Broad catch-all that still matches intent
+- Include local language keywords for target countries
+- Output ONLY valid JSON with no markdown, no explanation, no extra text`
+}
+
+/**
+ * Seller 모드 인텔리전스 프롬프트 (기존 로직)
+ * 판매자 정보를 분석하여 적합한 바이어 페르소나 생성
+ */
+function buildSellerModeIntelligencePrompt(
+  input: BuyerSearchInput,
+  industryHint: string,
+  countries: string,
+  companySizeLabel: string,
+): string {
   return `You are a B2B/B2C export buyer matching expert using a limited information-based inference framework.
 
 📋 STEP 0: Information Collection & Classification
@@ -164,12 +298,16 @@ Respond in the following JSON format:
 
 /**
  * LLM 관련성 평가 프롬프트 (배치)
+ * searchMode에 따라 다른 프롬프트 생성:
+ * - "seller" (기본값): 판매자의 바이어로 적합한지 평가
+ * - "direct": 검색 조건에 부합하는지 평가
  */
 export function buildBatchEvaluationPrompt(
   intelligence: BuyerIntelligence,
   companies: EnrichedCompany[],
   sellerSize: CompanySize,
   locale: "ko" | "en" = "ko",
+  searchMode: SearchMode = "seller",
 ): string {
   const isKorean = locale === "ko"
   const personaTypes = intelligence.buyerPersonas
@@ -196,6 +334,40 @@ export function buildBatchEvaluationPrompt(
     : `"matchedPersona": "Matched persona type (English)",
     "reason": "Reason for suitability (briefly 1-2 sentences in English)"`
 
+  // Direct 모드: 검색 조건에 부합하는지 평가
+  if (searchMode === "direct") {
+    return `You are an international company search expert.
+
+[Search Criteria]
+- Target Company Type: ${intelligence.productSummary}
+- Target Company Profiles: ${personaTypes}
+- Preferred Size: ${sellerSizeLabel}
+
+Evaluate how well the following companies match the search criteria above.
+
+${companyDescriptions}
+
+Respond with a JSON array for each company:
+[
+  {
+    "index": 0,
+    "score": 8,
+    ${languageInstruction}
+  },
+  ...
+]
+
+Scoring Criteria:
+- 9-10: Excellent match (Exact fit with search criteria)
+- 7-8: Good match (Closely related to target profile)
+- 5-6: Moderate (Partial match, some relevance)
+- 3-4: Low (Weak connection to search criteria)
+- 1-2: Unsuitable (Does not match search criteria)
+
+Output only JSON.`
+  }
+
+  // Seller 모드 (기본값): 바이어 적합성 평가
   return `You are a B2B/B2C export buyer matching expert.
 
 [Seller Info]
@@ -238,13 +410,44 @@ Output only JSON.`
 
 /**
  * 설명 생성 프롬프트
+ * searchMode에 따라 다른 프롬프트 생성:
+ * - "seller" (기본값): 바이어로 적합한 이유 설명
+ * - "direct": 검색 조건에 적합한 이유 설명
  */
 export function buildDescriptionPrompt(
   input: BuyerSearchInput,
   intelligence: BuyerIntelligence,
   buyer: ScoredCompany,
 ): string {
+  const searchMode: SearchMode = input.searchMode || "seller"
   const isKorean = input.locale === "ko"
+
+  // Direct 모드: 검색 조건에 적합한 이유 설명
+  if (searchMode === "direct") {
+    const languageInstruction = isKorean
+      ? "이 기업이 검색 조건에 적합한 이유를 1-2문장으로 설명하세요."
+      : "Explain why this company matches the search criteria in 1-2 sentences."
+
+    return `You are an international company search expert.
+
+[Search Criteria]
+${intelligence.productSummary}
+
+[Found Company]
+Company Name: ${buyer.companyName}
+Website: ${buyer.website}
+Industry: ${buyer.industry || "N/A"}
+Country: ${buyer.country}
+Company Info: ${buyer.description || "N/A"}
+Match Reason: ${buyer.llmEvaluation.reason}
+
+${languageInstruction}
+Write concisely, focusing on why this company is relevant to the search.
+
+Output only the explanation (no other text).`
+  }
+
+  // Seller 모드 (기본값): 바이어로 적합한 이유 설명
   const languageInstruction = isKorean
     ? "Explain why this buyer is a good candidate in 1-2 sentences in Korean."
     : "Explain why this buyer is a good candidate in 1-2 sentences in English."

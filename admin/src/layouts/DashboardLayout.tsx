@@ -126,7 +126,9 @@ function DashboardContent({ children }: DashboardContentProps) {
   // 로딩 중일 때는 이전 캐시된 워크스페이스 정보 사용
   const workspaces: WorkspaceOption[] = useMemo(() => {
     // 로딩 중이고 데이터가 없으면 localStorage에서 캐시 복원
-    if (isLoadingWorkspaces && (!userWorkspaces || userWorkspaces.length === 0)) {
+    const hasNoWorkspaces =
+      !userWorkspaces || (Array.isArray(userWorkspaces) && userWorkspaces.length === 0)
+    if (isLoadingWorkspaces && hasNoWorkspaces) {
       try {
         const cached = localStorage.getItem("cached_workspaces")
         if (cached) {

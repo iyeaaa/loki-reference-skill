@@ -349,9 +349,13 @@ export default function CompanyInformation() {
         {
           workspaceId,
           surveyData: {
-            industry: jotaiSurveyData.industry || "",
+            industry: Array.isArray(jotaiSurveyData.industry)
+              ? jotaiSurveyData.industry[0] || ""
+              : jotaiSurveyData.industry || "",
             target: jotaiSurveyData.target || "",
-            country: jotaiSurveyData.country || "",
+            country: Array.isArray(jotaiSurveyData.country)
+              ? jotaiSurveyData.country[0] || ""
+              : jotaiSurveyData.country || "",
             experience: jotaiSurveyData.experience || "",
             lang: jotaiSurveyData.lang,
           },

@@ -4,6 +4,7 @@
  */
 
 import { Annotation } from "@langchain/langgraph"
+import type { BuyerSearchInput, BuyerSearchResult } from "../buyer-search/types"
 import type { NodeEventEmitter } from "../chatbot/sse-context"
 
 // Search modes
@@ -244,6 +245,11 @@ export interface LeadDiscoveryState {
   // Clarification for ambiguous queries (advanced mode)
   clarification?: ClarificationState
   needsClarification: boolean
+
+  // Buyer Search (new flow - replacing BigQuery)
+  buyerSearchInput?: Partial<BuyerSearchInput>
+  buyerSearchResult?: BuyerSearchResult
+  buyerSearchProgress?: number
 }
 
 // LangGraph State Annotation
@@ -379,5 +385,18 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
   needsClarification: Annotation<boolean>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
+  }),
+  // Buyer Search (new flow - replacing BigQuery)
+  buyerSearchInput: Annotation<Partial<BuyerSearchInput> | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  buyerSearchResult: Annotation<BuyerSearchResult | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  buyerSearchProgress: Annotation<number | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
   }),
 })

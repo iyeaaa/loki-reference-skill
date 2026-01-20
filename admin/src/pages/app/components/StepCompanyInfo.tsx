@@ -106,9 +106,13 @@ export function StepCompanyInfo() {
       companyName: "",
       companyNameEn: "",
       companyDescription: "",
-      industry: surveyData?.industry || "",
+      industry: Array.isArray(surveyData?.industry)
+        ? surveyData.industry[0] || ""
+        : surveyData?.industry || "",
       target: surveyData?.target || "b2b",
-      country: surveyData?.country || "",
+      country: Array.isArray(surveyData?.country)
+        ? surveyData.country[0] || ""
+        : surveyData?.country || "",
       experience: surveyData?.experience || "none",
       websiteUrl: "",
       includeSignature: true,
@@ -377,9 +381,17 @@ export function StepCompanyInfo() {
               workspaceData?.companyDescription || strategyData.companyDescription || "",
             // Merge survey data from localStorage to ensure it's not lost
             // 기본값: target="b2b", experience="none" (설문에서 수집하지 않는 필드)
-            industry: strategyData.industry || surveyData?.industry || "",
+            industry:
+              strategyData.industry ||
+              (Array.isArray(surveyData?.industry)
+                ? surveyData.industry[0] || ""
+                : surveyData?.industry || ""),
             target: strategyData.target || surveyData?.target || "b2b",
-            country: strategyData.country || surveyData?.country || "",
+            country:
+              strategyData.country ||
+              (Array.isArray(surveyData?.country)
+                ? surveyData.country[0] || ""
+                : surveyData?.country || ""),
             experience: strategyData.experience || surveyData?.experience || "none",
             websiteUrl: strategyData.websiteUrl || "",
             includeSignature: strategyData.includeSignature ?? true,
@@ -399,9 +411,19 @@ export function StepCompanyInfo() {
             companyDescription: workspaceData?.companyDescription || "",
             // Preserve survey data from localStorage
             // 기본값: target="b2b", experience="none" (설문에서 수집하지 않는 필드)
-            industry: surveyData?.industry || prev.industry || "",
+            industry:
+              (Array.isArray(surveyData?.industry)
+                ? surveyData.industry[0] || ""
+                : surveyData?.industry || "") ||
+              prev.industry ||
+              "",
             target: surveyData?.target || prev.target || "b2b",
-            country: surveyData?.country || prev.country || "",
+            country:
+              (Array.isArray(surveyData?.country)
+                ? surveyData.country[0] || ""
+                : surveyData?.country || "") ||
+              prev.country ||
+              "",
             experience: surveyData?.experience || prev.experience || "none",
           }))
         }

@@ -59,8 +59,109 @@ function parseIntelligenceResponse(response: string): BuyerIntelligence | null {
 
 /**
  * Fallback 인텔리전스 생성 (LLM 실패 시)
+ * searchMode에 따라 다른 fallback 생성
  */
 function createFallbackIntelligence(input: BuyerSearchInput): BuyerIntelligence {
+  const searchMode = input.searchMode || "seller"
+
+  // Direct 모드: 검색 쿼리 기반 기업 프로필 생성
+  if (searchMode === "direct") {
+    return createDirectModeFallback(input)
+  }
+
+  // Seller 모드 (기본값): 바이어 페르소나 생성
+  return createSellerModeFallback(input)
+}
+
+/**
+ * Direct 모드 Fallback: 검색 쿼리 기반 기업 프로필 생성
+ */
+function createDirectModeFallback(input: BuyerSearchInput): BuyerIntelligence {
+  const industryKeyword = input.industry.replace("_", " ")
+  const allSizes: BuyerIntelligence["buyerPersonas"][0]["targetCompanySize"] = [
+    "startup",
+    "small",
+    "medium",
+    "large",
+    "enterprise",
+  ]
+
+  const personas: BuyerIntelligence["buyerPersonas"] = [
+    {
+      type: `${industryKeyword} Company`,
+      typeKo: `${industryKeyword} 기업`,
+      description: `검색 쿼리에 맞는 ${industryKeyword} 관련 기업`,
+      decisionMakers: ["CEO", "General Manager", "Director"],
+      targetCompanySize: [input.companySize],
+      searchKeywords: {
+        en: [industryKeyword, "company", "business"],
+        local: {},
+      },
+    },
+    {
+      type: `${industryKeyword} Specialist`,
+      typeKo: `${industryKeyword} 전문 기업`,
+      description: `${industryKeyword} 분야 전문 기업`,
+      decisionMakers: ["CEO", "Operations Manager"],
+      targetCompanySize: [input.companySize, "medium"],
+      searchKeywords: {
+        en: [industryKeyword, "specialist", "expert"],
+        local: {},
+      },
+    },
+    {
+      type: `${industryKeyword} Distributor`,
+      typeKo: `${industryKeyword} 유통 기업`,
+      description: `${industryKeyword} 제품 유통 기업`,
+      decisionMakers: ["Sales Director", "Purchasing Manager"],
+      targetCompanySize: ["small", "medium", "large"],
+      searchKeywords: {
+        en: [industryKeyword, "distributor", "supplier"],
+        local: {},
+      },
+    },
+    {
+      type: `${industryKeyword} Manufacturer`,
+      typeKo: `${industryKeyword} 제조 기업`,
+      description: `${industryKeyword} 제품 제조 기업`,
+      decisionMakers: ["CEO", "Production Manager"],
+      targetCompanySize: ["medium", "large", "enterprise"],
+      searchKeywords: {
+        en: [industryKeyword, "manufacturer", "producer"],
+        local: {},
+      },
+    },
+    {
+      type: "General Business",
+      typeKo: "일반 기업",
+      description: `검색 조건에 부합하는 일반 기업`,
+      decisionMakers: ["CEO", "Manager"],
+      targetCompanySize: allSizes,
+      searchKeywords: {
+        en: [industryKeyword, "business", "enterprise"],
+        local: {},
+      },
+    },
+  ]
+
+  return {
+    productSummary: input.companyDescription.slice(0, 200),
+    buyerPersonas: personas,
+    industryFilters: {
+      keywords: [industryKeyword],
+      excludeKeywords: [],
+    },
+    searchStrategy: {
+      priorityPersonas: personas.slice(0, 2).map((p) => p.type),
+      notes: "Fallback strategy (direct mode) - 검색 쿼리 기반 5개 기업 프로필 생성",
+    },
+  }
+}
+
+/**
+ * Seller 모드 Fallback: 바이어 페르소나 생성 (기존 로직)
+ */
+function createSellerModeFallback(input: BuyerSearchInput): BuyerIntelligence {
   const isB2B = input.target === "b2b" || input.target === "both"
   const isB2C = input.target === "b2c" || input.target === "both"
 
@@ -197,7 +298,7 @@ function createFallbackIntelligence(input: BuyerSearchInput): BuyerIntelligence 
     },
     searchStrategy: {
       priorityPersonas: finalPersonas.slice(0, 2).map((p) => p.type),
-      notes: "Fallback strategy - 규모 기반 우선순위로 5개 페르소나 생성",
+      notes: "Fallback strategy (seller mode) - 규모 기반 우선순위로 5개 페르소나 생성",
     },
   }
 }

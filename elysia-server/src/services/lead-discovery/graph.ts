@@ -12,11 +12,15 @@ import {
   NODE_RETRY_POLICIES,
 } from "./error-classifier"
 import { leadDiscoveryLogger } from "./logger"
-import { executeBigQuery } from "./nodes/bigquery-executor"
-import { generateBigQueryParams } from "./nodes/bigquery-param-generator"
-import { recommendBuyers } from "./nodes/buyer-recommender"
+// Legacy BigQuery imports (commented out - kept for potential future use)
+// import { executeBigQuery } from "./nodes/bigquery-executor"
+// import { generateBigQueryParams } from "./nodes/bigquery-param-generator"
+// import { recommendBuyers } from "./nodes/buyer-recommender"
+// import { understandQuery } from "./nodes/understand-query"
+// New buyer-search imports
+import { executeBuyerSearch } from "./nodes/buyer-search-executor"
+import { collectBuyerInfo } from "./nodes/collect-buyer-info"
 import { routeMode } from "./nodes/mode-router"
-import { understandQuery } from "./nodes/understand-query"
 import { analyzeWebsite } from "./nodes/website-analyzer"
 import type { ErrorContext, LeadDiscoveryState } from "./state"
 import { LeadDiscoveryStateAnnotation } from "./state"
@@ -31,6 +35,9 @@ const NODE_NAMES = {
   EXECUTE_BIGQUERY: "executeBigQuery",
   FORMAT_RESPONSE: "formatResponse",
   HANDLE_ERROR: "handleError",
+  // New nodes for buyer-search flow
+  COLLECT_BUYER_INFO: "collectBuyerInfo",
+  EXECUTE_BUYER_SEARCH: "executeBuyerSearch",
 } as const
 
 type NodeName = (typeof NODE_NAMES)[keyof typeof NODE_NAMES]
@@ -519,34 +526,35 @@ function routeAfterModeDetection(state: LeadDiscoveryState): NodeName {
     return NODE_NAMES.ANALYZE_WEBSITE
   }
 
-  // Advanced mode - go through understandQuery for clarification
+  // Advanced mode - go through collectBuyerInfo for buyer search
   leadDiscoveryLogger.routeDecision(
     NODE_NAMES.ROUTE_MODE,
-    NODE_NAMES.UNDERSTAND_QUERY,
-    "advanced mode - checking query clarity",
+    NODE_NAMES.COLLECT_BUYER_INFO,
+    "advanced mode - collecting buyer info",
   )
-  return NODE_NAMES.UNDERSTAND_QUERY
+  return NODE_NAMES.COLLECT_BUYER_INFO
 }
 
-function routeAfterUnderstandQuery(state: LeadDiscoveryState): NodeName {
-  if (state.error) {
-    leadDiscoveryLogger.routeDecision(
-      NODE_NAMES.UNDERSTAND_QUERY,
-      NODE_NAMES.HANDLE_ERROR,
-      "query understanding failed",
-    )
-    return NODE_NAMES.HANDLE_ERROR
-  }
-
-  // If clarification is needed, the node will interrupt
-  // After resume, we proceed to generate params
-  leadDiscoveryLogger.routeDecision(
-    NODE_NAMES.UNDERSTAND_QUERY,
-    NODE_NAMES.GENERATE_PARAMS,
-    `query understood - proceeding to param generation`,
-  )
-  return NODE_NAMES.GENERATE_PARAMS
-}
+// Legacy BigQuery routing functions (commented out - kept for potential future use)
+// function routeAfterUnderstandQuery(state: LeadDiscoveryState): NodeName {
+//   if (state.error) {
+//     leadDiscoveryLogger.routeDecision(
+//       NODE_NAMES.UNDERSTAND_QUERY,
+//       NODE_NAMES.HANDLE_ERROR,
+//       "query understanding failed",
+//     )
+//     return NODE_NAMES.HANDLE_ERROR
+//   }
+//
+//   // If clarification is needed, the node will interrupt
+//   // After resume, we proceed to generate params
+//   leadDiscoveryLogger.routeDecision(
+//     NODE_NAMES.UNDERSTAND_QUERY,
+//     NODE_NAMES.GENERATE_PARAMS,
+//     `query understood - proceeding to param generation`,
+//   )
+//   return NODE_NAMES.GENERATE_PARAMS
+// }
 
 function routeAfterWebsiteAnalysis(state: LeadDiscoveryState): NodeName {
   if (state.error) {
@@ -558,74 +566,115 @@ function routeAfterWebsiteAnalysis(state: LeadDiscoveryState): NodeName {
     return NODE_NAMES.HANDLE_ERROR
   }
 
+  // Route to collectBuyerInfo to build BuyerSearchInput from website analysis
   leadDiscoveryLogger.routeDecision(
     NODE_NAMES.ANALYZE_WEBSITE,
-    NODE_NAMES.RECOMMEND_BUYERS,
+    NODE_NAMES.COLLECT_BUYER_INFO,
     `analysis complete - ${state.websiteAnalysis?.companyName || "company analyzed"}`,
   )
-  return NODE_NAMES.RECOMMEND_BUYERS
+  return NODE_NAMES.COLLECT_BUYER_INFO
 }
 
-function routeAfterRecommendation(state: LeadDiscoveryState): NodeName {
+// function routeAfterRecommendation(state: LeadDiscoveryState): NodeName {
+//   if (state.error) {
+//     leadDiscoveryLogger.routeDecision(
+//       NODE_NAMES.RECOMMEND_BUYERS,
+//       NODE_NAMES.HANDLE_ERROR,
+//       "recommendation failed or cancelled",
+//     )
+//     return NODE_NAMES.HANDLE_ERROR
+//   }
+//
+//   if (state.selectedRecommendation) {
+//     leadDiscoveryLogger.routeDecision(
+//       NODE_NAMES.RECOMMEND_BUYERS,
+//       NODE_NAMES.GENERATE_PARAMS,
+//       `selected: ${state.selectedRecommendation.country} - ${state.selectedRecommendation.industry}`,
+//     )
+//     return NODE_NAMES.GENERATE_PARAMS
+//   }
+//
+//   // Still waiting for selection (shouldn't reach here due to interrupt)
+//   leadDiscoveryLogger.routeDecision(
+//     NODE_NAMES.RECOMMEND_BUYERS,
+//     NODE_NAMES.HANDLE_ERROR,
+//     "no selection made",
+//   )
+//   return NODE_NAMES.HANDLE_ERROR
+// }
+
+// function routeAfterParamGeneration(state: LeadDiscoveryState): NodeName {
+//   if (state.error) {
+//     leadDiscoveryLogger.routeDecision(
+//       NODE_NAMES.GENERATE_PARAMS,
+//       NODE_NAMES.HANDLE_ERROR,
+//       "param generation failed",
+//     )
+//     return NODE_NAMES.HANDLE_ERROR
+//   }
+//
+//   leadDiscoveryLogger.routeDecision(
+//     NODE_NAMES.GENERATE_PARAMS,
+//     NODE_NAMES.EXECUTE_BIGQUERY,
+//     `params ready - query: ${state.bigQueryParams?.query?.substring(0, 30)}...`,
+//   )
+//   return NODE_NAMES.EXECUTE_BIGQUERY
+// }
+
+// function routeAfterBigQuery(state: LeadDiscoveryState): NodeName {
+//   if (state.error && state.searchResults.length === 0) {
+//     leadDiscoveryLogger.routeDecision(
+//       NODE_NAMES.EXECUTE_BIGQUERY,
+//       NODE_NAMES.HANDLE_ERROR,
+//       "BigQuery execution failed",
+//     )
+//     return NODE_NAMES.HANDLE_ERROR
+//   }
+//
+//   leadDiscoveryLogger.routeDecision(
+//     NODE_NAMES.EXECUTE_BIGQUERY,
+//     NODE_NAMES.FORMAT_RESPONSE,
+//     `found ${state.searchResults.length} results`,
+//   )
+//   return NODE_NAMES.FORMAT_RESPONSE
+// }
+
+// === New Routing Functions for Buyer Search Flow ===
+
+function routeAfterCollectBuyerInfo(state: LeadDiscoveryState): NodeName {
   if (state.error) {
     leadDiscoveryLogger.routeDecision(
-      NODE_NAMES.RECOMMEND_BUYERS,
+      NODE_NAMES.COLLECT_BUYER_INFO,
       NODE_NAMES.HANDLE_ERROR,
-      "recommendation failed or cancelled",
+      "buyer info collection failed",
     )
     return NODE_NAMES.HANDLE_ERROR
   }
 
-  if (state.selectedRecommendation) {
-    leadDiscoveryLogger.routeDecision(
-      NODE_NAMES.RECOMMEND_BUYERS,
-      NODE_NAMES.GENERATE_PARAMS,
-      `selected: ${state.selectedRecommendation.country} - ${state.selectedRecommendation.industry}`,
-    )
-    return NODE_NAMES.GENERATE_PARAMS
-  }
-
-  // Still waiting for selection (shouldn't reach here due to interrupt)
+  // If clarification is needed, the node will interrupt
+  // After resume, we proceed to execute buyer search
   leadDiscoveryLogger.routeDecision(
-    NODE_NAMES.RECOMMEND_BUYERS,
-    NODE_NAMES.HANDLE_ERROR,
-    "no selection made",
+    NODE_NAMES.COLLECT_BUYER_INFO,
+    NODE_NAMES.EXECUTE_BUYER_SEARCH,
+    `buyer info collected - proceeding to search`,
   )
-  return NODE_NAMES.HANDLE_ERROR
+  return NODE_NAMES.EXECUTE_BUYER_SEARCH
 }
 
-function routeAfterParamGeneration(state: LeadDiscoveryState): NodeName {
-  if (state.error) {
-    leadDiscoveryLogger.routeDecision(
-      NODE_NAMES.GENERATE_PARAMS,
-      NODE_NAMES.HANDLE_ERROR,
-      "param generation failed",
-    )
-    return NODE_NAMES.HANDLE_ERROR
-  }
-
-  leadDiscoveryLogger.routeDecision(
-    NODE_NAMES.GENERATE_PARAMS,
-    NODE_NAMES.EXECUTE_BIGQUERY,
-    `params ready - query: ${state.bigQueryParams?.query?.substring(0, 30)}...`,
-  )
-  return NODE_NAMES.EXECUTE_BIGQUERY
-}
-
-function routeAfterBigQuery(state: LeadDiscoveryState): NodeName {
+function routeAfterBuyerSearch(state: LeadDiscoveryState): NodeName {
   if (state.error && state.searchResults.length === 0) {
     leadDiscoveryLogger.routeDecision(
-      NODE_NAMES.EXECUTE_BIGQUERY,
+      NODE_NAMES.EXECUTE_BUYER_SEARCH,
       NODE_NAMES.HANDLE_ERROR,
-      "BigQuery execution failed",
+      "buyer search failed",
     )
     return NODE_NAMES.HANDLE_ERROR
   }
 
   leadDiscoveryLogger.routeDecision(
-    NODE_NAMES.EXECUTE_BIGQUERY,
+    NODE_NAMES.EXECUTE_BUYER_SEARCH,
     NODE_NAMES.FORMAT_RESPONSE,
-    `found ${state.searchResults.length} results`,
+    `found ${state.searchResults.length} buyers`,
   )
   return NODE_NAMES.FORMAT_RESPONSE
 }
@@ -635,15 +684,17 @@ function routeAfterBigQuery(state: LeadDiscoveryState): NodeName {
 export function createLeadDiscoveryGraph() {
   const workflow = new StateGraph(LeadDiscoveryStateAnnotation)
 
-  // Add nodes
+  // Add nodes (only nodes used in the new buyer-search flow)
   workflow.addNode(NODE_NAMES.ROUTE_MODE, routeMode)
-  workflow.addNode(NODE_NAMES.UNDERSTAND_QUERY, understandQuery)
   workflow.addNode(NODE_NAMES.ANALYZE_WEBSITE, analyzeWebsite)
-  workflow.addNode(NODE_NAMES.RECOMMEND_BUYERS, recommendBuyers)
-  workflow.addNode(NODE_NAMES.GENERATE_PARAMS, generateBigQueryParams)
-  workflow.addNode(NODE_NAMES.EXECUTE_BIGQUERY, executeBigQuery)
   workflow.addNode(NODE_NAMES.FORMAT_RESPONSE, formatResponse)
   workflow.addNode(NODE_NAMES.HANDLE_ERROR, handleError)
+  // New nodes for buyer-search flow
+  workflow.addNode(NODE_NAMES.COLLECT_BUYER_INFO, collectBuyerInfo)
+  workflow.addNode(NODE_NAMES.EXECUTE_BUYER_SEARCH, executeBuyerSearch)
+
+  // Note: Legacy BigQuery nodes (understandQuery, recommendBuyers, generateParams, executeBigQuery)
+  // are NOT added to the graph but their code files are preserved for potential future use.
 
   // Set entry point
   // @ts-expect-error - LangGraph type inference issue
@@ -653,36 +704,27 @@ export function createLeadDiscoveryGraph() {
   // @ts-expect-error - LangGraph type inference issue
   workflow.addConditionalEdges(NODE_NAMES.ROUTE_MODE, routeAfterModeDetection, {
     [NODE_NAMES.ANALYZE_WEBSITE]: NODE_NAMES.ANALYZE_WEBSITE,
-    [NODE_NAMES.UNDERSTAND_QUERY]: NODE_NAMES.UNDERSTAND_QUERY,
+    [NODE_NAMES.COLLECT_BUYER_INFO]: NODE_NAMES.COLLECT_BUYER_INFO,
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
   })
 
-  // @ts-expect-error - LangGraph type inference issue
-  workflow.addConditionalEdges(NODE_NAMES.UNDERSTAND_QUERY, routeAfterUnderstandQuery, {
-    [NODE_NAMES.GENERATE_PARAMS]: NODE_NAMES.GENERATE_PARAMS,
-    [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
-  })
-
+  // Website analysis → collect buyer info
   // @ts-expect-error - LangGraph type inference issue
   workflow.addConditionalEdges(NODE_NAMES.ANALYZE_WEBSITE, routeAfterWebsiteAnalysis, {
-    [NODE_NAMES.RECOMMEND_BUYERS]: NODE_NAMES.RECOMMEND_BUYERS,
+    [NODE_NAMES.COLLECT_BUYER_INFO]: NODE_NAMES.COLLECT_BUYER_INFO,
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
   })
 
+  // Collect buyer info → execute buyer search
   // @ts-expect-error - LangGraph type inference issue
-  workflow.addConditionalEdges(NODE_NAMES.RECOMMEND_BUYERS, routeAfterRecommendation, {
-    [NODE_NAMES.GENERATE_PARAMS]: NODE_NAMES.GENERATE_PARAMS,
+  workflow.addConditionalEdges(NODE_NAMES.COLLECT_BUYER_INFO, routeAfterCollectBuyerInfo, {
+    [NODE_NAMES.EXECUTE_BUYER_SEARCH]: NODE_NAMES.EXECUTE_BUYER_SEARCH,
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
   })
 
+  // Execute buyer search → format response
   // @ts-expect-error - LangGraph type inference issue
-  workflow.addConditionalEdges(NODE_NAMES.GENERATE_PARAMS, routeAfterParamGeneration, {
-    [NODE_NAMES.EXECUTE_BIGQUERY]: NODE_NAMES.EXECUTE_BIGQUERY,
-    [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
-  })
-
-  // @ts-expect-error - LangGraph type inference issue
-  workflow.addConditionalEdges(NODE_NAMES.EXECUTE_BIGQUERY, routeAfterBigQuery, {
+  workflow.addConditionalEdges(NODE_NAMES.EXECUTE_BUYER_SEARCH, routeAfterBuyerSearch, {
     [NODE_NAMES.FORMAT_RESPONSE]: NODE_NAMES.FORMAT_RESPONSE,
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
   })

@@ -29,10 +29,11 @@ export type LeadDiscoveryStatus =
   | "error"
 
 // Clarification question type
+// options can be string[] or {value, label}[] depending on backend version
 export type ClarificationQuestion = {
   field: "country" | "industry" | "employeeRange"
   label: string
-  options: string[]
+  options: (string | { value: string; label: string })[]
   required: boolean
 }
 
@@ -46,6 +47,7 @@ export type ClarificationData = {
     keywords?: string[]
   }
   confidence: number
+  currentInput?: Record<string, unknown> // Partial input state from buyer_info_required interrupt
 }
 
 // SSE 이벤트 데이터 타입
@@ -259,6 +261,12 @@ async function processSSEStream(
         } else if (node === "analyzeWebsite") {
           status = "analyzing"
           defaultProgress = 15
+        } else if (node === "collectBuyerInfo") {
+          status = "searching"
+          defaultProgress = 25
+        } else if (node === "executeBuyerSearch") {
+          status = "searching"
+          defaultProgress = 35
         } else if (node === "recommendBuyers") {
           status = "recommending"
           defaultProgress = 40
@@ -436,11 +444,12 @@ async function processSSEStream(
           hasQuestions: !!data.questions,
         })
 
-        // Handle clarification_required interrupt
-        if (interruptType === "clarification_required") {
+        // Handle clarification_required or buyer_info_required interrupt
+        if (interruptType === "clarification_required" || interruptType === "buyer_info_required") {
           const questions = (data.questions as ClarificationQuestion[]) || []
           const understood = (data.understood as ClarificationData["understood"]) || {}
           const confidence = (data.confidence as number) || 0
+          const currentInput = (data.currentInput as Record<string, unknown>) || undefined
 
           log.info(
             `Clarification interrupt: ${questions.length} questions, confidence=${confidence}`,
@@ -450,6 +459,7 @@ async function processSSEStream(
             questions,
             understood,
             confidence,
+            currentInput,
           }
 
           options.onClarificationRequired?.(clarificationData, sessionIdRef.current || "")

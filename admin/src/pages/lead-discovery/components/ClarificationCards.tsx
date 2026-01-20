@@ -172,8 +172,28 @@ type QuestionCardProps = {
   index: number
 }
 
+/**
+ * Normalize option to string
+ * Handles both string and {value, label} object formats
+ */
+function normalizeOption(option: unknown): string {
+  if (typeof option === "string") {
+    return option
+  }
+  if (option && typeof option === "object" && "label" in option) {
+    return String((option as { label: unknown }).label)
+  }
+  return String(option)
+}
+
 function QuestionCard({ question, selectedValue, onSelect, disabled, index }: QuestionCardProps) {
   const label = FIELD_LABELS[question.field] || question.label
+
+  // Normalize options to string array (defensive handling for both string[] and {value, label}[])
+  const normalizedOptions = question.options.map(normalizeOption)
+
+  // Check if this is a free text input (no options provided)
+  const isFreeTextInput = normalizedOptions.length === 0
 
   return (
     <motion.div
@@ -187,43 +207,60 @@ function QuestionCard({ question, selectedValue, onSelect, disabled, index }: Qu
         {question.required && <span className="text-red-500 text-xs">*</span>}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <AnimatePresence mode="popLayout">
-          {question.options.map((option, oIndex) => {
-            const isSelected = selectedValue === option
+      {isFreeTextInput ? (
+        // Free text input for questions without predefined options
+        <input
+          className={cn(
+            "w-full rounded-lg border border-border bg-card px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground",
+            "focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary",
+            disabled && "cursor-not-allowed opacity-50",
+          )}
+          disabled={disabled}
+          onChange={(e) => onSelect(e.target.value)}
+          placeholder={question.label}
+          type="text"
+          value={selectedValue || ""}
+        />
+      ) : (
+        // Option buttons for questions with predefined options
+        <div className="flex flex-wrap gap-2">
+          <AnimatePresence mode="popLayout">
+            {normalizedOptions.map((option, oIndex) => {
+              const isSelected = selectedValue === option
 
-            return (
-              <motion.button
-                animate={{ opacity: 1, scale: 1 }}
-                className={cn(
-                  "group rounded-lg border px-3 py-2 text-sm transition-all",
-                  !disabled && "hover:border-primary/50 hover:bg-muted/30 active:scale-[0.98]",
-                  isSelected
-                    ? "border-primary bg-primary/10 font-medium text-primary"
-                    : "border-border bg-card text-foreground",
-                  disabled && !isSelected && "cursor-not-allowed opacity-50",
-                )}
-                disabled={disabled}
-                exit={{ opacity: 0, scale: 0.9 }}
-                initial={{ opacity: 0, scale: 0.9 }}
-                key={option}
-                onClick={() => onSelect(option)}
-                transition={{ duration: 0.15, delay: oIndex * 0.02 }}
-                type="button"
-              >
-                <span className="flex items-center gap-1.5">
-                  {isSelected ? (
-                    <Check className="h-3.5 w-3.5 text-primary" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
+              return (
+                <motion.button
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={cn(
+                    "group rounded-lg border px-3 py-2 text-sm transition-all",
+                    !disabled && "hover:border-primary/50 hover:bg-muted/30 active:scale-[0.98]",
+                    isSelected
+                      ? "border-primary bg-primary/10 font-medium text-primary"
+                      : "border-border bg-card text-foreground",
+                    disabled && !isSelected && "cursor-not-allowed opacity-50",
                   )}
-                  {option}
-                </span>
-              </motion.button>
-            )
-          })}
-        </AnimatePresence>
-      </div>
+                  disabled={disabled}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  key={option}
+                  onClick={() => onSelect(option)}
+                  transition={{ duration: 0.15, delay: oIndex * 0.02 }}
+                  type="button"
+                >
+                  <span className="flex items-center gap-1.5">
+                    {isSelected ? (
+                      <Check className="h-3.5 w-3.5 text-primary" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
+                    )}
+                    {option}
+                  </span>
+                </motion.button>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+      )}
     </motion.div>
   )
 }

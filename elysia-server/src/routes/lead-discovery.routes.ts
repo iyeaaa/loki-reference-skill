@@ -71,7 +71,7 @@ async function sendInterruptEvent(
         questions?: Array<{
           field: string
           label: string
-          options: string[]
+          options: string[] | Array<{ value: string; label: string }>
           required: boolean
         }>
         understood?: {
@@ -81,6 +81,8 @@ async function sendInterruptEvent(
           keywords?: string[]
         }
         confidence?: number
+        // Buyer search input (for buyer_info_required interrupt)
+        currentInput?: Record<string, unknown>
       }
     }>
   }
@@ -94,23 +96,24 @@ async function sendInterruptEvent(
   )
 
   // Handle different interrupt types
-  if (interruptType === "clarification_required") {
-    // Clarification interrupt - send questions to frontend
+  if (interruptType === "clarification_required" || interruptType === "buyer_info_required") {
+    // Clarification/buyer info interrupt - send questions to frontend
     session.push({
       event: "interrupt",
       data: {
-        type: "clarification_required",
+        type: interruptType,
         message: interruptPayload?.message || "검색 조건을 더 명확히 해주세요",
         sessionId,
         questions: interruptPayload?.questions || [],
         understood: interruptPayload?.understood || {},
         confidence: interruptPayload?.confidence || 0,
+        currentInput: interruptPayload?.currentInput || {},
         duration,
       },
     })
 
     leadDiscoveryLogger.info(
-      `[SSE] Clarification interrupt sent with ${interruptPayload?.questions?.length || 0} questions`,
+      `[SSE] ${interruptType} interrupt sent with ${interruptPayload?.questions?.length || 0} questions`,
     )
   } else {
     // Buyer selection interrupt - send recommendations to frontend
@@ -702,6 +705,25 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
               `[Clarify] Current state - clarification: ${JSON.stringify(state.clarification)}`,
             )
 
+            // ⭐ interrupt payload에서 currentInput 추출
+            // interrupt()가 예외를 던지기 때문에 state에 저장되지 않고
+            // tasks[].interrupts[].value에 payload가 저장됨
+            type InterruptTask = {
+              interrupts?: Array<{
+                value?: {
+                  currentInput?: Record<string, unknown>
+                }
+              }>
+            }
+
+            const tasks = currentState.tasks as InterruptTask[] | undefined
+            const interruptPayload = tasks?.[0]?.interrupts?.[0]?.value
+            const currentInput = interruptPayload?.currentInput || {}
+
+            leadDiscoveryLogger.info(
+              `[Clarify] Interrupt payload currentInput: ${JSON.stringify(currentInput)}`,
+            )
+
             // Build updated clarification state with answers
             const updatedClarification = {
               ...(state.clarification || {
@@ -714,6 +736,18 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
               needed: false,
             }
 
+            // ⭐ buyerSearchInput에 currentInput 데이터 병합
+            // interrupt 전에 파싱된 데이터(companyDescription, industry 등)를 보존
+            const existingInput = state.buyerSearchInput || {}
+            const mergedBuyerSearchInput = {
+              ...currentInput,
+              ...existingInput,
+            }
+
+            leadDiscoveryLogger.info(
+              `[Clarify] Merged buyerSearchInput: ${JSON.stringify(mergedBuyerSearchInput)}`,
+            )
+
             // Resume graph with clarification answers
             const resumeCommand = new Command({
               resume: { clarificationAnswers: answers, confirmed: true },
@@ -721,6 +755,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 clarification: updatedClarification,
                 needsClarification: false,
                 _emitter: emitter,
+                buyerSearchInput: mergedBuyerSearchInput,
               },
             })
 

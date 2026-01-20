@@ -16,6 +16,7 @@ import type {
   EnrichedCompany,
   LLMEvaluation,
   ScoredCompany,
+  SearchMode,
 } from "../types"
 
 const llm = new ChatGoogleGenerativeAI({
@@ -67,11 +68,18 @@ async function evaluateBatch(
   companies: EnrichedCompany[],
   sellerSize: CompanySize,
   locale: "ko" | "en" = "ko",
+  searchMode: SearchMode = "seller",
 ): Promise<Map<number, LLMEvaluation>> {
   const evaluations = new Map<number, LLMEvaluation>()
 
   try {
-    const prompt = buildBatchEvaluationPrompt(intelligence, companies, sellerSize, locale)
+    const prompt = buildBatchEvaluationPrompt(
+      intelligence,
+      companies,
+      sellerSize,
+      locale,
+      searchMode,
+    )
     const response = await llm.invoke(prompt)
     const responseText = (response.content as string).trim()
 
@@ -276,7 +284,13 @@ export async function scoreAndRankCompanies(
     logger.info(`[Scoring] 배치 ${batchIdx + 1}/${batches.length}: ${batch.length}개 평가 중...`)
 
     const evaluations = await limit(async () => {
-      return await evaluateBatch(intelligence, batch, input.companySize, input.locale)
+      return await evaluateBatch(
+        intelligence,
+        batch,
+        input.companySize,
+        input.locale,
+        input.searchMode || "seller",
+      )
     })
 
     // 최종 스코어 계산 및 실시간 콜백

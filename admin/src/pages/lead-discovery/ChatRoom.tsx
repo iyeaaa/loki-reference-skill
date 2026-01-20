@@ -168,9 +168,9 @@ function formatCompletionMessage(data: {
   // 메인 메시지 - 필터링 여부에 따라 다른 메시지
   let mainMessage: string
   if (isFiltered) {
-    mainMessage = `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n이 중 관련도가 높은 **상위 ${actualDisplayCount.toLocaleString()}개**를 엄선하여 오른쪽 테이블에 표시했어요. 🎯`
+    mainMessage = `Rinda가 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n이 중 관련도가 높은 **상위 ${actualDisplayCount.toLocaleString()}개**를 엄선하여 오른쪽 테이블에 표시했어요. 🎯`
   } else {
-    mainMessage = `Rinda 데이터베이스에서 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에서 결과를 확인하세요.`
+    mainMessage = `Rinda가 검색 조건에 맞는 **${totalCount.toLocaleString()}개의 잠재 바이어**를 탐색했어요.\n\n오른쪽 테이블에서 결과를 확인하세요.`
   }
 
   // 더 많은 데이터 안내 (필터링된 경우에만 표시)
@@ -1070,6 +1070,15 @@ export function ChatRoom() {
         mode: data.mode,
         customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
       }))
+    },
+    onThinking: (data) => {
+      // Clarification 후 검색 과정 Thinking 업데이트
+      updateThinking({
+        node: data.node,
+        summary: data.summary,
+        detail: data.detail,
+        isStreaming: data.isStreaming,
+      })
     },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Clarify results:", totalCount)

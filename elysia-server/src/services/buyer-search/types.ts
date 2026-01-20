@@ -36,6 +36,13 @@ export type CompanySize =
   | "enterprise" // 글로벌 대기업 (직원 1000명+)
 
 /**
+ * 검색 모드 타입
+ * - "direct": 찾을 회사 쿼리 (예: "동남아 실링팬 유통 기업")
+ * - "seller": 내 회사 설명 기반 바이어 찾기 (예: "실링팬 제조사의 바이어")
+ */
+export type SearchMode = "direct" | "seller"
+
+/**
  * 국가 타입
  */
 export type Country =
@@ -51,12 +58,13 @@ export type Country =
  */
 export interface BuyerSearchInput {
   companyName: string // 회사명
-  companyDescription: string // 회사 설명 (주요 제품 포함)
+  companyDescription: string // 회사 설명 (주요 제품 포함) 또는 검색 쿼리 (searchMode에 따라 의미 달라짐)
   industry: Industry // 산업군
   target: TargetCustomer // 타겟 고객
   country: Country[] // 희망 진출 국가 (복수 선택)
   locale: "en" | "ko" // 언어
   companySize: CompanySize // 회사 규모
+  searchMode?: SearchMode // 검색 모드: "direct" = 찾을 회사 쿼리, "seller" = 내 회사 설명 (기본값)
 }
 
 /**

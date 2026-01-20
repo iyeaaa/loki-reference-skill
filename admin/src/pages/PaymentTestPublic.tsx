@@ -1074,7 +1074,7 @@ export default function PaymentTestPublic() {
         {/* Business Information Footer */}
         <footer className="mt-12 border-gray-200 border-t pt-8">
           <div className="space-y-3 text-center text-gray-500 text-sm">
-            <div className="font-semibold text-gray-700">그린다에이아이주식회사</div>
+            <div className="font-semibold text-gray-700">그린다에이아이 주식회사</div>
             <div className="space-y-1">
               <p>사업자등록번호: 309-88-02709 | 대표: 강호진</p>
               <p>주소: 대전광역시 유성구 대학로 99, 503호 (궁동, 대전팁스타운)</p>

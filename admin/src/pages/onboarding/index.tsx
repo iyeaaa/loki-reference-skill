@@ -42,6 +42,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useExitIntent } from "@/hooks/useExitIntent"
 import { trackSurveyStep } from "@/lib/analytics"
 import { slideMobileVariants, slideVariants } from "@/lib/animations"
+import { apiFetch } from "@/lib/api/client"
 import type { OnboardingStep } from "@/lib/exit-intent-messages"
 import { cn } from "@/lib/utils"
 import {
@@ -73,6 +74,9 @@ export default function OnboardingPage() {
   // Jotai atom setter (for syncing after localStorage update)
   const setSurveyData = useSetAtom(surveyDataAtom)
 
+  // 자동 리다이렉트 처리 (기존 사용자)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
   // Slide animation direction tracking (동기적 계산으로 타이밍 문제 해결)
   const prevStepRef = useRef(currentStep)
   const direction = useMemo(() => {
@@ -92,6 +96,68 @@ export default function OnboardingPage() {
       experience: (stored?.experience as ExportExperience) ?? null,
     }
   })
+
+  // 기존 로그인 체크 (Step 1에서만, 팝업 없이)
+  const autoCheckRef = useRef(false)
+  useEffect(() => {
+    // Step 1에서만 실행
+    if (currentStep !== 1) {
+      return
+    }
+    // 이미 체크했으면 스킵
+    if (autoCheckRef.current) {
+      return
+    }
+
+    autoCheckRef.current = true
+
+    const checkAndRedirect = async () => {
+      // localStorage에서 authToken 확인
+      const authToken = localStorage.getItem("authToken")
+
+      if (authToken) {
+        try {
+          // 토큰 유효성 검증
+          console.log("[Survey] Token found - verifying...")
+          const response = await apiFetch<{ user: { id: string } }>("/api/v1/auth/verify", {
+            method: "POST",
+          })
+
+          if (response.user?.id) {
+            // 유효한 토큰 - 대시보드로 리다이렉트
+            console.log("[Survey] Valid token - redirecting to dashboard")
+            setIsRedirecting(true)
+            setTimeout(() => {
+              window.location.href = "/dashboard"
+            }, 300)
+            return
+          }
+        } catch (_error) {
+          // 토큰 만료 또는 유효하지 않음 - 삭제
+          console.log("[Survey] Token invalid or expired - removing")
+          localStorage.removeItem("authToken")
+          localStorage.removeItem("user")
+        }
+      }
+
+      // 로그인 안 됨 - 최근 로그인 이메일 확인
+      const recentEmail = localStorage.getItem("recent_google_email")
+
+      if (recentEmail) {
+        // 최근 로그인 기록 있음 - /trial로 리다이렉트
+        console.log("[Survey] Recent email found - redirecting to /trial")
+        setIsRedirecting(true)
+        setTimeout(() => {
+          window.location.href = "/trial"
+        }, 300)
+      } else {
+        // 완전 신규 사용자 - 설문 계속
+        console.log("[Survey] New user - continue survey")
+      }
+    }
+
+    checkAndRedirect()
+  }, [currentStep])
 
   // Redirect logic: invalid step or trying to skip ahead
   // localStorage 기반으로 검증 (state 타이밍 문제 해결)
@@ -176,6 +242,24 @@ export default function OnboardingPage() {
       default:
         return null
     }
+  }
+
+  // 자동 리다이렉트 중 로딩 화면
+  if (isRedirecting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2" />
+              <p className="text-gray-600 text-sm">
+                {isKorean ? "로그인 페이지로 이동 중..." : "Redirecting to login page..."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

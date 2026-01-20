@@ -16,6 +16,7 @@ import { clearSurveyStorage, getSurveyFromStorage, isValidSurveyData } from "@/s
 
 type GoogleAuthResponse = {
   token: string
+  refreshToken?: string
   user: {
     id: string
     username: string
@@ -60,8 +61,11 @@ export default function NewTrialPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      // Store auth data
-      authApi.storeAuthData(response.token, authUser)
+      // Store auth data (including refresh token)
+      authApi.storeAuthData(response.token, authUser, response.refreshToken)
+
+      // Store email for auto-redirect from survey page
+      localStorage.setItem("recent_google_email", response.user.email)
 
       // Update auth context (await로 state 업데이트 완료 대기)
       await login(response.token, authUser, true)

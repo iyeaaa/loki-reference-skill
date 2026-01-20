@@ -113,15 +113,19 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       // Update last login
       await userService.updateLastLogin(user.id)
 
-      // Generate JWT token
-      const token = authService.generateToken({
+      // Generate Access Token (1시간)
+      const accessToken = authService.generateToken({
         userId: user.id,
         email: user.email,
         userRole: user.userRole,
       })
 
+      // Generate Refresh Token (30일, Redis 저장)
+      const refreshToken = await authService.generateRefreshToken(user.id)
+
       return {
-        token,
+        token: accessToken,
+        refreshToken,
         user: {
           id: user.id,
           username: user.username,
@@ -322,12 +326,15 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           // Don't throw error here to avoid breaking user registration
         }
 
-        // Generate JWT token for immediate login
-        const token = authService.generateToken({
+        // Generate Access Token (1시간)
+        const accessToken = authService.generateToken({
           userId: newUser.id,
           email: newUser.email,
           userRole: newUser.userRole,
         })
+
+        // Generate Refresh Token (30일, Redis 저장)
+        const refreshToken = await authService.generateRefreshToken(newUser.id)
 
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(newUser.id)
@@ -357,7 +364,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
         return {
           message: "이메일 등록이 완료되었습니다. 체험을 시작하세요!",
-          token,
+          token: accessToken,
+          refreshToken,
           user: {
             id: newUser.id,
             username: newUser.username,
@@ -429,24 +437,56 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
   })
 
   // Refresh token endpoint
-  .post("/refresh", async ({ headers, set }) => {
-    const token = headers.authorization?.replace("Bearer ", "")
-    if (!token) {
-      set.status = 401
-      return errorResponse("인증 토큰이 없습니다.", ResponseCode.UNAUTHORIZED)
-    }
+  .post(
+    "/refresh",
+    async ({ body, set }) => {
+      const { refreshToken } = body
 
-    const payload = await authService.verifyToken(token)
-    const newToken = authService.generateToken({
-      userId: payload.userId,
-      email: payload.email,
-      userRole: payload.userRole,
-    })
+      if (!refreshToken) {
+        set.status = 401
+        return errorResponse("Refresh token이 없습니다.", ResponseCode.UNAUTHORIZED)
+      }
 
-    return {
-      token: newToken,
-    }
-  })
+      // Refresh Token 검증 (Redis)
+      const userId = await authService.verifyRefreshToken(refreshToken)
+
+      if (!userId) {
+        set.status = 401
+        return errorResponse(
+          "유효하지 않거나 만료된 Refresh token입니다.",
+          ResponseCode.UNAUTHORIZED,
+        )
+      }
+
+      // 사용자 정보 조회
+      const user = await userService.getUser(userId)
+      if (!user || !user.isActive) {
+        set.status = 401
+        return errorResponse("유효하지 않은 사용자입니다.", ResponseCode.UNAUTHORIZED)
+      }
+
+      // 새 Access Token 발급 (1시간)
+      const newAccessToken = authService.generateToken({
+        userId: user.id,
+        email: user.email,
+        userRole: user.userRole,
+      })
+
+      // 새 Refresh Token 발급 (기존 것은 삭제하고 새로 발급)
+      await authService.deleteRefreshToken(refreshToken)
+      const newRefreshToken = await authService.generateRefreshToken(user.id)
+
+      return {
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+      }
+    },
+    {
+      body: t.Object({
+        refreshToken: t.String(),
+      }),
+    },
+  )
 
   // Admin check endpoint
   .get("/admin-check", async ({ headers, set }) => {
@@ -639,18 +679,22 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           )
         }
 
-        // Generate JWT token
-        const token = authService.generateToken({
+        // Generate Access Token (1시간)
+        const accessToken = authService.generateToken({
           userId: user.id,
           email: user.email,
           userRole: user.userRole,
         })
 
+        // Generate Refresh Token (30일, Redis 저장)
+        const refreshToken = await authService.generateRefreshToken(user.id)
+
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(user.id)
 
         return {
-          token,
+          token: accessToken,
+          refreshToken,
           user: {
             id: user.id,
             username: user.username,
@@ -904,18 +948,22 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           // Don't fail the entire auth flow
         }
 
-        // Generate JWT token
-        const token = authService.generateToken({
+        // Generate Access Token (1시간)
+        const accessToken = authService.generateToken({
           userId: user.id,
           email: user.email,
           userRole: user.userRole,
         })
 
+        // Generate Refresh Token (30일, Redis 저장)
+        const refreshToken = await authService.generateRefreshToken(user.id)
+
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(user.id)
 
         return {
-          token,
+          token: accessToken,
+          refreshToken,
           user: {
             id: user.id,
             username: user.username,
@@ -997,18 +1045,22 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           )
         }
 
-        // Generate JWT token
-        const token = authService.generateToken({
+        // Generate Access Token (1시간)
+        const accessToken = authService.generateToken({
           userId: user.id,
           email: user.email,
           userRole: user.userRole,
         })
 
+        // Generate Refresh Token (30일, Redis 저장)
+        const refreshToken = await authService.generateRefreshToken(user.id)
+
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(user.id)
 
         return {
-          token,
+          token: accessToken,
+          refreshToken,
           user: {
             id: user.id,
             username: user.username,

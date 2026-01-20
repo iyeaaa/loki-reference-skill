@@ -97,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("[AuthProvider] logout - entryPoint:", entryPoint)
 
     localStorage.removeItem("authToken")
+    localStorage.removeItem("refreshToken") // Refresh Token 삭제
     localStorage.removeItem("user")
     // Clear Jotai survey data to prevent stale data for next user
     localStorage.removeItem("rinda_survey_data")

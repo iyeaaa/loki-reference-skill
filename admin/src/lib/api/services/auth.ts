@@ -1,4 +1,10 @@
-import { apiFetch, removeToken, setToken } from "@/lib/api/client"
+import {
+  apiFetch,
+  removeRefreshToken,
+  removeToken,
+  setRefreshToken,
+  setToken,
+} from "@/lib/api/client"
 import type {
   AuthResponse,
   AuthUser,
@@ -33,11 +39,15 @@ export const authApi = {
 
   logout: () => {
     removeToken()
+    removeRefreshToken()
     localStorage.removeItem("user")
   },
 
-  storeAuthData: (token: string, user: AuthUser) => {
+  storeAuthData: (token: string, user: AuthUser, refreshToken?: string) => {
     setToken(token)
+    if (refreshToken) {
+      setRefreshToken(refreshToken)
+    }
     localStorage.setItem("user", JSON.stringify(user))
   },
 

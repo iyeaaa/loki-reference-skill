@@ -225,6 +225,8 @@ export const websetRoutes = new Elysia({ prefix: "/api/v1/websets", tags: ["Webs
       }
     },
     {
+      type: "application/json" as never,
+      parse: "application/json",
       body: websetSchema,
       response: {
         201: t.Object({
@@ -279,6 +281,8 @@ export const websetRoutes = new Elysia({ prefix: "/api/v1/websets", tags: ["Webs
       params: t.Object({
         id: t.String({ format: "uuid" }),
       }),
+      type: "application/json" as never,
+      parse: "application/json",
       body: updateWebsetSchema,
       response: {
         200: t.Object({
@@ -450,6 +454,8 @@ export const websetRoutes = new Elysia({ prefix: "/api/v1/websets", tags: ["Webs
       params: t.Object({
         id: t.String({ format: "uuid" }),
       }),
+      type: "application/json" as never,
+      parse: "application/json",
       body: websetRowSchema,
       response: {
         201: t.Object({
@@ -505,6 +511,8 @@ export const websetRoutes = new Elysia({ prefix: "/api/v1/websets", tags: ["Webs
         id: t.String({ format: "uuid" }),
         rowId: t.String({ format: "uuid" }),
       }),
+      type: "application/json" as never,
+      parse: "application/json",
       body: updateWebsetRowSchema,
       response: {
         200: t.Object({
@@ -672,6 +680,8 @@ export const websetRoutes = new Elysia({ prefix: "/api/v1/websets", tags: ["Webs
       }
     },
     {
+      type: "application/json" as never,
+      parse: "application/json",
       body: t.Object({
         query: t.String({ minLength: 1 }),
       }),

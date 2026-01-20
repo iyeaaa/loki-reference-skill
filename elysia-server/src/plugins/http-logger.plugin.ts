@@ -40,7 +40,7 @@ export const isScannerRequest = (path: string): boolean =>
  * Check if path should be logged
  */
 const shouldSkipLogging = (path: string): boolean =>
-  path.startsWith("/health") || path.startsWith("/swagger") || path.includes("/favicon")
+  path.startsWith("/health") || path.startsWith("/openapi") || path.includes("/favicon")
 
 /**
  * HTTP Request/Response Logger

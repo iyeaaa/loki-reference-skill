@@ -47,9 +47,9 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/webhook/inbound-store",
   "POST /api/webhook/sendgrid-events",
   "POST /api/webhook/portone", // PortOne V2 payment webhook
-  // Swagger
-  "GET /swagger",
-  "GET /swagger/json",
+  // OpenAPI Documentation
+  "GET /openapi",
+  "GET /openapi/json",
   // Root
   "GET /",
   // Public Billing (PG 심사용 - 요금제 조회, 환율)

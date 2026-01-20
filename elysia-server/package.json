@@ -42,7 +42,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:ai-email": "bun scripts/test-email-generation.ts --interactive",
     "test:lead-discovery": "bun scripts/test-lead-discovery.ts",
-    "test:onboarding": "bun scripts/test-onboarding-full.ts"
+    "test:onboarding": "bun scripts/test-onboarding-full.ts",
+    "rinda-search-sdk": "openapi-typescript http://rindasearch-server-107-150-31-159.traefik.me/docs/json -o src/lib/rinda-search/schema.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
@@ -53,6 +54,7 @@
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.4",
+    "openapi-typescript": "^7.10.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
@@ -61,7 +63,7 @@
     "@aws-sdk/client-s3": "^3.965.0",
     "@clack/prompts": "^0.11.0",
     "@elysiajs/cors": "^1.4.0",
-    "@elysiajs/swagger": "^1.3.1",
+    "@elysiajs/openapi": "^1.0.0",
     "@google-cloud/bigquery": "^8.1.1",
     "@google/genai": "^1.30.0",
     "@google/generative-ai": "^0.24.1",
@@ -99,6 +101,7 @@
     "neverthrow": "^8.2.0",
     "nylas": "^7.8.1",
     "openai": "^6.9.1",
+    "openapi-fetch": "^0.15.0",
     "p-limit": "^7.2.0",
     "p-queue": "^9.0.0",
     "p-retry": "^7.1.0",

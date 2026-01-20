@@ -194,7 +194,7 @@ export interface RawCompany {
   description?: string
   size?: CompanySize // 회사 규모
   contacts?: RawContact[]
-  source: "perplexity" | "gemini" | "apollo" | "serper" | "places" // 데이터 소스
+  source: "perplexity" | "gemini" | "apollo" | "serper" | "places" | "rinda" // 데이터 소스
 }
 
 /**
@@ -228,7 +228,7 @@ export interface UniqueCompany {
  */
 export interface EmailInfo {
   email: string
-  source: "apollo" | "hunter" | "snov"
+  source: "apollo" | "hunter" | "snov" | "rinda"
   verified: boolean
   confidence: number // 0-100
   contactName?: string

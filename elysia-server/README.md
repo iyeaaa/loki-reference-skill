@@ -12,7 +12,7 @@ A production-ready email management system built with Elysia, featuring AI-power
 - User authentication with JWT
 - Rate limiting and security headers
 - Comprehensive logging with Pino
-- Swagger API documentation
+- OpenAPI documentation with Scalar UI
 
 ## Tech Stack
 
@@ -152,7 +152,8 @@ bun run db:restore
 ## API Documentation
 
 Once the server is running, visit:
-- Swagger UI: `http://localhost:3001/swagger`
+- OpenAPI (Scalar UI): `http://localhost:3001/openapi`
+- OpenAPI JSON: `http://localhost:3001/openapi/json`
 - Health check: `http://localhost:3001/health`
 
 ## Mastra AI Endpoints

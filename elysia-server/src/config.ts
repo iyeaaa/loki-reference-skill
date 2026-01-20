@@ -280,6 +280,15 @@ export const config = {
     secretKey: getEnvOrDefault("TOSS_SECRET_KEY", "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6"),
     webhookSecret: getEnvOrDefault("TOSS_WEBHOOK_SECRET", ""),
   },
+
+  // Rinda Search (People & Company Search API)
+  rindaSearch: {
+    baseUrl: getEnvOrDefault(
+      "RINDA_SEARCH_BASE_URL",
+      "http://rindasearch-server-107-150-31-159.traefik.me",
+    ),
+    apiKey: getEnv("RINDA_SEARCH_API_KEY"),
+  },
 } as const
 
 // TossPayments configuration validation (warn on startup if missing)

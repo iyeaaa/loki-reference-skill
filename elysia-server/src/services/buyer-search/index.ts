@@ -12,6 +12,7 @@ import { generateBuyerIntelligence } from "./phases/intelligence"
 import { scoreAndRankCompanies } from "./phases/scoring"
 import { searchWithGemini } from "./phases/search-gemini"
 import { searchWithPerplexity } from "./phases/search-perplexity"
+import { searchWithRinda } from "./phases/search-rinda"
 import type { Buyer, BuyerSearchInput, BuyerSearchResult, ProgressEvent } from "./types"
 
 /**
@@ -85,6 +86,7 @@ export async function searchBuyers(
     // 병렬 실행
     const perplexityPromise = searchWithPerplexity(intelligence, input.country)
     const geminiPromise = searchWithGemini(intelligence, input.country)
+    const rindaPromise = searchWithRinda(intelligence, input.country)
 
     // 다른 검색 소스들 (임시 비활성화)
     const apolloPromise = Promise.resolve([])
@@ -92,14 +94,21 @@ export async function searchBuyers(
     const placesPromise = Promise.resolve([])
 
     // 병렬 검색 완료 대기
-    const [perplexityResults, geminiResults, apolloResults, serperResults, placesResults] =
-      await Promise.all([
-        perplexityPromise,
-        geminiPromise,
-        apolloPromise,
-        serperPromise,
-        placesPromise,
-      ])
+    const [
+      perplexityResults,
+      geminiResults,
+      rindaResults,
+      apolloResults,
+      serperResults,
+      placesResults,
+    ] = await Promise.all([
+      perplexityPromise,
+      geminiPromise,
+      rindaPromise,
+      apolloPromise,
+      serperPromise,
+      placesPromise,
+    ])
 
     onProgress?.({
       phase: "search_gemini",
@@ -109,8 +118,8 @@ export async function searchBuyers(
       reasoning: {
         step: "AI search complete",
         stepKr: "AI 검색을 완료했어요",
-        details: `Found ${perplexityResults.length + geminiResults.length} companies`,
-        detailsKr: `${perplexityResults.length + geminiResults.length}개 회사 발견`,
+        details: `Found ${perplexityResults.length + geminiResults.length + rindaResults.length} companies`,
+        detailsKr: `${perplexityResults.length + geminiResults.length + rindaResults.length}개 회사 발견`,
       },
     })
 
@@ -119,6 +128,7 @@ export async function searchBuyers(
     const rawPool = [
       ...perplexityResults,
       ...geminiResults,
+      ...rindaResults,
       ...apolloResults,
       ...serperResults,
       ...placesResults,
@@ -303,7 +313,7 @@ export async function searchBuyers(
         totalSearched: rawPool.length,
         totalWithEmail: enrichedPool.length,
         searchTimeSeconds: Math.round(searchTimeSeconds * 10) / 10,
-        sources: ["perplexity", "gemini", "apollo", "serper", "places"],
+        sources: ["perplexity", "gemini", "rinda", "apollo", "serper", "places"],
       },
     }
 

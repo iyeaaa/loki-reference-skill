@@ -1,5 +1,5 @@
 import { cors } from "@elysiajs/cors"
-import { swagger } from "@elysiajs/swagger"
+import { openapi } from "@elysiajs/openapi"
 import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
 import { activityLogger, autoActivityLogger } from "./plugins/activity-logger.plugin"
@@ -88,7 +88,7 @@ const app = new Elysia()
     }),
   )
   .use(
-    swagger({
+    openapi({
       documentation: {
         info: {
           title: "SendGrid Email Service API",
@@ -124,7 +124,9 @@ const app = new Elysia()
           },
         },
       },
-      exclude: ["/health", "/health/ready", "/health/live"], // Exclude health checks from docs
+      exclude: {
+        paths: ["/health", "/health/ready", "/health/live"],
+      }, // Exclude health checks from docs
     }),
   )
   .use(requestId) // Add request ID for tracing

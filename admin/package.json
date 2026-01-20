@@ -24,7 +24,7 @@
     "i18n:check": "tsx scripts/i18n-check-sync.ts",
     "i18n:check:silent": "tsx scripts/i18n-check-sync.ts || true",
     "i18n:dedupe": "tsx scripts/i18n-dedupe.ts",
-    "openapi:generate": "openapi-typescript http://localhost:3001/swagger/json -o src/lib/api/generated/schema.ts",
+    "openapi:generate": "openapi-typescript http://localhost:3001/openapi/json -o src/lib/api/generated/schema.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

@@ -7,6 +7,7 @@ import pLimit from "p-limit"
 import logger from "../../../utils/logger"
 import { searchDomainWithSmartSelection } from "../../hunterio-domain-search.service"
 import type { EmailInfo, EnrichedCompany, RawContact, UniqueCompany } from "../types"
+import { rindaPersonToEmailInfo, searchRindaPeopleForCompany } from "./enrich-rinda"
 
 /**
  * 이메일이 일반 이메일인지 확인
@@ -129,12 +130,22 @@ export async function enrichWithEmails(companies: UniqueCompany[]): Promise<Enri
           }
         }
 
-        // 2. 도메인이 있으면 Hunter.io로 검색
+        // 2. Try Rinda person search first (primary)
+        const rindaPerson = await searchRindaPeopleForCompany(company)
+        const rindaEmail = rindaPersonToEmailInfo(rindaPerson)
+
+        if (rindaEmail) {
+          foundNewEmail++
+          logger.debug(`[Enrichment] Rinda found email for ${company.companyName}`)
+          return { ...company, primaryEmail: rindaEmail } as EnrichedCompany
+        }
+
+        // 3. Fallback to Hunter.io if Rinda returned no email
         if (company.domain) {
           const hunterResult = await searchDomainWithSmartSelection(company.domain)
-
           if (hunterResult.email) {
             foundNewEmail++
+            logger.debug(`[Enrichment] Hunter fallback found email for ${company.companyName}`)
             return {
               ...company,
               primaryEmail: {
@@ -146,16 +157,12 @@ export async function enrichWithEmails(companies: UniqueCompany[]): Promise<Enri
                 title: undefined,
               },
             } as EnrichedCompany
-          } else {
-            // 이메일 없음
-            noEmailFound++
-            return null
           }
-        } else {
-          // 도메인 없음
-          noEmailFound++
-          return null
         }
+
+        // 4. No email found from any source
+        noEmailFound++
+        return null
       } catch (error) {
         logger.error({ error, company: company.companyName }, "[Enrichment] 처리 중 오류")
         noEmailFound++
@@ -175,12 +182,12 @@ export async function enrichWithEmails(companies: UniqueCompany[]): Promise<Enri
 
   const duration = Date.now() - startTime
 
-  logger.info(`[Enrichment] 이메일 수집 완료 (${duration}ms):`)
-  logger.info(`  - 입력: ${companies.length}개`)
-  logger.info(`  - 기존 이메일 사용: ${alreadyHadEmail}개`)
-  logger.info(`  - 새로 발견: ${foundNewEmail}개`)
-  logger.info(`  - 이메일 없음: ${noEmailFound}개`)
-  logger.info(`  - 최종 (이메일 있음): ${enrichedResults.length}개`)
+  logger.info(`[Enrichment] Email collection complete (${duration}ms):`)
+  logger.info(`  - Input: ${companies.length}`)
+  logger.info(`  - Existing email used: ${alreadyHadEmail}`)
+  logger.info(`  - New emails found (Rinda + Hunter fallback): ${foundNewEmail}`)
+  logger.info(`  - No email found: ${noEmailFound}`)
+  logger.info(`  - Final (with email): ${enrichedResults.length}`)
 
   return enrichedResults
 }

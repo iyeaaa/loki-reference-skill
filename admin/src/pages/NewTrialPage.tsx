@@ -122,9 +122,9 @@ export default function NewTrialPage() {
           }
 
           // 온보딩 완료 여부에 따라 리다이렉트
+          // window.location.href 사용: AuthProvider가 localStorage에서 확실히 로드하도록 강제 새로고침
           if (onboardingResponse.data?.completedAt) {
             console.log("[NewTrialPage] Onboarding completed, redirecting to dashboard")
-            // 강제 새로고침으로 모든 데이터 확실히 로드
             window.location.href = "/dashboard"
           } else {
             console.log("[NewTrialPage] Onboarding not completed, redirecting to company")

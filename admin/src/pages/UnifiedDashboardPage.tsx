@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import { useAuth } from "@/lib/auth-provider"
 
 // Lazy load the dashboard page and layout
 const AppDashboardPage = lazy(() => import("./app/AppDashboardPage"))
@@ -10,13 +10,13 @@ const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"))
 
 /**
  * Unified Dashboard Page
- * - 온보딩 미완료: 로그아웃 후 /auth로 리다이렉트
+ * - 온보딩 미완료: /company로 리다이렉트 (온보딩 완료 필요)
  * - 온보딩 완료: 대시보드 표시
  * - 관리자 (userRole="admin"): 온보딩 체크 건너뛰기
  * - 캠페인 콜아웃은 DashboardLayout에서 전역적으로 관리
  */
 export default function UnifiedDashboardPage() {
-  const { logout } = useAuth()
+  const navigate = useNavigate()
 
   // Get current user
   const currentUser = useMemo(() => {
@@ -44,7 +44,7 @@ export default function UnifiedDashboardPage() {
   // Check if onboarding is complete
   const isOnboardingComplete = !!onboardingProgress?.completedAt
 
-  // Logout and redirect to /auth if onboarding not complete
+  // Redirect to /company if onboarding not complete
   useEffect(() => {
     if (workspacesLoading || onboardingLoading) {
       return
@@ -55,11 +55,11 @@ export default function UnifiedDashboardPage() {
       return
     }
 
-    // If no workspace or onboarding not complete, logout and redirect to /auth
+    // If no workspace or onboarding not complete, redirect to /company (onboarding page)
     if (!(workspaceId && isOnboardingComplete)) {
-      logout()
+      navigate("/company", { replace: true })
     }
-  }, [workspaceId, isOnboardingComplete, workspacesLoading, onboardingLoading, isAdmin, logout])
+  }, [workspaceId, isOnboardingComplete, workspacesLoading, onboardingLoading, isAdmin, navigate])
 
   // Show loading while checking
   if (workspacesLoading || onboardingLoading) {

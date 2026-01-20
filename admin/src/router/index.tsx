@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react"
 import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
 import { ProtectedRoute, UserProtectedRoute } from "@/components/ProtectedRoute"
-import { AuthProvider } from "@/lib/auth-provider"
+import { AuthProvider, useAuth } from "@/lib/auth-provider"
 import { PermissionProvider, RouteGuard } from "@/lib/permission"
 import { getSurveyFromStorage, isValidSurveyData } from "@/store/survey"
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
@@ -102,6 +102,7 @@ function LoginRedirect() {
  * Trial 페이지 라우팅 로직 (Hydration-safe)
  *
  * 우선순위:
+ * 0. 이미 로그인한 사용자 → /dashboard로 리다이렉트
  * 1. OAuth callback (code/error param) → NewTrialPage (로그인 처리)
  * 2. 로그아웃에서 온 경우 → NewTrialPage
  * 3. Survey 완료된 경우 → NewTrialPage (로그인 대기)
@@ -111,6 +112,7 @@ function LoginRedirect() {
  */
 function TrialRedirect() {
   const [searchParams] = useSearchParams()
+  const { user, isLoading } = useAuth()
 
   // Hydration-safe: 직접 localStorage에서 읽기 (Jotai atom 대신)
   const surveyData = getSurveyFromStorage()
@@ -119,6 +121,12 @@ function TrialRedirect() {
   const isFromLogout = searchParams.get("from") === "logout"
   const isOAuthCallback = searchParams.has("code")
   const hasError = searchParams.has("error")
+
+  // 0. Already logged in → redirect to dashboard
+  // (단, OAuth callback이나 logout이 아닌 경우에만)
+  if (!isLoading && user && !isOAuthCallback && !hasError && !isFromLogout) {
+    return <Navigate replace to="/dashboard" />
+  }
 
   // 1. OAuth callback → always show NewTrialPage
   if (isOAuthCallback || hasError) {

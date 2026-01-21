@@ -10,6 +10,7 @@ import * as onboardingService from "../services/onboarding.service"
 import * as userService from "../services/user.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import { canSendGmail } from "../utils/email-provider.util"
 import logger from "../utils/logger"
 
 // Type for user objects returned by different user service functions
@@ -589,6 +590,22 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
         const googleUser = await oauthService.getGoogleUserInfo(code)
 
+        // Validate that the email can send via Gmail API
+        if (!canSendGmail(googleUser.email, googleUser.hd)) {
+          console.log(
+            `[Auth/Google] ❌ Email cannot send via Gmail API: ${googleUser.email} (hd: ${googleUser.hd || "none"})`,
+          )
+          set.status = 400
+          return errorResponse(
+            "Gmail 또는 Google Workspace 이메일만 사용할 수 있습니다. 현재 이메일로는 이메일 발송이 불가능합니다.",
+            ResponseCode.BAD_REQUEST,
+          )
+        }
+
+        console.log(
+          `[Auth/Google] ✅ Email validated for Gmail API: ${googleUser.email} (hd: ${googleUser.hd || "none"})`,
+        )
+
         const existingUser = await userService.getUserByEmail(googleUser.email)
         let user: AuthUser | undefined
 
@@ -1011,6 +1028,22 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
         // Verify Google ID token
         const googleUser = await oauthService.verifyGoogleIdToken(idToken)
+
+        // Validate that the email can send via Gmail API
+        if (!canSendGmail(googleUser.email, googleUser.hd)) {
+          console.log(
+            `[Auth/GoogleVerify] ❌ Email cannot send via Gmail API: ${googleUser.email} (hd: ${googleUser.hd || "none"})`,
+          )
+          set.status = 400
+          return errorResponse(
+            "Gmail 또는 Google Workspace 이메일만 사용할 수 있습니다. 현재 이메일로는 이메일 발송이 불가능합니다.",
+            ResponseCode.BAD_REQUEST,
+          )
+        }
+
+        console.log(
+          `[Auth/GoogleVerify] ✅ Email validated for Gmail API: ${googleUser.email} (hd: ${googleUser.hd || "none"})`,
+        )
 
         // Check if user already exists
         const existingUser = await userService.getUserByEmail(googleUser.email)

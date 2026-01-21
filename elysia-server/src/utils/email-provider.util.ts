@@ -109,3 +109,50 @@ export function shouldFilterGenericEmail(email: string, type: "personal" | "gene
   // Only filter generic emails on free providers
   return isFreeEmailProvider(email)
 }
+
+/**
+ * Check if an email can send via Gmail API
+ *
+ * Gmail API can only send emails from:
+ * 1. Personal Gmail accounts (gmail.com or googlemail.com)
+ * 2. Google Workspace accounts (has hosted domain)
+ *
+ * Other email providers (naver.com, outlook.com, etc.) cannot send via Gmail API
+ * even if they're used as a Google account login.
+ *
+ * @param email - Email address to check
+ * @param hostedDomain - Google Workspace hosted domain (hd field from OAuth)
+ * @returns true if email can send via Gmail API, false otherwise
+ *
+ * @example
+ * ```typescript
+ * canSendGmail('user@gmail.com') // true (personal Gmail)
+ * canSendGmail('user@company.com', 'company.com') // true (Google Workspace)
+ * canSendGmail('user@naver.com') // false (not Gmail or Workspace)
+ * ```
+ */
+export function canSendGmail(email: string, hostedDomain?: string): boolean {
+  if (!email || !email.includes("@")) {
+    return false
+  }
+
+  const parts = email.split("@")
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return false
+  }
+
+  const domain = parts[1].toLowerCase()
+
+  // Allow personal Gmail accounts
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    return true
+  }
+
+  // Allow Google Workspace accounts (has hosted domain)
+  if (hostedDomain && hostedDomain.length > 0) {
+    return true
+  }
+
+  // Reject all other email providers
+  return false
+}

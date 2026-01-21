@@ -20,6 +20,7 @@ export interface GoogleUserInfo {
   family_name: string
   picture: string
   locale: string
+  hd?: string // Google Workspace hosted domain (only present for workspace accounts)
 }
 
 /**
@@ -82,6 +83,7 @@ export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
       family_name: data.family_name || "",
       picture: data.picture || "",
       locale: data.locale || "en",
+      hd: data.hd,
     }
   } catch (error) {
     logger.error(
@@ -127,6 +129,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<GoogleUserIn
       family_name: payload.family_name || "",
       picture: payload.picture || "",
       locale: payload.locale || "en",
+      hd: payload.hd,
     }
   } catch (error) {
     logger.error({ error }, "Failed to verify Google ID token")

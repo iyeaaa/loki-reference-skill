@@ -181,7 +181,10 @@ export default function NewTrialPage() {
         await handleLoginSuccess(response)
       } catch (error) {
         console.error("[NewTrialPage] Google OAuth callback error:", error)
-        toast.error("Google 로그인 처리 중 오류가 발생했습니다.")
+        // Display specific error message from backend, or fallback to generic message
+        const errorMessage =
+          error instanceof Error ? error.message : "Google 로그인 처리 중 오류가 발생했습니다."
+        toast.error(errorMessage)
         navigate("/trial", { replace: true })
       } finally {
         setIsProcessingCallback(false)

@@ -77,16 +77,15 @@ export function isAutomatedClick(event: EventData): boolean {
  * - Yahoo: 36건 중 2건만 감지됨 (6%)
  */
 const OPEN_BOT_USER_AGENT_PATTERNS = [
-  // Google Image Proxy (가장 많은 봇 트래픽)
-  /GoogleImageProxy/i,
-  /ggpht\.com/i,
+  // NOTE: Google Image Proxy (GoogleImageProxy, ggpht.com)는 봇 목록에서 제외!
+  // Gmail은 모든 이미지를 프록시를 통해 가져오므로, 이걸 봇으로 처리하면
+  // Gmail 사용자의 오픈을 전혀 추적할 수 없음.
+  // Google의 "프리페치"는 sg_machine_open으로 이미 감지됨.
 
-  // Yahoo Mail Proxy
-  /YahooMailProxy/i,
-  /Yahoo.*Proxy/i,
+  // NOTE: Yahoo Mail Proxy도 마찬가지로 제외
+  // 실제 Yahoo 사용자가 이메일을 열 때도 프록시를 통해 옴
 
-  // Generic Image Proxies
-  /imageproxy/i,
+  // Generic Image Proxies (명시적인 봇 프록시만)
   /Slack-ImgProxy/i,
   /willnorris\/imageproxy/i,
 
@@ -135,11 +134,12 @@ const CLICK_BOT_USER_AGENT_PATTERNS = [
  * - Microsoft ATP: 3,341건
  */
 const OPEN_BOT_IP_PATTERNS = [
-  // Google Image Proxy (가장 많은 봇 트래픽)
-  /^74\.125\./, // Google Image Proxy
-  /^66\.249\./, // Google (Googlebot, Image Proxy)
+  // NOTE: Google IP (74.125.x.x, 66.249.x.x)는 봇 목록에서 제외!
+  // Gmail은 모든 이미지를 Google Image Proxy를 통해 가져옴.
+  // 이걸 봇으로 처리하면 Gmail 사용자의 오픈을 전혀 추적할 수 없음.
+  // Google의 "프리페치"는 sg_machine_open으로 이미 감지됨.
 
-  // Microsoft ATP / Defender
+  // Microsoft ATP / Defender (이건 실제 보안 스캐너이므로 유지)
   /^4\.182\./, // Azure ATP / Safe Links
   /^57\.155\./, // Microsoft ATP
   /^72\.145\./, // Defender for Office 365
@@ -148,14 +148,8 @@ const OPEN_BOT_IP_PATTERNS = [
   /^40\.94\./, // Microsoft
   /^40\.107\./, // Microsoft
 
-  // Yahoo Mail
-  /^98\.137\./, // Yahoo
-  /^67\.195\./, // Yahoo
-  /^68\.180\./, // Yahoo
-
-  // Apple Mail Privacy Protection - 제거됨
-  // /^17\./ 패턴은 너무 광범위함 (Apple 전체 IP 대역)
-  // Apple Privacy Protection 사용자도 실제 사용자이므로 봇으로 처리하면 안 됨
+  // NOTE: Yahoo IP도 제외 - 실제 Yahoo 사용자가 프록시를 통해 접속함
+  // NOTE: Apple IP도 제외 - Privacy Protection 사용자도 실제 사용자임
 ]
 
 /**

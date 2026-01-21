@@ -90,15 +90,9 @@ const OPEN_BOT_USER_AGENT_PATTERNS = [
   /Slack-ImgProxy/i,
   /willnorris\/imageproxy/i,
 
-  // Microsoft ATP / Safe Links
-  /Chrome\/130\.0\.0\.0/,
-  /Chrome\/113\.0\.0\.0/,
-  /Chrome\/109\.0\.0\.0/, // Outdated Chrome (suspicious)
-  /MSOffice\s+16/i, // MS Office prefetch
-  /MSIE\s+10\.0/, // Old IE (likely bot)
-
-  // Minimal User-Agent (often security scanners)
-  /^Mozilla\/5\.0$/,
+  // NOTE: Chrome/130, Chrome/113 등 버전 패턴은 CLICK에만 사용!
+  // Open 이벤트에서 Chrome 버전으로 봇 판별하면 실제 사용자도 봇으로 처리됨
+  // Microsoft ATP/Safe Links는 링크를 미리 클릭할 때만 특정 Chrome 버전 사용
 
   // Explicit bots/crawlers
   /bot/i,
@@ -159,8 +153,9 @@ const OPEN_BOT_IP_PATTERNS = [
   /^67\.195\./, // Yahoo
   /^68\.180\./, // Yahoo
 
-  // Apple Mail Privacy Protection
-  /^17\./, // Apple (Privacy Protection proxies entire IP range)
+  // Apple Mail Privacy Protection - 제거됨
+  // /^17\./ 패턴은 너무 광범위함 (Apple 전체 IP 대역)
+  // Apple Privacy Protection 사용자도 실제 사용자이므로 봇으로 처리하면 안 됨
 ]
 
 /**

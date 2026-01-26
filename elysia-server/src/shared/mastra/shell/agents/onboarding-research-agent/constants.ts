@@ -1,1 +1,0 @@
-export const model = "gpt-5.2"

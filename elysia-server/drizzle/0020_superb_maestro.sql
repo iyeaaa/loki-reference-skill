@@ -1,1 +1,0 @@
-ALTER TABLE "sequences" ADD COLUMN "memo" text;

@@ -1,1 +1,0 @@
-ALTER TABLE "email_replies" ALTER COLUMN "reply_email_id" SET NOT NULL;

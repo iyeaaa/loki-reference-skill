@@ -1,1 +1,0 @@
-ALTER TABLE "onboarding_progress" DROP COLUMN "discovery_progress";

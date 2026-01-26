@@ -1,1 +1,0 @@
-ALTER TABLE "websets" ADD COLUMN "used_queries" text[] DEFAULT '{}';

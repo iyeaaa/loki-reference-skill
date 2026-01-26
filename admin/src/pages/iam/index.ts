@@ -1,6 +1,0 @@
-export { default as AuditLogsPage } from "./AuditLogsPage"
-export { default as PoliciesPage } from "./PoliciesPage"
-export { PolicyForm } from "./PolicyForm"
-export { RoleForm } from "./RoleForm"
-export { default as RolesPage } from "./RolesPage"
-export { default as TierBoundariesPage } from "./TierBoundariesPage"

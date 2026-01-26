@@ -1,9 +1,0 @@
-key,ko,en
-step.condition.always,항상 발송,Always Send
-step.condition.custom,사용자 정의 조건,Custom Condition
-step.condition.negativeResponse,이전 단계에서 부정적 응답,Negative Response from Previous Step
-step.condition.noResponse,이전 단계에서 응답 없음,No Response from Previous Step
-step.condition.positiveResponse,이전 단계에서 긍정적 응답,Positive Response from Previous Step
-step.sendCondition,발송 조건,Send Condition
-step.sendConditionLabel,발송 조건,Send Condition
-step.sendConditionPlaceholder,발송 조건을 선택하세요,Select send condition
